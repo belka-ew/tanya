@@ -1,0 +1,17 @@
+{
+	"name": "tanya",
+	"description": "D library with event loop",
+	"license": "MPL-2.0",
+	"copyright": "(c) Eugene Wissner <info@caraus.de>",
+	"authors": [
+		"Eugene Wissner"
+	],
+
+	"targetType": "library",
+
+	"configurations": [
+		{
+			"name": "library"
+		}
+	]
+}
