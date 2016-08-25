@@ -1,2 +1,6 @@
+# Binary
+*.[oa]
+
+# D
 .dub
 __test__*__
