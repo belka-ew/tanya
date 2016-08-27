@@ -8,13 +8,11 @@
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
  */  
-module tanya.crypto.padding;
+module tanya.crypto.cipher;
 
 import tanya.memory;
 import std.algorithm.iteration;
 import std.typecons;
-
-@nogc:
 
 /**
  * Supported padding mode.
@@ -31,13 +29,13 @@ enum Mode
 
 /**
  * Params:
- * 	allocator = Allocator that should be used if the block should be extended
- * 	            or a new block should be added.
  * 	input     = Sequence that should be padded.
  * 	mode      = Padding mode.
  * 	blockSize = Block size.
+ * 	allocator = Allocator that should be used if the block should be extended
+ * 	            or a new block should be added.
  *
- * Returns: The functions modifies the initial array and returns it.
+ * Returns: The function modifies the initial array and returns it.
  *
  * See_Also:
  * 	$(D_PSYMBOL Mode)
@@ -187,5 +185,95 @@ unittest
 		}
 
 		defaultAllocator.finalize(input);
+	}
+}
+
+/**
+ * Params:
+ * 	input     = Sequence that should be padded.
+ * 	mode      = Padding mode.
+ * 	blockSize = Block size.
+ * 	allocator = Allocator that should be used for freeing the space allocated
+ * 	            for the padding.
+ *
+ * Returns: The function modifies the initial array and returns it.
+ *
+ * See_Also:
+ * 	$(D_PSYMBOL applyPadding)
+ */
+ref ubyte[] removePadding(ref ubyte[] input,
+                      in Mode mode,
+                      in ushort blockSize,
+                      Allocator allocator = defaultAllocator)
+in
+{
+	assert(input.length != 0);
+	assert(input.length % 64 == 0);
+}
+body
+{
+	final switch (mode) with (Mode)
+	{
+		case zero:
+			break;
+		case pkcs7:
+		case ansiX923:
+			immutable last = input[$ - 1];
+
+			allocator.shrinkArray(input, last ? last : blockSize);
+			break;
+	}
+
+	return input;
+}
+
+///
+unittest
+{
+	{ // Zeros
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		auto inputDup = defaultAllocator.makeArray!ubyte(50);
+
+		applyPadding(input, Mode.zero, 64);
+		applyPadding(inputDup, Mode.zero, 64);
+
+		removePadding(input, Mode.zero, 64);
+		assert(input == inputDup);
+
+		defaultAllocator.finalize(input);
+		defaultAllocator.finalize(inputDup);
+
+	}
+	{ // PKCS#7
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		auto inputDup = defaultAllocator.makeArray!ubyte(50);
+		for (ubyte i; i < 40; ++i)
+		{
+			input[i] = i;
+			inputDup[i] = i;
+		}
+
+		applyPadding(input, Mode.pkcs7, 64);
+		removePadding(input, Mode.pkcs7, 64);
+		assert(input == inputDup);
+
+		defaultAllocator.finalize(input);
+		defaultAllocator.finalize(inputDup);
+	}
+	{ // ANSI X.923
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		auto inputDup = defaultAllocator.makeArray!ubyte(50);
+		for (ubyte i; i < 40; ++i)
+		{
+			input[i] = i;
+			inputDup[i] = i;
+		}
+
+		applyPadding(input, Mode.pkcs7, 64);
+		removePadding(input, Mode.pkcs7, 64);
+		assert(input == inputDup);
+
+		defaultAllocator.finalize(input);
+		defaultAllocator.finalize(inputDup);
 	}
 }
