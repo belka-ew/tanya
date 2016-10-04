@@ -14,8 +14,6 @@ import tanya.memory;
 import std.digest.sha;
 import std.typecons;
 
-@nogc:
-
 /// Block size of entropy accumulator (SHA-512).
 enum blockSize = 64;
 
@@ -27,7 +25,6 @@ enum maxGather = 128;
  */
 class EntropyException : Exception
 {
-@nogc:
 	/**
 	 * Params:
 	 * 	msg  = Message to output.
@@ -38,7 +35,7 @@ class EntropyException : Exception
 	this(string msg,
 	     string file = __FILE__,
 	     size_t line = __LINE__,
-	     Throwable next = null) pure @safe nothrow const
+	     Throwable next = null) pure @safe nothrow const @nogc
 	{
 		super(msg, file, line, next);
 	}
@@ -49,7 +46,6 @@ class EntropyException : Exception
  */
 abstract class EntropySource
 {
-@nogc:
 	/// Amount of already generated entropy.
 	protected ushort size_;
 
@@ -103,7 +99,6 @@ version (linux)
 	 */
 	class PlatformEntropySource : EntropySource
 	{
-	@nogc:
 		/**
 		 * Returns: Minimum bytes required from the entropy source.
 		 */
@@ -164,13 +159,12 @@ version (linux)
  */
 class Entropy
 {
-@nogc:
 	/// Entropy sources.
 	protected EntropySource[] sources;
 
 	private ubyte sourceCount_;
 
-	private Allocator allocator;
+	private shared Allocator allocator;
 
 	/// Entropy accumulator.
 	protected SHA!(maxGather * 8, 512) accumulator;
@@ -181,7 +175,7 @@ class Entropy
 	 * 	allocator  = Allocator to allocate entropy sources available on the
 	 * 	             system.
 	 */
-	this(size_t maxSources = 20, Allocator allocator = defaultAllocator)
+	this(size_t maxSources = 20, shared Allocator allocator = defaultAllocator)
 	in
 	{
 		assert(maxSources > 0 && maxSources <= ubyte.max);

@@ -20,7 +20,6 @@ import tanya.memory;
  */
 class SList(T)
 {
-@nogc:
 	/**
 	 * Creates a new $(D_PSYMBOL SList).
 	 *
@@ -28,7 +27,7 @@ class SList(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(Allocator allocator = defaultAllocator)
+	this(shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
         reset();
@@ -241,7 +240,7 @@ class SList(T)
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
 	 */
-	int opApply(int delegate(ref size_t i, ref T) @nogc dg)
+	int opApply(int delegate(ref size_t i, ref T) dg)
 	{
 		int result;
 		size_t i;
@@ -280,7 +279,7 @@ class SList(T)
 	}
 
 	/// Ditto.
-	int opApply(int delegate(ref T) @nogc dg)
+	int opApply(int delegate(ref T) dg)
 	{
 		int result;
 
@@ -389,7 +388,7 @@ class SList(T)
 	/// Current position in the list.
 	protected Entry* position;
 
-	private Allocator allocator;
+	private shared Allocator allocator;
 }
 
 interface Stuff

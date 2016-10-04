@@ -12,8 +12,6 @@ module tanya.container.buffer;
 
 import tanya.memory;
 
-@nogc:
-
 version (unittest)
 {
 	private int fillBuffer(void* buffer,
@@ -42,7 +40,6 @@ version (unittest)
  */
 interface Buffer
 {
-@nogc:
 	/**
 	 * Returns: The size of the internal buffer.
 	 */
@@ -74,7 +71,6 @@ interface Buffer
  */
 class ReadBuffer : Buffer
 {
-@nogc:
 	/// Internal buffer.
 	protected ubyte[] _buffer;
 
@@ -87,7 +83,7 @@ class ReadBuffer : Buffer
 	/// Size by which the buffer will grow.
 	protected immutable size_t blockSize;
 
-	private Allocator allocator;
+	private shared Allocator allocator;
 
 	invariant
 	{
@@ -107,7 +103,7 @@ class ReadBuffer : Buffer
 	 */
 	this(size_t size = 8192,
 	     size_t minAvailable = 1024,
-	     Allocator allocator = defaultAllocator)
+	     shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 		this.minAvailable = minAvailable;
@@ -294,7 +290,6 @@ class ReadBuffer : Buffer
  */
 class WriteBuffer : Buffer
 {
-@nogc:
 	/// Internal buffer.
 	protected ubyte[] _buffer;
 
@@ -310,7 +305,7 @@ class WriteBuffer : Buffer
 	/// The position of the free area in the buffer.
 	protected size_t position;
 
-	private Allocator allocator;
+	private shared Allocator allocator;
 
 	invariant
 	{
@@ -325,7 +320,7 @@ class WriteBuffer : Buffer
 	 * 	       will grow.
 	 */
 	this(size_t size = 8192,
-	     Allocator allocator = defaultAllocator)
+	     shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 		blockSize = size;

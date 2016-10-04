@@ -18,7 +18,6 @@ import tanya.event.protocol;
  */
 class TransportException : Exception
 {
-@nogc:
 	/**
 	 * Params:
 	 * 	msg  = Message to output.
@@ -29,7 +28,7 @@ class TransportException : Exception
 	this(string msg,
 	     string file = __FILE__,
 	     size_t line = __LINE__,
-	     Throwable next = null) pure @safe nothrow const
+	     Throwable next = null) pure @safe nothrow const @nogc
 	{
 		super(msg, file, line, next);
 	}
@@ -40,7 +39,6 @@ class TransportException : Exception
  */
 interface Transport
 {
-@nogc:
 	/**
 	 * Returns: Protocol.
 	 */
@@ -78,7 +76,6 @@ interface Transport
  */
 interface ReadTransport : Transport
 {
-@nogc:
 	/**
 	 * Returns: Underlying output buffer.
 	 */
@@ -103,7 +100,6 @@ interface ReadTransport : Transport
  */
 interface WriteTransport : Transport
 {
-@nogc:
 	/**
 	 * Returns: Underlying input buffer.
 	 */

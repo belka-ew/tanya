@@ -20,7 +20,6 @@ import tanya.memory;
  */
 class Queue(T)
 {
-@nogc:
 	/**
 	 * Creates a new $(D_PSYMBOL Queue).
 	 *
@@ -28,7 +27,7 @@ class Queue(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(Allocator allocator = defaultAllocator)
+	this(shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 	}
@@ -207,7 +206,7 @@ class Queue(T)
 	/// The last element of the list.
 	protected Entry* rear;
 
-	private Allocator allocator;
+	private shared Allocator allocator;
 }
 
 ///

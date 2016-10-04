@@ -10,49 +10,75 @@
  */  
 module tanya.memory.allocator;
 
+import std.experimental.allocator;
+import std.traits;
+
 /**
- * This interface should be similar to $(D_PSYMBOL
- * std.experimental.allocator.IAllocator), but usable in
- * $(D_KEYWORD @nogc)-code.
+ * Allocator interface.
  */
 interface Allocator
 {
-@nogc:
-	/**
-	 * Allocates $(D_PARAM s) bytes of memory.
-	 *
-	 * Params:
-	 * 	s = Amount of memory to allocate.
-	 *
-	 * Returns: The pointer to the new allocated memory.
-	 */
-    void[] allocate(size_t s) @safe;
+    /**
+     * Allocates $(D_PARAM size) bytes of memory.
+     *
+     * Params:
+     *     size = Amount of memory to allocate.
+     *
+     * Returns: The pointer to the new allocated memory.
+     */
+    void[] allocate(size_t size) shared;
 
     /**
-	 * Deallocates a memory block.
-	 *
-	 * Params:
-	 * 	p = A pointer to the memory block to be freed.
-	 *
-	 * Returns: Whether the deallocation was successful.
-	 */
-    bool deallocate(void[] p) @safe;
+     * Deallocates a memory block.
+     *
+     * Params:
+     *     p = A pointer to the memory block to be freed.
+     *
+     * Returns: Whether the deallocation was successful.
+     */
+    bool deallocate(void[] p) shared;
 
-	/**
-	 * Increases or decreases the size of a memory block.
-	 *
-	 * Params:
-	 * 	p    = A pointer to the memory block.
-	 * 	size = Size of the reallocated block.
-	 *
-	 * Returns: Whether the reallocation was successful.
-	 */
-	bool reallocate(ref void[] p, size_t s) @safe;
+    /**
+     * Increases or decreases the size of a memory block.
+     *
+     * Params:
+     *     p    = A pointer to the memory block.
+     *     size = Size of the reallocated block.
+     *
+     * Returns: Whether the reallocation was successful.
+     */
+    bool reallocate(ref void[] p, size_t size) shared;
 
-	/**
-     * Static allocator instance and initializer.
-	 *
-	 * Returns: An $(D_PSYMBOL Allocator) instance.
-	 */
-	static @property Allocator instance() @safe;
+    /**
+     * Returns: The alignment offered.
+     */
+    @property immutable(uint) alignment() shared const @safe pure nothrow;
 }
+
+/**
+ * Params:
+ *     T         = Element type of the array being created.
+ *     allocator = The allocator used for getting memory.
+ *     array     = A reference to the array being changed.
+ *     length    = New array length.
+ *
+ * Returns: $(D_KEYWORD true) upon success, $(D_KEYWORD false) if memory could
+ *          not be reallocated. In the latter
+ */
+bool resizeArray(T)(shared Allocator allocator,
+                    ref T[] array,
+                    in size_t length)
+{
+    void[] buf = array;
+
+    if (!allocator.reallocate(buf, length * T.sizeof))
+    {
+        return false;
+    }
+    array = cast(T[]) buf;
+
+    return true;
+}
+
+enum bool isFinalizable(T) = is(T == class) || is(T == interface)
+                           || hasElaborateDestructor!T || isDynamicArray!T;

@@ -24,7 +24,6 @@ import core.sys.posix.unistd;
  */
 class SocketTransport : DuplexTransport
 {
-@nogc:
 	private int socket_ = -1;
 
 	private Protocol protocol_;

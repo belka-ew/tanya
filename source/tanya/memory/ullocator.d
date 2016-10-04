@@ -7,28 +7,33 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- */  
+ */
 module tanya.memory.ullocator;
 
 import tanya.memory.allocator;
+import core.atomic;
+import core.exception;
 
-@nogc:
-
-version (Posix):
-
-import core.sys.posix.sys.mman;
-import core.sys.posix.unistd;
+version (Posix)
+{
+    import core.stdc.errno;
+    import core.sys.posix.sys.mman;
+    import core.sys.posix.unistd;
+}
+else version (Windows)
+{
+    import core.sys.windows.winbase;
+    import core.sys.windows.windows;
+}
 
 /**
- * Allocator for Posix systems with mmap/munmap support.
- *
  * This allocator allocates memory in regions (multiple of 4 KB for example).
  * Each region is then splitted in blocks. So it doesn't request the memory
  * from the operating system on each call, but only if there are no large
- * enought free blocks in the available regions.
+ * enough free blocks in the available regions.
  * Deallocation works in the same way. Deallocation doesn't immediately
  * gives the memory back to the operating system, but marks the appropriate
- * block as free and only if all blocks in the region are free, the complet
+ * block as free and only if all blocks in the region are free, the complete
  * region is deallocated.
  *
  * ----------------------------------------------------------------------------
@@ -42,382 +47,440 @@ import core.sys.posix.unistd;
  * |  N   |    -----------> next|            ||   N  |     |                  |
  * |      |     |         |     |            ||      |     |                  |
  * --------------------------------------------------- ------------------------
+ *
+ * TODO:
+ *     $(UL
+ *         $(LI Thread safety (core.atomic.cas))
+ *         $(LI If two neighbour blocks are free, they can be merged)
+ *         $(LI Reallocation shoud check if there is enough free space in the
+ *              next block instead of always moving the memory)
+ *         $(LI Make 64 KB regions mininmal region size on Linux)
+ *     )
  */
 class Ullocator : Allocator
 {
-@nogc:
-	@disable this();
+    @disable this();
 
-	shared static this() @safe nothrow
-	{
-		pageSize = sysconf(_SC_PAGE_SIZE);
-	}
-
-	/**
-	 * Allocates $(D_PARAM size) bytes of memory.
-	 *
-	 * Params:
-	 * 	size = Amount of memory to allocate.
-	 *
-	 * Returns: The pointer to the new allocated memory.
-	 */
-    void[] allocate(size_t size) @trusted nothrow
+    shared static this()
     {
-		immutable dataSize = addAlignment(size);
-
-		void* data = findBlock(dataSize);
-		if (data is null)
-		{
-			data = initializeRegion(dataSize);
-		}
-
-		return data is null ? null : data[0..size];
+        version (Posix)
+        {
+            pageSize = sysconf(_SC_PAGE_SIZE);
+        }
+        else version (Windows)
+        {
+            SYSTEM_INFO si;
+            GetSystemInfo(&si);
+            pageSize = si.dwPageSize;
+        }
     }
-
-	///
-	unittest
-	{
-		auto p = Ullocator.instance.allocate(20);
-
-		assert(p);
-
-		Ullocator.instance.deallocate(p);
-	}
-
-	/**
-	 * Search for a block large enough to keep $(D_PARAM size) and split it
-	 * into two blocks if the block is too large.
-	 *
-	 * Params:
-	 * 	size = Minimum size the block should have.
-	 *
-	 * Returns: Data the block points to or $(D_KEYWORD null).
-	 */
-	private void* findBlock(size_t size) nothrow
-	{
-		Block block1;
-		RegionLoop: for (auto r = head; r !is null; r = r.next)
-		{
-			block1 = cast(Block) (cast(void*) r + regionEntrySize);
-			do
-			{
-				if (block1.free && block1.size >= size)
-				{
-					break RegionLoop;
-				}
-			}
-			while ((block1 = block1.next) !is null);
-		}
-		if (block1 is null)
-		{
-			return null;
-		}
-		else if (block1.size >= size + alignment + blockEntrySize)
-		{ // Split the block if needed
-			Block block2 = cast(Block) (cast(void*) block1 + blockEntrySize + size);
-			block2.prev = block1;
-			if (block1.next is null)
-			{
-				block2.next = null;
-			}
-			else
-			{
-				block2.next = block1.next.next;
-			}
-			block1.next = block2;
-
-			block1.free = false;
-			block2.free = true;
-
-			block2.size = block1.size - blockEntrySize - size;
-			block1.size = size;
-
-			block2.region = block1.region;
-			++block1.region.blocks;
-		}
-		else
-		{
-			block1.free = false;
-			++block1.region.blocks;
-		}
-		return cast(void*) block1 + blockEntrySize;
-	}
 
     /**
-	 * Deallocates a memory block.
-	 *
-	 * Params:
-	 * 	p = A pointer to the memory block to be freed.
-	 *
-	 * Returns: Whether the deallocation was successful.
-	 */
-    bool deallocate(void[] p) @trusted nothrow
+     * Allocates $(D_PARAM size) bytes of memory.
+     *
+     * Params:
+     *     size = Amount of memory to allocate.
+     *
+     * Returns: The pointer to the new allocated memory.
+     */
+    void[] allocate(size_t size) shared @nogc @trusted nothrow
     {
-		if (p is null)
-		{
-			return true;
-		}
+        if (!size)
+        {
+            return null;
+        }
+        immutable dataSize = addAlignment(size);
 
-		Block block = cast(Block) (p.ptr - blockEntrySize);
-		if (block.region.blocks <= 1)
-		{
-			if (block.region.prev !is null)
-			{
-				block.region.prev.next = block.region.next;
-			}
-			else // Replace the list head. It is being deallocated
-			{
-				head = block.region.next;
-			}
-			if (block.region.next !is null)
-			{
-				block.region.next.prev = block.region.prev;
-			}
-			return munmap(block.region, block.region.size) == 0;
-		}
-		else
-		{
-			block.free = true;
-			--block.region.blocks;
-			return true;
-		}
+        void* data = findBlock(dataSize);
+        if (data is null)
+        {
+            data = initializeRegion(dataSize);
+        }
+
+        return data is null ? null : data[0..size];
     }
 
-	///
-	unittest
-	{
-		auto p = Ullocator.instance.allocate(20);
+    ///
+    @nogc @safe nothrow unittest
+    {
+        auto p = Ullocator.instance.allocate(20);
 
-		assert(Ullocator.instance.deallocate(p));
-	}
+        assert(p);
 
-	/**
-	 * Increases or decreases the size of a memory block.
-	 *
-	 * Params:
-	 * 	p    = A pointer to the memory block.
-	 * 	size = Size of the reallocated block.
-	 *
-	 * Returns: Whether the reallocation was successful.
-	 */
-	bool reallocate(ref void[] p, size_t size) @trusted nothrow
-	{
-		if (size == p.length)
-		{
-			return true;
-		}
+        Ullocator.instance.deallocate(p);
+    }
 
-		auto reallocP = allocate(size);
-		if (reallocP is null)
-		{
-			return false;
-		}
+    /**
+     * Search for a block large enough to keep $(D_PARAM size) and split it
+     * into two blocks if the block is too large.
+     *
+     * Params:
+     *     size = Minimum size the block should have.
+     *
+     * Returns: Data the block points to or $(D_KEYWORD null).
+     */
+    private void* findBlock(size_t size) shared @nogc nothrow
+    {
+        Block block1;
+        RegionLoop: for (auto r = head; r !is null; r = r.next)
+        {
+            block1 = cast(Block) (cast(void*) r + regionEntrySize);
+            do
+            {
+                if (block1.free && block1.size >= size)
+                {
+                    break RegionLoop;
+                }
+            }
+            while ((block1 = block1.next) !is null);
+        }
+        if (block1 is null)
+        {
+            return null;
+        }
+        else if (block1.size >= size + alignment + blockEntrySize)
+        { // Split the block if needed
+            Block block2 = cast(Block) (cast(void*) block1 + blockEntrySize + size);
+            block2.prev = block1;
+            if (block1.next is null)
+            {
+                block2.next = null;
+            }
+            else
+            {
+                block2.next = block1.next.next;
+            }
+            block1.next = block2;
 
-		if (p !is null)
-		{
-			if (size > p.length)
-			{
-				reallocP[0..p.length] = p[0..$];
-			}
-			else
-			{
-				reallocP[0..size] = p[0..size];
-			}
-			deallocate(p);
-		}
-		p = reallocP;
+            block1.free = false;
+            block2.free = true;
 
-		return true;
-	}
+            block2.size = block1.size - blockEntrySize - size;
+            block1.size = size;
 
-	///
-	unittest
-	{
-		void[] p;
-		Ullocator.instance.reallocate(p, 10 * int.sizeof);
-		(cast(int[]) p)[7] = 123;
+            block2.region = block1.region;
+            atomicOp!"+="(block1.region.blocks, 1);
+        }
+        else
+        {
+            block1.free = false;
+            atomicOp!"+="(block1.region.blocks, 1);
+        }
+        return cast(void*) block1 + blockEntrySize;
+    }
 
-		assert(p.length == 40);
+    /**
+     * Deallocates a memory block.
+     *
+     * Params:
+     *     p = A pointer to the memory block to be freed.
+     *
+     * Returns: Whether the deallocation was successful.
+     */
+    bool deallocate(void[] p) shared @nogc @trusted nothrow
+    {
+        if (p is null)
+        {
+            return true;
+        }
 
-		Ullocator.instance.reallocate(p, 8 * int.sizeof);
+        Block block = cast(Block) (p.ptr - blockEntrySize);
+        if (block.region.blocks <= 1)
+        {
+            if (block.region.prev !is null)
+            {
+                block.region.prev.next = block.region.next;
+            }
+            else // Replace the list head. It is being deallocated
+            {
+                head = block.region.next;
+            }
+            if (block.region.next !is null)
+            {
+                block.region.next.prev = block.region.prev;
+            }
+            version (Posix)
+            {
+                return munmap(cast(void*) block.region, block.region.size) == 0;
+            }
+            version (Windows)
+            {
+                return VirtualFree(cast(void*) block.region, 0, MEM_RELEASE) == 0;
+            }
+        }
+        else
+        {
+            block.free = true;
+            atomicOp!"-="(block.region.blocks, 1);
+            return true;
+        }
+    }
 
-		assert(p.length == 32);
-		assert((cast(int[]) p)[7] == 123);
+    ///
+    @nogc @safe nothrow unittest
+    {
+        auto p = Ullocator.instance.allocate(20);
 
-		Ullocator.instance.reallocate(p, 20 * int.sizeof);
-		(cast(int[]) p)[15] = 8;
+        assert(Ullocator.instance.deallocate(p));
+    }
 
-		assert(p.length == 80);
-		assert((cast(int[]) p)[15] == 8);
-		assert((cast(int[]) p)[7] == 123);
+    /**
+     * Increases or decreases the size of a memory block.
+     *
+     * Params:
+     *     p    = A pointer to the memory block.
+     *     size = Size of the reallocated block.
+     *
+     * Returns: Whether the reallocation was successful.
+     */
+    bool reallocate(ref void[] p, size_t size) shared @nogc @trusted nothrow
+    {
+        void[] reallocP;
 
-		Ullocator.instance.reallocate(p, 8 * int.sizeof);
+        if (size == p.length)
+        {
+            return true;
+        }
+        else if (size > 0)
+        {
+            reallocP = allocate(size);
+            if (reallocP is null)
+            {
+                return false;
+            }
+        }
 
-		assert(p.length == 32);
-		assert((cast(int[]) p)[7] == 123);
+        if (p !is null)
+        {
+            if (size > p.length)
+            {
+                reallocP[0..p.length] = p[0..$];
+            }
+            else if (size > 0)
+            {
+                reallocP[0..size] = p[0..size];
+            }
+            deallocate(p);
+        }
+        p = reallocP;
 
-		Ullocator.instance.deallocate(p);
-	}
+        return true;
+    }
 
-	/**
+    ///
+    @nogc @safe nothrow unittest
+    {
+        void[] p;
+        Ullocator.instance.reallocate(p, 10 * int.sizeof);
+        (cast(int[]) p)[7] = 123;
+
+        assert(p.length == 40);
+
+        Ullocator.instance.reallocate(p, 8 * int.sizeof);
+
+        assert(p.length == 32);
+        assert((cast(int[]) p)[7] == 123);
+
+        Ullocator.instance.reallocate(p, 20 * int.sizeof);
+        (cast(int[]) p)[15] = 8;
+
+        assert(p.length == 80);
+        assert((cast(int[]) p)[15] == 8);
+        assert((cast(int[]) p)[7] == 123);
+
+        Ullocator.instance.reallocate(p, 8 * int.sizeof);
+
+        assert(p.length == 32);
+        assert((cast(int[]) p)[7] == 123);
+
+        Ullocator.instance.deallocate(p);
+    }
+
+    /**
      * Static allocator instance and initializer.
-	 *
-	 * Returns: The global $(D_PSYMBOL Allocator) instance.
-	 */
-	static @property Ullocator instance() @trusted nothrow
-	{
-		if (instance_ is null)
-		{
-			immutable instanceSize = addAlignment(__traits(classInstanceSize, Ullocator));
+     *
+     * Returns: Global $(D_PSYMBOL Ullocator) instance.
+     */
+    static @property ref shared(Ullocator) instance() @nogc @trusted nothrow
+    {
+        if (instance_ is null)
+        {
+            immutable instanceSize = addAlignment(__traits(classInstanceSize, Ullocator));
 
-			Region head; // Will become soon our region list head
-			void* data = initializeRegion(instanceSize, head);
+            Region head; // Will become soon our region list head
+            void* data = initializeRegion(instanceSize, head);
+            if (data !is null)
+            {
+                data[0..instanceSize] = typeid(Ullocator).initializer[];
+                instance_ = cast(shared Ullocator) data;
+                instance_.head = head;
+            }
+        }
+        return instance_;
+    }
 
-			if (data is null)
-			{
-				return null;
-			}
-			data[0..instanceSize] = typeid(Ullocator).initializer[];
-			instance_ = cast(Ullocator) data;
-			instance_.head = head;
-		}
-		return instance_;
-	}
+    ///
+    @nogc @safe nothrow unittest
+    {
+        assert(instance is instance);
+    }
 
-	///
-	unittest
-	{
-		assert(instance is instance);
-	}
+    /**
+     * Initializes a region for one element.
+     *
+     * Params:
+     *     size = Aligned size of the first data block in the region.
+     *     head = Region list head.
+     *
+     * Returns: A pointer to the data.
+     */
+    pragma(inline)
+    private static void* initializeRegion(size_t size,
+                                          ref Region head) @nogc nothrow
+    {
+        immutable regionSize = calculateRegionSize(size);
+        
+        version (Posix)
+        {
+            void* p = mmap(null,
+                           regionSize,
+                           PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANON,
+                           -1,
+                           0);
+            if (p is MAP_FAILED)
+            {
+                if (errno == ENOMEM)
+                {
+                    onOutOfMemoryError();
+                }
+                return null;
+            }
+        }
+        else version (Windows)
+        {
+            void* p = VirtualAlloc(null,
+                                   regionSize,
+                                   MEM_COMMIT,
+                                   PAGE_READWRITE);
+            if (p is null)
+            {
+                if (GetLastError() == ERROR_NOT_ENOUGH_MEMORY)
+                {
+                    onOutOfMemoryError();
+                }
+                return null;
+            }
+        }
 
-	/**
-	 * Initializes a region for one element.
-	 *
-	 * Params:
-	 * 	size = Aligned size of the first data block in the region.
-	 *  head = Region list head.
-	 *
-	 * Returns: A pointer to the data.
-	 */
-	pragma(inline)
-	private static void* initializeRegion(size_t size,
-	                                      ref Region head) nothrow
-	{
-		immutable regionSize = calculateRegionSize(size);
-		void* p = mmap(null,
-		               regionSize,
-		               PROT_READ | PROT_WRITE,
-		               MAP_PRIVATE | MAP_ANON,
-		               -1,
-		               0);
-		if (p is MAP_FAILED)
-		{
-			return null;
-		}
+        Region region = cast(Region) p;
+        region.blocks = 1;
+        region.size = regionSize;
 
-		Region region = cast(Region) p;
-		region.blocks = 1;
-		region.size = regionSize;
+        // Set the pointer to the head of the region list
+        if (head !is null)
+        {
+            head.prev = region;
+        }
+        region.next = head;
+        region.prev = null;
+        head = region;
 
-		// Set the pointer to the head of the region list
-		if (head !is null)
-		{
-			head.prev = region;
-		}
-		region.next = head;
-		region.prev = null;
-		head = region;
+        // Initialize the data block
+        void* memoryPointer = p + regionEntrySize;
+        Block block1 = cast(Block) memoryPointer;
+        block1.size = size;
+        block1.free = false;
 
-		// Initialize the data block
-		void* memoryPointer = p + regionEntrySize;
-		Block block1 = cast(Block) memoryPointer;
-		block1.size = size;
-		block1.free = false;
+        // It is what we want to return
+        void* data = memoryPointer + blockEntrySize;
 
-		// It is what we want to return
-		void* data = memoryPointer + blockEntrySize;
+        // Free block after data
+        memoryPointer = data + size;
+        Block block2 = cast(Block) memoryPointer;
+        block1.prev = block2.next = null;
+        block1.next = block2;
+        block2.prev = block1;
+        block2.size = regionSize - size - regionEntrySize - blockEntrySize * 2;
+        block2.free = true;
+        block1.region = block2.region = region;
 
-		// Free block after data
-		memoryPointer = data + size;
-		Block block2 = cast(Block) memoryPointer;
-		block1.prev = block2.next = null;
-		block1.next = block2;
-		block2.prev = block1;
-		block2.size = regionSize - size - regionEntrySize - blockEntrySize * 2;
-		block2.free = true;
-		block1.region = block2.region = region;
+        return data;
+    }
 
-		return data;
-	}
+    /// Ditto.
+    private void* initializeRegion(size_t size) shared @nogc nothrow
+    {
+        return initializeRegion(size, head);
+    }
 
-	/// Ditto.
-	private void* initializeRegion(size_t size) nothrow
-	{
-		return initializeRegion(size, head);
-	}
+    /**
+     * Params:
+     *     x = Space to be aligned.
+     *
+     * Returns: Aligned size of $(D_PARAM x).
+     */
+    pragma(inline)
+    private static immutable(size_t) addAlignment(size_t x)
+    @nogc @safe pure nothrow
+    out (result)
+    {
+        assert(result > 0);
+    }
+    body
+    {
+        return (x - 1) / alignment_ * alignment_ + alignment_;
+    }
 
-	/**
-	 * Params:
-	 * 	x = Space to be aligned.
-	 *
-	 * Returns: Aligned size of $(D_PARAM x).
-	 */
-	pragma(inline)
-	private static immutable(size_t) addAlignment(size_t x) @safe pure nothrow
-	out (result)
-	{
-		assert(result > 0);
-	}
-	body
-	{
-		return (x - 1) / alignment * alignment + alignment;
-	}
+    /**
+     * Params:
+     *     x = Required space.
+     *
+     * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
+     */
+    pragma(inline)
+    private static immutable(size_t) calculateRegionSize(size_t x)
+    @nogc @safe pure nothrow
+    out (result)
+    {
+        assert(result > 0);
+    }
+    body
+    {
+        x += regionEntrySize + blockEntrySize * 2;
+        return x / pageSize * pageSize + pageSize;
+    }
 
-	/**
-	 * Params:
-	 * 	x = Required space.
-	 *
-	 * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
-	 */
-	pragma(inline)
-	private static immutable(size_t) calculateRegionSize(size_t x)
-	@safe pure nothrow
-	out (result)
-	{
-		assert(result > 0);
-	}
-	body
-	{
-		x += regionEntrySize + blockEntrySize * 2;
-		return x / pageSize * pageSize + pageSize;
-	}
+    @property immutable(uint) alignment() shared const @nogc @safe pure nothrow
+    {
+        return alignment_;
+    }
+    private enum alignment_ = 8;
 
-	enum alignment = 8;
+    private shared static Ullocator instance_;
 
-	private static Ullocator instance_;
+    private shared static immutable size_t pageSize;
 
-	private shared static immutable long pageSize;
+    private shared struct RegionEntry
+    {
+        Region prev;
+        Region next;
+        uint blocks;
+        size_t size;
+    }
+    private alias Region = shared RegionEntry*;
+    private enum regionEntrySize = 32;
 
-	private struct RegionEntry
-	{
-		Region prev;
-		Region next;
-		uint blocks;
-		ulong size;
-	}
-	private alias Region = RegionEntry*;
-	private enum regionEntrySize = 32;
+    private shared Region head;
 
-	private Region head;
-
-	private struct BlockEntry
-	{
-		Block prev;
-		Block next;
-		bool free;
-		ulong size;
-		Region region;
-	}
-	private alias Block = BlockEntry*;
-	private enum blockEntrySize = 40;
+    private shared struct BlockEntry
+    {
+        Block prev;
+        Block next;
+        bool free;
+        size_t size;
+        Region region;
+    }
+    private alias Block = shared BlockEntry*;
+    private enum blockEntrySize = 40;
 }

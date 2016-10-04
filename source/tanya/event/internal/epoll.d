@@ -28,8 +28,6 @@ import core.sys.posix.netinet.in_;
 import core.time;
 import std.algorithm.comparison;
 
-@nogc:
-
 extern (C) nothrow
 { // TODO: Make a pull request for Phobos to mark this extern functions as @nogc.
     int epoll_create1(int __flags);
@@ -42,7 +40,6 @@ private enum maxEvents = 128;
 
 class EpollLoop : Loop
 {
-@nogc:
 	/**
 	 * Initializes the loop.
 	 */
@@ -108,7 +105,7 @@ class EpollLoop : Loop
 	 * 	protocolFactory = Protocol factory.
 	 * 	socket          = Socket.
 	 */
-	protected override void acceptConnection(Protocol delegate() @nogc protocolFactory,
+	protected override void acceptConnection(Protocol delegate() protocolFactory,
 	                                         int socket)
 	{
 		sockaddr_in client_addr;

@@ -43,7 +43,7 @@ enum Mode
 ubyte[] applyPadding(ref ubyte[] input,
                      in Mode mode,
                      in ushort blockSize,
-                     Allocator allocator = defaultAllocator)
+                     shared Allocator allocator = defaultAllocator)
 in
 {
 	assert(blockSize > 0 && blockSize <= 256);
@@ -204,7 +204,7 @@ unittest
 ref ubyte[] removePadding(ref ubyte[] input,
                       in Mode mode,
                       in ushort blockSize,
-                      Allocator allocator = defaultAllocator)
+                      shared Allocator allocator = defaultAllocator)
 in
 {
 	assert(input.length != 0);

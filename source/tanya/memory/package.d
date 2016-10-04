@@ -26,8 +26,6 @@ else version (Posix)
 	import core.sys.posix.pthread;
 }
 
-@nogc:
-
 version (Windows)
 {
 	package alias Mutex = CRITICAL_SECTION;
@@ -42,12 +40,12 @@ else version (Posix)
 	}
 }
 
-@property void defaultAllocator(Allocator allocator) @safe nothrow
+@property void defaultAllocator(shared Allocator allocator) @safe nothrow
 {
 	_defaultAllocator = allocator;
 }
 
-@property Allocator defaultAllocator() @safe nothrow
+@property shared(Allocator) defaultAllocator() @safe nothrow
 {
 	return _defaultAllocator;
 }
@@ -204,4 +202,4 @@ bool resizeArray(T, A)(auto ref A allocator, ref T[] array, in size_t length)
 enum bool isFinalizable(T) = is(T == class) || is(T == interface)
                           || hasElaborateDestructor!T || isDynamicArray!T;
 
-private Allocator _defaultAllocator;
+private shared Allocator _defaultAllocator;

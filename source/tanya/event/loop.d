@@ -29,8 +29,6 @@ static if (UseEpoll)
     import tanya.event.internal.epoll;
 }
 
-@nogc:
-
 /**
  * Events.
  */
@@ -49,7 +47,6 @@ alias EventMask = BitFlags!Event;
  */
 abstract class Loop
 {
-@nogc:
 	/// Pending watchers.
 	protected Queue!Watcher pendings;
 
@@ -204,7 +201,7 @@ abstract class Loop
 	 * 	protocolFactory = Protocol factory.
 	 * 	socket          = Socket.
 	 */
-	protected void acceptConnection(Protocol delegate() @nogc protocolFactory,
+	protected void acceptConnection(Protocol delegate() protocolFactory,
 	                                int socket);
 
 	/// Whether the event loop should be stopped.
@@ -219,7 +216,6 @@ abstract class Loop
  */
 class BadLoopException : Exception
 {
-@nogc:
 	/**
 	 * Params:
 	 * 	file = The file where the exception occurred.
@@ -227,7 +223,7 @@ class BadLoopException : Exception
 	 * 	next = The previous exception in the chain of exceptions, if any.
 	 */
 	this(string file = __FILE__, size_t line = __LINE__, Throwable next = null)
-	pure @safe nothrow const
+	pure @safe nothrow const @nogc
 	{
 		super("Event loop cannot be initialized.", file, line, next);
 	}

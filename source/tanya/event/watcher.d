@@ -21,7 +21,6 @@ import std.functional;
  */
 abstract class Watcher
 {
-@nogc:
     /// Whether the watcher is active.
     bool active;
 
@@ -33,7 +32,6 @@ abstract class Watcher
 
 class ConnectionWatcher : Watcher
 {
-@nogc:
 	/// Watched file descriptor.
     private int socket_;
 
@@ -41,7 +39,7 @@ class ConnectionWatcher : Watcher
 	protected Protocol delegate() protocolFactory;
 
 	/// Callback.
-	package void delegate(Protocol delegate() @nogc protocolFactory,
+	package void delegate(Protocol delegate() protocolFactory,
 	                      int socket) accept;
 
 	invariant
@@ -54,27 +52,27 @@ class ConnectionWatcher : Watcher
 	 * 	protocolFactory = Function returning a new $(D_PSYMBOL Protocol) instance.
 	 * 	socket          = Socket.
 	 */
-	this(Protocol function() @nogc protocolFactory, int socket)
+	this(Protocol function() protocolFactory, int socket)
 	{
 		this.protocolFactory = toDelegate(protocolFactory);
 		socket_ = socket;
 	}
 
 	/// Ditto.
-	this(Protocol delegate() @nogc protocolFactory, int socket)
+	this(Protocol delegate() protocolFactory, int socket)
 	{
 		this.protocolFactory = protocolFactory;
 		socket_ = socket;
 	}
 
 	/// Ditto.
-	protected this(Protocol function() @nogc protocolFactory)
+	protected this(Protocol function() protocolFactory)
 	{
 		this.protocolFactory = toDelegate(protocolFactory);
 	}
 
 	/// Ditto.
-	protected this(Protocol delegate() @nogc protocolFactory)
+	protected this(Protocol delegate() protocolFactory)
 	{
 		this.protocolFactory = protocolFactory;
 	}
@@ -90,7 +88,7 @@ class ConnectionWatcher : Watcher
 	/**
 	 * Returns: Application protocol factory.
 	 */
-	@property inout(Protocol delegate() @nogc) protocol() inout
+	@property inout(Protocol delegate()) protocol() inout
 	{
 		return protocolFactory;
 	}
@@ -107,7 +105,6 @@ class ConnectionWatcher : Watcher
  */
 class IOWatcher : ConnectionWatcher
 {
-@nogc:
 	/// References a watcher or a transport.
 	DuplexTransport transport_;
 
@@ -116,7 +113,7 @@ class IOWatcher : ConnectionWatcher
 	 * 	protocolFactory = Function returning application specific protocol.
 	 * 	transport       = Transport.
 	 */
-	this(Protocol delegate() @nogc protocolFactory,
+	this(Protocol delegate() protocolFactory,
 		 DuplexTransport transport)
 	in
 	{
@@ -143,7 +140,7 @@ class IOWatcher : ConnectionWatcher
      *
 	 * Returns: $(D_KEYWORD this).
      */
-	IOWatcher opCall(Protocol delegate() @nogc protocolFactory,
+	IOWatcher opCall(Protocol delegate() protocolFactory,
 	                 DuplexTransport transport) @safe pure nothrow
 	in
 	{

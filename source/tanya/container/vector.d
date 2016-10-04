@@ -12,8 +12,6 @@ module tanya.container.vector;
 
 import tanya.memory;
 
-@nogc:
-
 /**
  * One dimensional array. It allocates automatically if needed.
  *
@@ -34,7 +32,6 @@ import tanya.memory;
  */
 class Vector(T)
 {
-@nogc:
 	/**
 	 * Creates a new $(D_PSYMBOL Vector).
 	 *
@@ -43,14 +40,14 @@ class Vector(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(size_t length, Allocator allocator = defaultAllocator)
+	this(size_t length, shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 		vector = makeArray!T(allocator, length);
 	}
 
 	/// Ditto.
-	this(Allocator allocator = defaultAllocator)
+	this(shared Allocator allocator = defaultAllocator)
 	{
 		this(0, allocator);
 	}
@@ -194,7 +191,7 @@ class Vector(T)
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
 	 */
-	int opApply(int delegate(ref T) @nogc dg)
+	int opApply(int delegate(ref T) dg)
 	{
 		int result;
 
@@ -211,7 +208,7 @@ class Vector(T)
 	}
 
 	/// Ditto.
-	int opApply(int delegate(ref size_t i, ref T) @nogc dg)
+	int opApply(int delegate(ref size_t i, ref T) dg)
 	{
 		int result;
 
@@ -408,7 +405,7 @@ class Vector(T)
 	/// Container.
 	protected T[] vector;
 
-	private Allocator allocator;
+	private shared Allocator allocator;
 }
 
 ///
