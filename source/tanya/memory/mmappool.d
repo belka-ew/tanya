@@ -8,7 +8,7 @@
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
-module tanya.memory.ullocator;
+module tanya.memory.mmappool;
 
 import tanya.memory.allocator;
 import core.atomic;
@@ -57,7 +57,7 @@ else version (Windows)
  *         $(LI Make 64 KB regions mininmal region size on Linux)
  *     )
  */
-class Ullocator : Allocator
+class MmapPool : Allocator
 {
     @disable this();
 
@@ -103,11 +103,11 @@ class Ullocator : Allocator
     ///
     @nogc @safe nothrow unittest
     {
-        auto p = Ullocator.instance.allocate(20);
+        auto p = MmapPool.instance.allocate(20);
 
         assert(p);
 
-        Ullocator.instance.deallocate(p);
+        MmapPool.instance.deallocate(p);
     }
 
     /**
@@ -219,9 +219,9 @@ class Ullocator : Allocator
     ///
     @nogc @safe nothrow unittest
     {
-        auto p = Ullocator.instance.allocate(20);
+        auto p = MmapPool.instance.allocate(20);
 
-        assert(Ullocator.instance.deallocate(p));
+        assert(MmapPool.instance.deallocate(p));
     }
 
     /**
@@ -271,48 +271,48 @@ class Ullocator : Allocator
     @nogc @safe nothrow unittest
     {
         void[] p;
-        Ullocator.instance.reallocate(p, 10 * int.sizeof);
+        MmapPool.instance.reallocate(p, 10 * int.sizeof);
         (cast(int[]) p)[7] = 123;
 
         assert(p.length == 40);
 
-        Ullocator.instance.reallocate(p, 8 * int.sizeof);
+        MmapPool.instance.reallocate(p, 8 * int.sizeof);
 
         assert(p.length == 32);
         assert((cast(int[]) p)[7] == 123);
 
-        Ullocator.instance.reallocate(p, 20 * int.sizeof);
+        MmapPool.instance.reallocate(p, 20 * int.sizeof);
         (cast(int[]) p)[15] = 8;
 
         assert(p.length == 80);
         assert((cast(int[]) p)[15] == 8);
         assert((cast(int[]) p)[7] == 123);
 
-        Ullocator.instance.reallocate(p, 8 * int.sizeof);
+        MmapPool.instance.reallocate(p, 8 * int.sizeof);
 
         assert(p.length == 32);
         assert((cast(int[]) p)[7] == 123);
 
-        Ullocator.instance.deallocate(p);
+        MmapPool.instance.deallocate(p);
     }
 
     /**
      * Static allocator instance and initializer.
      *
-     * Returns: Global $(D_PSYMBOL Ullocator) instance.
+     * Returns: Global $(D_PSYMBOL MmapPool) instance.
      */
-    static @property ref shared(Ullocator) instance() @nogc @trusted nothrow
+    static @property ref shared(MmapPool) instance() @nogc @trusted nothrow
     {
         if (instance_ is null)
         {
-            immutable instanceSize = addAlignment(__traits(classInstanceSize, Ullocator));
+            immutable instanceSize = addAlignment(__traits(classInstanceSize, MmapPool));
 
             Region head; // Will become soon our region list head
             void* data = initializeRegion(instanceSize, head);
             if (data !is null)
             {
-                data[0..instanceSize] = typeid(Ullocator).initializer[];
-                instance_ = cast(shared Ullocator) data;
+                data[0..instanceSize] = typeid(MmapPool).initializer[];
+                instance_ = cast(shared MmapPool) data;
                 instance_.head = head;
             }
         }
@@ -457,7 +457,7 @@ class Ullocator : Allocator
     }
     private enum alignment_ = 8;
 
-    private shared static Ullocator instance_;
+    private shared static MmapPool instance_;
 
     private shared static immutable size_t pageSize;
 

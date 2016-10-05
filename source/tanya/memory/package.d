@@ -22,7 +22,7 @@ version (Windows)
 }
 else version (Posix)
 {
-	public import tanya.memory.ullocator;
+	public import tanya.memory.mmappool;
 	import core.sys.posix.pthread;
 }
 
@@ -52,7 +52,7 @@ else version (Posix)
 
 static this() @safe nothrow
 {
-	defaultAllocator = Ullocator.instance;
+	defaultAllocator = MmapPool.instance;
 }
 
 package struct Monitor
