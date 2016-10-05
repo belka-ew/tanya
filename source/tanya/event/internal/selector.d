@@ -61,9 +61,9 @@ class SocketTransport : DuplexTransport
 	~this()
 	{
 		close(socket);
-		finalize(defaultAllocator, input_);
-		finalize(defaultAllocator, output_);
-		finalize(defaultAllocator, protocol_);
+		dispose(defaultAllocator, input_);
+		dispose(defaultAllocator, output_);
+		dispose(defaultAllocator, protocol_);
 	}
 
 	/**

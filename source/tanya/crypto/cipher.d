@@ -94,7 +94,7 @@ unittest
 		assert(input.length == 64);
 		assert(input[63] == 0);
 
-		defaultAllocator.finalize(input);
+		defaultAllocator.dispose(input);
 	}
 	{ // PKCS#7
 		auto input = defaultAllocator.makeArray!ubyte(50);
@@ -139,7 +139,7 @@ unittest
 			}
 		}
 
-		defaultAllocator.finalize(input);
+		defaultAllocator.dispose(input);
 	}
 	{ // ANSI X.923
 		auto input = defaultAllocator.makeArray!ubyte(50);
@@ -184,7 +184,7 @@ unittest
 			}
 		}
 
-		defaultAllocator.finalize(input);
+		defaultAllocator.dispose(input);
 	}
 }
 
@@ -240,8 +240,8 @@ unittest
 		removePadding(input, Mode.zero, 64);
 		assert(input == inputDup);
 
-		defaultAllocator.finalize(input);
-		defaultAllocator.finalize(inputDup);
+		defaultAllocator.dispose(input);
+		defaultAllocator.dispose(inputDup);
 
 	}
 	{ // PKCS#7
@@ -257,8 +257,8 @@ unittest
 		removePadding(input, Mode.pkcs7, 64);
 		assert(input == inputDup);
 
-		defaultAllocator.finalize(input);
-		defaultAllocator.finalize(inputDup);
+		defaultAllocator.dispose(input);
+		defaultAllocator.dispose(inputDup);
 	}
 	{ // ANSI X.923
 		auto input = defaultAllocator.makeArray!ubyte(50);
@@ -273,7 +273,7 @@ unittest
 		removePadding(input, Mode.pkcs7, 64);
 		assert(input == inputDup);
 
-		defaultAllocator.finalize(input);
-		defaultAllocator.finalize(inputDup);
+		defaultAllocator.dispose(input);
+		defaultAllocator.dispose(inputDup);
 	}
 }

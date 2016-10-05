@@ -41,7 +41,7 @@ class Queue(T)
 		{
             static if (isFinalizable!T)
             {
-                finalize(allocator, e);
+                dispose(allocator, e);
             }
 		}
 	}
@@ -99,7 +99,7 @@ class Queue(T)
 		q.insertBack(values[1]);
 		assert(q.front is values[0]);
 
-		finalize(defaultAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -129,7 +129,7 @@ class Queue(T)
 		assert(q.front == value);
 		assert(!q.empty);
 
-		finalize(defaultAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -150,7 +150,7 @@ class Queue(T)
 		q.insertBack(value);
 		assert(!q.empty);
 
-		finalize(defaultAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -167,7 +167,7 @@ class Queue(T)
 	{
 		auto n = first.next.next;
 
-		finalize(allocator, first.next);
+		dispose(allocator, first.next);
 		first.next = n;
 
         return this;
@@ -185,7 +185,7 @@ class Queue(T)
 		q.popFront();
 		assert(q.front is values[1]);
 
-		finalize(defaultAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -214,5 +214,5 @@ unittest
 {
 	auto q = make!(Queue!int)(defaultAllocator);
 
-	finalize(defaultAllocator, q);
+	dispose(defaultAllocator, q);
 }

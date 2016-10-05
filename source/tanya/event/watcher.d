@@ -128,7 +128,7 @@ class IOWatcher : ConnectionWatcher
 
 	~this()
 	{
-		finalize(defaultAllocator, transport_);
+		dispose(defaultAllocator, transport_);
 	}
 
     /**
@@ -185,7 +185,7 @@ class IOWatcher : ConnectionWatcher
 		else if (transport.disconnected)
 		{
 			transport.protocol.disconnected();
-			finalize(defaultAllocator, transport_);
+			dispose(defaultAllocator, transport_);
 			protocolFactory = null;
 		}
 		else if (transport.output.length)
@@ -200,7 +200,7 @@ class IOWatcher : ConnectionWatcher
 			}
 			catch (TransportException e)
 			{
-				finalize(defaultAllocator, e);
+				dispose(defaultAllocator, e);
 			}
 		}
 	}

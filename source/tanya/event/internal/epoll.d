@@ -59,7 +59,7 @@ class EpollLoop : Loop
 	 */
 	~this()
 	{
-		finalize(defaultAllocator, epollEvents);
+		dispose(defaultAllocator, epollEvents);
 	}
 
 	/**
@@ -125,7 +125,7 @@ class EpollLoop : Loop
 				// If it is a ConnectionWatcher
 				if (connection is null && connections[client] !is null)
 				{
-					finalize(defaultAllocator, connections[client]);
+					dispose(defaultAllocator, connections[client]);
 					connections[client] = null;
 				}
 			}
@@ -198,7 +198,7 @@ class EpollLoop : Loop
 					catch (TransportException e)
 					{
 						swapPendings.insertBack(connection);
-						finalize(defaultAllocator, e);
+						dispose(defaultAllocator, e);
 					}
 				}
 				else if (ev.events & (EPOLLOUT | EPOLLERR | EPOLLHUP))

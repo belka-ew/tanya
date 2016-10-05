@@ -70,9 +70,9 @@ abstract class Loop
 	 */
 	~this()
 	{
-		finalize(defaultAllocator, connections);
-		finalize(defaultAllocator, pendings);
-		finalize(defaultAllocator, swapPendings);
+		dispose(defaultAllocator, connections);
+		dispose(defaultAllocator, pendings);
+		dispose(defaultAllocator, swapPendings);
 	}
 
 	/**

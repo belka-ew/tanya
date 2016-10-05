@@ -42,7 +42,7 @@ class SList(T)
 		{
             static if (isFinalizable!T)
             {
-                finalize(allocator, front);
+                dispose(allocator, front);
             }
 			popFront();
 		}
@@ -87,7 +87,7 @@ class SList(T)
 		l.front = values[1];
 		assert(l.front == values[1]);
 
-		finalize(defaultAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -118,7 +118,7 @@ class SList(T)
 		assert(l.front == value);
 		assert(!l.empty);
 
-		finalize(defaultAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -144,7 +144,7 @@ class SList(T)
 		auto n = first.next.next;
 		auto content = first.next.content;
 
-		finalize(allocator, first.next);
+		dispose(allocator, first.next);
 		first.next = n;
 
         return content;
@@ -162,7 +162,7 @@ class SList(T)
 		l.popFront();
 		assert(l.front == values[0]);
 
-		finalize(defaultAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -183,7 +183,7 @@ class SList(T)
 		auto temp = position.next.next;
 		auto content = position.next.content;
 
-		finalize(allocator, position.next);
+		dispose(allocator, position.next);
 		position.next = temp;
 
 		return content;
@@ -203,7 +203,7 @@ class SList(T)
 		assert(l.remove() == 8);
 		assert(l.empty);
 
-		finalize(defaultAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
     /**
@@ -231,7 +231,7 @@ class SList(T)
 		l.reset();
 		assert(l.current == 5);
 
-		finalize(defaultAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -275,7 +275,7 @@ class SList(T)
 			assert(i != 2 || e == values[0]);
 		}
 
-		finalize(defaultAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/// Ditto.
@@ -315,7 +315,7 @@ class SList(T)
 			++i;
 		}
 
-		finalize(defaultAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -400,5 +400,5 @@ unittest
 {
 	auto l = make!(SList!Stuff)(defaultAllocator);
 
-	finalize(defaultAllocator, l);
+	dispose(defaultAllocator, l);
 }

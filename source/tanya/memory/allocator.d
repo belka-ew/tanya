@@ -7,11 +7,16 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- */  
+ */
 module tanya.memory.allocator;
 
 import std.experimental.allocator;
 import std.traits;
+
+version (unittest)
+{
+    import tanya.memory : defaultAllocator;
+}
 
 /**
  * Allocator interface.
@@ -78,6 +83,24 @@ bool resizeArray(T)(shared Allocator allocator,
     array = cast(T[]) buf;
 
     return true;
+}
+
+///
+unittest
+{
+    int[] p;
+
+    defaultAllocator.resizeArray(p, 20);
+    assert(p.length == 20);
+
+    defaultAllocator.resizeArray(p, 30);
+    assert(p.length == 30);
+
+    defaultAllocator.resizeArray(p, 10);
+    assert(p.length == 10);
+
+    defaultAllocator.resizeArray(p, 0);
+    assert(p is null);
 }
 
 enum bool isFinalizable(T) = is(T == class) || is(T == interface)

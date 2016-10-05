@@ -22,7 +22,7 @@ import tanya.memory;
  *
  * v[1000] = value;
  *
- * finalize(defaultAllocator, v);
+ * dispose(defaultAllocator, v);
  * ---
  * it will allocate not only for one, but for 1000 elements. So this
  * implementation is more suitable for sequential data with random access.
@@ -57,7 +57,7 @@ class Vector(T)
 	 */
 	~this()
 	{
-		finalize(allocator, vector);
+		dispose(allocator, vector);
 	}
 
 	/**
@@ -94,7 +94,7 @@ class Vector(T)
         v.length = 0;
         assert(v.length == 0);
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
     }
 
 	/**
@@ -116,7 +116,7 @@ class Vector(T)
 		void remove(size_t pos)
 		{
 			auto el = vector[pos];
-			finalize(allocator, el);
+			dispose(allocator, el);
 		}
 	}
 
@@ -151,7 +151,7 @@ class Vector(T)
 		v[4] = values[1];
 		assert(v.length == 5);
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
 	}
 
 	/**
@@ -182,7 +182,7 @@ class Vector(T)
 		v[0] = values[1];
 		assert(v[0] is values[1]);
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
 	}
 
 	/**
@@ -250,7 +250,7 @@ class Vector(T)
 			assert(j != 2 || e is values[2]);
 		}
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
 	}
 
 	/**
@@ -289,7 +289,7 @@ class Vector(T)
         v.front = values[1];
         assert(v.front == 15);
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
     }
 
 	/**
@@ -325,7 +325,7 @@ class Vector(T)
 		v.popFront();
         assert(v.empty);
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
 	}
 
 	/**
@@ -364,7 +364,7 @@ class Vector(T)
         v.back = values[1];
         assert(v.back == 15);
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
     }
 
 	/**
@@ -399,7 +399,7 @@ class Vector(T)
 		v.popBack();
         assert(v.empty);
 
-        finalize(defaultAllocator, v);
+        dispose(defaultAllocator, v);
 	}
 
 	/// Container.
@@ -413,5 +413,5 @@ unittest
 {
 	auto v = make!(Vector!int)(defaultAllocator);
 
-	finalize(defaultAllocator, v);
+	dispose(defaultAllocator, v);
 }

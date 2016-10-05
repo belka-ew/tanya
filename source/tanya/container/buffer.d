@@ -116,7 +116,7 @@ class ReadBuffer : Buffer
 	 */
 	~this()
 	{
-		finalize(allocator, _buffer);
+		dispose(allocator, _buffer);
 	}
 
 	///
@@ -126,7 +126,7 @@ class ReadBuffer : Buffer
 		assert(b.capacity == 8192);
 		assert(b.length == 0);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 
 	/**
@@ -169,7 +169,7 @@ class ReadBuffer : Buffer
 		b[];
 		assert(b.free == b.blockSize);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 
 	/**
@@ -240,7 +240,7 @@ class ReadBuffer : Buffer
 		assert(result[10] == 20);
 		assert(result[14] == 24);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 
 	/**
@@ -275,7 +275,7 @@ class ReadBuffer : Buffer
 		assert(result[9] == 9);
 		assert(b.length == 0);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 }
 
@@ -333,7 +333,7 @@ class WriteBuffer : Buffer
 	 */
 	~this()
 	{
-		finalize(allocator, _buffer);
+		dispose(allocator, _buffer);
 	}
 
 	/**
@@ -385,7 +385,7 @@ class WriteBuffer : Buffer
 		b.written = b.length;
 		assert(b.length == 0);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 
 	/**
@@ -485,7 +485,7 @@ class WriteBuffer : Buffer
 		assert(b._buffer[0] == 23 && b._buffer[1] == 255
 		    && b._buffer[2] == 48 && b._buffer[3] == 23 && b._buffer[4] == 255);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 
 		b = make!WriteBuffer(defaultAllocator, 2);
 
@@ -495,7 +495,7 @@ class WriteBuffer : Buffer
 		assert(b.ring == 3);
 		assert(b.position == 3);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 
 	/**
@@ -578,7 +578,7 @@ class WriteBuffer : Buffer
 		b.written = 4;
 		assert(b.length == 0);
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 
 	/**
@@ -631,6 +631,6 @@ class WriteBuffer : Buffer
 		assert(returnedBuf[0..b.length] == buf[0..6]);
 		b.written = b.length;
 
-		finalize(defaultAllocator, b);
+		dispose(defaultAllocator, b);
 	}
 }
