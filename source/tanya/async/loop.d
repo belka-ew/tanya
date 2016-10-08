@@ -36,11 +36,11 @@
  *     auto address = new InternetAddress("127.0.0.1", cast(ushort) 8192);
  *     version (Windows)
  *     {
- *         auto sock = new OverlappedStreamSocket(AddressFamily.INET)
+ *         auto sock = new OverlappedStreamSocket(AddressFamily.INET);
  *     }
  *     else
  *     {
- *         auto sock = new StreamSocket(AddressFamily.INET)
+ *         auto sock = new StreamSocket(AddressFamily.INET);
  *         sock.blocking = false;
  *     }
  *
