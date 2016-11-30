@@ -27,7 +27,7 @@ class Queue(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(IAllocator allocator = defaultAllocator)
+	this(IAllocator allocator = theAllocator)
 	{
 		this.allocator = allocator;
 	}
@@ -91,7 +91,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = make!(Queue!int)(defaultAllocator);
+		auto q = make!(Queue!int)(theAllocator);
 		int[2] values = [8, 9];
 
 		q.insertBack(values[0]);
@@ -99,7 +99,7 @@ class Queue(T)
 		q.insertBack(values[1]);
 		assert(q.front is values[0]);
 
-		dispose(defaultAllocator, q);
+		dispose(theAllocator, q);
 	}
 
 	/**
@@ -119,7 +119,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = make!(Queue!int)(defaultAllocator);
+		auto q = make!(Queue!int)(theAllocator);
 		int value = 5;
 
 		assert(q.empty);
@@ -129,7 +129,7 @@ class Queue(T)
 		assert(q.front == value);
 		assert(!q.empty);
 
-		dispose(defaultAllocator, q);
+		dispose(theAllocator, q);
 	}
 
 	/**
@@ -143,14 +143,14 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = make!(Queue!int)(defaultAllocator);
+		auto q = make!(Queue!int)(theAllocator);
 		int value = 7;
 
 		assert(q.empty);
 		q.insertBack(value);
 		assert(!q.empty);
 
-		dispose(defaultAllocator, q);
+		dispose(theAllocator, q);
 	}
 
 	/**
@@ -176,7 +176,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = make!(Queue!int)(defaultAllocator);
+		auto q = make!(Queue!int)(theAllocator);
 		int[2] values = [8, 9];
 
 		q.insertBack(values[0]);
@@ -185,7 +185,7 @@ class Queue(T)
 		q.popFront();
 		assert(q.front is values[1]);
 
-		dispose(defaultAllocator, q);
+		dispose(theAllocator, q);
 	}
 
 	/**
@@ -212,7 +212,7 @@ class Queue(T)
 ///
 unittest
 {
-	auto q = make!(Queue!int)(defaultAllocator);
+	auto q = make!(Queue!int)(theAllocator);
 
-	dispose(defaultAllocator, q);
+	dispose(theAllocator, q);
 }

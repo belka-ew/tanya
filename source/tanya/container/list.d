@@ -27,7 +27,7 @@ class SList(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(IAllocator allocator = defaultAllocator)
+	this(IAllocator allocator = theAllocator)
 	{
 		this.allocator = allocator;
         reset();
@@ -79,7 +79,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		auto l = make!(SList!int)(theAllocator);
 		int[2] values = [8, 9];
 
 		l.front = values[0];
@@ -87,7 +87,7 @@ class SList(T)
 		l.front = values[1];
 		assert(l.front == values[1]);
 
-		dispose(defaultAllocator, l);
+		dispose(theAllocator, l);
 	}
 
 	/**
@@ -108,7 +108,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		auto l = make!(SList!int)(theAllocator);
 		int value = 5;
 
 		assert(l.empty);
@@ -118,7 +118,7 @@ class SList(T)
 		assert(l.front == value);
 		assert(!l.empty);
 
-		dispose(defaultAllocator, l);
+		dispose(theAllocator, l);
 	}
 
 	/**
@@ -153,7 +153,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		auto l = make!(SList!int)(theAllocator);
 		int[2] values = [8, 9];
 
 		l.front = values[0];
@@ -162,7 +162,7 @@ class SList(T)
 		l.popFront();
 		assert(l.front == values[0]);
 
-		dispose(defaultAllocator, l);
+		dispose(theAllocator, l);
 	}
 
 	/**
@@ -192,7 +192,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		auto l = make!(SList!int)(theAllocator);
 		int[3] values = [8, 5, 4];
 
 		l.front = values[0];
@@ -203,7 +203,7 @@ class SList(T)
 		assert(l.remove() == 8);
 		assert(l.empty);
 
-		dispose(defaultAllocator, l);
+		dispose(theAllocator, l);
 	}
 
     /**
@@ -220,7 +220,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		auto l = make!(SList!int)(theAllocator);
 		int[2] values = [8, 5];
 
 		l.current = values[0];
@@ -231,7 +231,7 @@ class SList(T)
 		l.reset();
 		assert(l.current == 5);
 
-		dispose(defaultAllocator, l);
+		dispose(theAllocator, l);
 	}
 
 	/**
@@ -262,7 +262,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		auto l = make!(SList!int)(theAllocator);
 		int[3] values = [5, 4, 9];
 
 		l.front = values[0];
@@ -275,7 +275,7 @@ class SList(T)
 			assert(i != 2 || e == values[0]);
 		}
 
-		dispose(defaultAllocator, l);
+		dispose(theAllocator, l);
 	}
 
 	/// Ditto.
@@ -300,7 +300,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		auto l = make!(SList!int)(theAllocator);
 		int[3] values = [5, 4, 9];
 		size_t i;
 
@@ -315,7 +315,7 @@ class SList(T)
 			++i;
 		}
 
-		dispose(defaultAllocator, l);
+		dispose(theAllocator, l);
 	}
 
 	/**
@@ -398,7 +398,7 @@ interface Stuff
 ///
 unittest
 {
-	auto l = make!(SList!Stuff)(defaultAllocator);
+	auto l = make!(SList!Stuff)(theAllocator);
 
-	dispose(defaultAllocator, l);
+	dispose(theAllocator, l);
 }

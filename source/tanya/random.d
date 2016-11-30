@@ -148,13 +148,13 @@ version (linux)
 /**
  * Pseudorandom number generator.
  * ---
- * auto entropy = defaultAllocator.make!Entropy;
+ * auto entropy = theAllocator.make!Entropy;
  *
  * ubyte[blockSize] output;
  *
  * output = entropy.random;
  *
- * defaultAllocator.finalize(entropy);
+ * theAllocator.finalize(entropy);
  * ---
  */
 class Entropy
@@ -175,7 +175,7 @@ class Entropy
 	 * 	allocator  = Allocator to allocate entropy sources available on the
 	 * 	             system.
 	 */
-	this(size_t maxSources = 20, IAllocator allocator = defaultAllocator)
+	this(size_t maxSources = 20, IAllocator allocator = theAllocator)
 	in
 	{
 		assert(maxSources > 0 && maxSources <= ubyte.max);

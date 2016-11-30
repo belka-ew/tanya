@@ -252,7 +252,7 @@ else version (Windows)
 
             if (result == SOCKET_ERROR && !wouldHaveBlocked)
             {
-                throw defaultAllocator.make!SocketException("Unable to receive");
+                throw theAllocator.make!SocketException("Unable to receive");
             }
             return result == 0;
         }
@@ -282,7 +282,7 @@ else version (Windows)
             if (result == FALSE && !wouldHaveBlocked)
             {
                 disconnected_ = true;
-                throw defaultAllocator.make!SocketException("Unable to receive");
+                throw theAllocator.make!SocketException("Unable to receive");
             }
             if (lpNumber == 0)
             {
@@ -324,7 +324,7 @@ else version (Windows)
             if (result == SOCKET_ERROR && !wouldHaveBlocked)
             {
                 disconnected_ = true;
-                throw defaultAllocator.make!SocketException("Unable to send");
+                throw theAllocator.make!SocketException("Unable to send");
             }
             return result == 0;
         }
@@ -354,7 +354,7 @@ else version (Windows)
             if (result == FALSE && !wouldHaveBlocked)
             {
                 disconnected_ = true;
-                throw defaultAllocator.make!SocketException("Unable to receive");
+                throw theAllocator.make!SocketException("Unable to receive");
             }
             return lpNumber;
         }
@@ -396,7 +396,7 @@ else version (Windows)
                                    NULL);
             if (!result == SOCKET_ERROR)
             {
-                throw defaultAllocator.make!SocketException("Unable to retrieve an accept extension function pointer");
+                throw theAllocator.make!SocketException("Unable to retrieve an accept extension function pointer");
             }
         }
 
@@ -416,7 +416,7 @@ else version (Windows)
             auto socket = cast(socket_t) socket(addressFamily, SOCK_STREAM, 0);
             if (socket == socket_t.init)
             {
-                throw defaultAllocator.make!SocketException("Unable to create socket");
+                throw theAllocator.make!SocketException("Unable to create socket");
             }
             scope (failure)
             {
@@ -426,7 +426,7 @@ else version (Windows)
             overlapped.handle = cast(HANDLE) socket;
             overlapped.event = OverlappedSocketEvent.accept;
             overlapped.buffer.len = (sockaddr_in.sizeof + 16) * 2;
-            overlapped.buffer.buf = defaultAllocator.makeArray!char(overlapped.buffer.len).ptr;
+            overlapped.buffer.buf = theAllocator.makeArray!char(overlapped.buffer.len).ptr;
 
             // We don't want to get any data now, but only start to accept the connections
             BOOL result = acceptExtension(handle_,
@@ -439,7 +439,7 @@ else version (Windows)
                                           &overlapped.overlapped);
             if (result == FALSE && !wouldHaveBlocked)
             {
-                throw defaultAllocator.make!SocketException("Unable to accept socket connection");
+                throw theAllocator.make!SocketException("Unable to accept socket connection");
             }
             return result == TRUE;
         }
@@ -459,13 +459,13 @@ else version (Windows)
         {
             scope (exit)
             {
-                defaultAllocator.dispose(overlapped.buffer.buf[0..overlapped.buffer.len]);
+                theAllocator.dispose(overlapped.buffer.buf[0..overlapped.buffer.len]);
             }
-            auto socket = defaultAllocator.make!OverlappedConnectedSocket(cast(socket_t) overlapped.handle,
+            auto socket = theAllocator.make!OverlappedConnectedSocket(cast(socket_t) overlapped.handle,
                                                                           addressFamily);
             scope (failure)
             {
-                defaultAllocator.dispose(socket);
+                theAllocator.dispose(socket);
             }
             socket.setOption(SocketOptionLevel.SOCKET,
                              cast(SocketOption) SO_UPDATE_ACCEPT_CONTEXT,
@@ -737,7 +737,7 @@ abstract class Socket
                        result.ptr,
                        &length) == SOCKET_ERROR)
         {
-            throw defaultAllocator.make!SocketException("Unable to get socket option");
+            throw theAllocator.make!SocketException("Unable to get socket option");
         }
         return length;
     }
@@ -797,7 +797,7 @@ abstract class Socket
                        value.ptr,
                        cast(uint) value.length) == SOCKET_ERROR)
         {
-            throw defaultAllocator.make!SocketException("Unable to set socket option");
+            throw theAllocator.make!SocketException("Unable to set socket option");
         }
     }
 
@@ -865,7 +865,7 @@ abstract class Socket
             }
             if (fl == SOCKET_ERROR)
             {
-                throw defaultAllocator.make!SocketException("Unable to set socket blocking");
+                throw theAllocator.make!SocketException("Unable to set socket blocking");
             }
         }
         else version (Windows)
@@ -873,7 +873,7 @@ abstract class Socket
             uint num = !yes;
             if (ioctlsocket(handle_, FIONBIO, &num) == SOCKET_ERROR)
             {
-                throw defaultAllocator.make!SocketException("Unable to set socket blocking");
+                throw theAllocator.make!SocketException("Unable to set socket blocking");
             }
             blocking_ = yes;
         }
@@ -942,7 +942,7 @@ abstract class Socket
     {
         if (.listen(handle_, backlog) == SOCKET_ERROR)
         {
-            throw defaultAllocator.make!SocketException("Unable to listen on socket");
+            throw theAllocator.make!SocketException("Unable to listen on socket");
         }
     }
 
@@ -992,7 +992,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
         auto handle = cast(socket_t) socket(af, SOCK_STREAM, 0);
         if (handle == socket_t.init)
         {
-            throw defaultAllocator.make!SocketException("Unable to create socket");
+            throw theAllocator.make!SocketException("Unable to create socket");
         }
         super(handle, af);
     }
@@ -1009,7 +1009,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
     {
         if (.bind(handle_, address.name, address.length) == SOCKET_ERROR)
         {
-            throw defaultAllocator.make!SocketException("Unable to bind socket");
+            throw theAllocator.make!SocketException("Unable to bind socket");
         }
     }
 
@@ -1048,10 +1048,10 @@ class StreamSocket : Socket, ConnectionOrientedSocket
             {
                 return null;
             }
-            throw defaultAllocator.make!SocketException("Unable to accept socket connection");
+            throw theAllocator.make!SocketException("Unable to accept socket connection");
         }
 
-        auto newSocket = defaultAllocator.make!ConnectedSocket(sock, addressFamily);
+        auto newSocket = theAllocator.make!ConnectedSocket(sock, addressFamily);
 
         version (linux)
         { // Blocking mode already set
@@ -1066,7 +1066,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
                 }
                 catch (SocketException e)
                 {
-                    defaultAllocator.dispose(newSocket);
+                    theAllocator.dispose(newSocket);
                     throw e;
                 }
             }
@@ -1162,7 +1162,7 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
                 return 0;
             }
             disconnected_ = true;
-            throw defaultAllocator.make!SocketException("Unable to receive");
+            throw theAllocator.make!SocketException("Unable to receive");
         }
         return ret;
     }
@@ -1199,7 +1199,7 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
         {
             return 0;
         }
-        throw defaultAllocator.make!SocketException("Unable to send");
+        throw theAllocator.make!SocketException("Unable to send");
     }
 }
 
@@ -1242,18 +1242,18 @@ class InternetAddress : Address
     {
         if (getaddrinfoPointer is null || freeaddrinfoPointer is null)
         {
-            throw defaultAllocator.make!AddressException("Address info lookup is not available on this system");
+            throw theAllocator.make!AddressException("Address info lookup is not available on this system");
         }
         addrinfo* ai_res;
         port_ = port;
 
         // Make C-string from host.
-        char[] node = defaultAllocator.makeArray!char(host.length + 1);
+        char[] node = theAllocator.makeArray!char(host.length + 1);
         node[0.. $ - 1] = host;
         node[$ - 1] = '\0';
         scope (exit)
         {
-            defaultAllocator.dispose(node);
+            theAllocator.dispose(node);
         }
 
         // Convert port to a C-string.
@@ -1278,7 +1278,7 @@ class InternetAddress : Address
         auto ret = getaddrinfoPointer(node.ptr, servicePointer, null, &ai_res);
         if (ret)
         {
-            throw defaultAllocator.make!AddressException("Address info lookup failed");
+            throw theAllocator.make!AddressException("Address info lookup failed");
         }
         scope (exit)
         {
@@ -1292,7 +1292,7 @@ class InternetAddress : Address
         }
         if (ai_res.ai_family != AddressFamily.INET && ai_res.ai_family != AddressFamily.INET6)
         {
-            throw defaultAllocator.make!AddressException("Wrong address family");
+            throw theAllocator.make!AddressException("Wrong address family");
         }
     }
 

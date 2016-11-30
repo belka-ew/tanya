@@ -44,7 +44,7 @@ enum PaddingMode
 ubyte[] pad(ref ubyte[] input,
             in PaddingMode mode,
             in ushort blockSize,
-            IAllocator allocator = defaultAllocator)
+            IAllocator allocator = theAllocator)
 in
 {
     assert(blockSize > 0 && blockSize <= 256);
@@ -86,7 +86,7 @@ body
 unittest
 {
     { // Zeros
-        auto input = defaultAllocator.makeArray!ubyte(50);
+        auto input = theAllocator.makeArray!ubyte(50);
 
         pad(input, PaddingMode.zero, 64);
         assert(input.length == 64);
@@ -95,10 +95,10 @@ unittest
         assert(input.length == 64);
         assert(input[63] == 0);
 
-        defaultAllocator.dispose(input);
+        theAllocator.dispose(input);
     }
     { // PKCS#7
-        auto input = defaultAllocator.makeArray!ubyte(50);
+        auto input = theAllocator.makeArray!ubyte(50);
         for (ubyte i; i < 40; ++i)
         {
             input[i] = i;
@@ -140,10 +140,10 @@ unittest
             }
         }
 
-        defaultAllocator.dispose(input);
+        theAllocator.dispose(input);
     }
     { // ANSI X.923
-        auto input = defaultAllocator.makeArray!ubyte(50);
+        auto input = theAllocator.makeArray!ubyte(50);
         for (ubyte i; i < 40; ++i)
         {
             input[i] = i;
@@ -185,7 +185,7 @@ unittest
             }
         }
 
-        defaultAllocator.dispose(input);
+        theAllocator.dispose(input);
     }
 }
 
@@ -204,7 +204,7 @@ unittest
 ref ubyte[] unpad(ref ubyte[] input,
                   in PaddingMode mode,
                   in ushort blockSize,
-                  IAllocator allocator = defaultAllocator)
+                  IAllocator allocator = theAllocator)
 in
 {
     assert(input.length != 0);
@@ -231,8 +231,8 @@ body
 unittest
 {
     { // Zeros
-        auto input = defaultAllocator.makeArray!ubyte(50);
-        auto inputDup = defaultAllocator.makeArray!ubyte(50);
+        auto input = theAllocator.makeArray!ubyte(50);
+        auto inputDup = theAllocator.makeArray!ubyte(50);
 
         pad(input, PaddingMode.zero, 64);
         pad(inputDup, PaddingMode.zero, 64);
@@ -240,13 +240,13 @@ unittest
         unpad(input, PaddingMode.zero, 64);
         assert(input == inputDup);
 
-        defaultAllocator.dispose(input);
-        defaultAllocator.dispose(inputDup);
+        theAllocator.dispose(input);
+        theAllocator.dispose(inputDup);
 
     }
     { // PKCS#7
-        auto input = defaultAllocator.makeArray!ubyte(50);
-        auto inputDup = defaultAllocator.makeArray!ubyte(50);
+        auto input = theAllocator.makeArray!ubyte(50);
+        auto inputDup = theAllocator.makeArray!ubyte(50);
         for (ubyte i; i < 40; ++i)
         {
             input[i] = i;
@@ -257,12 +257,12 @@ unittest
         unpad(input, PaddingMode.pkcs7, 64);
         assert(input == inputDup);
 
-        defaultAllocator.dispose(input);
-        defaultAllocator.dispose(inputDup);
+        theAllocator.dispose(input);
+        theAllocator.dispose(inputDup);
     }
     { // ANSI X.923
-        auto input = defaultAllocator.makeArray!ubyte(50);
-        auto inputDup = defaultAllocator.makeArray!ubyte(50);
+        auto input = theAllocator.makeArray!ubyte(50);
+        auto inputDup = theAllocator.makeArray!ubyte(50);
         for (ubyte i; i < 40; ++i)
         {
             input[i] = i;
@@ -273,7 +273,7 @@ unittest
         unpad(input, PaddingMode.pkcs7, 64);
         assert(input == inputDup);
 
-        defaultAllocator.dispose(input);
-        defaultAllocator.dispose(inputDup);
+        theAllocator.dispose(input);
+        theAllocator.dispose(inputDup);
     }
 }

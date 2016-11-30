@@ -14,13 +14,8 @@ import std.experimental.allocator;
 import std.traits;
 import std.typecons : Ternary;
 
-version (unittest)
-{
-    import tanya.memory : defaultAllocator;
-}
-
 /**
- * Allocator interface.
+ * Abstract class implementing a basic allocator.
  */
 abstract class Allocator : IAllocator
 {
@@ -170,16 +165,16 @@ unittest
 {
     int[] p;
 
-    defaultAllocator.resizeArray(p, 20);
+    theAllocator.resizeArray(p, 20);
     assert(p.length == 20);
 
-    defaultAllocator.resizeArray(p, 30);
+    theAllocator.resizeArray(p, 30);
     assert(p.length == 30);
 
-    defaultAllocator.resizeArray(p, 10);
+    theAllocator.resizeArray(p, 10);
     assert(p.length == 10);
 
-    defaultAllocator.resizeArray(p, 0);
+    theAllocator.resizeArray(p, 0);
     assert(p is null);
 }
 

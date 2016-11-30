@@ -17,12 +17,12 @@ import tanya.memory;
  *
  * If you assign a value:
  * ---
- * auto v = make!(Vector!int)(defaultAllocator);
+ * auto v = make!(Vector!int)(theAllocator);
  * int value = 5;
  *
  * v[1000] = value;
  *
- * dispose(defaultAllocator, v);
+ * dispose(theAllocator, v);
  * ---
  * it will allocate not only for one, but for 1000 elements. So this
  * implementation is more suitable for sequential data with random access.
@@ -40,14 +40,14 @@ class Vector(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(size_t length, IAllocator allocator = defaultAllocator)
+	this(size_t length, IAllocator allocator = theAllocator)
 	{
 		this.allocator = allocator;
 		vector = makeArray!T(allocator, length);
 	}
 
 	/// Ditto.
-	this(IAllocator allocator = defaultAllocator)
+	this(IAllocator allocator = theAllocator)
 	{
 		this(0, allocator);
 	}
@@ -82,19 +82,18 @@ class Vector(T)
     ///
     unittest
     {
-        auto v = make!(Vector!int)(defaultAllocator);
+        auto v = make!(Vector!int)(theAllocator);
 
         v.length = 5;
         assert(v.length == 5);
 
-		// TODO
         v.length = 7;
         assert(v.length == 7);
 
         v.length = 0;
         assert(v.length == 0);
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
     }
 
 	/**
@@ -140,7 +139,7 @@ class Vector(T)
 	///
 	unittest
 	{
-        auto v = make!(Vector!int)(defaultAllocator);
+        auto v = make!(Vector!int)(theAllocator);
         int[2] values = [5, 15];
 
 		assert(v.length == 0);
@@ -151,7 +150,7 @@ class Vector(T)
 		v[4] = values[1];
 		assert(v.length == 5);
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
 	}
 
 	/**
@@ -170,7 +169,7 @@ class Vector(T)
 	///
 	unittest
 	{
-        auto v = make!(Vector!int)(defaultAllocator);
+        auto v = make!(Vector!int)(theAllocator);
         int[2] values = [5, 15];
 
 		v[1] = values[0];
@@ -182,7 +181,7 @@ class Vector(T)
 		v[0] = values[1];
 		assert(v[0] is values[1]);
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
 	}
 
 	/**
@@ -227,7 +226,7 @@ class Vector(T)
 	///
 	unittest
 	{
-        auto v = make!(Vector!int)(defaultAllocator, 1);
+        auto v = make!(Vector!int)(theAllocator, 1);
         int[3] values = [5, 15, 8];
 
         v[0] = values[0];
@@ -250,7 +249,7 @@ class Vector(T)
 			assert(j != 2 || e is values[2]);
 		}
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
 	}
 
 	/**
@@ -280,7 +279,7 @@ class Vector(T)
     ///
     unittest
     {
-        auto v = make!(Vector!int)(defaultAllocator, 1);
+        auto v = make!(Vector!int)(theAllocator, 1);
         int[2] values = [5, 15];
 
         v.front = values[0];
@@ -289,7 +288,7 @@ class Vector(T)
         v.front = values[1];
         assert(v.front == 15);
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
     }
 
 	/**
@@ -312,7 +311,7 @@ class Vector(T)
 	///
 	unittest
 	{
-        auto v = make!(Vector!int)(defaultAllocator, 1);
+        auto v = make!(Vector!int)(theAllocator, 1);
         int[2] values = [5, 15];
 
         v[0] = values[0];
@@ -325,7 +324,7 @@ class Vector(T)
 		v.popFront();
         assert(v.empty);
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
 	}
 
 	/**
@@ -355,7 +354,7 @@ class Vector(T)
     ///
     unittest
     {
-        auto v = make!(Vector!int)(defaultAllocator, 1);
+        auto v = make!(Vector!int)(theAllocator, 1);
         int[2] values = [5, 15];
 
         v.back = values[0];
@@ -364,7 +363,7 @@ class Vector(T)
         v.back = values[1];
         assert(v.back == 15);
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
     }
 
 	/**
@@ -386,7 +385,7 @@ class Vector(T)
 	///
 	unittest
 	{
-        auto v = make!(Vector!int)(defaultAllocator, 1);
+        auto v = make!(Vector!int)(theAllocator, 1);
         int[2] values = [5, 15];
 
         v[0] = values[0];
@@ -399,7 +398,7 @@ class Vector(T)
 		v.popBack();
         assert(v.empty);
 
-        dispose(defaultAllocator, v);
+        dispose(theAllocator, v);
 	}
 
 	/// Container.
@@ -411,7 +410,7 @@ class Vector(T)
 ///
 unittest
 {
-	auto v = make!(Vector!int)(defaultAllocator);
+	auto v = make!(Vector!int)(theAllocator);
 
-	dispose(defaultAllocator, v);
+	dispose(theAllocator, v);
 }

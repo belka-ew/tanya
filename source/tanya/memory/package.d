@@ -12,8 +12,3 @@ module tanya.memory;
 
 public import tanya.memory.allocator;
 public import std.experimental.allocator;
-
-@property IAllocator defaultAllocator()
-{
-    return theAllocator;
-}
