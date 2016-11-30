@@ -8,14 +8,12 @@
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
  */  
-module tanya.container.math;
+module tanya.math;
 
 version (unittest)
 {
 	import std.algorithm.iteration;
 }
-
-@nogc:
 
 /**
  * Computes $(D_PARAM x) to the power $(D_PARAM y) modulo $(D_PARAM z).
@@ -28,7 +26,7 @@ version (unittest)
  * Returns: Reminder of the division of $(D_PARAM x) to the power $(D_PARAM y)
  *          by $(D_PARAM z).
  */
-ulong pow(ulong x, ulong y, ulong z) @safe nothrow pure
+ulong pow(ulong x, ulong y, ulong z) nothrow pure @safe @nogc
 in
 {
 	assert(z > 0);
@@ -94,7 +92,7 @@ unittest
  * Returns: $(D_KEYWORD true) if $(D_PARAM x) is a prime number,
  *          $(D_KEYWORD false) otherwise.
  */
-bool isPseudoprime(ulong x) @safe nothrow pure
+bool isPseudoprime(ulong x) nothrow pure @safe @nogc
 {
 	return pow(2, x - 1, x) == 1;
 }
