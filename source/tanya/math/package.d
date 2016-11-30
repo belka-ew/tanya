@@ -10,6 +10,8 @@
  */  
 module tanya.math;
 
+public import tanya.math.mp;
+
 version (unittest)
 {
 	import std.algorithm.iteration;
