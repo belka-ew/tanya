@@ -268,7 +268,7 @@ class MmapPool : Allocator
     }
 
     ///
-    @nogc @safe nothrow unittest
+    @nogc nothrow unittest
     {
         void[] p;
         MmapPool.instance.reallocate(p, 10 * int.sizeof);
