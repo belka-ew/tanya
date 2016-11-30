@@ -27,7 +27,7 @@ class Queue(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(shared Allocator allocator = defaultAllocator)
+	this(IAllocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 	}
@@ -206,7 +206,7 @@ class Queue(T)
 	/// The last element of the list.
 	protected Entry* rear;
 
-	private shared Allocator allocator;
+	private IAllocator allocator;
 }
 
 ///

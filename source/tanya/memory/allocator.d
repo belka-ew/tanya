@@ -12,6 +12,7 @@ module tanya.memory.allocator;
 
 import std.experimental.allocator;
 import std.traits;
+import std.typecons : Ternary;
 
 version (unittest)
 {
@@ -21,43 +22,122 @@ version (unittest)
 /**
  * Allocator interface.
  */
-interface Allocator
+abstract class Allocator : IAllocator
 {
     /**
-     * Allocates $(D_PARAM size) bytes of memory.
+     * Not supported.
      *
+     * Returns: $(D_KEYWORD false).
+     */
+    bool deallocateAll() const @nogc @safe pure nothrow
+    {
+        return false;
+    }
+
+    /**
+     * Not supported.
+     *
+     * Returns $(D_PSYMBOL Ternary.unknown).
+     */
+    Ternary empty() const @nogc @safe pure nothrow
+    {
+        return Ternary.unknown;
+    }
+
+    /**
+     * Not supported.
+     *
+     * Params:
+     *     b = Memory block.
+     * 
+     * Returns: $(D_PSYMBOL Ternary.unknown).
+     */
+    Ternary owns(void[] b) const @nogc @safe pure nothrow
+    {
+        return Ternary.unknown;
+    }
+
+    /**
+     * Not supported.
+     *
+     * Params:
+     *     p      = Pointer to a memory block.
+     *     result = Full block allocated.
+     *
+     * Returns: $(D_PSYMBOL Ternary.unknown).
+     */
+    Ternary resolveInternalPointer(void* p, ref void[] result)
+    const @nogc @safe pure nothrow
+    {
+        return Ternary.unknown;
+    }
+
+    /**
      * Params:
      *     size = Amount of memory to allocate.
      *
-     * Returns: The pointer to the new allocated memory.
+     * Returns: The good allocation size that guarantees zero internal
+     *          fragmentation.
      */
-    void[] allocate(size_t size) shared;
+    size_t goodAllocSize(size_t s)
+    {
+        auto rem = s % alignment;
+        return rem ? s + alignment - rem : s;
+    }
 
     /**
-     * Deallocates a memory block.
+     * Not supported.
+     * 
+     * Returns: $(D_KEYWORD null).
+     *
+     */
+    void[] allocateAll() const @nogc @safe pure nothrow
+    {
+        return null;
+    }
+
+    /**
+     * Not supported.
+     * 
+     * Params:
+     *     b = Block to be expanded.
+     *     s = New size.
+     *
+     * Returns: $(D_KEYWORD false).
+     */
+    bool expand(ref void[] b, size_t s) const @nogc @safe pure nothrow
+    {
+        return false;
+    }
+
+    /**
+     * Not supported.
      *
      * Params:
-     *     p = A pointer to the memory block to be freed.
+     *     n = Amount of memory to allocate.
+     *     a = Alignment.
      *
-     * Returns: Whether the deallocation was successful.
+     * Returns: $(D_KEYWORD null).
      */
-    bool deallocate(void[] p) shared;
+    void[] alignedAllocate(size_t n, uint a) const @nogc @safe pure nothrow
+    {
+        return null;
+    }
 
     /**
-     * Increases or decreases the size of a memory block.
+     * Not supported.
      *
      * Params:
-     *     p    = A pointer to the memory block.
-     *     size = Size of the reallocated block.
+     *     n = Amount of memory to allocate.
+     *     a = Alignment.
      *
-     * Returns: Whether the reallocation was successful.
+     * Returns: $(D_KEYWORD false).
      */
-    bool reallocate(ref void[] p, size_t size) shared;
-
-    /**
-     * Returns: The alignment offered.
-     */
-    @property immutable(uint) alignment() shared const @safe pure nothrow;
+    bool alignedReallocate(ref void[] b, size_t size, uint alignment)
+    const @nogc @safe pure nothrow
+    {
+        return false;
+    }
 }
 
 /**
@@ -70,7 +150,7 @@ interface Allocator
  * Returns: $(D_KEYWORD true) upon success, $(D_KEYWORD false) if memory could
  *          not be reallocated. In the latter
  */
-bool resizeArray(T)(shared Allocator allocator,
+bool resizeArray(T)(IAllocator allocator,
                     ref T[] array,
                     in size_t length)
 {

@@ -44,7 +44,7 @@ enum PaddingMode
 ubyte[] pad(ref ubyte[] input,
             in PaddingMode mode,
             in ushort blockSize,
-            shared Allocator allocator = defaultAllocator)
+            IAllocator allocator = defaultAllocator)
 in
 {
     assert(blockSize > 0 && blockSize <= 256);
@@ -204,7 +204,7 @@ unittest
 ref ubyte[] unpad(ref ubyte[] input,
                   in PaddingMode mode,
                   in ushort blockSize,
-                  shared Allocator allocator = defaultAllocator)
+                  IAllocator allocator = defaultAllocator)
 in
 {
     assert(input.length != 0);

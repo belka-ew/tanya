@@ -40,14 +40,14 @@ class Vector(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(size_t length, shared Allocator allocator = defaultAllocator)
+	this(size_t length, IAllocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 		vector = makeArray!T(allocator, length);
 	}
 
 	/// Ditto.
-	this(shared Allocator allocator = defaultAllocator)
+	this(IAllocator allocator = defaultAllocator)
 	{
 		this(0, allocator);
 	}
@@ -405,7 +405,7 @@ class Vector(T)
 	/// Container.
 	protected T[] vector;
 
-	private shared Allocator allocator;
+	private IAllocator allocator;
 }
 
 ///

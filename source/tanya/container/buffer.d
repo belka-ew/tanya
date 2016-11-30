@@ -6,8 +6,8 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
- */
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
+ */  
 module tanya.container.buffer;
 
 import tanya.memory;
@@ -131,7 +131,7 @@ class ReadBuffer : Buffer
     {
         this.minAvailable = minAvailable;
         this.blockSize = size;
-        defaultAllocator.resizeArray!ubyte(buffer_, size);
+        theAllocator.resizeArray!ubyte(buffer_, size);
     }
 
     /**
@@ -139,17 +139,17 @@ class ReadBuffer : Buffer
      */
     ~this()
     {
-        defaultAllocator.dispose(buffer_);
+        theAllocator.dispose(buffer_);
     }
 
     ///
     unittest
     {
-        auto b = defaultAllocator.make!ReadBuffer;
+        auto b = theAllocator.make!ReadBuffer;
         assert(b.capacity == 8192);
         assert(b.length == 0);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 
     /**
@@ -190,7 +190,7 @@ class ReadBuffer : Buffer
     ///
     unittest
     {
-        auto b = defaultAllocator.make!ReadBuffer;
+        auto b = theAllocator.make!ReadBuffer;
         size_t numberRead;
 
         // Fills the buffer with values 0..10
@@ -202,7 +202,7 @@ class ReadBuffer : Buffer
         b.clear();
         assert(b.free == b.blockSize);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 
     /**
@@ -224,7 +224,7 @@ class ReadBuffer : Buffer
     ///
     unittest
     {
-        auto b = defaultAllocator.make!ReadBuffer;
+        auto b = theAllocator.make!ReadBuffer;
         size_t numberRead;
         ubyte[] result;
 
@@ -252,7 +252,7 @@ class ReadBuffer : Buffer
         assert(result[10] == 20);
         assert(result[14] == 24);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 
     /**
@@ -294,7 +294,7 @@ class ReadBuffer : Buffer
         {
             if (capacity - length < minAvailable)
             {
-                defaultAllocator.resizeArray!ubyte(buffer_, capacity + blockSize);
+                theAllocator.resizeArray!ubyte(buffer_, capacity + blockSize);
             }
             ring = length_;
             return buffer_[length_..$];
@@ -304,7 +304,7 @@ class ReadBuffer : Buffer
     ///
     unittest
     {
-        auto b = defaultAllocator.make!ReadBuffer;
+        auto b = theAllocator.make!ReadBuffer;
         size_t numberRead;
         ubyte[] result;
 
@@ -319,7 +319,7 @@ class ReadBuffer : Buffer
         b.clear();
         assert(b.length == 0);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 }
 
@@ -365,7 +365,7 @@ class WriteBuffer : Buffer
     {
         blockSize = size;
         ring = size - 1;
-        defaultAllocator.resizeArray!ubyte(buffer_, size);
+        theAllocator.resizeArray!ubyte(buffer_, size);
     }
 
     /**
@@ -373,7 +373,7 @@ class WriteBuffer : Buffer
      */
     ~this()
     {
-        defaultAllocator.dispose(buffer_);
+        theAllocator.dispose(buffer_);
     }
 
     /**
@@ -415,7 +415,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = defaultAllocator.make!WriteBuffer(4);
+        auto b = theAllocator.make!WriteBuffer(4);
         ubyte[3] buf = [48, 23, 255];
 
         b ~= buf;
@@ -433,7 +433,7 @@ class WriteBuffer : Buffer
         b += b.length;
         assert(b.length == 0);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 
     /**
@@ -498,7 +498,7 @@ class WriteBuffer : Buffer
             {
                 auto newSize = end / blockSize * blockSize + blockSize;
 
-                defaultAllocator.resizeArray!ubyte(buffer_, newSize);
+                theAllocator.resizeArray!ubyte(buffer_, newSize);
             }
             buffer_[position..end] = buffer[start..$];
             position = end;
@@ -514,7 +514,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = defaultAllocator.make!WriteBuffer(4);
+        auto b = theAllocator.make!WriteBuffer(4);
         ubyte[3] buf = [48, 23, 255];
 
         b ~= buf;
@@ -533,9 +533,9 @@ class WriteBuffer : Buffer
         assert(b.buffer_[0] == 23 && b.buffer_[1] == 255
             && b.buffer_[2] == 48 && b.buffer_[3] == 23 && b.buffer_[4] == 255);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
 
-        b = make!WriteBuffer(defaultAllocator, 2);
+        b = make!WriteBuffer(theAllocator, 2);
 
         b ~= buf;
         assert(b.start == 0);
@@ -543,7 +543,7 @@ class WriteBuffer : Buffer
         assert(b.ring == 3);
         assert(b.position == 3);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 
     /**
@@ -620,7 +620,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = defaultAllocator.make!WriteBuffer;
+        auto b = theAllocator.make!WriteBuffer;
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
 
         b ~= buf;
@@ -630,7 +630,7 @@ class WriteBuffer : Buffer
         b += 4;
         assert(b.length == 0);
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 
     /**
@@ -663,7 +663,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = defaultAllocator.make!WriteBuffer(6);
+        auto b = theAllocator.make!WriteBuffer(6);
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
 
         b ~= buf;
@@ -679,7 +679,7 @@ class WriteBuffer : Buffer
         assert(b[0..$] == buf[0..6]);
         b += b.length;
 
-        defaultAllocator.dispose(b);
+        theAllocator.dispose(b);
     }
 
     /**

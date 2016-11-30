@@ -164,7 +164,7 @@ class Entropy
 
 	private ubyte sourceCount_;
 
-	private shared Allocator allocator;
+	private IAllocator allocator;
 
 	/// Entropy accumulator.
 	protected SHA!(maxGather * 8, 512) accumulator;
@@ -175,7 +175,7 @@ class Entropy
 	 * 	allocator  = Allocator to allocate entropy sources available on the
 	 * 	             system.
 	 */
-	this(size_t maxSources = 20, shared Allocator allocator = defaultAllocator)
+	this(size_t maxSources = 20, IAllocator allocator = defaultAllocator)
 	in
 	{
 		assert(maxSources > 0 && maxSources <= ubyte.max);

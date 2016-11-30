@@ -27,7 +27,7 @@ class SList(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(shared Allocator allocator = defaultAllocator)
+	this(IAllocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
         reset();
@@ -388,7 +388,7 @@ class SList(T)
 	/// Current position in the list.
 	protected Entry* position;
 
-	private shared Allocator allocator;
+	private IAllocator allocator;
 }
 
 interface Stuff

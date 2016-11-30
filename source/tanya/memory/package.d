@@ -10,20 +10,10 @@
  */
 module tanya.memory;
 
-public
-{
-    import tanya.memory.allocator;
-    import std.experimental.allocator : make, dispose, shrinkArray, expandArray, makeArray, dispose;
-}
+public import tanya.memory.allocator;
+public import std.experimental.allocator;
 
-shared Allocator allocator;
-
-@property ref shared(Allocator) defaultAllocator()
+@property IAllocator defaultAllocator()
 {
-    import tanya.memory.mallocator;
-    if (allocator is null)
-    {
-        allocator = Mallocator.instance;
-    }
-    return allocator;
+    return theAllocator;
 }
