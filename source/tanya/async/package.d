@@ -10,10 +10,7 @@
  */
 module tanya.async;
 
-public
-{
-    import tanya.async.loop;
-    import tanya.async.protocol;
-    import tanya.async.transport;
-    import tanya.async.watcher;
-}
+public import tanya.async.loop;
+public import tanya.async.protocol;
+public import tanya.async.transport;
+public import tanya.async.watcher;

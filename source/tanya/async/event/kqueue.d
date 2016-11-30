@@ -127,13 +127,13 @@ else version (DragonFlyBSD)
 
 version (MacBSD):
 
-import dlib.async.event.selector;
-import dlib.async.loop;
-import dlib.async.transport;
-import dlib.async.watcher;
-import dlib.memory;
-import dlib.memory.mmappool;
-import dlib.network.socket;
+import tanya.async.event.selector;
+import tanya.async.loop;
+import tanya.async.transport;
+import tanya.async.watcher;
+import tanya.memory;
+import tanya.memory.mmappool;
+import tanya.network.socket;
 import core.stdc.errno;
 import core.sys.posix.unistd;
 import core.sys.posix.sys.time;
@@ -250,7 +250,7 @@ class KqueueLoop : SelectorLoop
         {
             if (errno != EINTR)
             {
-                throw defaultAllocator.make!BadLoopException();
+                throw theAllocator.make!BadLoopException();
             }
             return;
         }

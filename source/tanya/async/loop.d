@@ -26,7 +26,7 @@
  *         this.transport = transport;
  *     }
  *
- *     void disconnected(SocketException exception = null)
+ *     void disconnected(SocketException e = null)
  *     {
  *     }
  * }
@@ -34,6 +34,7 @@
  * void main()
  * {
  *     auto address = new InternetAddress("127.0.0.1", cast(ushort) 8192);
+ *
  *     version (Windows)
  *     {
  *         auto sock = new OverlappedStreamSocket(AddressFamily.INET);
@@ -263,7 +264,7 @@ abstract class Loop
     protected void kill(IOWatcher watcher, SocketException exception)
     {
         watcher.socket.shutdown();
-        defaultAllocator.dispose(watcher.socket);
+        theAllocator.dispose(watcher.socket);
         MmapPool.instance.dispose(watcher.transport);
         watcher.exception = exception;
         swapPendings.insertBack(watcher);

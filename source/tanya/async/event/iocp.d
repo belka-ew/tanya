@@ -101,7 +101,7 @@ class IOCPLoop : Loop
         completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
         if (!completionPort)
         {
-            throw defaultAllocator.make!BadLoopException("Creating completion port failed");
+            throw theAllocator.make!BadLoopException("Creating completion port failed");
         }
     }
 
@@ -141,7 +141,7 @@ class IOCPLoop : Loop
             catch (SocketException e)
             {
                 MmapPool.instance.dispose(overlapped);
-                defaultAllocator.dispose(e);
+                theAllocator.dispose(e);
                 return false;
             }
         }
@@ -173,7 +173,7 @@ class IOCPLoop : Loop
                 catch (SocketException e)
                 {
                     MmapPool.instance.dispose(overlapped);
-                    defaultAllocator.dispose(e);
+                    theAllocator.dispose(e);
                     return false;
                 }
             }

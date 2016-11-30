@@ -107,7 +107,7 @@ class EpollLoop : SelectorLoop
         {
             if (errno != EINTR)
             {
-                throw defaultAllocator.make!BadLoopException();
+                throw theAllocator.make!BadLoopException();
             }
             return;
         }
