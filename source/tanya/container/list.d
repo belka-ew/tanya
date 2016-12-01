@@ -30,7 +30,6 @@ class SList(T)
 	this(IAllocator allocator = theAllocator)
 	{
 		this.allocator = allocator;
-        reset();
 	}
 
 	/**
@@ -38,20 +37,38 @@ class SList(T)
 	 */
 	~this()
 	{
+		clear();
+	}
+
+	/**
+	 * Remove all contents from the $(D_PSYMBOL SList).
+	 */
+	void clear()
+	{
 		while (!empty)
 		{
-            static if (isFinalizable!T)
-            {
-                dispose(allocator, front);
-            }
 			popFront();
 		}
+	}
+
+	///
+	unittest
+	{
+		auto l = make!(SList!int)(theAllocator);
+		int[2] values = [8, 5];
+
+		l.front = values[0];
+		l.front = values[1];
+		l.clear();
+		assert(l.empty);
+
+		dispose(theAllocator, l);
 	}
 
 	/**
 	 * Returns: First element.
 	 */
-	@property ref T front()
+	@property ref inout(T) front() inout
 	in
 	{
 		assert(!empty);
@@ -124,7 +141,7 @@ class SList(T)
 	/**
 	 * Returns: $(D_KEYWORD true) if the list is empty.
 	 */
-	@property bool empty() const @safe pure nothrow
+	@property bool empty() const
 	{
 		return first.next is null;
 	}
@@ -166,28 +183,29 @@ class SList(T)
 	}
 
 	/**
-	 * Returns the current item from the list and removes from the list.
+	 * Removes $(D_PARAM howMany) elements from the list.
+	 *
+	 * Unlike $(D_PSYMBOL popFront()), this method doesn't fail, if it could not
+	 * remove $(D_PARAM howMany) elements. Instead, if $(D_PARAM howMany) is
+	 * greater than the list length, all elements are removed.
 	 *
 	 * Params:
-	 * 	x = The item should be removed.
+	 * 	howMany = How many elements should be removed.
 	 *
-	 * Returns: Removed item.
+	 * Returns: The number of elements removed.
 	 */
-	T remove()
-	in
+	size_t removeFront(in size_t howMany = 1)
 	{
-		assert(!empty);
+		size_t i;
+		for (; i < howMany && !empty; ++i)
+		{
+			popFront();
+		}
+		return i;
 	}
-	body
-	{
-		auto temp = position.next.next;
-		auto content = position.next.content;
 
-		dispose(allocator, position.next);
-		position.next = temp;
-
-		return content;
-	}
+	/// Ditto.
+	alias remove = removeFront;
 
 	///
 	unittest
@@ -197,39 +215,11 @@ class SList(T)
 
 		l.front = values[0];
 		l.front = values[1];
-		assert(l.remove() == 5);
 		l.front = values[2];
-		assert(l.remove() == 4);
-		assert(l.remove() == 8);
-		assert(l.empty);
-
-		dispose(theAllocator, l);
-	}
-
-    /**
-     * Resets the current position.
-     *
-	 * Returns: $(D_KEYWORD this).
-     */
-    typeof(this) reset()
-    {
-        position = &first;
-        return this;
-    }
-
-	///
-	unittest
-	{
-		auto l = make!(SList!int)(theAllocator);
-		int[2] values = [8, 5];
-
-		l.current = values[0];
-		l.current = values[1];
-		assert(l.current == 5);
-		l.advance();
-		assert(l.current == 8);
-		l.reset();
-		assert(l.current == 5);
+		assert(l.removeFront(0) == 0);
+		assert(l.removeFront(2) == 2);
+		assert(l.removeFront(3) == 1);
+		assert(l.removeFront(3) == 0);
 
 		dispose(theAllocator, l);
 	}
@@ -240,22 +230,20 @@ class SList(T)
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
 	 */
-	int opApply(int delegate(ref size_t i, ref T) dg)
+	int opApply(scope int delegate(ref size_t i, ref T) dg)
 	{
 		int result;
 		size_t i;
 
-		for (position = first.next; position; position = position.next, ++i)
+		for (auto pos = first.next; pos; pos = pos.next, ++i)
 		{
-			result = dg(i, position.content);
+			result = dg(i, pos.content);
 
 			if (result != 0)
 			{
 				return result;
 			}
 		}
-		reset();
-
 		return result;
 	}
 
@@ -279,21 +267,19 @@ class SList(T)
 	}
 
 	/// Ditto.
-	int opApply(int delegate(ref T) dg)
+	int opApply(scope int delegate(ref T) dg)
 	{
 		int result;
 
-		for (position = first.next; position; position = position.next)
+		for (auto pos = first.next; pos; pos = pos.next)
 		{
-			result = dg(position.content);
+			result = dg(pos.content);
 
 			if (result != 0)
 			{
 				return result;
 			}
 		}
-		reset();
-
 		return result;
 	}
 
@@ -319,58 +305,6 @@ class SList(T)
 	}
 
 	/**
-	 * Returns: $(D_KEYWORD true) if the current position is the end position.
-	 */
-	@property bool end() const
-	{
-		return empty || position.next.next is null;
-	}
-
-	/**
-	 * Moves to the next element and returns it.
-	 *
-	 * Returns: The element on the next position.
-	 */
-	T advance()
-	in
-	{
-		assert(!end);
-	}
-	body
-	{
-		position = position.next;
-		return position.content;
-	}
-
-	/**
-	 * Returns: Element on the current position.
-	 */
-	@property ref T current()
-	in
-	{
-		assert(!empty);
-	}
-	body
-	{
-		return position.next.content;
-	}
-
-	/**
-	 * Inserts a new element at the current position.
-	 *
-	 * Params:
-	 * 	x = New element.
-	 */
-	@property void current(T x)
-	{
-		Entry* temp = make!Entry(allocator);
-		
-		temp.content = x;
-		temp.next = position.next;
-		position.next = temp;
-	}
-
-	/**
 	 * List entry.
 	 */
 	protected struct Entry
@@ -385,19 +319,17 @@ class SList(T)
 	/// 0th element of the list.
 	protected Entry first;
 
-	/// Current position in the list.
-	protected Entry* position;
-
-	private IAllocator allocator;
-}
-
-interface Stuff
-{
+	/// Allocator.
+	protected IAllocator allocator;
 }
 
 ///
 unittest
 {
+	interface Stuff
+	{
+	}
+
 	auto l = make!(SList!Stuff)(theAllocator);
 
 	dispose(theAllocator, l);
