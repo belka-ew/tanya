@@ -12,7 +12,7 @@ module tanya.memory.allocator;
 
 import std.experimental.allocator;
 import std.traits;
-import std.typecons : Ternary;
+import std.typecons;
 
 /**
  * Abstract class implementing a basic allocator.
