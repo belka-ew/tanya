@@ -55,12 +55,12 @@ class Vector(T)
 			return this;
 		}
 
-		@property bool empty() const
+		@property bool empty() inout const
 		{
 			return start >= end;
 		}
 
-		@property size_t length() const
+		@property size_t length() inout const
 		{
 			return end - start;
 		}
@@ -261,13 +261,13 @@ class Vector(T)
 	/**
 	 * Returns: Vector length.
 	 */
-	@property size_t length() const
+	@property size_t length() inout const
 	{
 		return vector.length;
 	}
 
 	/// Ditto.
-	size_t opDollar() const
+	size_t opDollar() inout const
 	{
 		return length;
 	}
@@ -301,7 +301,7 @@ class Vector(T)
 	/**
 	 * Returns: $(D_KEYWORD true) if the vector is empty.
 	 */
-	@property bool empty() const
+	@property bool empty() inout const
 	{
 		return vector.length == 0;
 	}
@@ -776,4 +776,6 @@ unittest
 	assert(v.front == 5);
 	assert(v[1] == 15);
 	assert(v.back == 8);
+
+	theAllocator.dispose(v);
 }

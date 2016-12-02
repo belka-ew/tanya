@@ -111,7 +111,7 @@ class SList(T)
 	/**
 	 * Returns: $(D_KEYWORD true) if the list is empty.
 	 */
-	@property bool empty() const
+	@property bool empty() inout const
 	{
 		return first.next is null;
 	}

@@ -6,7 +6,7 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
+ * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
  */  
 module tanya.container.queue;
 
@@ -37,19 +37,38 @@ class Queue(T)
 	 */
 	~this()
 	{
-		foreach (e; this)
+		clear();
+	}
+
+	/**
+	 * Removes all elements from the queue.
+	 */
+	void clear()
+	{
+		while (!empty)
 		{
-            static if (isFinalizable!T)
-            {
-                dispose(allocator, e);
-            }
+			popFront();
 		}
+	}
+
+	///
+	unittest
+	{
+		auto q = theAllocator.make!(Queue!int);
+
+		assert(q.empty);
+		q.insertBack(8);
+		q.insertBack(9);
+		q.clear();
+		assert(q.empty);
+
+		theAllocator.dispose(q);
 	}
 
 	/**
 	 * Returns: First element.
 	 */
-	@property ref T front()
+	@property ref inout(T) front() inout
 	in
 	{
 		assert(!empty);
@@ -64,10 +83,8 @@ class Queue(T)
 	 *
 	 * Params:
 	 * 	x = New element.
-	 *
-	 * Returns: $(D_KEYWORD this).
 	 */
-	typeof(this) insertBack(T x)
+	void insertBack(T x)
 	{
 		Entry* temp = make!Entry(allocator);
 		
@@ -82,52 +99,21 @@ class Queue(T)
 			rear.next = temp;
 			rear = rear.next;
 		}
-
-		return this;
 	}
 
+	/// Ditto.
 	alias insert = insertBack;
 
 	///
 	unittest
 	{
 		auto q = make!(Queue!int)(theAllocator);
-		int[2] values = [8, 9];
-
-		q.insertBack(values[0]);
-		assert(q.front is values[0]);
-		q.insertBack(values[1]);
-		assert(q.front is values[0]);
-
-		dispose(theAllocator, q);
-	}
-
-	/**
-	 * Inserts a new element.
-	 *
-	 * Params:
-	 * 	x = New element.
-	 *
-	 * Returns: $(D_KEYWORD this).
-	 */
-	typeof(this) opOpAssign(string Op)(ref T x)
-		if (Op == "~")
-	{
-		return insertBack(x);
-	}
-
-	///
-	unittest
-	{
-		auto q = make!(Queue!int)(theAllocator);
-		int value = 5;
 
 		assert(q.empty);
-
-		q ~= value;
-
-		assert(q.front == value);
-		assert(!q.empty);
+		q.insertBack(8);
+		assert(q.front == 8);
+		q.insertBack(9);
+		assert(q.front == 8);
 
 		dispose(theAllocator, q);
 	}
@@ -135,7 +121,7 @@ class Queue(T)
 	/**
 	 * Returns: $(D_KEYWORD true) if the queue is empty.
 	 */
-	@property bool empty() const @safe pure nothrow
+	@property bool empty() inout const
 	{
 		return first.next is null;
 	}
@@ -154,11 +140,9 @@ class Queue(T)
 	}
 
 	/**
-	 * Move position to the next element.
-	 *
-	 * Returns: $(D_KEYWORD this).
+	 * Move the position to the next element.
 	 */
-	typeof(this) popFront()
+	void popFront()
 	in
 	{
 		assert(!empty);
@@ -169,21 +153,91 @@ class Queue(T)
 
 		dispose(allocator, first.next);
 		first.next = n;
-
-        return this;
 	}
 
 	///
 	unittest
 	{
 		auto q = make!(Queue!int)(theAllocator);
-		int[2] values = [8, 9];
 
-		q.insertBack(values[0]);
-		q.insertBack(values[1]);
-		assert(q.front is values[0]);
+		q.insertBack(8);
+		q.insertBack(9);
+		assert(q.front == 8);
 		q.popFront();
-		assert(q.front is values[1]);
+		assert(q.front == 9);
+
+		dispose(theAllocator, q);
+	}
+
+	/**
+	 * $(D_KEYWORD foreach) iteration.
+	 *
+	 * Params:
+	 * 	dg = $(D_KEYWORD foreach) body.
+	 */
+	int opApply(scope int delegate(ref size_t i, ref T) dg)
+	{
+		int result;
+
+		for (size_t i = 0; !empty; ++i)
+		{
+			if ((result = dg(i, front)) != 0)
+			{
+				return result;
+			}
+			popFront();
+		}
+		return result;
+	}
+
+	/// Ditto.
+	int opApply(scope int delegate(ref T) dg)
+	{
+		int result;
+
+		while (!empty)
+		{
+			if ((result = dg(front)) != 0)
+			{
+				return result;
+			}
+			popFront();
+		}
+		return result;
+	}
+
+	///
+	unittest
+	{
+		auto q = theAllocator.make!(Queue!int);
+
+		size_t j;
+		q.insertBack(5);
+		q.insertBack(4);
+		q.insertBack(9);
+		foreach (i, e; q)
+		{
+			assert(i != 2 || e == 9);
+			assert(i != 1 || e == 4);
+			assert(i != 0 || e == 5);
+			++j;
+		}
+		assert(j == 3);
+		assert(q.empty);
+
+		j = 0;
+		q.insertBack(5);
+		q.insertBack(4);
+		q.insertBack(9);
+		foreach (e; q)
+		{
+			assert(j != 2 || e == 9);
+			assert(j != 1 || e == 4);
+			assert(j != 0 || e == 5);
+			++j;
+		}
+		assert(j == 3);
+		assert(q.empty);
 
 		dispose(theAllocator, q);
 	}
@@ -206,13 +260,33 @@ class Queue(T)
 	/// The last element of the list.
 	protected Entry* rear;
 
-	private IAllocator allocator;
+	/// The allocator.
+	protected IAllocator allocator;
 }
 
 ///
 unittest
 {
-	auto q = make!(Queue!int)(theAllocator);
+	auto q = theAllocator.make!(Queue!int);
 
-	dispose(theAllocator, q);
+	q.insertBack(5);
+	assert(!q.empty);
+
+	q.insertBack(4);
+	assert(q.front == 5);
+
+	q.insertBack(9);
+	assert(q.front == 5);
+
+	q.popFront();
+	assert(q.front == 4);
+
+	foreach (i, ref e; q)
+	{
+		assert(i != 0 || e == 4);
+		assert(i != 1 || e == 9);
+	}
+	assert(q.empty);
+
+	theAllocator.dispose(q);
 }
