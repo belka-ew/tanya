@@ -31,13 +31,13 @@ interface ReadTransport : Transport
  */
 interface WriteTransport : Transport
 {
-    /**
-     * Write some data to the transport.
-     *
-     * Params:
-     *     data = Data to send.
-     */
-    void write(ubyte[] data);
+	/**
+	 * Write some data to the transport.
+	 *
+	 * Params:
+	 * 	data = Data to send.
+	 */
+	void write(ubyte[] data);
 }
 
 /**
@@ -52,7 +52,7 @@ interface DuplexTransport : ReadTransport, WriteTransport
  */
 interface SocketTransport : Transport
 {
-    @property inout(Socket) socket() inout pure nothrow @safe @nogc;
+	@property inout(Socket) socket() inout pure nothrow @safe @nogc;
 }
 
 /**

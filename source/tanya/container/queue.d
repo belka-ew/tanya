@@ -121,7 +121,7 @@ class Queue(T)
 	/**
 	 * Returns: $(D_KEYWORD true) if the queue is empty.
 	 */
-	@property bool empty() inout const
+	@property bool empty() inout const pure nothrow @safe @nogc
 	{
 		return first.next is null;
 	}
@@ -170,7 +170,8 @@ class Queue(T)
 	}
 
 	/**
-	 * $(D_KEYWORD foreach) iteration.
+	 * $(D_KEYWORD foreach) iteration. The elements will be automatically
+	 * dequeued.
 	 *
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.

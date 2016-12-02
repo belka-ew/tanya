@@ -18,28 +18,28 @@ import tanya.async.transport;
  */
 interface Protocol
 {
-    /**
-     * Params:
-     *     data = Read data.
-     */
-    void received(ubyte[] data);
+	/**
+	 * Params:
+	 * 	data = Read data.
+	 */
+	void received(ubyte[] data);
 
-    /**
-     * Called when a connection is made.
-     *
-     * Params:
-     *     transport = Protocol transport.
-     */
-    void connected(DuplexTransport transport);
+	/**
+	 * Called when a connection is made.
+	 *
+	 * Params:
+	 * 	transport = Protocol transport.
+	 */
+	void connected(DuplexTransport transport);
 
-    /**
-     * Called when a connection is lost.
-     *
-     * Params:
-     *     exception = $(D_PSYMBOL Exception) if an error caused
-     *                 the disconnect, $(D_KEYWORD null) otherwise.
-     */
-    void disconnected(SocketException exception = null);
+	/**
+	 * Called when a connection is lost.
+	 *
+	 * Params:
+	 * 	exception = $(D_PSYMBOL Exception) if an error caused
+	 * 	            the disconnect, $(D_KEYWORD null) otherwise.
+	 */
+	void disconnected(SocketException exception = null);
 }
 
 /**

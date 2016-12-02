@@ -10,100 +10,105 @@
  *
  * ---
  * import tanya.async;
+ * import tanya.memory;
  * import tanya.network.socket;
  *
  * class EchoProtocol : TransmissionControlProtocol
  * {
- *     private DuplexTransport transport;
+ * 	private DuplexTransport transport;
  *
- *     void received(ubyte[] data)
- *     {
- *         transport.write(data);
- *     }
+ * 	void received(ubyte[] data)
+ * 	{
+ * 		transport.write(data);
+ * 	}
  *
- *     void connected(DuplexTransport transport)
- *     {
- *         this.transport = transport;
- *     }
+ * 	void connected(DuplexTransport transport)
+ * 	{
+ * 		this.transport = transport;
+ * 	}
  *
- *     void disconnected(SocketException e = null)
- *     {
- *     }
+ * 	void disconnected(SocketException e = null)
+ * 	{
+ * 	}
  * }
  *
  * void main()
  * {
- *     auto address = new InternetAddress("127.0.0.1", cast(ushort) 8192);
+ * 	auto address = theAllocator.make!InternetAddress("127.0.0.1", cast(ushort) 8192);
  *
- *     version (Windows)
- *     {
- *         auto sock = new OverlappedStreamSocket(AddressFamily.INET);
- *     }
- *     else
- *     {
- *         auto sock = new StreamSocket(AddressFamily.INET);
- *         sock.blocking = false;
- *     }
+ * 	version (Windows)
+ * 	{
+ * 		auto sock = theAllocator.make!OverlappedStreamSocket(AddressFamily.INET);
+ * 	}
+ * 	else
+ * 	{
+ * 		auto sock = theAllocator.make!StreamSocket(AddressFamily.INET);
+ * 		sock.blocking = false;
+ * 	}
  *
- *     sock.bind(address);
- *     sock.listen(5);
+ * 	sock.bind(address);
+ * 	sock.listen(5);
  *
- *     auto io = new ConnectionWatcher(sock);
- *     io.setProtocol!EchoProtocol;
+ * 	auto io = theAllocator.make!ConnectionWatcher(sock);
+ * 	io.setProtocol!EchoProtocol;
  *
- *     defaultLoop.start(io);
- *     defaultLoop.run();
+ * 	defaultLoop.start(io);
+ * 	defaultLoop.run();
  *
- *     sock.shutdown();
+ * 	sock.shutdown();
+ * 	theAllocator.dispose(io);
+ * 	theAllocator.dispose(sock);
+ * 	theAllocator.dispose(address);
  * }
  * ---
  */
 module tanya.async.loop;
 
-import tanya.async.protocol;
-import tanya.async.transport;
-import tanya.async.watcher;
-import tanya.container.buffer;
-import tanya.memory;
-import tanya.memory.mmappool;
-import tanya.network.socket;
 import core.time;
 import std.algorithm.iteration;
 import std.algorithm.mutation;
 import std.typecons;
+import tanya.async.protocol;
+import tanya.async.transport;
+import tanya.async.watcher;
+import tanya.container.buffer;
+import tanya.container.queue;
+import tanya.memory;
+import tanya.memory.mmappool;
+import tanya.network.socket;
 
 version (DisableBackends)
 {
 }
 else version (linux)
 {
-    import tanya.async.event.epoll;
-    version = Epoll;
+	import tanya.async.event.epoll;
+	version = Epoll;
 }
 else version (Windows)
 {
-    import tanya.async.event.iocp;
-    version = IOCP;
+	import tanya.async.event.iocp;
+	version = IOCP;
 }
 else version (OSX)
 {
-    version = Kqueue;
+	version = Kqueue;
 }
 else version (iOS)
 {
-    version = Kqueue;
+	version = Kqueue;
 }
 else version (FreeBSD)
 {
-    version = Kqueue;
+	version = Kqueue;
 }
 else version (OpenBSD)
 {
-    version = Kqueue;
+	version = Kqueue;
 }
 else version (DragonFlyBSD)
 {
-    version = Kqueue;
+	version = Kqueue;
 }
 
 /**
@@ -111,11 +116,11 @@ else version (DragonFlyBSD)
  */
 enum Event : uint
 {
-    none   = 0x00,       /// No events.
-    read   = 0x01,       /// Non-blocking read call.
-    write  = 0x02,       /// Non-blocking write call.
-    accept = 0x04,       /// Connection made.
-    error  = 0x80000000, /// Sent when an error occurs.
+	none   = 0x00,       /// No events.
+	read   = 0x01,       /// Non-blocking read call.
+	write  = 0x02,       /// Non-blocking write call.
+	accept = 0x04,       /// Connection made.
+	error  = 0x80000000, /// Sent when an error occurs.
 }
 
 alias EventMask = BitFlags!Event;
@@ -125,161 +130,170 @@ alias EventMask = BitFlags!Event;
  */
 abstract class Loop
 {
-    /// Pending watchers.
-    protected PendingQueue!Watcher pendings;
+	/// Pending watchers.
+	protected Queue!Watcher pendings;
 
-    protected PendingQueue!Watcher swapPendings;
+	protected Queue!Watcher swapPendings;
 
-    /**
-     * Returns: Maximal event count can be got at a time
-     *          (should be supported by the backend).
-     */
-    protected @property inout(uint) maxEvents() inout const pure nothrow @safe @nogc
-    {
-        return 128U;
-    }
+	/**
+	 * Returns: Maximal event count can be got at a time
+	 *          (should be supported by the backend).
+	 */
+	protected @property inout(uint) maxEvents() inout const pure nothrow @safe @nogc
+	{
+		return 128U;
+	}
 
-    /**
-     * Initializes the loop.
-     */
-    this()
-    {
-        pendings = MmapPool.instance.make!(PendingQueue!Watcher);
-        swapPendings = MmapPool.instance.make!(PendingQueue!Watcher);
-    }
+	/**
+	 * Initializes the loop.
+	 */
+	this()
+	{
+		pendings = MmapPool.instance.make!(Queue!Watcher);
+		swapPendings = MmapPool.instance.make!(Queue!Watcher);
+	}
 
-    /**
-     * Frees loop internals.
-     */
-    ~this()
-    {
-        MmapPool.instance.dispose(pendings);
-        MmapPool.instance.dispose(swapPendings);
-    }
+	/**
+	 * Frees loop internals.
+	 */
+	~this()
+	{
+		foreach (w; pendings)
+		{
+			MmapPool.instance.dispose(w);
+		}
+		MmapPool.instance.dispose(pendings);
 
-    /**
-     * Starts the loop.
-     */
-    void run()
-    {
-        done_ = false;
-        do
-        {
-            poll();
+		foreach (w; swapPendings)
+		{
+			MmapPool.instance.dispose(w);
+		}
+		MmapPool.instance.dispose(swapPendings);
+	}
 
-            // Invoke pendings
-            swapPendings.each!((ref p) => p.invoke());
+	/**
+	 * Starts the loop.
+	 */
+	void run()
+	{
+		done_ = false;
+		do
+		{
+			poll();
 
-            swap(pendings, swapPendings);
-        }
-        while (!done_);
-    }
+			// Invoke pendings
+			swapPendings.each!((ref p) => p.invoke());
 
-    /**
-     * Break out of the loop.
-     */
-    void unloop() @safe pure nothrow
-    {
-        done_ = true;
-    }
+			swap(pendings, swapPendings);
+		}
+		while (!done_);
+	}
 
-    /**
-     * Start watching.
-     *
-     * Params:
-     *     watcher = Watcher.
-     */
-    void start(ConnectionWatcher watcher)
-    {
-        if (watcher.active)
-        {
-            return;
-        }
-        watcher.active = true;
-        reify(watcher, EventMask(Event.none), EventMask(Event.accept));
-    }
+	/**
+	 * Break out of the loop.
+	 */
+	void unloop() @safe pure nothrow
+	{
+		done_ = true;
+	}
 
-    /**
-     * Stop watching.
-     *
-     * Params:
-     *     watcher = Watcher.
-     */
-    void stop(ConnectionWatcher watcher)
-    {
-        if (!watcher.active)
-        {
-            return;
-        }
-        watcher.active = false;
+	/**
+	 * Start watching.
+	 *
+	 * Params:
+	 * 	watcher = Watcher.
+	 */
+	void start(ConnectionWatcher watcher)
+	{
+		if (watcher.active)
+		{
+			return;
+		}
+		watcher.active = true;
+		reify(watcher, EventMask(Event.none), EventMask(Event.accept));
+	}
 
-        reify(watcher, EventMask(Event.accept), EventMask(Event.none));
-    }
+	/**
+	 * Stop watching.
+	 *
+	 * Params:
+	 * 	watcher = Watcher.
+	 */
+	void stop(ConnectionWatcher watcher)
+	{
+		if (!watcher.active)
+		{
+			return;
+		}
+		watcher.active = false;
 
-    /**
-     * Should be called if the backend configuration changes.
-     *
-     * Params:
-     *     watcher   = Watcher.
-     *     oldEvents = The events were already set.
-     *     events    = The events should be set.
-     *
-     * Returns: $(D_KEYWORD true) if the operation was successful.
-     */
-    abstract protected bool reify(ConnectionWatcher watcher,
-                                  EventMask oldEvents,
-                                  EventMask events);
+		reify(watcher, EventMask(Event.accept), EventMask(Event.none));
+	}
 
-    /**
-     * Returns: The blocking time.
-     */
-    protected @property inout(Duration) blockTime()
-    inout @safe pure nothrow
-    {
-        // Don't block if we have to do.
-        return swapPendings.empty ? blockTime_ : Duration.zero;
-    }
+	/**
+	 * Should be called if the backend configuration changes.
+	 *
+	 * Params:
+	 * 	watcher   = Watcher.
+	 * 	oldEvents = The events were already set.
+	 * 	events    = The events should be set.
+	 *
+	 * Returns: $(D_KEYWORD true) if the operation was successful.
+	 */
+	abstract protected bool reify(ConnectionWatcher watcher,
+								  EventMask oldEvents,
+								  EventMask events);
 
-    /**
-     * Sets the blocking time for IO watchers.
-     *
-     * Params:
-     *     blockTime = The blocking time. Cannot be larger than
-     *                 $(D_PSYMBOL maxBlockTime).
-     */
-    protected @property void blockTime(in Duration blockTime) @safe pure nothrow
-    in
-    {
-        assert(blockTime <= 1.dur!"hours", "Too long to wait.");
-        assert(!blockTime.isNegative);
-    }
-    body
-    {
-        blockTime_ = blockTime;
-    }
+	/**
+	 * Returns: The blocking time.
+	 */
+	protected @property inout(Duration) blockTime()
+	inout @safe pure nothrow
+	{
+		// Don't block if we have to do.
+		return swapPendings.empty ? blockTime_ : Duration.zero;
+	}
 
-    /**
-     * Kills the watcher and closes the connection.
-     */
-    protected void kill(IOWatcher watcher, SocketException exception)
-    {
-        watcher.socket.shutdown();
-        theAllocator.dispose(watcher.socket);
-        MmapPool.instance.dispose(watcher.transport);
-        watcher.exception = exception;
-        swapPendings.insertBack(watcher);
-    }
+	/**
+	 * Sets the blocking time for IO watchers.
+	 *
+	 * Params:
+	 * 	blockTime = The blocking time. Cannot be larger than
+	 * 	            $(D_PSYMBOL maxBlockTime).
+	 */
+	protected @property void blockTime(in Duration blockTime) @safe pure nothrow
+	in
+	{
+		assert(blockTime <= 1.dur!"hours", "Too long to wait.");
+		assert(!blockTime.isNegative);
+	}
+	body
+	{
+		blockTime_ = blockTime;
+	}
 
-    /**
-     * Does the actual polling.
-     */
-    abstract protected void poll();
+	/**
+	 * Kills the watcher and closes the connection.
+	 */
+	protected void kill(IOWatcher watcher, SocketException exception)
+	{
+		watcher.socket.shutdown();
+		theAllocator.dispose(watcher.socket);
+		MmapPool.instance.dispose(watcher.transport);
+		watcher.exception = exception;
+		swapPendings.insertBack(watcher);
+	}
 
-    /// Whether the event loop should be stopped.
-    private bool done_;
+	/**
+	 * Does the actual polling.
+	 */
+	abstract protected void poll();
 
-    /// Maximal block time.
-    protected Duration blockTime_ = 1.dur!"minutes";
+	/// Whether the event loop should be stopped.
+	private bool done_;
+
+	/// Maximal block time.
+	protected Duration blockTime_ = 1.dur!"minutes";
 }
 
 /**
@@ -287,18 +301,17 @@ abstract class Loop
  */
 class BadLoopException : Exception
 {
-@nogc:
-    /**
-     * Params:
-     *     file = The file where the exception occurred.
-     *     line = The line number where the exception occurred.
-     *     next = The previous exception in the chain of exceptions, if any.
-     */
-    this(string file = __FILE__, size_t line = __LINE__, Throwable next = null)
-    pure @safe nothrow const
-    {
-        super("Event loop cannot be initialized.", file, line, next);
-    }
+	/**
+	 * Params:
+	 * 	file = The file where the exception occurred.
+	 * 	line = The line number where the exception occurred.
+	 * 	next = The previous exception in the chain of exceptions, if any.
+	 */
+	this(string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+	pure nothrow const @safe @nogc
+	{
+		super("Event loop cannot be initialized.", file, line, next);
+	}
 }
 
 /**
@@ -310,24 +323,24 @@ class BadLoopException : Exception
  */
 @property Loop defaultLoop()
 {
-    if (defaultLoop_ !is null)
-    {
-        return defaultLoop_;
-    }
-    version (Epoll)
-    {
-        defaultLoop_ = MmapPool.instance.make!EpollLoop;
-    }
-    else version (IOCP)
-    {
-        defaultLoop_ = MmapPool.instance.make!IOCPLoop;
-    }
-    else version (Kqueue)
-    {
-        import tanya.async.event.kqueue;
-        defaultLoop_ = MmapPool.instance.make!KqueueLoop;
-    }
-    return defaultLoop_;
+	if (defaultLoop_ !is null)
+	{
+		return defaultLoop_;
+	}
+	version (Epoll)
+	{
+		defaultLoop_ = MmapPool.instance.make!EpollLoop;
+	}
+	else version (IOCP)
+	{
+		defaultLoop_ = MmapPool.instance.make!IOCPLoop;
+	}
+	else version (Kqueue)
+	{
+		import tanya.async.event.kqueue;
+		defaultLoop_ = MmapPool.instance.make!KqueueLoop;
+	}
+	return defaultLoop_;
 }
 
 /**
@@ -339,145 +352,16 @@ class BadLoopException : Exception
  * your implementation to this property.
  *
  * Params:
- *     loop = The event loop.
+ * 	loop = The event loop.
  */
 @property void defaultLoop(Loop loop)
 in
 {
-    assert(loop !is null);
+	assert(loop !is null);
 }
 body
 {
-    defaultLoop_ = loop;
+	defaultLoop_ = loop;
 }
 
 private Loop defaultLoop_;
-
-/**
- * Queue.
- *
- * Params:
- *     T = Content type.
- */
-class PendingQueue(T)
-{
-    /**
-     * Creates a new $(D_PSYMBOL Queue).
-     */
-    this()
-    {
-    }
-
-    /**
-     * Removes all elements from the queue.
-     */
-    ~this()
-    {
-        foreach (e; this)
-        {
-            MmapPool.instance.dispose(e);
-        }
-    }
-
-    /**
-     * Returns: First element.
-     */
-    @property ref T front()
-    in
-    {
-        assert(!empty);
-    }
-    body
-    {
-        return first.next.content;
-    }
-
-    /**
-     * Inserts a new element.
-     *
-     * Params:
-     *     x = New element.
-     *
-     * Returns: $(D_KEYWORD this).
-     */
-    typeof(this) insertBack(T x)
-    {
-        Entry* temp = MmapPool.instance.make!Entry;
-        
-        temp.content = x;
-
-        if (empty)
-        {
-            first.next = rear = temp;
-        }
-        else
-        {
-            rear.next = temp;
-            rear = rear.next;
-        }
-
-        return this;
-    }
-
-    alias insert = insertBack;
-
-    /**
-     * Inserts a new element.
-     *
-     * Params:
-     *     x = New element.
-     *
-     * Returns: $(D_KEYWORD this).
-     */
-    typeof(this) opOpAssign(string Op)(ref T x)
-        if (Op == "~")
-    {
-        return insertBack(x);
-    }
-
-    /**
-     * Returns: $(D_KEYWORD true) if the queue is empty.
-     */
-    @property bool empty() const @safe pure nothrow
-    {
-        return first.next is null;
-    }
-
-    /**
-     * Move position to the next element.
-     *
-     * Returns: $(D_KEYWORD this).
-     */
-    typeof(this) popFront()
-    in
-    {
-        assert(!empty);
-    }
-    body
-    {
-        auto n = first.next.next;
-
-        MmapPool.instance.dispose(first.next);
-        first.next = n;
-
-        return this;
-    }
-
-    /**
-     * Queue entry.
-     */
-    protected struct Entry
-    {
-        /// Queue item content.
-        T content;
-
-        /// Next list item.
-        Entry* next;
-    }
-
-    /// The first element of the list.
-    protected Entry first;
-
-    /// The last element of the list.
-    protected Entry* rear;
-}
