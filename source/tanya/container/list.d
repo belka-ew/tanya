@@ -55,10 +55,9 @@ class SList(T)
 	unittest
 	{
 		auto l = make!(SList!int)(theAllocator);
-		int[2] values = [8, 5];
 
-		l.front = values[0];
-		l.front = values[1];
+		l.insertFront(8);
+		l.insertFront(5);
 		l.clear();
 		assert(l.empty);
 
@@ -84,7 +83,7 @@ class SList(T)
 	 * Params:
 	 * 	x = New element.
 	 */
-	@property void front(T x)
+	void insertFront(T x)
 	{
 		Entry* temp = make!Entry(allocator);
 		
@@ -93,47 +92,18 @@ class SList(T)
 		first.next = temp;
 	}
 
-	///
-	unittest
-	{
-		auto l = make!(SList!int)(theAllocator);
-		int[2] values = [8, 9];
-
-		l.front = values[0];
-		assert(l.front == values[0]);
-		l.front = values[1];
-		assert(l.front == values[1]);
-
-		dispose(theAllocator, l);
-	}
-
-	/**
-	 * Inserts a new element at the beginning.
-	 *
-	 * Params:
-	 * 	x = New element.
-	 *
-	 * Returns: $(D_KEYWORD this).
-	 */
-	typeof(this) opOpAssign(string Op)(ref T x)
-		if (Op == "~")
-	{
-		front = x;
-		return this;
-	}
+	/// Ditto.
+	alias insert = insertFront;
 
 	///
 	unittest
 	{
 		auto l = make!(SList!int)(theAllocator);
-		int value = 5;
 
-		assert(l.empty);
-
-		l ~= value;
-
-		assert(l.front == value);
-		assert(!l.empty);
+		l.insertFront(8);
+		assert(l.front == 8);
+		l.insertFront(9);
+		assert(l.front == 9);
 
 		dispose(theAllocator, l);
 	}
@@ -164,20 +134,19 @@ class SList(T)
 		dispose(allocator, first.next);
 		first.next = n;
 
-        return content;
+		return content;
 	}
 
 	///
 	unittest
 	{
 		auto l = make!(SList!int)(theAllocator);
-		int[2] values = [8, 9];
 
-		l.front = values[0];
-		l.front = values[1];
-		assert(l.front == values[1]);
+		l.insertFront(8);
+		l.insertFront(9);
+		assert(l.front == 9);
 		l.popFront();
-		assert(l.front == values[0]);
+		assert(l.front == 8);
 
 		dispose(theAllocator, l);
 	}
@@ -211,11 +180,10 @@ class SList(T)
 	unittest
 	{
 		auto l = make!(SList!int)(theAllocator);
-		int[3] values = [8, 5, 4];
 
-		l.front = values[0];
-		l.front = values[1];
-		l.front = values[2];
+		l.insertFront(8);
+		l.insertFront(5);
+		l.insertFront(4);
 		assert(l.removeFront(0) == 0);
 		assert(l.removeFront(2) == 2);
 		assert(l.removeFront(3) == 1);
@@ -247,25 +215,6 @@ class SList(T)
 		return result;
 	}
 
-	///
-	unittest
-	{
-		auto l = make!(SList!int)(theAllocator);
-		int[3] values = [5, 4, 9];
-
-		l.front = values[0];
-		l.front = values[1];
-		l.front = values[2];
-		foreach (i, e; l)
-		{
-			assert(i != 0 || e == values[2]);
-			assert(i != 1 || e == values[1]);
-			assert(i != 2 || e == values[0]);
-		}
-
-		dispose(theAllocator, l);
-	}
-
 	/// Ditto.
 	int opApply(scope int delegate(ref T) dg)
 	{
@@ -287,20 +236,16 @@ class SList(T)
 	unittest
 	{
 		auto l = make!(SList!int)(theAllocator);
-		int[3] values = [5, 4, 9];
-		size_t i;
 
-		l.front = values[0];
-		l.front = values[1];
-		l.front = values[2];
-		foreach (e; l)
+		l.insertFront(5);
+		l.insertFront(4);
+		l.insertFront(9);
+		foreach (i, e; l)
 		{
-			assert(i != 0 || e == values[2]);
-			assert(i != 1 || e == values[1]);
-			assert(i != 2 || e == values[0]);
-			++i;
+			assert(i != 0 || e == 9);
+			assert(i != 1 || e == 4);
+			assert(i != 2 || e == 5);
 		}
-
 		dispose(theAllocator, l);
 	}
 
@@ -325,6 +270,26 @@ class SList(T)
 
 ///
 unittest
+{
+	auto l = make!(SList!int)(theAllocator);
+	size_t i;
+
+	l.insertFront(5);
+	l.insertFront(4);
+	l.insertFront(9);
+	foreach (e; l)
+	{
+		assert(i != 0 || e == 9);
+		assert(i != 1 || e == 4);
+		assert(i != 2 || e == 5);
+		++i;
+	}
+	assert(i == 3);
+
+	dispose(theAllocator, l);
+}
+
+private unittest
 {
 	interface Stuff
 	{

@@ -43,7 +43,7 @@ class Vector(T)
 
 		private alias ElementType = typeof(data[0].vector[0]);
 
-		private this(V data, in size_t a, in size_t b)
+		protected this(V data, in size_t a, in size_t b)
 		{
 			this.data = data;
 			start = a;
@@ -709,9 +709,11 @@ class Vector(T)
 		theAllocator.dispose(v1);
 	}
 
-	private T[] vector;
+	/// Internal representation.
+	protected T[] vector;
 
-	private IAllocator allocator;
+	/// The allocator.
+	protected IAllocator allocator;
 }
 
 ///
