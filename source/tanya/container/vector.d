@@ -469,9 +469,7 @@ class Vector(T)
 
 		foreach (e; vector)
 		{
-			result = dg(e);
-
-			if (result != 0)
+			if ((result = dg(e)) != 0)
 			{
 				return result;
 			}
@@ -486,9 +484,7 @@ class Vector(T)
 
 		foreach (i, e; vector)
 		{
-			result = dg(i, e);
-
-			if (result != 0)
+			if ((result = dg(i, e)) != 0)
 			{
 				return result;
 			}
@@ -513,6 +509,62 @@ class Vector(T)
 			assert(j != 0 || e == 5);
 			assert(j != 1 || e == 15);
 			assert(j != 2 || e == 8);
+		}
+		theAllocator.dispose(v);
+	}
+
+	/**
+	 * $(D_KEYWORD foreach) iteration.
+	 *
+	 * Params:
+	 * 	dg = $(D_KEYWORD foreach) body.
+	 */
+	int opApplyReverse(scope int delegate(ref T) dg)
+	{
+		int result;
+
+		foreach_reverse (e; vector)
+		{
+			if ((result = dg(e)) != 0)
+			{
+				return result;
+			}
+		}
+		return result;
+	}
+
+	/// Ditto.
+	int opApplyReverse(scope int delegate(ref size_t i, ref T) dg)
+	{
+		int result;
+
+		foreach_reverse (i, e; vector)
+		{
+			if ((result = dg(i, e)) != 0)
+			{
+				return result;
+			}
+		}
+		return result;
+	}
+
+	///
+	unittest
+	{
+		auto v = theAllocator.make!(Vector!int)(5, 15, 8);
+		size_t i;
+
+		foreach_reverse (j, ref e; v)
+		{
+			i = j;
+		}
+		assert(i == 0);
+
+		foreach_reverse (j, e; v)
+		{
+			assert(j != 2 || e == 8);
+			assert(j != 1 || e == 15);
+			assert(j != 0 || e == 5);
 		}
 		theAllocator.dispose(v);
 	}
