@@ -11,7 +11,6 @@
 module tanya.memory.allocator;
 
 import std.experimental.allocator;
-import std.traits;
 import std.typecons;
 
 /**
@@ -178,5 +177,39 @@ unittest
     assert(p is null);
 }
 
-enum bool isFinalizable(T) = is(T == class) || is(T == interface)
-                           || hasElaborateDestructor!T || isDynamicArray!T;
+/**
+ * Mixin to get around the impossibility to define a default constructor for
+ * structs. It can be used for the structs that don't disable the default
+ * constructor and don't wan't to force passing the allocator each time to
+ * the constructor.
+ *
+ * It defines the private property `allocator`, a constructor that accepts only
+ * an allocator instance and the method `checkAllocator` that checks if an
+ * allocator is set and sets it to ` $(D_PSYMBOL theAllocator) if not.
+ *
+ * `checkAllocator` should be used at beginning of functions that
+ * allocate/free memory.
+ */
+mixin template StructAllocator()
+{
+	private IAllocator allocator;
+
+	this(IAllocator allocator)
+	in
+	{
+		assert(allocator !is null);
+	}
+	body
+	{
+		this.allocator = allocator;
+	}
+
+	pragma(inline, true)
+	private void checkAllocator() nothrow @safe @nogc
+	{
+		if (allocator is null)
+		{
+			allocator = theAllocator;
+		}
+	}
+}

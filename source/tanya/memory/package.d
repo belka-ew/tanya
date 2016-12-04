@@ -10,5 +10,6 @@
  */
 module tanya.memory;
 
-public import tanya.memory.allocator;
 public import std.experimental.allocator;
+public import tanya.memory.allocator;
+public import tanya.memory.types;
