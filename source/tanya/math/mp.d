@@ -11,17 +11,36 @@
 module tanya.math.mp;
 
 import std.algorithm.comparison;
-import std.algorithm.mutation;
 import std.algorithm.searching;
+import std.algorithm.mutation;
+import std.experimental.allocator;
+import tanya.memory.allocator;
+import tanya.memory.types;
 
 struct Integer
 {
-    private ubyte[] rep;
+    private RefCounted!(ubyte[]) rep;
 	private bool sign;
 
-	this(in uint value)
+	/**
+	 * Creates a multiple precision integer.
+	 *
+	 * Params:
+	 * 	value     = Initial value.
+	 *	allocator = Allocator.
+	 */
+	this(in uint value, IAllocator allocator = theAllocator)
+	in
 	{
-		opAssign(value);
+		assert(allocator !is null);
+	}
+	body
+	{
+		this(allocator);
+
+		immutable size = calculateSizeFromInt(value);
+		rep = allocator.makeArray!ubyte(size);
+		assignInt(size, value);
 	}
 
 	///
@@ -32,24 +51,37 @@ struct Integer
 		assert(h.rep[0] == 79);
 	}
 
-	this(in Integer value)
+	/// Ditto.
+	this(in Integer value, IAllocator allocator = theAllocator)
+	in
 	{
-		opAssign(value);
+		assert(allocator !is null);
+	}
+	body
+	{
+		this(allocator);
+
+		rep = allocator.makeArray!ubyte(value.length);
+		value.rep.get.copy(rep.get);
 	}
 
-	~this()
+	/// Ditto.
+	this(IAllocator allocator)
 	{
-		destroy(rep);
+		this.allocator = allocator;
+		rep = RefCounted!(ubyte[])(allocator);
 	}
 
-	Integer opAssign(in uint value)
+	/*
+	 * Figure out the minimum amount of space this value will take
+	 * up in bytes (leave at least one byte, though, if the value is 0).
+	 */
+	pragma(inline, true)
+	private ushort calculateSizeFromInt(in ref uint value)
+	const pure nothrow @safe @nogc
 	{
-		uint mask, shift;
 		ushort size = 4;
-
-		// Figure out the minimum amount of space this value will take
-		// up in bytes (leave at least one byte, though, if the value is 0).
-		for (mask = 0xff000000; mask > 0x000000ff; mask >>= 8)
+		for (uint mask = 0xff000000; mask > 0x000000ff; mask >>= 8)
 		{
 			if (value & mask)
 			{
@@ -57,26 +89,44 @@ struct Integer
 			}
 			--size;
 		}
-		rep.length = size;
-
-		// Work backward through the int, masking off each byte
-		// (up to the first 0 byte) and copy it into the internal
-		// representation in big-endian format.
-		mask = 0x00000000ff;
-		shift = 0;
-		for (auto i = size; i; --i)
+		return size;
+	}
+	
+	/*
+	 * Work backward through the int, masking off each byte
+	 * (up to the first 0 byte) and copy it into the internal
+	 * representation in big-endian format.
+	 */
+	pragma(inline, true)
+	private void assignInt(in ref ushort size, in ref uint value)
+	pure nothrow @safe @nogc
+	{
+		uint mask = 0x00000000ff, shift;
+		for (ushort i = size; i; --i)
 		{
 			rep[i - 1] = cast(ubyte) ((value & mask) >> shift);
 			mask <<= 8;
 			shift += 8;
 		}
+
+	}
+
+	ref Integer opAssign(in uint value)
+	{
+		ushort size = calculateSizeFromInt(value);
+
+		checkAllocator();
+		allocator.resizeArray(rep.get, size);
+		assignInt(size, value);
+
 		return this;
 	}
 
-	Integer opAssign(in Integer value)
+	ref Integer opAssign(in Integer value)
 	{
-		rep.length = value.length;
-		value.rep.copy(rep);
+		checkAllocator();
+		allocator.resizeArray(rep, value.length);
+		value.rep.get.copy(rep.get);
 
 		return this;
 	}
@@ -101,22 +151,42 @@ struct Integer
 		assert(h.rep[0] == 0);
 	}
 
+	/**
+	 * Returns: Integer size.
+	 */
 	@property size_t length() const pure nothrow @safe @nogc
 	{
-		return rep.length;
+		return rep.get.length;
 	}
 
-    bool opEquals(in Integer h)
+	/**
+	 * Params:
+	 * 	h = The second integer.
+	 *
+	 * Returns: Whether the two integers are equal.
+	 */
+    bool opEquals(in Integer h) const
     {
         return rep == h.rep;
     }
 
+	///
+	unittest
+	{
+		auto h1 = Integer(1019);
+
+		assert(h1 == Integer(1019));
+		assert(h1 != Integer(109));
+	}
+
     /**
-     * Compare h1 to h2. Return:
-     * a positive number if h1 > h2
-     * a negative number if h1 < h2
+	 * Params:
+	 * 	h = The second integer.
+     *
+     * Returns: A positive number if $(D_INLINECODE this > h), a negative
+     *          number if $(D_INLINECODE this > h), `0` otherwise.
      */
-    int opCmp(in Integer h)
+    int opCmp(in Integer h) const
     {
         if (length > h.length)
         {
@@ -165,21 +235,27 @@ struct Integer
     }
 
 	/**
-	 * Add two huges - overwrite h1 with the result.
+	 * Assignment operators with another $(D_PSYMBOL Integer).
+	 *
+	 * Params:
+	 * 	h = The second integer.
+	 *
+	 * Returns: $(D_KEYWORD this).
 	 */
-	Integer opOpAssign(string op)(Integer h)
+	ref Integer opOpAssign(string op)(in Integer h)
 		if (op == "+")
 	{
 		uint sum;
 		uint carry = 0;
 
+		checkAllocator();
+
 		// Adding h2 to h1. If h2 is > h1 to begin with, resize h1
 
 		if (h.length > length)
 		{
-			auto tmp = new ubyte[h.length];
-			tmp[h.length - length ..$] = rep[0..length];
-			destroy(rep);
+			auto tmp = allocator.makeArray!ubyte(h.length);
+			tmp[h.length - length .. $] = rep[0 .. length];
 			rep = tmp;
 		}
 
@@ -206,10 +282,9 @@ struct Integer
 		if (carry)
 		{
 			// Still overflowed; allocate more space
-			ubyte[] tmp = new ubyte[length + 1];
+			auto tmp = allocator.makeArray!ubyte(length + 1);
 			tmp[1..$] = rep[0..length];
 			tmp[0] = 0x01;
-			destroy(rep);
 			rep = tmp;
 		}
 		return this;
@@ -232,12 +307,15 @@ struct Integer
 		assert(h1.rep == [0x01, 0x00, 0x00, 0x11, 0x02]);
 	}
 
-	Integer opOpAssign(string op)(Integer h)
+	/// Ditto.
+	ref Integer opOpAssign(string op)(in Integer h)
 		if (op == "-")
 	{
 		auto i = rep.length;
 		auto j = h.rep.length;
 		uint borrow = 0;
+
+		checkAllocator();
 
 		do
 		{
@@ -271,10 +349,10 @@ struct Integer
 		immutable offset = rep.countUntil!(a => a != 0);
 		if (offset > 0)
 		{
-			ubyte[] tmp = rep;
-			rep = new ubyte[rep.length - offset];
-			tmp[offset..$].copy(rep);
-			destroy(tmp);
+			ubyte[] tmp;
+			allocator.resizeArray(tmp, rep.length - offset);
+			rep[offset .. $].copy(tmp);
+			rep = tmp;
 		}
 		return this;
 	}
@@ -293,10 +371,10 @@ struct Integer
 		h2 = 4294967294;
 		h1 -= h2;
 		assert(h1.rep == [0x80, 0x00, 0x00, 0x01]);
-
 	}
 
-	Integer opOpAssign(string op)(in size_t n)
+	/// Ditto.
+	ref Integer opOpAssign(string op)(in size_t n)
 		if (op == "<<")
 	{
 		ubyte carry;
@@ -305,14 +383,15 @@ struct Integer
 		immutable bit = n % 8;
 		immutable delta = 8 - bit;
 
+		checkAllocator();
 		if (cast(ubyte) (rep[0] >> delta))
 		{
-			rep.length = rep.length + n / 8 + 1;
+			allocator.resizeArray(rep, i + n / 8 + 1);
 			j = i + 1;
 		}
 		else
 		{
-			rep.length = rep.length + n / 8;
+			allocator.resizeArray(rep, i + n / 8);
 			j = i;
 		}
 		do
@@ -339,13 +418,16 @@ struct Integer
 		assert(h1.rep == [0x01, 0xff, 0xff, 0xff, 0xfe]);
 	}
 
-	Integer opOpAssign(string op)(in size_t n)
+	/// Ditto.
+	ref Integer opOpAssign(string op)(in size_t n)
 		if (op == ">>")
 	{
 		immutable step = n / 8;
+
+		checkAllocator();
 		if (step >= rep.length)
 		{
-			rep.length = 1;
+			allocator.resizeArray(rep, 1);
 			rep[0] = 0;
 			return this;
 		}
@@ -405,10 +487,8 @@ struct Integer
 		assert(h1.rep == [0x00]);
 	}
 
-	/**
-	 * Multiply h1 by h2, overwriting the value of h1.
-	 */
-	Integer opOpAssign(string op)(in Integer h)
+	/// Ditto.
+	ref Integer opOpAssign(string op)(in Integer h)
 		if (op == "*")
 	{
 		ubyte mask;
@@ -416,7 +496,6 @@ struct Integer
 		auto temp = Integer(this);
 
 		opAssign(0);
-
 		do
 		{
 			--i;
@@ -443,22 +522,16 @@ struct Integer
 		assert(h1.rep == [0xdb, 0x18]); // 56088
 	}
 
-	/**
-	 * divident = numerator, divisor = denominator
-	 *
-	 * Note that this process destroys divisor (and, of couse,
-	 * overwrites quotient). The divident is the remainder of the
-	 * division (if that's important to the caller). The divisor will
-	 * be modified by this routine, but it will end up back where it
-	 * "started".
-	 */
-	Integer opOpAssign(string op)(in Integer h)
+	/// Ditto.
+	ref Integer opOpAssign(string op)(in Integer h)
 		if ((op == "/") || (op == "%"))
 	{
 		auto divisor = Integer(h);
 		// "bit_position" keeps track of which bit, of the quotient,
 		// is being set or cleared on the current operation.
 		size_t bit_size;
+
+		checkAllocator();
 
 		// First, left-shift divisor until it's >= than the divident
 		while (opCmp(divisor) > 0)
@@ -468,7 +541,7 @@ struct Integer
 		}
 		static if (op == "/")
 		{
-			auto quotient = new ubyte[bit_size / 8 + 1];
+			auto quotient = allocator.makeArray!ubyte(bit_size / 8 + 1);
 		}
 
 		auto bit_position = 8 - (bit_size % 8) - 1;
@@ -494,7 +567,6 @@ struct Integer
 
 		static if (op == "/")
 		{
-			destroy(rep);
 			rep = quotient;
 		}
 		return this;
@@ -522,7 +594,8 @@ struct Integer
 		assert(h1.rep == [0x7b]); // 123
 	}
 
-	Integer opOpAssign(string op)(in Integer exp)
+	/// Ditto.
+	ref Integer opOpAssign(string op)(in Integer exp)
 		if (op == "^^")
 	{
 		auto i = exp.rep.length;
@@ -563,4 +636,6 @@ struct Integer
 		h1 ^^= h2;
 		assert(h1.rep == [0x1b, 0x5c, 0xab, 0x9c, 0x31, 0x10]);
 	}
+
+	mixin StructAllocator;
 }
