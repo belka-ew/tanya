@@ -10,6 +10,7 @@
  */
 module tanya.memory.allocator;
 
+import std.algorithm.mutation;
 import std.experimental.allocator;
 import std.typecons;
 
@@ -136,26 +137,33 @@ abstract class Allocator : IAllocator
 
 /**
  * Params:
- *     T         = Element type of the array being created.
- *     allocator = The allocator used for getting memory.
- *     array     = A reference to the array being changed.
- *     length    = New array length.
+ * 	T         = Element type of the array being created.
+ * 	allocator = The allocator used for getting memory.
+ * 	array     = A reference to the array being changed.
+ * 	length    = New array length.
+ * 	init      = The value to fill the new part of the array with if it becomes
+ * 	            larger.
  *
  * Returns: $(D_KEYWORD true) upon success, $(D_KEYWORD false) if memory could
  *          not be reallocated. In the latter
  */
 bool resizeArray(T)(IAllocator allocator,
                     ref T[] array,
-                    in size_t length)
+                    in size_t length,
+					T init = T.init)
 {
     void[] buf = array;
+	immutable oldLength = array.length;
 
     if (!allocator.reallocate(buf, length * T.sizeof))
     {
         return false;
     }
     array = cast(T[]) buf;
-
+	if (oldLength < length)
+	{
+		array[oldLength .. $].uninitializedFill(init);
+	}
     return true;
 }
 
@@ -194,7 +202,7 @@ mixin template StructAllocator()
 {
 	private IAllocator allocator;
 
-	this(IAllocator allocator)
+	this(IAllocator allocator) pure nothrow @safe @nogc
 	in
 	{
 		assert(allocator !is null);
