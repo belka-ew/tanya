@@ -53,8 +53,7 @@ struct Integer
 		assignInt(absolute);
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		{
 			auto h = Integer(79);
@@ -178,8 +177,7 @@ struct Integer
 		return this;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		auto h = Integer(1019);
 		assert(h.length == 2);
@@ -216,8 +214,7 @@ struct Integer
         return rep == h.rep;
     }
 
-	///
-	unittest
+	private unittest
 	{
 		auto h1 = Integer(1019);
 
@@ -262,8 +259,7 @@ struct Integer
         return 0;
     }
 
-    ///
-    unittest
+    private unittest
     {
 		auto h1 = Integer(1019);
 		auto h2 = Integer(1019);
@@ -380,11 +376,45 @@ struct Integer
 		checkAllocator();
 		static if (op == "+")
 		{
-			add(h.rep);
+			if (h.sign == sign)
+			{
+				add(h.rep);
+			}
+			else
+			{
+				if (this >= h)
+				{
+					subtract(h.rep);
+				}
+				else
+				{
+					auto tmp = Integer(h);
+					tmp.subtract(rep);
+					rep = tmp.rep;
+					sign = length == 0 ? false : h.sign;
+				}
+			}
 		}
 		else
 		{
-			subtract(h.rep);
+			if (h.sign == sign)
+			{
+				if (this >= h)
+				{
+					subtract(h.rep);
+				}
+				else
+				{
+					auto tmp = Integer(h);
+					tmp.subtract(rep);
+					rep = tmp.rep;
+					sign = length == 0 ? false : !sign;
+				}
+			}
+			else
+			{
+				subtract(h.rep);
+			}
 		}
 		return this;
 	}
@@ -403,6 +433,12 @@ struct Integer
 
 		h1 += h2;
 		assert(h1.rep == [0x01, 0x00, 0x00, 0x11, 0x02]);
+
+		h1 = 3;
+		h2 = 4;
+		h1 -= h2;
+		assert(h1.rep == [0x01]);
+		assert(h1.sign);
 	}
 
 	private unittest
@@ -460,8 +496,7 @@ struct Integer
 		return this;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		auto h1 = Integer(4294967295);
 		h1 <<= 1;
@@ -504,8 +539,7 @@ struct Integer
 		return this;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		auto h1 = Integer(4294967294);
 		h1 >>= 10;
@@ -563,8 +597,7 @@ struct Integer
 		return this;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		auto h1 = Integer(123);
 		auto h2 = Integer(456);
@@ -629,8 +662,7 @@ struct Integer
 		return this;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		auto h1 = Integer(18);
 		auto h2 = Integer(4);
@@ -680,8 +712,7 @@ struct Integer
 		return this;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		auto h1 = Integer(2);
 		auto h2 = Integer(4);
@@ -717,8 +748,7 @@ struct Integer
 		return h;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		auto h1 = Integer(79);
 		Integer h2;
@@ -822,8 +852,7 @@ struct Integer
 		return this;
 	}
 
-	///
-	unittest
+	private unittest
 	{
 		Integer h;
 
@@ -866,5 +895,46 @@ struct Integer
 		{
 			allocator = defaultAllocator;
 		}
+	}
+
+	/**
+	 * Casting to boolean.
+	 *
+	 * Returns: $(D_KEYWORD false) if the $(D_PSYMBOL Integer) is 0,
+	 *          $(D_KEYWORD true) otherwise.
+	 */
+	T opCast(T : bool)() const pure nothrow @safe @nogc
+	{
+		return length == 0 ? false : true;
+	}
+
+	/**
+	 * Casting to integer types.
+	 *
+	 * Returns: Integer type.
+	 */
+	T opCast(T : long)() const// pure nothrow @safe @nogc
+	{
+		ulong ret;
+		for (size_t i = length, j; i > 0 && j <= 32; --i, j += 8)
+		{
+			ret |= cast(long) (rep[i - 1]) << j;
+		}
+		return sign ? -ret : ret;
+	}
+
+	private unittest
+	{
+		auto h = Integer(79);
+		assert(cast(long) h == 79);
+
+		h = -79;
+		assert(cast(long) h == -79);
+
+		h = 4294967295;
+		assert(cast(long) h == 4294967295);
+
+		h = -4294967295;
+		assert(cast(long) h == -4294967295);
 	}
 }
