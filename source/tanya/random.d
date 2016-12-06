@@ -10,9 +10,10 @@
  */  
 module tanya.random;
 
-import tanya.memory;
+import std.experimental.allocator;
 import std.digest.sha;
 import std.typecons;
+import tanya.memory;
 
 /// Block size of entropy accumulator (SHA-512).
 enum blockSize = 64;
@@ -148,13 +149,13 @@ version (linux)
 /**
  * Pseudorandom number generator.
  * ---
- * auto entropy = theAllocator.make!Entropy;
+ * auto entropy = defaultAllocator.make!Entropy();
  *
  * ubyte[blockSize] output;
  *
  * output = entropy.random;
  *
- * theAllocator.finalize(entropy);
+ * defaultAllocator.finalize(entropy);
  * ---
  */
 class Entropy
@@ -175,7 +176,7 @@ class Entropy
 	 * 	allocator  = Allocator to allocate entropy sources available on the
 	 * 	             system.
 	 */
-	this(size_t maxSources = 20, IAllocator allocator = theAllocator)
+	this(size_t maxSources = 20, shared Allocator allocator = defaultAllocator)
 	in
 	{
 		assert(maxSources > 0 && maxSources <= ubyte.max);

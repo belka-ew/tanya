@@ -157,7 +157,7 @@ class IOWatcher : ConnectionWatcher
 		super();
 		transport_ = transport;
 		protocol_ = protocol;
-		output = MmapPool.instance.make!ReadBuffer();
+		output = MmapPool.instance.make!ReadBuffer(8192, 1024, MmapPool.instance);
 		active = true;
 	}
 

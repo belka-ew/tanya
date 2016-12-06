@@ -45,7 +45,7 @@ class IOCPStreamTransport : StreamTransport
 	body
 	{
 		socket_ = socket;
-		input = MmapPool.instance.make!WriteBuffer();
+		input = MmapPool.instance.make!WriteBuffer(8192, MmapPool.instance);
 	}
 
 	~this()
@@ -101,7 +101,8 @@ class IOCPStreamTransport : StreamTransport
 		completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 		if (!completionPort)
 		{
-			throw theAllocator.make!BadLoopException("Creating completion port failed");
+			throw make!BadLoopException(defaultAllocator,
+			                            "Creating completion port failed");
 		}
 	}
 
@@ -141,7 +142,7 @@ class IOCPStreamTransport : StreamTransport
 			catch (SocketException e)
 			{
 				MmapPool.instance.dispose(overlapped);
-				theAllocator.dispose(e);
+				defaultAllocator.dispose(e);
 				return false;
 			}
 		}
@@ -173,7 +174,7 @@ class IOCPStreamTransport : StreamTransport
 				catch (SocketException e)
 				{
 					MmapPool.instance.dispose(overlapped);
-					theAllocator.dispose(e);
+					defaultAllocator.dispose(e);
 					return false;
 				}
 			}

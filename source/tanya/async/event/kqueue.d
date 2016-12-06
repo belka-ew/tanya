@@ -250,7 +250,7 @@ class KqueueLoop : SelectorLoop
 		{
 			if (errno != EINTR)
 			{
-				throw theAllocator.make!BadLoopException();
+				throw defaultAllocatorAllocator.make!BadLoopException();
 			}
 			return;
 		}

@@ -34,31 +34,31 @@
  *
  * void main()
  * {
- * 	auto address = theAllocator.make!InternetAddress("127.0.0.1", cast(ushort) 8192);
+ * 	auto address = defaultAllocator.make!InternetAddress("127.0.0.1", cast(ushort) 8192);
  *
  * 	version (Windows)
  * 	{
- * 		auto sock = theAllocator.make!OverlappedStreamSocket(AddressFamily.INET);
+ * 		auto sock = defaultAllocator.make!OverlappedStreamSocket(AddressFamily.INET);
  * 	}
  * 	else
  * 	{
- * 		auto sock = theAllocator.make!StreamSocket(AddressFamily.INET);
+ * 		auto sock = defaultAllocator.make!StreamSocket(AddressFamily.INET);
  * 		sock.blocking = false;
  * 	}
  *
  * 	sock.bind(address);
  * 	sock.listen(5);
  *
- * 	auto io = theAllocator.make!ConnectionWatcher(sock);
+ * 	auto io = defaultAllocator.make!ConnectionWatcher(sock);
  * 	io.setProtocol!EchoProtocol;
  *
  * 	defaultLoop.start(io);
  * 	defaultLoop.run();
  *
  * 	sock.shutdown();
- * 	theAllocator.dispose(io);
- * 	theAllocator.dispose(sock);
- * 	theAllocator.dispose(address);
+ * 	defaultAllocator.dispose(io);
+ * 	defaultAllocator.dispose(sock);
+ * 	defaultAllocator.dispose(address);
  * }
  * ---
  */
@@ -278,7 +278,7 @@ abstract class Loop
 	protected void kill(IOWatcher watcher, SocketException exception)
 	{
 		watcher.socket.shutdown();
-		theAllocator.dispose(watcher.socket);
+		defaultAllocator.dispose(watcher.socket);
 		MmapPool.instance.dispose(watcher.transport);
 		watcher.exception = exception;
 		swapPendings.insertBack(watcher);

@@ -27,7 +27,7 @@ class Queue(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(IAllocator allocator = theAllocator)
+	this(shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 	}
@@ -54,7 +54,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = theAllocator.make!(Queue!int);
+		auto q = defaultAllocator.make!(Queue!int);
 
 		assert(q.empty);
 		q.insertBack(8);
@@ -62,7 +62,7 @@ class Queue(T)
 		q.clear();
 		assert(q.empty);
 
-		theAllocator.dispose(q);
+		defaultAllocator.dispose(q);
 	}
 
 	/**
@@ -107,7 +107,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = make!(Queue!int)(theAllocator);
+		auto q = make!(Queue!int)(defaultAllocator);
 
 		assert(q.empty);
 		q.insertBack(8);
@@ -115,7 +115,7 @@ class Queue(T)
 		q.insertBack(9);
 		assert(q.front == 8);
 
-		dispose(theAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -129,14 +129,14 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = make!(Queue!int)(theAllocator);
+		auto q = make!(Queue!int)(defaultAllocator);
 		int value = 7;
 
 		assert(q.empty);
 		q.insertBack(value);
 		assert(!q.empty);
 
-		dispose(theAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -158,7 +158,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = make!(Queue!int)(theAllocator);
+		auto q = make!(Queue!int)(defaultAllocator);
 
 		q.insertBack(8);
 		q.insertBack(9);
@@ -166,7 +166,7 @@ class Queue(T)
 		q.popFront();
 		assert(q.front == 9);
 
-		dispose(theAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -210,7 +210,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = theAllocator.make!(Queue!int);
+		auto q = defaultAllocator.make!(Queue!int);
 
 		size_t j;
 		q.insertBack(5);
@@ -240,7 +240,7 @@ class Queue(T)
 		assert(j == 3);
 		assert(q.empty);
 
-		dispose(theAllocator, q);
+		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -262,13 +262,13 @@ class Queue(T)
 	protected Entry* rear;
 
 	/// The allocator.
-	protected IAllocator allocator;
+	protected shared Allocator allocator;
 }
 
 ///
 unittest
 {
-	auto q = theAllocator.make!(Queue!int);
+	auto q = defaultAllocator.make!(Queue!int);
 
 	q.insertBack(5);
 	assert(!q.empty);
@@ -289,5 +289,5 @@ unittest
 	}
 	assert(q.empty);
 
-	theAllocator.dispose(q);
+	defaultAllocator.dispose(q);
 }

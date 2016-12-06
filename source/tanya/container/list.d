@@ -27,7 +27,7 @@ class SList(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(IAllocator allocator = theAllocator)
+	this(shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 	}
@@ -54,14 +54,14 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(theAllocator);
+		auto l = make!(SList!int)(defaultAllocator);
 
 		l.insertFront(8);
 		l.insertFront(5);
 		l.clear();
 		assert(l.empty);
 
-		dispose(theAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -98,14 +98,14 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(theAllocator);
+		auto l = make!(SList!int)(defaultAllocator);
 
 		l.insertFront(8);
 		assert(l.front == 8);
 		l.insertFront(9);
 		assert(l.front == 9);
 
-		dispose(theAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -140,7 +140,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(theAllocator);
+		auto l = make!(SList!int)(defaultAllocator);
 
 		l.insertFront(8);
 		l.insertFront(9);
@@ -148,7 +148,7 @@ class SList(T)
 		l.popFront();
 		assert(l.front == 8);
 
-		dispose(theAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -179,7 +179,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(theAllocator);
+		auto l = make!(SList!int)(defaultAllocator);
 
 		l.insertFront(8);
 		l.insertFront(5);
@@ -189,7 +189,7 @@ class SList(T)
 		assert(l.removeFront(3) == 1);
 		assert(l.removeFront(3) == 0);
 
-		dispose(theAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -235,7 +235,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(theAllocator);
+		auto l = make!(SList!int)(defaultAllocator);
 
 		l.insertFront(5);
 		l.insertFront(4);
@@ -246,7 +246,7 @@ class SList(T)
 			assert(i != 1 || e == 4);
 			assert(i != 2 || e == 5);
 		}
-		dispose(theAllocator, l);
+		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -265,13 +265,13 @@ class SList(T)
 	protected Entry first;
 
 	/// Allocator.
-	protected IAllocator allocator;
+	protected shared Allocator allocator;
 }
 
 ///
 unittest
 {
-	auto l = make!(SList!int)(theAllocator);
+	auto l = make!(SList!int)(defaultAllocator);
 	size_t i;
 
 	l.insertFront(5);
@@ -286,7 +286,7 @@ unittest
 	}
 	assert(i == 3);
 
-	dispose(theAllocator, l);
+	dispose(defaultAllocator, l);
 }
 
 private unittest
@@ -295,7 +295,7 @@ private unittest
 	{
 	}
 
-	auto l = make!(SList!Stuff)(theAllocator);
+	auto l = make!(SList!Stuff)(defaultAllocator);
 
-	dispose(theAllocator, l);
+	dispose(defaultAllocator, l);
 }

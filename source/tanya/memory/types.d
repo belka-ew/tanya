@@ -37,12 +37,14 @@ struct RefCounted(T)
 		private T* payload;
 	}
 
-	private uint *counter;
+	private uint counter;
 
 	invariant
 	{
-		assert(counter is null || allocator !is null);
+		assert(counter == 0 || allocator !is null);
 	}
+
+	private shared Allocator allocator;
 
 	/**
 	 * Takes ownership over $(D_PARAM value), setting the counter to 1.
@@ -54,20 +56,29 @@ struct RefCounted(T)
 
 	 * Precondition: $(D_INLINECODE allocator !is null)
 	 */
-	this(T value, IAllocator allocator = theAllocator)
+	this(T value, shared Allocator allocator = defaultAllocator)
 	in
 	{
 		assert(allocator !is null);
 	}
 	body
 	{
-		this.allocator = allocator;
-		initialize();
-		move(value, get);
+		this(allocator);
+		static if (!isReference!T)
+		{
+			payload = cast(T*) allocator.allocate(stateSize!T).ptr;
+			move(value, *payload);
+			counter = 1;
+		}
+		else if (value !is null)
+		{
+			move(value, payload);
+			counter = 1;
+		}
 	}
 
 	/// Ditto.
-	this(IAllocator allocator)
+	this(shared Allocator allocator) pure nothrow @safe @nogc
 	in
 	{
 		assert(allocator !is null);
@@ -75,28 +86,6 @@ struct RefCounted(T)
 	body
 	{
 		this.allocator = allocator;
-	}
-
-	/**
-	 * Allocates the internal storage.
-	 */
-	private void initialize()
-	{
-		static if (isReference!T)
-		{
-			counter = allocator.make!uint(1);
-		}
-		else
-		{
-			// Allocate for the counter and the payload together.
-			auto p = allocator.allocate(uint.sizeof + T.sizeof);
-			if (p is null)
-			{
-				onOutOfMemoryError();
-			}
-			counter = emplace(cast(uint*) p.ptr, 1);
-			payload = cast(T*) p[uint.sizeof .. $].ptr;
-		}
 	}
 
 	/**
@@ -106,7 +95,7 @@ struct RefCounted(T)
 	{
 		if (isInitialized)
 		{
-			++(*counter);
+			++counter;
 		}
 	}
 
@@ -117,15 +106,14 @@ struct RefCounted(T)
 	 */
 	~this()
 	{
-		if (!isInitialized || (--(*counter)))
+		if (isInitialized && !--counter)
 		{
-			return;
+			static if (isReference!T)
+			{
+				allocator.dispose(payload);
+				payload = null;
+			}
 		}
-		allocator.dispose(payload);
-		payload = null;
-
-		allocator.dispose(counter);
-		counter = null;
 	}
 
 	/**
@@ -135,7 +123,7 @@ struct RefCounted(T)
 	 * If it is the last reference of the previously owned object,
 	 * it will be destroyed.
 	 *
-	 * If the allocator wasn't set before, $(D_PSYMBOL theAllocator) will
+	 * If the allocator wasn't set before, $(D_PSYMBOL defaultAllocator) will
 	 * be used. If you need a different allocator, create a new
 	 * $(D_PSYMBOL RefCounted).
 	 *
@@ -144,21 +132,18 @@ struct RefCounted(T)
 	 */
 	ref T opAssign(T rhs)
 	{
-		checkAllocator();
-		if (isInitialized)
+		if (allocator is null)
 		{
-			static if (isReference!T)
-			{
-				if (!--(*counter))
-				{
-					allocator.dispose(payload);
-					*counter = 1;
-				}
-			}
+			allocator = defaultAllocator;
 		}
-		else
+		static if (isReference!T)
 		{
-			initialize();
+			counter == 1 ? allocator.dispose(payload) : --counter;
+		}
+		else if (!isInitialized)
+		{
+			payload = cast(T*) allocator.allocate(stateSize!T).ptr;
+			counter = 1;
 		}
 		move(rhs, get);
 		return get;
@@ -212,7 +197,7 @@ struct RefCounted(T)
 	 */
 	@property uint count() const pure nothrow @safe @nogc
 	{
-		return counter is null ? 0 : *counter;
+		return counter;
 	}
 
 	/**
@@ -220,10 +205,8 @@ struct RefCounted(T)
 	 */
 	@property bool isInitialized() const pure nothrow @safe @nogc
 	{
-		return counter !is null;
+		return counter != 0;
 	}
-
-	mixin StructAllocator;
 
 	alias get this;
 }
@@ -247,9 +230,11 @@ version (unittest)
 
 	struct B
 	{
+		int prop;
 		@disable this();
 		this(int param1)
 		{
+			prop = param1;
 		}
 	}
 }
@@ -269,7 +254,7 @@ unittest
 		}
 	}
 
-	auto arr = theAllocator.makeArray!ubyte(2);
+	auto arr = defaultAllocator.makeArray!ubyte(2);
 	{
 		auto a = S(arr);
 		assert(a.member.count == 1);
@@ -288,7 +273,7 @@ unittest
 private unittest
 {
 	uint destroyed;
-	auto a = theAllocator.make!A(destroyed);
+	auto a = defaultAllocator.make!A(destroyed);
 
 	assert(destroyed == 0);
 	{
@@ -323,6 +308,7 @@ private unittest
 	static assert(!is(typeof(cast(int) (RefCounted!A()))));
 
 	static assert(is(RefCounted!B));
+	static assert(is(RefCounted!A));
 }
 
 /**
@@ -341,40 +327,26 @@ private unittest
  * 
  * Returns: Newly created $(D_PSYMBOL RefCounted!T).
  */
-RefCounted!T refCounted(T, A...)(IAllocator allocator, auto ref A args)
+RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
 	if (!is(T == interface) && !isAbstractClass!T)
 {
-	auto rc = typeof(return)(allocator);
-
-	immutable toAllocate = max(stateSize!T, 1) + uint.sizeof;
-	auto p = allocator.allocate(toAllocate);
-	if (p is null)
+	static if (isReference!T)
 	{
-		onOutOfMemoryError();
-	}
-	scope (failure)
-	{
-		allocator.deallocate(p);
-	}
-
-	rc.counter = emplace(cast(uint*) p.ptr, 1);
-
-	static if (is(T == class))
-	{
-		rc.payload = emplace!T(p[uint.sizeof .. $], args);
+		return typeof(return)(allocator.make!T(args), allocator);
 	}
 	else
 	{
-		rc.payload = emplace(cast(T*) p[uint.sizeof .. $].ptr, args);
+		auto rc = typeof(return)(allocator);
+		rc.counter = 1;
+		rc.payload = allocator.make!T(args);
+		return rc;
 	}
-
-	return rc;
 }
 
 ///
 unittest
 {
-	auto rc = theAllocator.refCounted!int(5);
+	auto rc = defaultAllocator.refCounted!int(5);
 	assert(rc.count == 1);
 
 	void func(RefCounted!int param)
@@ -395,7 +367,21 @@ unittest
 
 private unittest
 {
-	static assert(!is(theAllocator.refCounted!A));
-	static assert(!is(typeof(theAllocator.refCounted!B())));
-	static assert(is(typeof(theAllocator.refCounted!B(5))));
+	struct E
+	{
+	}
+	static assert(is(typeof(defaultAllocator.refCounted!bool(false))));
+	static assert(is(typeof(defaultAllocator.refCounted!B(5))));
+	static assert(!is(typeof(defaultAllocator.refCounted!B())));
+
+	static assert(is(typeof(defaultAllocator.refCounted!E())));
+	static assert(!is(typeof(defaultAllocator.refCounted!E(5))));
+	{
+		auto rc = defaultAllocator.refCounted!B(3);
+		assert(rc.get.prop == 3);
+	}
+	{
+		auto rc = defaultAllocator.refCounted!E();
+		assert(rc.isInitialized);
+	}
 }

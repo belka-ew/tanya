@@ -200,7 +200,7 @@ class Vector(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(IAllocator allocator = theAllocator)
+	this(shared Allocator allocator = defaultAllocator)
 	{
 		this.allocator = allocator;
 	}
@@ -211,18 +211,18 @@ class Vector(T)
 	 * Params:
 	 *  U      = Variadic template for the constructor parameters.
 	 * 	params = Values to initialize the array with. The last parameter can
-	 * 	         be an allocator, if not, $(D_PSYMBOL theAllocator) is used.
+	 * 	         be an allocator, if not, $(D_PSYMBOL defaultAllocator) is used.
 	 */
 	this(U...)(U params)
 	{
-		static if (isImplicitlyConvertible!(typeof(params[$ - 1]), IAllocator))
+		static if (isImplicitlyConvertible!(typeof(params[$ - 1]), Allocator))
 		{
 			allocator = params[$ - 1];
 			auto values = params[0 .. $ - 1];
 		}
 		else
 		{
-			allocator = theAllocator;
+			allocator = defaultAllocator;
 			alias values = params;
 		}
 
@@ -252,7 +252,7 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int)(18, 20, 15);
+		auto v = defaultAllocator.make!(Vector!int)(18, 20, 15);
 
 		v.clear();
 		assert(v.length == 0);
@@ -286,7 +286,7 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int);
+		auto v = defaultAllocator.make!(Vector!int);
 
 		v.length = 5;
 		assert(v.length == 5);
@@ -337,14 +337,14 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int)(5, 18, 17);
+		auto v = defaultAllocator.make!(Vector!int)(5, 18, 17);
 
 		assert(v.removeBack(0) == 0);
 		assert(v.removeBack(2) == 2);
 		assert(v.removeBack(3) == 1);
 		assert(v.removeBack(3) == 0);
 
-		theAllocator.dispose(v);
+		defaultAllocator.dispose(v);
 	}
 
 	/**
@@ -377,14 +377,14 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v1 = theAllocator.make!(Vector!int)(12, 1, 7);
+		auto v1 = defaultAllocator.make!(Vector!int)(12, 1, 7);
 
 		v1[] = 3;
 		assert(v1[0] == 3);
 		assert(v1[1] == 3);
 		assert(v1[2] == 3);
 
-		theAllocator.dispose(v1);
+		defaultAllocator.dispose(v1);
 	}
 
 
@@ -406,14 +406,14 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int)(6, 123, 34, 5);
+		auto v = defaultAllocator.make!(Vector!int)(6, 123, 34, 5);
 
 		assert(v[0] == 6);
 		assert(v[1] == 123);
 		assert(v[2] == 34);
 		assert(v[3] == 5);
 
-		theAllocator.dispose(v);
+		defaultAllocator.dispose(v);
 	}
 
 	/**
@@ -435,8 +435,8 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v1 = theAllocator.make!(Vector!int);
-		auto v2 = theAllocator.make!(Vector!int);
+		auto v1 = defaultAllocator.make!(Vector!int);
+		auto v2 = defaultAllocator.make!(Vector!int);
 
 		assert(v1 == v2);
 
@@ -453,8 +453,8 @@ class Vector(T)
 		v2[1] = 3;
 		assert(v1 == v2);
 
-		theAllocator.dispose(v1);
-		theAllocator.dispose(v2);
+		defaultAllocator.dispose(v1);
+		defaultAllocator.dispose(v2);
 	}
 
 	/**
@@ -495,7 +495,7 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int)(5, 15, 8);
+		auto v = defaultAllocator.make!(Vector!int)(5, 15, 8);
 
 		size_t i;
 		foreach (j, ref e; v)
@@ -510,7 +510,7 @@ class Vector(T)
 			assert(j != 1 || e == 15);
 			assert(j != 2 || e == 8);
 		}
-		theAllocator.dispose(v);
+		defaultAllocator.dispose(v);
 	}
 
 	/**
@@ -551,7 +551,7 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int)(5, 15, 8);
+		auto v = defaultAllocator.make!(Vector!int)(5, 15, 8);
 		size_t i;
 
 		foreach_reverse (j, ref e; v)
@@ -566,7 +566,7 @@ class Vector(T)
 			assert(j != 1 || e == 15);
 			assert(j != 0 || e == 5);
 		}
-		theAllocator.dispose(v);
+		defaultAllocator.dispose(v);
 	}
 
 	/**
@@ -587,7 +587,7 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int)(5);
+		auto v = defaultAllocator.make!(Vector!int)(5);
 
 		assert(v.front == 5);
 
@@ -595,7 +595,7 @@ class Vector(T)
 		v[1] = 15;
 		assert(v.front == 5);
 
-		theAllocator.dispose(v);
+		defaultAllocator.dispose(v);
 	}
 
 	/**
@@ -616,7 +616,7 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v = theAllocator.make!(Vector!int)(5);
+		auto v = defaultAllocator.make!(Vector!int)(5);
 
 		assert(v.back == 5);
 
@@ -624,7 +624,7 @@ class Vector(T)
 		v[1] = 15;
 		assert(v.back == 15);
 
-		theAllocator.dispose(v);
+		defaultAllocator.dispose(v);
 	}
 
 	/**
@@ -745,8 +745,8 @@ class Vector(T)
 	///
 	unittest
 	{
-		auto v1 = theAllocator.make!(Vector!int)(3, 3, 3);
-		auto v2 = theAllocator.make!(Vector!int)(1, 2);
+		auto v1 = defaultAllocator.make!(Vector!int)(3, 3, 3);
+		auto v2 = defaultAllocator.make!(Vector!int)(1, 2);
 
 		v1[0..2] = 286;
 		assert(v1[0] == 286);
@@ -757,25 +757,25 @@ class Vector(T)
 		assert(v2[0] == 286);
 		assert(v2[1] == 3);
 
-		theAllocator.dispose(v2);
-		theAllocator.dispose(v1);
+		defaultAllocator.dispose(v2);
+		defaultAllocator.dispose(v1);
 	}
 
 	/// Internal representation.
 	protected T[] vector;
 
 	/// The allocator.
-	protected IAllocator allocator;
+	protected shared Allocator allocator;
 }
 
 ///
 unittest
 {
-	auto v = theAllocator.make!(Vector!int)(5, 15, 8);
+	auto v = defaultAllocator.make!(Vector!int)(5, 15, 8);
 
 	assert(v.front == 5);
 	assert(v[1] == 15);
 	assert(v.back == 8);
 
-	theAllocator.dispose(v);
+	defaultAllocator.dispose(v);
 }

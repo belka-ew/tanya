@@ -20,260 +20,260 @@ import std.typecons;
  * Supported padding mode.
  *
  * See_Also:
- *     $(D_PSYMBOL pad)
+ * 	$(D_PSYMBOL pad)
  */
 enum PaddingMode
 {
-    zero,
-    pkcs7,
-    ansiX923,
+	zero,
+	pkcs7,
+	ansiX923,
 }
 
 /**
  * Params:
- *     input     = Sequence that should be padded.
- *     mode      = Padding mode.
- *     blockSize = Block size.
- *  allocator = Allocator was used to allocate $(D_PARAM input).
+ * 	input     = Sequence that should be padded.
+ * 	mode      = Padding mode.
+ * 	blockSize = Block size.
+ * 	allocator = Allocator was used to allocate $(D_PARAM input).
  *
  * Returns: The function modifies the initial array and returns it.
  *
  * See_Also:
- *     $(D_PSYMBOL PaddingMode)
+ * 	$(D_PSYMBOL PaddingMode)
  */
 ubyte[] pad(ref ubyte[] input,
             in PaddingMode mode,
             in ushort blockSize,
-            IAllocator allocator = theAllocator)
+            shared Allocator allocator = defaultAllocator)
 in
 {
-    assert(blockSize > 0 && blockSize <= 256);
-    assert(blockSize % 64 == 0);
-    assert(input.length > 0);
+	assert(blockSize > 0 && blockSize <= 256);
+	assert(blockSize % 64 == 0);
+	assert(input.length > 0);
 }
 body
 {
-    immutable rest = cast(ubyte) input.length % blockSize;
-    immutable size_t lastBlock = input.length - (rest > 0 ? rest : blockSize);
-    immutable needed = cast(ubyte) (rest > 0 ? blockSize - rest : 0);
+	immutable rest = cast(ubyte) input.length % blockSize;
+	immutable size_t lastBlock = input.length - (rest > 0 ? rest : blockSize);
+	immutable needed = cast(ubyte) (rest > 0 ? blockSize - rest : 0);
 
-    final switch (mode) with (PaddingMode)
-    {
-        case zero:
-            allocator.expandArray(input, needed);
-            break;
-        case pkcs7:
-            if (needed)
-            {
-                allocator.expandArray(input, needed);
-                input[input.length - needed ..$].each!((ref e) => e = needed);
-            }
-            else
-            {
-                allocator.expandArray(input, blockSize);
-            }
-            break;
-        case ansiX923:
-            allocator.expandArray(input, needed ? needed : blockSize);
-            input[$ - 1] = needed;
-            break;
-    }
+	final switch (mode) with (PaddingMode)
+	{
+		case zero:
+			allocator.expandArray(input, needed);
+			break;
+		case pkcs7:
+			if (needed)
+			{
+				allocator.expandArray(input, needed);
+				input[input.length - needed ..$].each!((ref e) => e = needed);
+			}
+			else
+			{
+				allocator.expandArray(input, blockSize);
+			}
+			break;
+		case ansiX923:
+			allocator.expandArray(input, needed ? needed : blockSize);
+			input[$ - 1] = needed;
+			break;
+	}
 
-    return input;
+	return input;
 }
 
 ///
 unittest
 {
-    { // Zeros
-        auto input = theAllocator.makeArray!ubyte(50);
+	{ // Zeros
+		auto input = defaultAllocator.makeArray!ubyte(50);
 
-        pad(input, PaddingMode.zero, 64);
-        assert(input.length == 64);
+		pad(input, PaddingMode.zero, 64);
+		assert(input.length == 64);
 
-        pad(input, PaddingMode.zero, 64);
-        assert(input.length == 64);
-        assert(input[63] == 0);
+		pad(input, PaddingMode.zero, 64);
+		assert(input.length == 64);
+		assert(input[63] == 0);
 
-        theAllocator.dispose(input);
-    }
-    { // PKCS#7
-        auto input = theAllocator.makeArray!ubyte(50);
-        for (ubyte i; i < 40; ++i)
-        {
-            input[i] = i;
-        }
+		defaultAllocator.dispose(input);
+	}
+	{ // PKCS#7
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		for (ubyte i; i < 40; ++i)
+		{
+			input[i] = i;
+		}
 
-        pad(input, PaddingMode.pkcs7, 64);
-        assert(input.length == 64);
-        for (ubyte i; i < 64; ++i)
-        {
-            if (i >= 40 && i < 50)
-            {
-                assert(input[i] == 0);
-            }
-            else if (i >= 50)
-            {
-                assert(input[i] == 14);
-            }
-            else
-            {
-                assert(input[i] == i);
-            }
-        }
+		pad(input, PaddingMode.pkcs7, 64);
+		assert(input.length == 64);
+		for (ubyte i; i < 64; ++i)
+		{
+			if (i >= 40 && i < 50)
+			{
+				assert(input[i] == 0);
+			}
+			else if (i >= 50)
+			{
+				assert(input[i] == 14);
+			}
+			else
+			{
+				assert(input[i] == i);
+			}
+		}
 
-        pad(input, PaddingMode.pkcs7, 64);
-        assert(input.length == 128);
-        for (ubyte i; i < 128; ++i)
-        {
-            if (i >= 64 || (i >= 40 && i < 50))
-            {
-                assert(input[i] == 0);
-            }
-            else if (i >= 50 && i < 64)
-            {
-                assert(input[i] == 14);
-            }
-            else
-            {
-                assert(input[i] == i);
-            }
-        }
+		pad(input, PaddingMode.pkcs7, 64);
+		assert(input.length == 128);
+		for (ubyte i; i < 128; ++i)
+		{
+			if (i >= 64 || (i >= 40 && i < 50))
+			{
+				assert(input[i] == 0);
+			}
+			else if (i >= 50 && i < 64)
+			{
+				assert(input[i] == 14);
+			}
+			else
+			{
+				assert(input[i] == i);
+			}
+		}
 
-        theAllocator.dispose(input);
-    }
-    { // ANSI X.923
-        auto input = theAllocator.makeArray!ubyte(50);
-        for (ubyte i; i < 40; ++i)
-        {
-            input[i] = i;
-        }
+		defaultAllocator.dispose(input);
+	}
+	{ // ANSI X.923
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		for (ubyte i; i < 40; ++i)
+		{
+			input[i] = i;
+		}
 
-        pad(input, PaddingMode.ansiX923, 64);
-        assert(input.length == 64);
-        for (ubyte i; i < 64; ++i)
-        {
-            if (i < 40)
-            {
-                assert(input[i] == i);
-            }
-            else if (i == 63)
-            {
-                assert(input[i] == 14);
-            }
-            else
-            {
-                assert(input[i] == 0);
-            }
-        }
+		pad(input, PaddingMode.ansiX923, 64);
+		assert(input.length == 64);
+		for (ubyte i; i < 64; ++i)
+		{
+			if (i < 40)
+			{
+				assert(input[i] == i);
+			}
+			else if (i == 63)
+			{
+				assert(input[i] == 14);
+			}
+			else
+			{
+				assert(input[i] == 0);
+			}
+		}
 
-        pad(input, PaddingMode.pkcs7, 64);
-        assert(input.length == 128);
-        for (ubyte i = 0; i < 128; ++i)
-        {
-            if (i < 40)
-            {
-                assert(input[i] == i);
-            }
-            else if (i == 63)
-            {
-                assert(input[i] == 14);
-            }
-            else
-            {
-                assert(input[i] == 0);
-            }
-        }
+		pad(input, PaddingMode.pkcs7, 64);
+		assert(input.length == 128);
+		for (ubyte i = 0; i < 128; ++i)
+		{
+			if (i < 40)
+			{
+				assert(input[i] == i);
+			}
+			else if (i == 63)
+			{
+				assert(input[i] == 14);
+			}
+			else
+			{
+				assert(input[i] == 0);
+			}
+		}
 
-        theAllocator.dispose(input);
-    }
+		defaultAllocator.dispose(input);
+	}
 }
 
 /**
  * Params:
- *     input     = Sequence that should be padded.
- *     mode      = Padding mode.
- *     blockSize = Block size.
- *  allocator = Allocator was used to allocate $(D_PARAM input).
+ * 	input     = Sequence that should be padded.
+ * 	mode      = Padding mode.
+ * 	blockSize = Block size.
+ * 	allocator = Allocator was used to allocate $(D_PARAM input).
  *
  * Returns: The function modifies the initial array and returns it.
  *
  * See_Also:
- *     $(D_PSYMBOL pad)
+ * 	$(D_PSYMBOL pad)
  */
 ref ubyte[] unpad(ref ubyte[] input,
                   in PaddingMode mode,
                   in ushort blockSize,
-                  IAllocator allocator = theAllocator)
+                  shared Allocator allocator = defaultAllocator)
 in
 {
-    assert(input.length != 0);
-    assert(input.length % 64 == 0);
+	assert(input.length != 0);
+	assert(input.length % 64 == 0);
 }
 body
 {
-    final switch (mode) with (PaddingMode)
-    {
-        case zero:
-            break;
-        case pkcs7:
-        case ansiX923:
-            immutable last = input[$ - 1];
+	final switch (mode) with (PaddingMode)
+	{
+		case zero:
+			break;
+		case pkcs7:
+		case ansiX923:
+			immutable last = input[$ - 1];
 
-            allocator.shrinkArray(input, last ? last : blockSize);
-            break;
-    }
+			allocator.shrinkArray(input, last ? last : blockSize);
+			break;
+	}
 
-    return input;
+	return input;
 }
 
 ///
 unittest
 {
-    { // Zeros
-        auto input = theAllocator.makeArray!ubyte(50);
-        auto inputDup = theAllocator.makeArray!ubyte(50);
+	{ // Zeros
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		auto inputDup = defaultAllocator.makeArray!ubyte(50);
 
-        pad(input, PaddingMode.zero, 64);
-        pad(inputDup, PaddingMode.zero, 64);
+		pad(input, PaddingMode.zero, 64);
+		pad(inputDup, PaddingMode.zero, 64);
 
-        unpad(input, PaddingMode.zero, 64);
-        assert(input == inputDup);
+		unpad(input, PaddingMode.zero, 64);
+		assert(input == inputDup);
 
-        theAllocator.dispose(input);
-        theAllocator.dispose(inputDup);
+		defaultAllocator.dispose(input);
+		defaultAllocator.dispose(inputDup);
 
-    }
-    { // PKCS#7
-        auto input = theAllocator.makeArray!ubyte(50);
-        auto inputDup = theAllocator.makeArray!ubyte(50);
-        for (ubyte i; i < 40; ++i)
-        {
-            input[i] = i;
-            inputDup[i] = i;
-        }
+	}
+	{ // PKCS#7
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		auto inputDup = defaultAllocator.makeArray!ubyte(50);
+		for (ubyte i; i < 40; ++i)
+		{
+			input[i] = i;
+			inputDup[i] = i;
+		}
 
-        pad(input, PaddingMode.pkcs7, 64);
-        unpad(input, PaddingMode.pkcs7, 64);
-        assert(input == inputDup);
+		pad(input, PaddingMode.pkcs7, 64);
+		unpad(input, PaddingMode.pkcs7, 64);
+		assert(input == inputDup);
 
-        theAllocator.dispose(input);
-        theAllocator.dispose(inputDup);
-    }
-    { // ANSI X.923
-        auto input = theAllocator.makeArray!ubyte(50);
-        auto inputDup = theAllocator.makeArray!ubyte(50);
-        for (ubyte i; i < 40; ++i)
-        {
-            input[i] = i;
-            inputDup[i] = i;
-        }
+		defaultAllocator.dispose(input);
+		defaultAllocator.dispose(inputDup);
+	}
+	{ // ANSI X.923
+		auto input = defaultAllocator.makeArray!ubyte(50);
+		auto inputDup = defaultAllocator.makeArray!ubyte(50);
+		for (ubyte i; i < 40; ++i)
+		{
+			input[i] = i;
+			inputDup[i] = i;
+		}
 
-        pad(input, PaddingMode.pkcs7, 64);
-        unpad(input, PaddingMode.pkcs7, 64);
-        assert(input == inputDup);
+		pad(input, PaddingMode.pkcs7, 64);
+		unpad(input, PaddingMode.pkcs7, 64);
+		assert(input == inputDup);
 
-        theAllocator.dispose(input);
-        theAllocator.dispose(inputDup);
-    }
+		defaultAllocator.dispose(input);
+		defaultAllocator.dispose(inputDup);
+	}
 }

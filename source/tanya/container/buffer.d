@@ -108,30 +108,36 @@ class ReadBuffer : Buffer
     /// Size by which the buffer will grow.
     protected immutable size_t blockSize;
 
+	/// Allocator.
+	protected shared Allocator allocator;
+
     invariant
     {
         assert(length_ <= buffer_.length);
         assert(blockSize > 0);
         assert(minAvailable > 0);
+		assert(allocator !is null);
     }
 
     /**
      * Creates a new read buffer.
      *
      * Params:
-     *     size         = Initial buffer size and the size by which the buffer
-     *                    will grow.
-     *     minAvailable = minimal size should be always  available to fill.
-     *                    So it will reallocate if $(D_INLINECODE 
-     *                    $(D_PSYMBOL free) < $(D_PARAM minAvailable)
-     *                    ).
+     * 	size         = Initial buffer size and the size by which the buffer
+     * 	               will grow.
+     * 	minAvailable = minimal size should be always  available to fill.
+     * 	               So it will reallocate if $(D_INLINECODE 
+     * 	               $(D_PSYMBOL free) < $(D_PARAM minAvailable)).
+	 * 	allocator    = Allocator.
      */
     this(size_t size = 8192,
-         size_t minAvailable = 1024)
+         size_t minAvailable = 1024,
+	     shared Allocator allocator = defaultAllocator)
     {
         this.minAvailable = minAvailable;
         this.blockSize = size;
-        theAllocator.resizeArray!ubyte(buffer_, size);
+		this.allocator = allocator;
+        allocator.resizeArray!ubyte(buffer_, size);
     }
 
     /**
@@ -139,17 +145,17 @@ class ReadBuffer : Buffer
      */
     ~this()
     {
-        theAllocator.dispose(buffer_);
+        allocator.dispose(buffer_);
     }
 
     ///
     unittest
     {
-        auto b = theAllocator.make!ReadBuffer;
+        auto b = defaultAllocator.make!ReadBuffer;
         assert(b.capacity == 8192);
         assert(b.length == 0);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 
     /**
@@ -190,7 +196,7 @@ class ReadBuffer : Buffer
     ///
     unittest
     {
-        auto b = theAllocator.make!ReadBuffer;
+        auto b = defaultAllocator.make!ReadBuffer;
         size_t numberRead;
 
         // Fills the buffer with values 0..10
@@ -202,7 +208,7 @@ class ReadBuffer : Buffer
         b.clear();
         assert(b.free == b.blockSize);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 
     /**
@@ -224,7 +230,7 @@ class ReadBuffer : Buffer
     ///
     unittest
     {
-        auto b = theAllocator.make!ReadBuffer;
+        auto b = defaultAllocator.make!ReadBuffer;
         size_t numberRead;
         ubyte[] result;
 
@@ -252,7 +258,7 @@ class ReadBuffer : Buffer
         assert(result[10] == 20);
         assert(result[14] == 24);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 
     /**
@@ -294,7 +300,7 @@ class ReadBuffer : Buffer
         {
             if (capacity - length < minAvailable)
             {
-                theAllocator.resizeArray!ubyte(buffer_, capacity + blockSize);
+                allocator.resizeArray!ubyte(buffer_, capacity + blockSize);
             }
             ring = length_;
             return buffer_[length_..$];
@@ -304,7 +310,7 @@ class ReadBuffer : Buffer
     ///
     unittest
     {
-        auto b = theAllocator.make!ReadBuffer;
+        auto b = defaultAllocator.make!ReadBuffer;
         size_t numberRead;
         ubyte[] result;
 
@@ -319,7 +325,7 @@ class ReadBuffer : Buffer
         b.clear();
         assert(b.length == 0);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 }
 
@@ -349,23 +355,29 @@ class WriteBuffer : Buffer
     /// The position of the free area in the buffer.
     protected size_t position;
 
+	/// Allocator.
+	protected shared Allocator allocator;
+
     invariant
     {
         assert(blockSize > 0);
         // position can refer to an element outside the buffer if the buffer is full.
         assert(position <= buffer_.length);
+		assert(allocator !is null);
     }
 
     /**
      * Params:
-     *  size = Initial buffer size and the size by which the buffer
-     *            will grow.
+     *  size      = Initial buffer size and the size by which the buffer will
+     * 	            grow.
+	 * 	allocator = Allocator.
      */
-    this(size_t size = 8192)
+    this(size_t size = 8192, shared Allocator allocator = defaultAllocator)
     {
+		this.allocator = allocator;
         blockSize = size;
         ring = size - 1;
-        theAllocator.resizeArray!ubyte(buffer_, size);
+        allocator.resizeArray!ubyte(buffer_, size);
     }
 
     /**
@@ -373,7 +385,7 @@ class WriteBuffer : Buffer
      */
     ~this()
     {
-        theAllocator.dispose(buffer_);
+        allocator.dispose(buffer_);
     }
 
     /**
@@ -415,7 +427,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = theAllocator.make!WriteBuffer(4);
+        auto b = defaultAllocator.make!WriteBuffer(4);
         ubyte[3] buf = [48, 23, 255];
 
         b ~= buf;
@@ -433,7 +445,7 @@ class WriteBuffer : Buffer
         b += b.length;
         assert(b.length == 0);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 
     /**
@@ -498,7 +510,7 @@ class WriteBuffer : Buffer
             {
                 auto newSize = end / blockSize * blockSize + blockSize;
 
-                theAllocator.resizeArray!ubyte(buffer_, newSize);
+                allocator.resizeArray!ubyte(buffer_, newSize);
             }
             buffer_[position..end] = buffer[start..$];
             position = end;
@@ -514,7 +526,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = theAllocator.make!WriteBuffer(4);
+        auto b = defaultAllocator.make!WriteBuffer(4);
         ubyte[3] buf = [48, 23, 255];
 
         b ~= buf;
@@ -533,9 +545,9 @@ class WriteBuffer : Buffer
         assert(b.buffer_[0] == 23 && b.buffer_[1] == 255
             && b.buffer_[2] == 48 && b.buffer_[3] == 23 && b.buffer_[4] == 255);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
 
-        b = make!WriteBuffer(theAllocator, 2);
+        b = make!WriteBuffer(defaultAllocator, 2);
 
         b ~= buf;
         assert(b.start == 0);
@@ -543,7 +555,7 @@ class WriteBuffer : Buffer
         assert(b.ring == 3);
         assert(b.position == 3);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 
     /**
@@ -620,7 +632,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = theAllocator.make!WriteBuffer;
+        auto b = defaultAllocator.make!WriteBuffer;
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
 
         b ~= buf;
@@ -630,7 +642,7 @@ class WriteBuffer : Buffer
         b += 4;
         assert(b.length == 0);
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 
     /**
@@ -663,7 +675,7 @@ class WriteBuffer : Buffer
     ///
     unittest
     {
-        auto b = theAllocator.make!WriteBuffer(6);
+        auto b = defaultAllocator.make!WriteBuffer(6);
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
 
         b ~= buf;
@@ -679,7 +691,7 @@ class WriteBuffer : Buffer
         assert(b[0..$] == buf[0..6]);
         b += b.length;
 
-        theAllocator.dispose(b);
+        defaultAllocator.dispose(b);
     }
 
     /**

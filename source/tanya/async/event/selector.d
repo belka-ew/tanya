@@ -46,7 +46,7 @@ class SelectorStreamTransport : StreamTransport
 	{
 		socket_ = socket;
 		this.loop = loop;
-		input = MmapPool.instance.make!WriteBuffer();
+		input = MmapPool.instance.make!WriteBuffer(8192, MmapPool.instance);
 	}
 
 	/**
@@ -224,7 +224,7 @@ abstract class SelectorLoop : Loop
 			}
 			catch (SocketException e)
 			{
-				theAllocator.dispose(e);
+				defaultAllocator.dispose(e);
 				break;
 			}
 			if (client is null)
