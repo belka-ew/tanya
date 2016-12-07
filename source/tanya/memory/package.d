@@ -10,10 +10,15 @@
  */
 module tanya.memory;
 
+import core.exception;
 import std.algorithm.mutation;
-public import std.experimental.allocator;
+public import std.experimental.allocator : make, makeArray, expandArray,
+                                           stateSize, shrinkArray;
+import std.traits;
 public import tanya.memory.allocator;
 public import tanya.memory.types;
+
+private extern (C) void _d_monitordelete(Object h, bool det) @nogc;
 
 shared Allocator allocator;
 
@@ -81,4 +86,118 @@ unittest
 
 	defaultAllocator.resizeArray(p, 0);
 	assert(p is null);
+}
+
+private void deStruct(T)(ref T s)
+	if (is(S == struct))
+{
+	static if (__traits(hasMember, T, "__xdtor")
+	      &&   __traits(isSame, T, __traits(parent, s.__xdtor)))
+	{
+		s.__xdtor();
+	}
+	auto buf = (cast(ubyte*) &s)[0 .. T.sizeof];
+	auto init = cast(ubyte[])typeid(T).initializer();
+	if (init.ptr is null) // null ptr means initialize to 0s
+	{
+		buf[] = 0;
+	}
+	else
+	{
+		buf[] = init[];
+	}
+}
+
+/**
+ * Destroys and deallocates $(D_PARAM p) of type $(D_PARAM T).
+ * It is assumed the respective entities had been allocated with the same
+ * allocator.
+ *
+ * Params:
+ * 	T         = Type of $(D_PARAM p).
+ * 	allocator = Allocator the $(D_PARAM p) was allocated with.
+ * 	p         = Object or array to be destroyed.
+ */
+void dispose(T)(shared Allocator allocator, T* p)
+{
+    static if (hasElaborateDestructor!T)
+    {
+		deStruct(*p);
+    }
+    allocator.deallocate((cast(void*) p)[0 .. T.sizeof]);
+}
+
+/// Ditto.
+void dispose(T)(shared Allocator allocator, T p)
+	if (is(T == class) || is(T == interface))
+{
+	if (p is null)
+	{
+		return;
+	}
+	static if (is(T == interface))
+	{
+		version(Windows)
+		{
+			import core.sys.windows.unknwn : IUnknown;
+			static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
+										 ~ __PRETTY_FUNCTION__);
+		}
+		auto ob = cast(Object) p;
+	}
+	else
+	{
+		alias ob = p;
+	}
+	auto ptr = cast(void *) ob;
+	auto support = ptr[0 .. typeid(ob).initializer.length];
+
+	auto ppv = cast(void**) ptr;
+	if (!*ppv)
+	{
+		return;
+	}
+
+	auto pc = cast(ClassInfo*) *ppv;
+	try
+	{
+		auto c = *pc;
+		do
+		{
+			if (c.destructor) // call destructor
+			{
+				(cast(void function (Object)) c.destructor)(cast(Object) ptr);
+			}
+		}
+		while ((c = c.base) !is null);
+
+		if (ppv[1]) // if monitor is not null
+		{
+			_d_monitordelete(cast(Object) ptr, true);
+		}
+		auto w = (*pc).initializer;
+		ptr[0 .. w.length] = w[];
+	}
+	catch (Exception e)
+	{
+		onFinalizeError(*pc, e);
+	}
+	finally
+	{
+		*ppv = null;
+	}
+	allocator.deallocate(support);
+}
+
+/// Ditto.
+void dispose(T)(shared Allocator allocator, T[] array)
+{
+    static if (hasElaborateDestructor!(typeof(array[0])))
+    {
+        foreach (ref e; array)
+        {
+            deStruct(e);
+        }
+    }
+    allocator.deallocate(array);
 }

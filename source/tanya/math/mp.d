@@ -898,7 +898,10 @@ struct Integer
 	}
 
 	/**
-	 * Casting to boolean.
+	 * Casting.
+	 *
+	 * Params:
+	 * 	T = Target type.
 	 *
 	 * Returns: $(D_KEYWORD false) if the $(D_PSYMBOL Integer) is 0,
 	 *          $(D_KEYWORD true) otherwise.
@@ -911,7 +914,10 @@ struct Integer
 	/**
 	 * Casting to integer types.
 	 *
-	 * Returns: Integer type.
+	 * Params:
+	 * 	T = Target type.
+	 *
+	 * Returns: Signed integer.
 	 */
 	T opCast(T : long)() const// pure nothrow @safe @nogc
 	{
