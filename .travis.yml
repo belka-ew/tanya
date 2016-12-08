@@ -1,19 +1,17 @@
 sudo: false
 
 os:
-	- linux
-	- osx
-	- windows
+ - linux
 
 language: d
 
 d:
-	- dmd-2.072.1
+ - dmd-2.072.1
 
 env: 
-	matrix:
-		- ARCH=x86
-		- ARCH=x86_64
+ matrix:
+  - ARCH=x86
+  - ARCH=x86_64
 
 script:
-	- dub test --arch=$ARCH
+ - dub test --arch=$ARCH
