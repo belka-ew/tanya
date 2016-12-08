@@ -62,7 +62,8 @@ bool resizeArray(T)(shared Allocator allocator,
 	{
 		return false;
 	}
-	array = cast(T[]) buf;
+	// Casting from void[] is unsafe, but we know we cast to the original type
+	array = () @trusted { return cast(T[]) buf; }();
 	if (oldLength < length)
 	{
 		array[oldLength .. $].uninitializedFill(init);

@@ -24,7 +24,7 @@ struct Integer
 	private bool sign;
 	private shared Allocator allocator;
 
-	invariant
+	pure nothrow @safe @nogc invariant
 	{
 		assert(rep.length || !sign, "0 should be positive.");
 	}
@@ -38,6 +38,7 @@ struct Integer
 	 *	allocator = Allocator.
 	 */
 	this(T)(in T value, shared Allocator allocator = defaultAllocator)
+	nothrow @safe @nogc
 		if (isIntegral!T)
 	in
 	{
@@ -53,23 +54,23 @@ struct Integer
 		assignInt(absolute);
 	}
 
-	private unittest
+	private @nogc unittest
 	{
-		{
-			auto h = Integer(79);
-			assert(h.length == 1);
-			assert(h.rep[0] == 79);
-		}
-		{
-			auto h = Integer(-2);
-			assert(h.length == 1);
-			assert(h.rep[0] == 2);
-			assert(h.sign);
-		}
+		auto h1 = Integer(79);
+		assert(h1.length == 1);
+		assert(h1.rep[0] == 79);
+		assert(!h1.sign);
+
+		auto h2 = Integer(-2);
+		assert(h2.length == 1);
+		assert(h2.rep[0] == 2);
+		assert(h2.sign);
 	}
 
 	/// Ditto.
-	this(in Integer value, shared Allocator allocator = defaultAllocator)
+	this(T)(in T value, shared Allocator allocator = defaultAllocator)
+	nothrow @safe @nogc
+		if (is(T == Integer))
 	in
 	{
 		assert(allocator !is null);
@@ -84,7 +85,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	this(shared Allocator allocator)
+	this(shared Allocator allocator) nothrow @safe @nogc
 	{
 		this.allocator = allocator;
 		rep = RefCounted!(ubyte[])(allocator);
@@ -132,13 +133,11 @@ struct Integer
 	private void assignInt(in ulong value)
 	pure nothrow @safe @nogc
 	{
-		uint mask = 0xff, shift;
-
-		for (auto i = length; i; --i)
+		ulong mask = 0xff;
+		ushort shift;
+		for (auto i = length; i; --i, mask <<= 8, shift += 8)
 		{
 			rep[i - 1] = cast(ubyte) ((value & mask) >> shift);
-			mask <<= 8;
-			shift += 8;
 		}
 	}
 
@@ -151,7 +150,7 @@ struct Integer
 	 *
 	 * Returns: $(D_KEYWORD this).
 	 */
-	ref Integer opAssign(T)(in T value)
+	ref Integer opAssign(T)(in T value) nothrow @safe @nogc
 		if (isIntegral!T)
 	{
 		T absolute = value;
@@ -165,7 +164,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	ref Integer opAssign(in Integer value)
+	ref Integer opAssign(in Integer value) nothrow @safe @nogc
 	{
 		checkAllocator();
 
@@ -177,7 +176,7 @@ struct Integer
 		return this;
 	}
 
-	private unittest
+	private @nogc unittest
 	{
 		auto h = Integer(1019);
 		assert(h.length == 2);
@@ -209,12 +208,13 @@ struct Integer
 	 *
 	 * Returns: Whether the two integers are equal.
 	 */
-    bool opEquals(in Integer h) const
+    bool opEquals(in Integer h) const nothrow @safe @nogc
     {
         return rep == h.rep;
     }
 
-	private unittest
+	///
+	unittest
 	{
 		auto h1 = Integer(1019);
 
@@ -229,7 +229,7 @@ struct Integer
      * Returns: A positive number if $(D_INLINECODE this > h), a negative
      *          number if $(D_INLINECODE this > h), `0` otherwise.
      */
-    int opCmp(in Integer h) const
+    int opCmp(in Integer h) const nothrow @safe @nogc
     {
         if (length > h.length)
         {
@@ -259,7 +259,8 @@ struct Integer
         return 0;
     }
 
-    private unittest
+	///
+    unittest
     {
 		auto h1 = Integer(1019);
 		auto h2 = Integer(1019);
@@ -272,7 +273,7 @@ struct Integer
 		assert(h1 > h2);
     }
 
-	private void add(in ref RefCounted!(ubyte[]) h)
+	private void add(in ref RefCounted!(ubyte[]) h) nothrow @safe @nogc
 	{
 		uint sum;
 		uint carry = 0;
@@ -317,7 +318,7 @@ struct Integer
 
 	}
 
-	private void subtract(in ref RefCounted!(ubyte[]) h)
+	private void subtract(in ref RefCounted!(ubyte[]) h) nothrow @safe @nogc
 	{
 		auto i = rep.length;
 		auto j = h.length;
@@ -370,7 +371,7 @@ struct Integer
 	 *
 	 * Returns: $(D_KEYWORD this).
 	 */
-	ref Integer opOpAssign(string op)(in Integer h)
+	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
 		if ((op == "+") || (op == "-"))
 	{
 		checkAllocator();
@@ -419,159 +420,66 @@ struct Integer
 		return this;
 	}
 
-	private unittest
+	private @nogc unittest
 	{
-		auto h1 = Integer(1019);
-		
-		auto h2 = Integer(3337);
-		h1 += h2;
-		assert(h1.rep == [0x11, 0x04]);
-
-		h2 = 2_147_483_647;
-		h1 += h2;
-		assert(h1.rep == [0x80, 0x00, 0x11, 0x03]);
-
-		h1 += h2;
-		assert(h1.rep == [0x01, 0x00, 0x00, 0x11, 0x02]);
-
-		h1 = 3;
-		h2 = 4;
-		h1 -= h2;
-		assert(h1.rep == [0x01]);
-		assert(h1.sign);
+		{
+			auto h1 = Integer(1019);
+			auto h2 = Integer(3337);
+			h1 += h2;
+			assert(h1.length == 2);
+			assert(h1.rep[0] == 0x11 && h1.rep[1] == 0x04);
+		}
+		{
+			auto h1 = Integer(4356);
+			auto h2 = Integer(2_147_483_647);
+			ubyte[4] expected = [0x80, 0x00, 0x11, 0x03];
+			h1 += h2;
+			assert(h1.rep == expected);
+		}
+		{
+			auto h1 = Integer(2147488003L);
+			auto h2 = Integer(2_147_483_647);
+			ubyte[5] expected = [0x01, 0x00, 0x00, 0x11, 0x02];
+			h1 += h2;
+			assert(h1.rep == expected);
+		}
+		{
+			auto h1 = Integer(3);
+			auto h2 = Integer(4);
+			h1 -= h2;
+			assert(h1.length == 1);
+			assert(h1.rep[0] == 0x01);
+			assert(h1.sign);
+		}
 	}
 
-	private unittest
+	private @nogc unittest
 	{
-		auto h1 = Integer(4294967295);
-		auto h2 = Integer(4294967295);
-		h1 += h2;
-
-		h2 = 2147483647;
-		h1 -= h2;
-		assert(h1.rep == [0x01, 0x7f, 0xff, 0xff, 0xff]);
-
-		h2 = 4294967294;
-		h1 -= h2;
-		assert(h1.rep == [0x80, 0x00, 0x00, 0x01]);
-
-		h2 = h1;
-		h1 -= h2;
-		assert(h1.length == 0);
-	}
-
-	/// Ditto.
-	ref Integer opOpAssign(string op)(in size_t n)
-		if (op == "<<")
-	{
-		ubyte carry;
-		auto i = rep.length;
-		size_t j;
-		immutable bit = n % 8;
-		immutable delta = 8 - bit;
-
-		checkAllocator();
-		if (cast(ubyte) (rep[0] >> delta))
 		{
-			allocator.resizeArray(rep, i + n / 8 + 1);
-			j = i + 1;
-		}
-		else
-		{
-			allocator.resizeArray(rep, i + n / 8);
-			j = i;
-		}
-		do
-		{
-			--i, --j;
-			immutable oldCarry = carry;
-			carry = rep[i] >> delta;
-			rep[j] = cast(ubyte) ((rep[i] << bit) | oldCarry);
-		}
-		while (i);
-		if (carry)
-		{
-			rep[0] = carry;
-		}
-		return this;
-	}
+			auto h1 = Integer(8589934590L);
+			auto h2 = Integer(2147483647);
+			ubyte[5] expected = [0x01, 0x7f, 0xff, 0xff, 0xff];
 
-	private unittest
-	{
-		auto h1 = Integer(4294967295);
-		h1 <<= 1;
-		assert(h1.rep == [0x01, 0xff, 0xff, 0xff, 0xfe]);
+			h1 -= h2;
+			assert(h1.rep == expected);
+		}
+		{
+			auto h1 = Integer(6442450943);
+			auto h2 = Integer(4294967294);
+			ubyte[4] expected = [0x80, 0x00, 0x00, 0x01];
+			h1 -= h2;
+			assert(h1.rep == expected);
+		}
+		{
+			auto h1 = Integer(2147483649);
+			auto h2 = Integer(h1);
+			h1 -= h2;
+			assert(h1.length == 0);
+		}
 	}
 
 	/// Ditto.
-	ref Integer opOpAssign(string op)(in size_t n)
-		if (op == ">>")
-	{
-		immutable step = n / 8;
-
-		checkAllocator();
-		if (step >= rep.length)
-		{
-			allocator.resizeArray(rep, 0);
-			return this;
-		}
-
-		size_t i, j;
-		ubyte carry;
-		immutable bit = n % 8;
-		immutable delta = 8 - bit;
-
-		carry = cast(ubyte) (rep[0] << delta);
-		rep[0] = (rep[0] >> bit);
-		if (rep[0])
-		{
-			++j;
-		}
-		for (i = 1; i < rep.length; ++i)
-		{
-			immutable oldCarry = carry;
-			carry = cast(ubyte) (rep[i] << delta);
-			rep[j] = (rep[i] >> bit | oldCarry);
-			++j;
-		}
-		allocator.resizeArray(rep, rep.length - n / 8 - (i == j ? 0 : 1));
-
-		return this;
-	}
-
-	private unittest
-	{
-		auto h1 = Integer(4294967294);
-		h1 >>= 10;
-		assert(h1.rep == [0x3f, 0xff, 0xff]);
-
-		h1 = 27336704;
-		h1 >>= 1;
-		assert(h1.rep == [0xd0, 0x90, 0x00]);
-
-		h1 = 4294967294;
-		h1 >>= 20;
-		assert(h1.rep == [0x0f, 0xff]);
-
-		h1 >>= 0;
-		assert(h1.rep == [0x0f, 0xff]);
-
-		h1 >>= 20;
-		assert(h1.length == 0);
-
-		h1 >>= 2;
-		assert(h1.length == 0);
-
-		h1 = 1431655765;
-		h1 >>= 16;
-		assert(h1.rep == [0x55, 0x55]);
-
-		h1 >>= 16;
-		assert(h1.length == 0);
-	}
-
-	/// Ditto.
-	ref Integer opOpAssign(string op)(in Integer h)
+	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
 		if (op == "*")
 	{
 		auto i = h.rep.length;
@@ -597,16 +505,17 @@ struct Integer
 		return this;
 	}
 
-	private unittest
+	///
+	unittest
 	{
 		auto h1 = Integer(123);
 		auto h2 = Integer(456);
 		h1 *= h2;
-		assert(h1.rep == [0xdb, 0x18]); // 56088
+		assert(cast(long) h1 == 56088);
 	}
 
 	/// Ditto.
-	ref Integer opOpAssign(string op)(in Integer h)
+	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
 		if ((op == "/") || (op == "%"))
 	in
 	{
@@ -662,12 +571,13 @@ struct Integer
 		return this;
 	}
 
-	private unittest
+	private @nogc unittest
 	{
 		auto h1 = Integer(18);
 		auto h2 = Integer(4);
 		h1 %= h2;
-		assert(h1.rep == [0x02]);
+		assert(h1.length == 1);
+		assert(h1.rep[0] == 0x02);
 
 		h1 = 8;
 		h1 %= h2;
@@ -675,16 +585,18 @@ struct Integer
 
 		h1 = 7;
 		h1 %= h2;
-		assert(h1.rep == [0x03]);
+		assert(h1.length == 1);
+		assert(h1.rep[0] == 0x03);
 
 		h1 = 56088;
 		h2 = 456;
 		h1 /= h2;
-		assert(h1.rep == [0x7b]);
+		assert(h1.length == 1);
+		assert(h1.rep[0] == 0x7b);
 	}
 
 	/// Ditto.
-	ref Integer opOpAssign(string op)(in Integer exp)
+	ref Integer opOpAssign(string op)(in Integer exp) nothrow @safe @nogc
 		if (op == "^^")
 	{
 		auto i = exp.rep.length;
@@ -712,17 +624,19 @@ struct Integer
 		return this;
 	}
 
-	private unittest
+	private @nogc unittest
 	{
 		auto h1 = Integer(2);
 		auto h2 = Integer(4);
 
 		h1 ^^= h2;
-		assert(h1.rep == [0x10]);
+		assert(h1.length == 1);
+		assert(h1.rep[0] == 0x10);
 
 		h1 = Integer(2342);
 		h1 ^^= h2;
-		assert(h1.rep == [0x1b, 0x5c, 0xab, 0x9c, 0x31, 0x10]);
+		ubyte[6] expected = [0x1b, 0x5c, 0xab, 0x9c, 0x31, 0x10];
+		assert(h1.rep == expected);
 	}
 
 	/**
@@ -733,9 +647,10 @@ struct Integer
 	 *
 	 * Returns: New $(D_PSYMBOL Integer).
 	 */
-	Integer opUnary(string op)()
+	Integer opUnary(string op)() nothrow @safe @nogc
 		if ((op == "+") || (op == "-") || (op == "~"))
 	{
+		checkAllocator();
 		auto h = Integer(this, allocator);
 		static if (op == "-")
 		{
@@ -748,7 +663,7 @@ struct Integer
 		return h;
 	}
 
-	private unittest
+	private @nogc unittest
 	{
 		auto h1 = Integer(79);
 		Integer h2;
@@ -779,7 +694,7 @@ struct Integer
 		assert(h2.rep[0] == ~cast(ubyte) 79);
 	}
 
-	private void decrement()
+	private void decrement() nothrow @safe @nogc
 	{
 		immutable size = rep.get.retro.countUntil!((const ref a) => a != 0);
 		if (rep[0] == 1)
@@ -794,7 +709,7 @@ struct Integer
 		}
 	}
 
-	private void increment()
+	private void increment() nothrow @safe @nogc
 	{
 		auto size = rep
 				   .get
@@ -821,7 +736,7 @@ struct Integer
 	 *
 	 * Returns: $(D_KEYWORD this).
 	 */
-	ref Integer opUnary(string op)()
+	ref Integer opUnary(string op)() nothrow @safe @nogc
 		if ((op == "++") || (op == "--"))
 	{
 		checkAllocator();
@@ -852,41 +767,48 @@ struct Integer
 		return this;
 	}
 
-	private unittest
+	private @nogc unittest
 	{
 		Integer h;
 
 		++h;
-		assert(h.rep == [0x01]);
 		assert(h.length == 1);
+		assert(h.rep[0] == 0x01);
 
 		--h;
 		assert(h.length == 0);
 
 		h = 511;
 		++h;
-		assert(h.rep == [0x02, 0x00]);
+		assert(h.length == 2);
+		assert(h.rep[0] == 0x02 && h.rep[1] == 0x00);
 
 		--h;
-		assert(h.rep == [0x01, 0xff]);
+		assert(h.length == 2);
+		assert(h.rep[0] == 0x01 && h.rep[1] == 0xff);
 
 		h = 79;
 		++h;
-		assert(h.rep == [0x50]);
+		assert(h.length == 1);
+		assert(h.rep[0] == 0x50);
 
 		--h;
-		assert(h.rep == [0x4f]);
+		assert(h.length == 1);
+		assert(h.rep[0] == 0x4f);
 
 		h = 65535;
 		++h;
-		assert(h.rep == [0x01, 0x00, 0x00]);
+		assert(h.length == 3);
+		assert(h.rep[0] == 0x01 && h.rep[1] == 0x00 && h.rep[2] == 0x00);
 
 		--h;
-		assert(h.rep == [0xff, 0xff]);
+		assert(h.length == 2);
+		assert(h.rep[0] == 0xff && h.rep[1] == 0xff);
 
 		h = -2;
 		++h;
-		assert(h.rep == [0x01]);
+		assert(h.length == 1);
+		assert(h.rep[0] == 0x01);
 	}
 
 	private void checkAllocator() nothrow @safe @nogc
@@ -919,7 +841,7 @@ struct Integer
 	 *
 	 * Returns: Signed integer.
 	 */
-	T opCast(T : long)() const// pure nothrow @safe @nogc
+	T opCast(T : long)() const pure nothrow @safe @nogc
 	{
 		ulong ret;
 		for (size_t i = length, j; i > 0 && j <= 32; --i, j += 8)
@@ -929,7 +851,8 @@ struct Integer
 		return sign ? -ret : ret;
 	}
 
-	private unittest
+	///
+	unittest
 	{
 		auto h = Integer(79);
 		assert(cast(long) h == 79);
@@ -942,5 +865,157 @@ struct Integer
 
 		h = -4294967295;
 		assert(cast(long) h == -4294967295);
+	}
+
+	/**
+	 * Shift operations.
+	 *
+	 * Params:
+	 * 	op = Left or right shift.
+	 * 	n  = Number of bits to shift by.
+	 *
+	 * Returns: An $(D_PSYMBOL Integer) shifted by $(D_PARAM n) bits.
+	 */
+	ref Integer opOpAssign(string op)(in size_t n) nothrow @safe @nogc
+		if (op == ">>")
+	{
+		immutable step = n / 8;
+
+		checkAllocator();
+		if (step >= rep.length)
+		{
+			allocator.resizeArray(rep, 0);
+			return this;
+		}
+
+		size_t i, j;
+		ubyte carry;
+		immutable bit = n % 8;
+		immutable delta = 8 - bit;
+
+		carry = cast(ubyte) (rep[0] << delta);
+		rep[0] = (rep[0] >> bit);
+		if (rep[0])
+		{
+			++j;
+		}
+		for (i = 1; i < rep.length; ++i)
+		{
+			immutable oldCarry = carry;
+			carry = cast(ubyte) (rep[i] << delta);
+			rep[j] = (rep[i] >> bit | oldCarry);
+			++j;
+		}
+		allocator.resizeArray(rep, rep.length - n / 8 - (i == j ? 0 : 1));
+
+		return this;
+	}
+
+	private @nogc unittest
+	{
+		auto h1 = Integer(4294967294);
+		h1 >>= 10;
+		assert(h1.length == 3);
+		assert(h1.rep[0] == 0x3f && h1.rep[1] == 0xff && h1.rep[2] == 0xff);
+
+		h1 = 27336704;
+		h1 >>= 1;
+		assert(h1.length == 3);
+		assert(h1.rep[0] == 0xd0 && h1.rep[1] == 0x90 && h1.rep[2] == 0x00);
+
+		h1 = 4294967294;
+		h1 >>= 20;
+		assert(h1.length == 2);
+		assert(h1.rep[0] == 0x0f && h1.rep[1] == 0xff);
+
+		h1 >>= 0;
+		assert(h1.length == 2);
+		assert(h1.rep[0] == 0x0f && h1.rep[1] == 0xff);
+
+		h1 >>= 20;
+		assert(h1.length == 0);
+
+		h1 >>= 2;
+		assert(h1.length == 0);
+
+		h1 = 1431655765;
+		h1 >>= 16;
+		assert(h1.length == 2);
+		assert(h1.rep[0] == 0x55 && h1.rep[1] == 0x55);
+
+		h1 >>= 16;
+		assert(h1.length == 0);
+	}
+
+	/// Ditto.
+	ref Integer opOpAssign(string op)(in size_t n) nothrow @safe @nogc
+		if (op == "<<")
+	{
+		ubyte carry;
+		auto i = rep.length;
+		size_t j;
+		immutable bit = n % 8;
+		immutable delta = 8 - bit;
+
+		checkAllocator();
+		if (cast(ubyte) (rep[0] >> delta))
+		{
+			allocator.resizeArray(rep, i + n / 8 + 1);
+			j = i + 1;
+		}
+		else
+		{
+			allocator.resizeArray(rep, i + n / 8);
+			j = i;
+		}
+		do
+		{
+			--i, --j;
+			immutable oldCarry = carry;
+			carry = rep[i] >> delta;
+			rep[j] = cast(ubyte) ((rep[i] << bit) | oldCarry);
+		}
+		while (i);
+		if (carry)
+		{
+			rep[0] = carry;
+		}
+		return this;
+	}
+
+	private @nogc unittest
+	{
+		auto h1 = Integer(4294967295);
+		ubyte[5] expected = [0x01, 0xff, 0xff, 0xff, 0xfe];
+		h1 <<= 1;
+		assert(h1.rep == expected);
+	}
+
+	/// Ditto.
+	Integer opBinary(string op)(in size_t n) nothrow @safe @nogc
+		if (op == "<<" || op == ">>")
+	{
+		checkAllocator();
+		auto ret = Integer(this, allocator);
+		static if (op == "<<")
+		{
+			ret <<= n;
+		}
+		else
+		{
+			ret >>= n;
+		}
+		return ret;
+	}
+
+	///
+	unittest
+	{
+		auto h1 = Integer(425);
+		auto h2 = h1 << 1;
+		assert(cast(long) h2 == 850);
+
+		h2 = h1 >> 1;
+		assert(cast(long) h2 == 212);
 	}
 }
