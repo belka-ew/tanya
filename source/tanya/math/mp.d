@@ -993,18 +993,12 @@ struct Integer
 
 	/// Ditto.
 	Integer opBinary(string op)(in size_t n) nothrow @safe @nogc
-		if (op == "<<" || op == ">>")
+		if (op == "<<" || op == ">>" || op == "+" || op == "-" || op == "/"
+		 || op == "*" || op == "^^" || op == "%")
 	{
 		checkAllocator();
 		auto ret = Integer(this, allocator);
-		static if (op == "<<")
-		{
-			ret <<= n;
-		}
-		else
-		{
-			ret >>= n;
-		}
+		mixin("ret " ~ op ~ "= n;");
 		return ret;
 	}
 
@@ -1017,5 +1011,16 @@ struct Integer
 
 		h2 = h1 >> 1;
 		assert(cast(long) h2 == 212);
+	}
+
+	/// Ditto.
+	Integer opBinary(string op)(in Integer h) nothrow @safe @nogc
+		if (op == "+" || op == "-" || op == "/"
+		 || op == "*" || op == "^^" || op == "%")
+	{
+		checkAllocator();
+		auto ret = Integer(this, allocator);
+		mixin("ret " ~ op ~ "= h;");
+		return ret;
 	}
 }
