@@ -1,5 +1,7 @@
 # Tanya
 
+[![Build Status](https://travis-ci.org/caraus-ecms/tanya.svg?branch=master)](https://travis-ci.org/caraus-ecms/tanya)
+
 tanya is a general purpose library for D programming language that doesn't rely on the Garbage Collector.
 
 # Overview
