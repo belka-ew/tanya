@@ -18,9 +18,12 @@ import std.range;
 import std.traits;
 import tanya.memory;
 
+/**
+ * Mutliple precision integer.
+ */
 struct Integer
 {
-    private RefCounted!(ubyte[]) rep;
+	private RefCounted!(ubyte[]) rep;
 	private bool sign;
 	private shared Allocator allocator;
 
@@ -47,11 +50,7 @@ struct Integer
 	body
 	{
 		this(allocator);
-
-		T absolute = value;
-		immutable size = calculateSizeFromInt(absolute);
-		allocator.resizeArray(rep, size);
-		assignInt(absolute);
+		assignInt(value);
 	}
 
 	private @nogc unittest
@@ -93,10 +92,10 @@ struct Integer
 
 	/*
 	 * Figures out the minimum amount of space this value will take
-	 * up in bytes. Set the sign.
+	 * up in bytes and resizes the internal storage. Sets the sign.
 	 */
-	private ubyte calculateSizeFromInt(T)(ref T value)
-	pure nothrow @safe @nogc
+	private void assignInt(T)(in ref T value)
+	nothrow @safe @nogc
 	in
 	{
 		static assert(isIntegral!T);
@@ -104,40 +103,36 @@ struct Integer
 	body
 	{
 		ubyte size = ulong.sizeof;
+		ulong mask;
 
 		static if (isSigned!T)
 		{
 			sign = value < 0 ? true : false;
-			value = abs(value);
+			immutable absolute = value.abs;
 		}
 		else
 		{
 			sign = false;
+			alias absolute = value;
 		}
-		for (ulong mask = 0xff00000000000000; mask >= 0xff; mask >>= 8)
+		for (mask = 0xff00000000000000; mask >= 0xff; mask >>= 8)
 		{
-			if (value & mask)
+			if (absolute & mask)
 			{
 				break;
 			}
 			--size;
 		}
-		return size;
-	}
-	
-	/*
-	 * Work backward through the int, masking off each byte
-	 * (up to the first 0 byte) and copy it into the internal
-	 * representation in big-endian format.
-	 */
-	private void assignInt(in ulong value)
-	pure nothrow @safe @nogc
-	{
-		ulong mask = 0xff;
+		allocator.resizeArray(rep.get, size);
+
+		/* Work backward through the int, masking off each byte (up to the
+		   first 0 byte) and copy it into the internal representation in
+		   big-endian format. */
+		mask = 0xff;
 		ushort shift;
-		for (auto i = length; i; --i, mask <<= 8, shift += 8)
+		for (auto i = rep.length; i; --i, mask <<= 8, shift += 8)
 		{
-			rep[i - 1] = cast(ubyte) ((value & mask) >> shift);
+			rep[i - 1] = cast(ubyte) ((absolute & mask) >> shift);
 		}
 	}
 
@@ -153,12 +148,8 @@ struct Integer
 	ref Integer opAssign(T)(in T value) nothrow @safe @nogc
 		if (isIntegral!T)
 	{
-		T absolute = value;
-		immutable size = calculateSizeFromInt(absolute);
-
 		checkAllocator();
-		allocator.resizeArray(rep.get, size);
-		assignInt(absolute);
+		assignInt(value);
 
 		return this;
 	}
@@ -278,8 +269,6 @@ struct Integer
 		uint sum;
 		uint carry = 0;
 
-		// Adding h2 to h1. If h2 is > h1 to begin with, resize h1
-
 		if (h.length > length)
 		{
 			auto tmp = allocator.makeArray!ubyte(h.length);
@@ -311,7 +300,7 @@ struct Integer
 		{
 			// Still overflowed; allocate more space
 			auto tmp = allocator.makeArray!ubyte(length + 1);
-			tmp[1..$] = rep[0..length];
+			tmp[1 .. $] = rep[0..length];
 			tmp[0] = 0x01;
 			rep = tmp;
 		}
@@ -373,6 +362,11 @@ struct Integer
 	 */
 	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
 		if ((op == "+") || (op == "-"))
+	out
+	{
+		assert(!rep.length || rep[0]);
+	}
+	body
 	{
 		checkAllocator();
 		static if (op == "+")
@@ -414,7 +408,7 @@ struct Integer
 			}
 			else
 			{
-				subtract(h.rep);
+				add(h.rep);
 			}
 		}
 		return this;
@@ -481,6 +475,11 @@ struct Integer
 	/// Ditto.
 	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
 		if (op == "*")
+	out
+	{
+		assert(!rep.length || rep[0]);
+	}
+	body
 	{
 		auto i = h.rep.length;
 		auto temp = Integer(this, allocator);
@@ -598,6 +597,11 @@ struct Integer
 	/// Ditto.
 	ref Integer opOpAssign(string op)(in Integer exp) nothrow @safe @nogc
 		if (op == "^^")
+	out
+	{
+		assert(!rep.length || rep[0]);
+	}
+	body
 	{
 		auto i = exp.rep.length;
 		auto tmp1 = Integer(this, allocator);
@@ -738,6 +742,11 @@ struct Integer
 	 */
 	ref Integer opUnary(string op)() nothrow @safe @nogc
 		if ((op == "++") || (op == "--"))
+	out
+	{
+		assert(!rep.length || rep[0]);
+	}
+	body
 	{
 		checkAllocator();
 
@@ -878,6 +887,11 @@ struct Integer
 	 */
 	ref Integer opOpAssign(string op)(in size_t n) nothrow @safe @nogc
 		if (op == ">>")
+	out
+	{
+		assert(!rep.length || rep[0]);
+	}
+	body
 	{
 		immutable step = n / 8;
 
@@ -950,6 +964,11 @@ struct Integer
 	/// Ditto.
 	ref Integer opOpAssign(string op)(in size_t n) nothrow @safe @nogc
 		if (op == "<<")
+	out
+	{
+		assert(!rep.length || rep[0]);
+	}
+	body
 	{
 		ubyte carry;
 		auto i = rep.length;

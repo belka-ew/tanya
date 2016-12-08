@@ -316,10 +316,6 @@ private unittest
  * $(D_PSYMBOL RefCounted) using $(D_PARAM args) as the parameter list for
  * the constructor of $(D_PARAM T).
  *
- * This function is more efficient than using $(D_PSYMBOL RefCounted)
- * for the new objects directly, since $(D_PSYMBOL refCounted) allocates
- * only once (the object and the internal storage are allocated at once).
- *
  * Params:
  * 	T    = Type of the constructed object.
  * 	A    = Types of the arguments to the constructor of $(D_PARAM T).
