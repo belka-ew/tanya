@@ -29,7 +29,7 @@ struct Integer
 
 	pure nothrow @safe @nogc invariant
 	{
-		assert(rep.length || !sign, "0 should be positive.");
+		assert(!rep.count || rep.length || !sign, "0 should be positive.");
 	}
 
 	/**
@@ -39,18 +39,37 @@ struct Integer
 	 * 	T         = Value type.
 	 * 	value     = Initial value.
 	 *	allocator = Allocator.
+	 *
+	 * Precondition: $(D_INLINECODE allocator !is null)
 	 */
 	this(T)(in T value, shared Allocator allocator = defaultAllocator)
 	nothrow @safe @nogc
-		if (isIntegral!T)
+		if (isIntegral!T || is(T == Integer))
+	{
+		this(allocator);
+		static if (isIntegral!T)
+		{
+			assignInt(value);
+		}
+		else
+		{
+			rep = RefCounted!(ubyte[])(() @trusted {
+				return cast(ubyte[]) allocator.allocate(value.length);
+			}(), allocator);
+			value.rep.get.copy(rep.get);
+			sign = value.sign;
+		}
+	}
+
+	/// Ditto.
+	this(shared Allocator allocator) nothrow @safe @nogc
 	in
 	{
 		assert(allocator !is null);
 	}
 	body
 	{
-		this(allocator);
-		assignInt(value);
+		this.allocator = allocator;
 	}
 
 	private @nogc unittest
@@ -66,30 +85,6 @@ struct Integer
 		assert(h2.sign);
 	}
 
-	/// Ditto.
-	this(T)(in T value, shared Allocator allocator = defaultAllocator)
-	nothrow @safe @nogc
-		if (is(T == Integer))
-	in
-	{
-		assert(allocator !is null);
-	}
-	body
-	{
-		this(allocator);
-
-		allocator.resizeArray(rep, value.length);
-		value.rep.get.copy(rep.get);
-		sign = value.sign;
-	}
-
-	/// Ditto.
-	this(shared Allocator allocator) nothrow @safe @nogc
-	{
-		this.allocator = allocator;
-		rep = RefCounted!(ubyte[])(allocator);
-	}
-
 	/*
 	 * Figures out the minimum amount of space this value will take
 	 * up in bytes and resizes the internal storage. Sets the sign.
@@ -99,6 +94,7 @@ struct Integer
 	in
 	{
 		static assert(isIntegral!T);
+		assert(allocator !is null);
 	}
 	body
 	{
@@ -123,8 +119,16 @@ struct Integer
 			}
 			--size;
 		}
-		allocator.resizeArray(rep.get, size);
-
+		if (rep.count)
+		{
+			allocator.resizeArray(rep.get, size);
+		}
+		else
+		{
+			rep = RefCounted!(ubyte[])(() @trusted {
+				return cast(ubyte[]) allocator.allocate(size);
+			}(), allocator);
+		}
 		/* Work backward through the int, masking off each byte (up to the
 		   first 0 byte) and copy it into the internal representation in
 		   big-endian format. */
@@ -146,23 +150,31 @@ struct Integer
 	 * Returns: $(D_KEYWORD this).
 	 */
 	ref Integer opAssign(T)(in T value) nothrow @safe @nogc
-		if (isIntegral!T)
+		if (isIntegral!T || is(T == Integer))
 	{
-		checkAllocator();
-		assignInt(value);
-
-		return this;
-	}
-
-	/// Ditto.
-	ref Integer opAssign(in Integer value) nothrow @safe @nogc
-	{
-		checkAllocator();
-
-		allocator.resizeArray(rep, value.length);
-		value.rep.get.copy(rep.get);
-
-		sign = value.sign;
+		if (allocator is null)
+		{
+			allocator = defaultAllocator;
+		}
+		static if (isIntegral!T)
+		{
+			assignInt(value);
+		}
+		else
+		{
+			if (rep.count)
+			{
+				allocator.resizeArray(rep, value.length);
+			}
+			else
+			{
+				rep = RefCounted!(ubyte[])(() @trusted {
+					return cast(ubyte[]) allocator.allocate(value.length);
+				}(), allocator);
+			}
+			value.rep.get.copy(rep.get);
+			sign = value.sign;
+		}
 
 		return this;
 	}
@@ -368,7 +380,7 @@ struct Integer
 	}
 	body
 	{
-		checkAllocator();
+		initialize();
 		static if (op == "+")
 		{
 			if (h.sign == sign)
@@ -522,7 +534,7 @@ struct Integer
 	}
 	body
 	{
-		checkAllocator();
+		initialize();
 
 		auto divisor = Integer(h, allocator);
 		size_t bitSize;
@@ -654,7 +666,7 @@ struct Integer
 	Integer opUnary(string op)() nothrow @safe @nogc
 		if ((op == "+") || (op == "-") || (op == "~"))
 	{
-		checkAllocator();
+		initialize();
 		auto h = Integer(this, allocator);
 		static if (op == "-")
 		{
@@ -748,7 +760,7 @@ struct Integer
 	}
 	body
 	{
-		checkAllocator();
+		initialize();
 
 		static if (op == "++")
 		{
@@ -820,11 +832,15 @@ struct Integer
 		assert(h.rep[0] == 0x01);
 	}
 
-	private void checkAllocator() nothrow @safe @nogc
+	private void initialize() nothrow @safe @nogc
 	{
 		if (allocator is null)
 		{
 			allocator = defaultAllocator;
+		}
+		if (!rep.count)
+		{
+			rep = allocator.refCounted!(ubyte[])(0);
 		}
 	}
 
@@ -895,7 +911,7 @@ struct Integer
 	{
 		immutable step = n / 8;
 
-		checkAllocator();
+		initialize();
 		if (step >= rep.length)
 		{
 			allocator.resizeArray(rep, 0);
@@ -976,7 +992,7 @@ struct Integer
 		immutable bit = n % 8;
 		immutable delta = 8 - bit;
 
-		checkAllocator();
+		initialize();
 		if (cast(ubyte) (rep[0] >> delta))
 		{
 			allocator.resizeArray(rep, i + n / 8 + 1);
@@ -1015,7 +1031,7 @@ struct Integer
 		if (op == "<<" || op == ">>" || op == "+" || op == "-" || op == "/"
 		 || op == "*" || op == "^^" || op == "%")
 	{
-		checkAllocator();
+		initialize();
 		auto ret = Integer(this, allocator);
 		mixin("ret " ~ op ~ "= n;");
 		return ret;
@@ -1037,7 +1053,7 @@ struct Integer
 		if (op == "+" || op == "-" || op == "/"
 		 || op == "*" || op == "^^" || op == "%")
 	{
-		checkAllocator();
+		initialize();
 		auto ret = Integer(this, allocator);
 		mixin("ret " ~ op ~ "= h;");
 		return ret;

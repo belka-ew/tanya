@@ -11,7 +11,6 @@
 module tanya.memory;
 
 import core.exception;
-import std.algorithm.mutation;
 public import std.experimental.allocator : make, makeArray, expandArray,
                                            stateSize, shrinkArray;
 import std.traits;
@@ -66,7 +65,7 @@ bool resizeArray(T)(shared Allocator allocator,
 	array = () @trusted { return cast(T[]) buf; }();
 	if (oldLength < length)
 	{
-		array[oldLength .. $].uninitializedFill(init);
+		array[oldLength .. $] = init;
 	}
 	return true;
 }

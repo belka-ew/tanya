@@ -30,12 +30,13 @@ struct RefCounted(T)
 {
 	static if (isReference!T)
 	{
-		private T payload;
+		private alias Payload = T;
 	}
 	else
 	{
-		private T* payload;
+		private alias Payload = T*;
 	}
+	private Payload payload_;
 
 	private uint counter;
 
@@ -48,33 +49,20 @@ struct RefCounted(T)
 
 	/**
 	 * Takes ownership over $(D_PARAM value), setting the counter to 1.
+	 * $(D_PARAM value) may be a pointer, an object or a dynamic array.
 	 *
 	 * Params:
 	 * 	value     = Value whose ownership is taken over.
 	 * 	allocator = Allocator used to destroy the $(D_PARAM value) and to
 	 * 	            allocate/deallocate internal storage.
-
+	 *
 	 * Precondition: $(D_INLINECODE allocator !is null)
 	 */
-	this(T value, shared Allocator allocator = defaultAllocator)
-	in
-	{
-		assert(allocator !is null);
-	}
-	body
+	this(Payload value, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
-		static if (!isReference!T)
-		{
-			payload = cast(T*) allocator.allocate(stateSize!T).ptr;
-			move(value, *payload);
-			counter = 1;
-		}
-		else if (value !is null)
-		{
-			move(value, payload);
-			counter = 1;
-		}
+		move(value, payload_);
+		counter = 1;
 	}
 
 	/// Ditto.
@@ -93,7 +81,7 @@ struct RefCounted(T)
 	 */
 	this(this) pure nothrow @safe @nogc
 	{
-		if (isInitialized)
+		if (count)
 		{
 			++counter;
 		}
@@ -106,12 +94,12 @@ struct RefCounted(T)
 	 */
 	~this()
 	{
-		if (isInitialized && !--counter)
+		if (count && !--counter)
 		{
 			static if (isReference!T)
 			{
-				allocator.dispose(payload);
-				payload = null;
+				allocator.dispose(payload_);
+				payload_ = null;
 			}
 		}
 	}
@@ -138,23 +126,34 @@ struct RefCounted(T)
 		}
 		static if (isReference!T)
 		{
-			counter == 1 ? allocator.dispose(payload) : --counter;
+			if (counter > 1)
+			{
+				--counter;
+			}
+			else if (counter == 1)
+			{
+				allocator.dispose(payload_);
+			}
+			else
+			{
+				counter = 1;
+			}
 		}
-		else if (!isInitialized)
+		else if (!count)
 		{
-			payload = cast(T*) allocator.allocate(stateSize!T).ptr;
+			payload_ = cast(T*) allocator.allocate(stateSize!T).ptr;
 			counter = 1;
 		}
-		move(rhs, get);
-		return get;
+		move(rhs, payload);
+		return payload;
 	}
 
 	/// Ditto.
 	ref typeof(this) opAssign(typeof(this) rhs)
 	{
-		swap(counter, rhs.counter);
-		swap(get, rhs.get);
 		swap(allocator, rhs.allocator);
+		swap(counter, rhs.counter);
+		swap(payload, rhs.payload);
 
 		return this;
 	}
@@ -169,24 +168,27 @@ struct RefCounted(T)
 	 */
 	inout(T2) opCast(T2)() inout pure nothrow @safe @nogc
 		if (is(T : T2))
-	in
-	{
-		assert(payload !is null, "Attempted to access an uninitialized reference.");
-	}
-	body
 	{
 		return get;
 	}
 
-	ref inout(T) get() inout return pure nothrow @safe @nogc
+	/**
+	 * Returns: Reference to the owned object.
+	 */
+	ref inout(T) get() inout pure nothrow @safe @nogc
+	in
+	{
+		assert(counter, "Attempted to access an uninitialized reference.");
+	}
+	body
 	{
 		static if (isReference!T)
 		{
-			return payload;
+			return payload_;
 		}
 		else
 		{
-			return *payload;
+			return *payload_;
 		}
 	}
 
@@ -200,12 +202,17 @@ struct RefCounted(T)
 		return counter;
 	}
 
-	/**
-	 * Returns: Whether tihs $(D_PSYMBOL RefCounted) is initialized.
-	 */
-	@property bool isInitialized() const pure nothrow @safe @nogc
+	pragma(inline, true)
+	private ref inout(T) payload() inout return pure nothrow @safe @nogc
 	{
-		return counter != 0;
+		static if (isReference!T)
+		{
+			return payload_;
+		}
+		else
+		{
+			return *payload_;
+		}
 	}
 
 	alias get this;
@@ -248,9 +255,9 @@ unittest
 
 		this(ref ubyte[] member)
 		{
-			assert(!this.member.isInitialized);
+			assert(!this.member.count);
 			this.member = member;
-			assert(this.member.isInitialized);
+			assert(this.member.count);
 		}
 	}
 
@@ -291,17 +298,20 @@ private unittest
 	assert(destroyed == 1);
 
 	RefCounted!int rc;
+	assert(rc.count == 0);
 	rc = 8;
+	assert(rc.count == 1);
 }
 
 private unittest
 {
-	auto rc = RefCounted!int(5);
+	auto val = defaultAllocator.make!int(5);
+	auto rc = RefCounted!int(val);
 
-	static assert(is(typeof(rc.payload) == int*));
+	static assert(is(typeof(rc.payload_) == int*));
 	static assert(is(typeof(cast(int) rc) == int));
 
-	static assert(is(typeof(RefCounted!(int*).payload) == int*));
+	static assert(is(typeof(RefCounted!(int*).payload_) == int*));
 
 	static assert(is(typeof(cast(A) (RefCounted!A())) == A));
 	static assert(is(typeof(cast(Object) (RefCounted!A())) == Object));
@@ -326,7 +336,11 @@ private unittest
 RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
 	if (!is(T == interface) && !isAbstractClass!T)
 {
-	static if (isReference!T)
+	static if (isDynamicArray!T)
+	{
+		return typeof(return)(allocator.makeArray!(ForeachType!T)(args), allocator);
+	}
+	else static if (isReference!T)
 	{
 		return typeof(return)(allocator.make!T(args), allocator);
 	}
@@ -334,7 +348,7 @@ RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
 	{
 		auto rc = typeof(return)(allocator);
 		rc.counter = 1;
-		rc.payload = allocator.make!T(args);
+		rc.payload_ = allocator.make!T(args);
 		return rc;
 	}
 }
@@ -378,6 +392,6 @@ private unittest
 	}
 	{
 		auto rc = defaultAllocator.refCounted!E();
-		assert(rc.isInitialized);
+		assert(rc.count);
 	}
 }
