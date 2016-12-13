@@ -131,15 +131,16 @@ alias EventMask = BitFlags!Event;
 abstract class Loop
 {
 	/// Pending watchers.
-	protected Queue!Watcher pendings;
+	protected Queue!Watcher* pendings;
 
-	protected Queue!Watcher swapPendings;
+	protected Queue!Watcher* swapPendings;
 
 	/**
 	 * Returns: Maximal event count can be got at a time
 	 *          (should be supported by the backend).
 	 */
-	protected @property inout(uint) maxEvents() inout const pure nothrow @safe @nogc
+	protected @property inout(uint) maxEvents()
+	inout const pure nothrow @safe @nogc
 	{
 		return 128U;
 	}
@@ -147,7 +148,7 @@ abstract class Loop
 	/**
 	 * Initializes the loop.
 	 */
-	this()
+	this() @nogc
 	{
 		pendings = MmapPool.instance.make!(Queue!Watcher);
 		swapPendings = MmapPool.instance.make!(Queue!Watcher);
@@ -156,15 +157,15 @@ abstract class Loop
 	/**
 	 * Frees loop internals.
 	 */
-	~this()
+	~this() @nogc
 	{
-		foreach (w; pendings)
+		foreach (w; *pendings)
 		{
 			MmapPool.instance.dispose(w);
 		}
 		MmapPool.instance.dispose(pendings);
 
-		foreach (w; swapPendings)
+		foreach (w; *swapPendings)
 		{
 			MmapPool.instance.dispose(w);
 		}
@@ -174,7 +175,7 @@ abstract class Loop
 	/**
 	 * Starts the loop.
 	 */
-	void run()
+	void run() @nogc
 	{
 		done_ = false;
 		do
@@ -182,7 +183,7 @@ abstract class Loop
 			poll();
 
 			// Invoke pendings
-			swapPendings.each!((ref p) => p.invoke());
+			swapPendings.each!((ref p) @nogc => p.invoke());
 
 			swap(pendings, swapPendings);
 		}
@@ -192,7 +193,7 @@ abstract class Loop
 	/**
 	 * Break out of the loop.
 	 */
-	void unloop() @safe pure nothrow
+	void unloop() @safe pure nothrow @nogc
 	{
 		done_ = true;
 	}
@@ -203,7 +204,7 @@ abstract class Loop
 	 * Params:
 	 * 	watcher = Watcher.
 	 */
-	void start(ConnectionWatcher watcher)
+	void start(ConnectionWatcher watcher) @nogc
 	{
 		if (watcher.active)
 		{
@@ -219,7 +220,7 @@ abstract class Loop
 	 * Params:
 	 * 	watcher = Watcher.
 	 */
-	void stop(ConnectionWatcher watcher)
+	void stop(ConnectionWatcher watcher) @nogc
 	{
 		if (!watcher.active)
 		{
@@ -242,13 +243,13 @@ abstract class Loop
 	 */
 	abstract protected bool reify(ConnectionWatcher watcher,
 								  EventMask oldEvents,
-								  EventMask events);
+								  EventMask events) @nogc;
 
 	/**
 	 * Returns: The blocking time.
 	 */
 	protected @property inout(Duration) blockTime()
-	inout @safe pure nothrow
+	inout @safe pure nothrow @nogc
 	{
 		// Don't block if we have to do.
 		return swapPendings.empty ? blockTime_ : Duration.zero;
@@ -261,7 +262,7 @@ abstract class Loop
 	 * 	blockTime = The blocking time. Cannot be larger than
 	 * 	            $(D_PSYMBOL maxBlockTime).
 	 */
-	protected @property void blockTime(in Duration blockTime) @safe pure nothrow
+	protected @property void blockTime(in Duration blockTime) @safe pure nothrow @nogc
 	in
 	{
 		assert(blockTime <= 1.dur!"hours", "Too long to wait.");
@@ -275,7 +276,7 @@ abstract class Loop
 	/**
 	 * Kills the watcher and closes the connection.
 	 */
-	protected void kill(IOWatcher watcher, SocketException exception)
+	protected void kill(IOWatcher watcher, SocketException exception) @nogc
 	{
 		watcher.socket.shutdown();
 		defaultAllocator.dispose(watcher.socket);
@@ -287,7 +288,7 @@ abstract class Loop
 	/**
 	 * Does the actual polling.
 	 */
-	abstract protected void poll();
+	abstract protected void poll() @nogc;
 
 	/// Whether the event loop should be stopped.
 	private bool done_;
@@ -321,7 +322,7 @@ class BadLoopException : Exception
  *
  * Returns: The default event loop.
  */
-@property Loop defaultLoop()
+@property Loop defaultLoop() @nogc
 {
 	if (defaultLoop_ !is null)
 	{
@@ -354,7 +355,7 @@ class BadLoopException : Exception
  * Params:
  * 	loop = The event loop.
  */
-@property void defaultLoop(Loop loop)
+@property void defaultLoop(Loop loop) @nogc
 in
 {
 	assert(loop !is null);

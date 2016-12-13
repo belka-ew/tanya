@@ -37,7 +37,7 @@ interface WriteTransport : Transport
 	 * Params:
 	 * 	data = Data to send.
 	 */
-	void write(ubyte[] data);
+	void write(ubyte[] data) @nogc;
 }
 
 /**

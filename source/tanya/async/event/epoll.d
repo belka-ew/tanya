@@ -26,6 +26,13 @@ import core.sys.posix.unistd;
 import core.time;
 import std.algorithm.comparison;
 
+extern (C) nothrow @nogc
+{
+	int epoll_create1(int flags);
+	int epoll_ctl (int epfd, int op, int fd, epoll_event *event);
+	int epoll_wait (int epfd, epoll_event *events, int maxevents, int timeout);
+}
+
 class EpollLoop : SelectorLoop
 {
 	protected int fd;
@@ -34,7 +41,7 @@ class EpollLoop : SelectorLoop
 	/**
 	 * Initializes the loop.
 	 */
-	this()
+	this() @nogc
 	{
 		if ((fd = epoll_create1(EPOLL_CLOEXEC)) < 0)
 		{
@@ -47,7 +54,7 @@ class EpollLoop : SelectorLoop
 	/**
 	 * Free loop internals.
 	 */
-	~this()
+	~this() @nogc
 	{
 		MmapPool.instance.dispose(events);
 		close(fd);
@@ -63,7 +70,9 @@ class EpollLoop : SelectorLoop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
-	protected override bool reify(ConnectionWatcher watcher, EventMask oldEvents, EventMask events)
+	protected override bool reify(ConnectionWatcher watcher,
+	                              EventMask oldEvents,
+	                              EventMask events) @nogc
 	in
 	{
 		assert(watcher !is null);
@@ -97,7 +106,7 @@ class EpollLoop : SelectorLoop
 	/**
 	 * Does the actual polling.
 	 */
-	protected override void poll()
+	protected override void poll() @nogc
 	{
 		// Don't block
 		immutable timeout = cast(immutable int) blockTime.total!"msecs";

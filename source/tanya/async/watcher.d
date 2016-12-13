@@ -42,7 +42,7 @@ abstract class Watcher
 	/**
 	 * Invoke some action on event.
 	 */
-	void invoke();
+	void invoke() @nogc;
 }
 
 class ConnectionWatcher : Watcher
@@ -51,28 +51,28 @@ class ConnectionWatcher : Watcher
 	private Socket socket_;
 
 	/// Protocol factory.
-	protected Protocol delegate() protocolFactory;
+	protected Protocol delegate() @nogc protocolFactory;
 
-	package Queue!IOWatcher incoming;
+	package Queue!IOWatcher* incoming;
 
 	/**
 	 * Params:
 	 * 	socket = Socket.
 	 */
-	this(Socket socket)
+	this(Socket socket) @nogc
 	{
 		socket_ = socket;
 		incoming = MmapPool.instance.make!(Queue!IOWatcher);
 	}
 
 	/// Ditto.
-	protected this()
+	protected this() pure nothrow @safe @nogc
 	{
 	}
 
-	~this()
+	~this() @nogc
 	{
-		foreach (w; incoming)
+		foreach (w; *incoming)
 		{
 			MmapPool.instance.dispose(w);
 		}
@@ -83,9 +83,9 @@ class ConnectionWatcher : Watcher
 	 * Params:
 	 * 	P = Protocol should be used.
 	 */
-	void setProtocol(P : Protocol)()
+	void setProtocol(P : Protocol)() @nogc
 	{
-		this.protocolFactory = () => cast(Protocol) MmapPool.instance.make!P;
+		this.protocolFactory = () @nogc => cast(Protocol) MmapPool.instance.make!P;
 	}
 
 	/**
@@ -99,7 +99,7 @@ class ConnectionWatcher : Watcher
 	/**
 	 * Returns: New protocol instance.
 	 */
-	@property Protocol protocol()
+	@property Protocol protocol() @nogc
 	in
 	{
 		assert(protocolFactory !is null, "Protocol isn't set.");
@@ -112,9 +112,9 @@ class ConnectionWatcher : Watcher
 	/**
 	 * Invokes new connection callback.
 	 */
-	override void invoke()
+	override void invoke() @nogc
 	{
-		foreach (io; incoming)
+		foreach (io; *incoming)
 		{
 			io.protocol.connected(cast(DuplexTransport) io.transport);
 		}
@@ -146,7 +146,7 @@ class IOWatcher : ConnectionWatcher
 	 * 	transport = Transport.
 	 * 	protocol  = New instance of the application protocol.
 	 */
-	this(StreamTransport transport, Protocol protocol)
+	this(StreamTransport transport, Protocol protocol) @nogc
 	in
 	{
 		assert(transport !is null);
@@ -164,7 +164,7 @@ class IOWatcher : ConnectionWatcher
 	/**
 	 * Destroys the watcher.
 	 */
-	protected ~this()
+	protected ~this() @nogc
 	{
 		MmapPool.instance.dispose(output);
 		MmapPool.instance.dispose(protocol_);
@@ -179,7 +179,8 @@ class IOWatcher : ConnectionWatcher
 	 *
 	 * Returns: $(D_KEYWORD this).
 	 */
-	IOWatcher opCall(StreamTransport transport, Protocol protocol) pure nothrow @nogc
+	IOWatcher opCall(StreamTransport transport, Protocol protocol)
+	pure nothrow @nogc
 	in
 	{
 		assert(transport !is null);
@@ -231,7 +232,7 @@ class IOWatcher : ConnectionWatcher
 	/**
 	 * Invokes the watcher callback.
 	 */
-	override void invoke()
+	override void invoke() @nogc
 	{
 		if (output.length)
 		{

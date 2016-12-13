@@ -42,7 +42,7 @@ class SelectorStreamTransport : StreamTransport
 	 * 	loop     = Event loop.
 	 * 	socket   = Socket.
 	 */
-	this(SelectorLoop loop, ConnectedSocket socket)
+	this(SelectorLoop loop, ConnectedSocket socket) @nogc
 	{
 		socket_ = socket;
 		this.loop = loop;
@@ -52,7 +52,7 @@ class SelectorStreamTransport : StreamTransport
 	/**
 	 * Close the transport and deallocate the data buffers.
 	 */
-	~this()
+	~this() @nogc
 	{
 		MmapPool.instance.dispose(input);
 	}
@@ -71,7 +71,7 @@ class SelectorStreamTransport : StreamTransport
 	 * Params:
 	 * 	data = Data to send.
 	 */
-	void write(ubyte[] data)
+	void write(ubyte[] data) @nogc
 	{
 		if (!data.length)
 		{
@@ -113,13 +113,13 @@ abstract class SelectorLoop : Loop
 	/// Pending connections.
 	protected ConnectionWatcher[] connections;
 
-	this()
+	this() @nogc
 	{
 		super();
 		connections = MmapPool.instance.makeArray!ConnectionWatcher(maxEvents);
 	}
 
-	~this()
+	~this() @nogc
 	{
 		foreach (ref connection; connections)
 		{
@@ -147,7 +147,8 @@ abstract class SelectorLoop : Loop
 	 *          completed or scheduled, $(D_KEYWORD false) otherwise (the
 	 *          transport will be destroyed then).
 	 */
-	protected bool feed(SelectorStreamTransport transport, SocketException exception = null)
+	protected bool feed(SelectorStreamTransport transport,
+	                    SocketException exception = null) @nogc
 	{
 		while (transport.input.length && transport.writeReady)
 		{
@@ -186,7 +187,7 @@ abstract class SelectorLoop : Loop
 	 * Params:
 	 * 	watcher = Watcher.
 	 */
-	override void start(ConnectionWatcher watcher)
+	override void start(ConnectionWatcher watcher) @nogc
 	{
 		if (watcher.active)
 		{
@@ -208,7 +209,7 @@ abstract class SelectorLoop : Loop
 	 * Params:
 	 * 	connection = Connection watcher ready to accept.
 	 */
-	package void acceptConnections(ConnectionWatcher connection)
+	package void acceptConnections(ConnectionWatcher connection) @nogc
 	in
 	{
 		assert(connection !is null);

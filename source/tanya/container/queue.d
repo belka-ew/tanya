@@ -18,7 +18,7 @@ import tanya.memory;
  * Params:
  * 	T = Content type.
  */
-class Queue(T)
+struct Queue(T)
 {
 	/**
 	 * Creates a new $(D_PSYMBOL Queue).
@@ -27,7 +27,7 @@ class Queue(T)
 	 * 	allocator = The allocator should be used for the element
 	 * 	            allocations.
 	 */
-	this(shared Allocator allocator = defaultAllocator)
+	this(shared Allocator allocator)
 	{
 		this.allocator = allocator;
 	}
@@ -86,6 +86,10 @@ class Queue(T)
 	 */
 	void insertBack(T x)
 	{
+		if (allocator is null)
+		{
+			allocator = defaultAllocator;
+		}
 		Entry* temp = make!Entry(allocator);
 		
 		temp.content = x;
@@ -121,7 +125,7 @@ class Queue(T)
 	/**
 	 * Returns: $(D_KEYWORD true) if the queue is empty.
 	 */
-	@property bool empty() inout const pure nothrow @safe @nogc
+	@property bool empty() inout const pure nothrow @safe
 	{
 		return first.next is null;
 	}
@@ -146,6 +150,7 @@ class Queue(T)
 	in
 	{
 		assert(!empty);
+		assert(allocator !is null);
 	}
 	body
 	{
@@ -176,7 +181,7 @@ class Queue(T)
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
 	 */
-	int opApply(scope int delegate(ref size_t i, ref T) dg)
+	int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
 	{
 		int result;
 
@@ -192,7 +197,7 @@ class Queue(T)
 	}
 
 	/// Ditto.
-	int opApply(scope int delegate(ref T) dg)
+	int opApply(scope int delegate(ref T) @nogc dg)
 	{
 		int result;
 
@@ -210,7 +215,7 @@ class Queue(T)
 	///
 	unittest
 	{
-		auto q = defaultAllocator.make!(Queue!int);
+		auto q = Queue!int(defaultAllocator);
 
 		size_t j;
 		q.insertBack(5);
@@ -239,8 +244,6 @@ class Queue(T)
 		}
 		assert(j == 3);
 		assert(q.empty);
-
-		dispose(defaultAllocator, q);
 	}
 
 	/**
@@ -268,7 +271,7 @@ class Queue(T)
 ///
 unittest
 {
-	auto q = defaultAllocator.make!(Queue!int);
+	auto q = Queue!int(defaultAllocator);
 
 	q.insertBack(5);
 	assert(!q.empty);
@@ -288,6 +291,4 @@ unittest
 		assert(i != 1 || e == 9);
 	}
 	assert(q.empty);
-
-	defaultAllocator.dispose(q);
 }

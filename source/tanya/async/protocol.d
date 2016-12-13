@@ -22,7 +22,7 @@ interface Protocol
 	 * Params:
 	 * 	data = Read data.
 	 */
-	void received(ubyte[] data);
+	void received(ubyte[] data) @nogc;
 
 	/**
 	 * Called when a connection is made.
@@ -30,7 +30,7 @@ interface Protocol
 	 * Params:
 	 * 	transport = Protocol transport.
 	 */
-	void connected(DuplexTransport transport);
+	void connected(DuplexTransport transport) @nogc;
 
 	/**
 	 * Called when a connection is lost.
@@ -39,7 +39,7 @@ interface Protocol
 	 * 	exception = $(D_PSYMBOL Exception) if an error caused
 	 * 	            the disconnect, $(D_KEYWORD null) otherwise.
 	 */
-	void disconnected(SocketException exception = null);
+	void disconnected(SocketException exception = null) @nogc;
 }
 
 /**

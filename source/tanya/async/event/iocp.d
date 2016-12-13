@@ -37,7 +37,7 @@ class IOCPStreamTransport : StreamTransport
 	 * Params:
 	 * 	socket = Socket.
 	 */
-	this(OverlappedConnectedSocket socket)
+	this(OverlappedConnectedSocket socket) @nogc
 	in
 	{
 		assert(socket !is null);
@@ -53,7 +53,8 @@ class IOCPStreamTransport : StreamTransport
 		MmapPool.instance.dispose(input);
 	}
 
-	@property inout(OverlappedConnectedSocket) socket() inout pure nothrow @safe @nogc
+	@property inout(OverlappedConnectedSocket) socket()
+	inout pure nothrow @safe @nogc
 	{
 		return socket_;
 	}
@@ -64,7 +65,7 @@ class IOCPStreamTransport : StreamTransport
 	 * Params:
 	 * 	data = Data to send.
 	 */
-	void write(ubyte[] data)
+	void write(ubyte[] data) @nogc
 	{
 		immutable empty = input.length == 0;
 		input ~= data;
@@ -85,8 +86,8 @@ class IOCPStreamTransport : StreamTransport
 	}
 }
 
-	class IOCPLoop : Loop
-	{
+class IOCPLoop : Loop
+{
 	protected HANDLE completionPort;
 
 	protected OVERLAPPED overlap;
@@ -94,7 +95,7 @@ class IOCPStreamTransport : StreamTransport
 	/**
 	 * Initializes the loop.
 	 */
-	this()
+	this() @nogc
 	{
 		super();
 
@@ -118,7 +119,7 @@ class IOCPStreamTransport : StreamTransport
 	 */
 	override protected bool reify(ConnectionWatcher watcher,
 								  EventMask oldEvents,
-								  EventMask events)
+								  EventMask events) @nogc
 	{
 		SocketState overlapped;
 		if (!(oldEvents & Event.accept) && (events & Event.accept))
@@ -185,7 +186,7 @@ class IOCPStreamTransport : StreamTransport
 	/**
 	 * Does the actual polling.
 	 */
-	override protected void poll()
+	override protected void poll() @nogc
 	{
 		DWORD lpNumberOfBytes;
 		ULONG_PTR key;

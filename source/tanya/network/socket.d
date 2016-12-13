@@ -15,9 +15,8 @@ import core.stdc.errno;
 import core.time;
 import std.algorithm.comparison;
 import std.algorithm.searching;
-public import std.socket : AddressException, socket_t, Linger, SocketOptionLevel,
-                           SocketType, AddressFamily, AddressInfo,
-                           SocketOption;
+public import std.socket : socket_t, Linger, SocketOptionLevel, SocketOption,
+                           SocketType, AddressFamily, AddressInfo;
 import std.traits;
 import std.typecons;
 
@@ -213,7 +212,7 @@ else version (Windows)
 		 *     handle   = Socket handle.
 		 *     af       = Address family.
 		 */
-		this(socket_t handle, AddressFamily af)
+		this(socket_t handle, AddressFamily af) @nogc
 		{
 			super(handle, af);
 		}
@@ -233,7 +232,7 @@ else version (Windows)
 		 */
 		bool beginReceive(ubyte[] buffer,
 						  SocketState overlapped,
-						  Flags flags = Flags(Flag.none)) @trusted
+						  Flags flags = Flags(Flag.none)) @nogc @trusted
 		{
 			auto receiveFlags = cast(DWORD) flags;
 
@@ -267,7 +266,7 @@ else version (Windows)
 		 *
 		 * Throws: $(D_PSYMBOL SocketException) if unable to receive.
 		 */
-		int endReceive(SocketState overlapped) @trusted
+		int endReceive(SocketState overlapped) @nogc @trusted
 		out (count)
 		{
 			assert(count >= 0);
@@ -306,7 +305,7 @@ else version (Windows)
 		 */
 		bool beginSend(ubyte[] buffer,
 					   SocketState overlapped,
-					   Flags flags = Flags(Flag.none)) @trusted
+					   Flags flags = Flags(Flag.none)) @nogc @trusted
 		{
 			overlapped.handle = cast(HANDLE) handle_;
 			overlapped.event = OverlappedSocketEvent.write;
@@ -339,7 +338,7 @@ else version (Windows)
 		 *
 		 * Throws: $(D_PSYMBOL SocketException) if unable to receive.
 		*/
-		int endSend(SocketState overlapped) @trusted
+		int endSend(SocketState overlapped) @nogc @trusted
 		out (count)
 		{
 			assert(count >= 0);
@@ -373,7 +372,7 @@ else version (Windows)
 		 *
 		 * Throws: $(D_PSYMBOL SocketException) on errors.
 		 */
-		this(AddressFamily af) @trusted
+		this(AddressFamily af) @nogc @trusted
 		{
 			super(af);
 			scope (failure)
@@ -412,7 +411,7 @@ else version (Windows)
 		 *
 		 * Throws: $(D_PSYMBOL SocketException) on accept errors.
 		 */
-		bool beginAccept(SocketState overlapped) @trusted
+		bool beginAccept(SocketState overlapped) @nogc @trusted
 		{
 			auto socket = cast(socket_t) socket(addressFamily, SOCK_STREAM, 0);
 			if (socket == socket_t.init)
@@ -457,7 +456,7 @@ else version (Windows)
 		 *
 		 * Throws: $(D_PSYMBOL SocketException) if unable to accept.
 		 */
-		OverlappedConnectedSocket endAccept(SocketState overlapped) @trusted
+		OverlappedConnectedSocket endAccept(SocketState overlapped) @nogc @trusted
 		{
 			scope (exit)
 			{
@@ -666,7 +665,7 @@ abstract class Socket
 	/// Address family.
 	protected AddressFamily family;
 
-	private @property void handle(socket_t handle)
+	private @property void handle(socket_t handle) @nogc
 	in
 	{
 		assert(handle != socket_t.init);
@@ -696,7 +695,7 @@ abstract class Socket
 	 * 	handle   = Socket.
 	 * 	af       = Address family.
 	 */
-	this(socket_t handle, AddressFamily af)
+	this(socket_t handle, AddressFamily af) @nogc
 	in
 	{
 		assert(handle != socket_t.init);
@@ -731,7 +730,9 @@ abstract class Socket
 	 *
 	 * Throws: $(D_PSYMBOL SocketException) on error.
 	 */
-	protected int getOption(SocketOptionLevel level, SocketOption option, void[] result) const @trusted
+	protected int getOption(SocketOptionLevel level,
+	                        SocketOption option,
+	                        void[] result) const @trusted @nogc
 	{
 		auto length = cast(socklen_t) result.length;
 		if (getsockopt(handle_,
@@ -746,19 +747,25 @@ abstract class Socket
 	}
 
 	/// Ditto.
-	int getOption(SocketOptionLevel level, SocketOption option, out size_t result) const @trusted
+	int getOption(SocketOptionLevel level,
+	              SocketOption option,
+	              out size_t result) const @trusted @nogc
 	{
 		return getOption(level, option, (&result)[0..1]);
 	}
 
 	/// Ditto.
-	int getOption(SocketOptionLevel level, SocketOption option, out Linger result) const @trusted
+	int getOption(SocketOptionLevel level,
+	              SocketOption option,
+                  out Linger result) const @trusted @nogc
 	{
 		return getOption(level, option, (&result.clinger)[0..1]);
 	}
 
 	/// Ditto.
-	int getOption(SocketOptionLevel level, SocketOption option, out Duration result) const @trusted
+	int getOption(SocketOptionLevel level,
+	              SocketOption option,
+	              out Duration result) const @trusted @nogc
 	{
 		// WinSock returns the timeout values as a milliseconds DWORD,
 		// while Linux and BSD return a timeval struct.
@@ -791,8 +798,9 @@ abstract class Socket
 	 *
 	 * Throws: $(D_PSYMBOL SocketException) on error.
 	 */
-	protected void setOption(SocketOptionLevel level, SocketOption option, void[] value)
-	const @trusted
+	protected void setOption(SocketOptionLevel level,
+			                 SocketOption option,
+	                         void[] value) const @trusted @nogc
 	{
 		if (setsockopt(handle_,
 					   cast(int)level,
@@ -805,19 +813,22 @@ abstract class Socket
 	}
 
 	/// Ditto.
-	void setOption(SocketOptionLevel level, SocketOption option, size_t value) const @trusted
+	void setOption(SocketOptionLevel level, SocketOption option, size_t value)
+	const @trusted @nogc
 	{
 		setOption(level, option, (&value)[0..1]);
 	}
 
 	/// Ditto.
-	void setOption(SocketOptionLevel level, SocketOption option, Linger value) const @trusted
+	void setOption(SocketOptionLevel level, SocketOption option, Linger value)
+	const @trusted @nogc
 	{
 		setOption(level, option, (&value.clinger)[0..1]);
 	}
 
 	/// Ditto.
-	void setOption(SocketOptionLevel level, SocketOption option, Duration value) const @trusted
+	void setOption(SocketOptionLevel level, SocketOption option, Duration value)
+	const @trusted @nogc
 	{
 		version (Posix)
 		{
@@ -855,7 +866,7 @@ abstract class Socket
 	 * Params:
 	 * 	yes = Socket's blocking flag.
 	 */
-	@property void blocking(bool yes)
+	@property void blocking(bool yes) @nogc
 	{
 		version (Posix)
 		{
@@ -943,7 +954,7 @@ abstract class Socket
 	 * 	backlog = Request of how many pending incoming connections are 
 	 * 	          queued until $(D_PSYMBOL accept)ed.
 	 */
-	void listen(int backlog) const @trusted
+	void listen(int backlog) const @trusted @nogc
 	{
 		if (.listen(handle_, backlog) == SOCKET_ERROR)
 		{
@@ -992,7 +1003,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
 	 * Params:
 	 * 	af       = Address family.
 	 */
-	this(AddressFamily af) @trusted
+	this(AddressFamily af) @trusted @nogc
 	{
 		auto handle = cast(socket_t) socket(af, SOCK_STREAM, 0);
 		if (handle == socket_t.init)
@@ -1010,7 +1021,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
 	 *
 	 * Throws: $(D_PSYMBOL SocketException) if unable to bind.
 	 */
-	void bind(Address address) @trusted const
+	void bind(Address address) const @trusted @nogc
 	{
 		if (.bind(handle_, address.name, address.length) == SOCKET_ERROR)
 		{
@@ -1029,7 +1040,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
 	 *
 	 * Throws: $(D_PSYMBOL SocketException) if unable to accept.
 	 */
-	ConnectedSocket accept() @trusted
+	ConnectedSocket accept() @trusted @nogc
 	{
 		socket_t sock;
 
@@ -1112,7 +1123,7 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
 	 * 	handle   = Socket.
 	 * 	af       = Address family.
 	 */
-	this(socket_t handle, AddressFamily af)
+	this(socket_t handle, AddressFamily af) @nogc
 	{
 		super(handle, af);
 	}
@@ -1148,7 +1159,7 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
 	 *
 	 * Throws: $(D_PSYMBOL SocketException) if unable to receive.
 	 */
-	ptrdiff_t receive(ubyte[] buf, Flags flags = Flag.none) @trusted
+	ptrdiff_t receive(ubyte[] buf, Flags flags = Flag.none) @trusted @nogc
 	{
 		ptrdiff_t ret;
 		if (!buf.length)
@@ -1186,7 +1197,8 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
 	 *
 	 * Throws: $(D_PSYMBOL SocketException) if unable to send.
 	 */
-	ptrdiff_t send(const(ubyte)[] buf, Flags flags = Flag.none) const @trusted
+	ptrdiff_t send(const(ubyte)[] buf, Flags flags = Flag.none)
+	const @trusted @nogc
 	{
 		int sendFlags = cast(int) flags;
 		ptrdiff_t sent;
@@ -1244,12 +1256,12 @@ class InternetAddress : Address
 		anyPort = 0,
 	}
 
-	this(in string host, ushort port = anyPort)
+	this(in string host, ushort port = anyPort) @nogc
 	{
 		if (getaddrinfoPointer is null || freeaddrinfoPointer is null)
 		{
-			throw make!AddressException(defaultAllocator,
-			                            "Address info lookup is not available on this system");
+			throw make!SocketException(defaultAllocator,
+			                           "Address info lookup is not available on this system");
 		}
 		addrinfo* ai_res;
 		port_ = port;
@@ -1285,7 +1297,7 @@ class InternetAddress : Address
 		auto ret = getaddrinfoPointer(node.ptr, servicePointer, null, &ai_res);
 		if (ret)
 		{
-			throw defaultAllocator.make!AddressException("Address info lookup failed");
+			throw defaultAllocator.make!SocketException("Address info lookup failed");
 		}
 		scope (exit)
 		{
@@ -1299,7 +1311,7 @@ class InternetAddress : Address
 		}
 		if (ai_res.ai_family != AddressFamily.INET && ai_res.ai_family != AddressFamily.INET6)
 		{
-			throw defaultAllocator.make!AddressException("Wrong address family");
+			throw defaultAllocator.make!SocketException("Wrong address family");
 		}
 	}
 

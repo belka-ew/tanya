@@ -151,12 +151,13 @@ class KqueueLoop : SelectorLoop
 	 * Returns: Maximal event count can be got at a time
 	 *          (should be supported by the backend).
 	 */
-	override protected @property inout(uint) maxEvents() inout const pure nothrow @safe @nogc
+	override protected @property inout(uint) maxEvents()
+	inout const pure nothrow @safe @nogc
 	{
 		return cast(uint) events.length;
 	}
 
-	this()
+	this() @nogc
 	{
 		super();
 
@@ -171,14 +172,14 @@ class KqueueLoop : SelectorLoop
 	/**
 	 * Free loop internals.
 	 */
-	~this()
+	~this() @nogc
 	{
 		MmapPool.instance.dispose(events);
 		MmapPool.instance.dispose(changes);
 		close(fd);
 	}
 
-	private void set(socket_t socket, short filter, ushort flags)
+	private void set(socket_t socket, short filter, ushort flags) @nogc
 	{
 		if (changes.length <= changeCount)
 		{
@@ -206,7 +207,7 @@ class KqueueLoop : SelectorLoop
 	 */
 	override protected bool reify(ConnectionWatcher watcher,
 								  EventMask oldEvents,
-								  EventMask events)
+								  EventMask events) @nogc
 	{
 		if (events != oldEvents)
 		{
@@ -233,7 +234,7 @@ class KqueueLoop : SelectorLoop
 	/**
 	 * Does the actual polling.
 	 */
-	protected override void poll()
+	protected override void poll() @nogc
 	{
 		timespec ts;
 		blockTime.split!("seconds", "nsecs")(ts.tv_sec, ts.tv_nsec);
@@ -316,7 +317,7 @@ class KqueueLoop : SelectorLoop
 	 * Returns: The blocking time.
 	 */
 	override protected @property inout(Duration) blockTime()
-	inout @safe pure nothrow
+	inout @nogc @safe pure nothrow
 	{
 		return min(super.blockTime, 1.dur!"seconds");
 	}
@@ -333,7 +334,8 @@ class KqueueLoop : SelectorLoop
 	 *          completed or scheduled, $(D_KEYWORD false) otherwise (the
 	 *          transport is be destroyed then).
 	 */
-	protected override bool feed(SelectorStreamTransport transport, SocketException exception = null)
+	protected override bool feed(SelectorStreamTransport transport,
+	                             SocketException exception = null) @nogc
 	{
 		if (!super.feed(transport, exception))
 		{
