@@ -34,51 +34,6 @@ version (unittest)
 }
 
 /**
- * Interface for implemeting input/output buffers.
- */
-interface Buffer
-{
-    /**
-     * Returns: The size of the internal buffer.
-     */
-    @property size_t capacity() const @nogc @safe pure nothrow;
-
-    /**
-     * Returns: Data size.
-     */
-    @property size_t length() const @nogc @safe pure nothrow;
-
-    /**
-     * Returns: Available space.
-     */
-    @property size_t free() const @nogc @safe pure nothrow;
-
-    /**
-     * Params:
-     *     start = Start position.
-     *     end   = End position.
-     *
-     * Returns: Array between $(D_PARAM start) and $(D_PARAM end).
-     */
-    @property ubyte[] opSlice(size_t start, size_t end)
-    in
-    {
-        assert(start <= end);
-        assert(end <= length);
-    }
-
-    /**
-    * Returns: Length of available data.
-    */
-    @property size_t opDollar() const pure nothrow @safe @nogc;
-
-    /**
-     * Returns: Data chunk.
-     */
-    @property ubyte[] opIndex();
-}
-
-/**
  * Self-expanding buffer, that can be used with functions returning the number
  * of the read bytes.
  *
@@ -88,7 +43,7 @@ interface Buffer
  * sure to call $(D_PSYMBOL ReadBuffer.clear()) before you append the result
  * of the pended asynchronous call.
  */
-class ReadBuffer : Buffer
+class ReadBuffer
 {
     /// Internal buffer.
     protected ubyte[] buffer_;
@@ -111,7 +66,7 @@ class ReadBuffer : Buffer
 	/// Allocator.
 	protected shared Allocator allocator;
 
-    invariant
+    @nogc invariant
     {
         assert(length_ <= buffer_.length);
         assert(blockSize > 0);
@@ -132,7 +87,7 @@ class ReadBuffer : Buffer
      */
     this(size_t size = 8192,
          size_t minAvailable = 1024,
-	     shared Allocator allocator = defaultAllocator)
+	     shared Allocator allocator = defaultAllocator) @nogc
     {
         this.minAvailable = minAvailable;
         this.blockSize = size;
@@ -143,7 +98,7 @@ class ReadBuffer : Buffer
     /**
      * Deallocates the internal buffer.
      */
-    ~this()
+    ~this() @nogc
     {
         allocator.dispose(buffer_);
     }
@@ -219,7 +174,7 @@ class ReadBuffer : Buffer
      *
      * Returns: $(D_KEYWORD this).
      */
-    ReadBuffer opOpAssign(string op)(size_t length)
+    ReadBuffer opOpAssign(string op)(size_t length) @nogc
         if (op == "+")
     {
         length_ += length;
@@ -288,7 +243,7 @@ class ReadBuffer : Buffer
      *
      * Returns: A free chunk of the buffer.
      */
-    ubyte[] opIndex()
+    ubyte[] opIndex() @nogc
     {
         if (start > 0)
         {
@@ -338,7 +293,7 @@ class ReadBuffer : Buffer
  * you permanently keep some data in the buffer and alternate writing and
  * reading, because it may allocate and move elements.
  */
-class WriteBuffer : Buffer
+class WriteBuffer
 {
     /// Internal buffer.
     protected ubyte[] buffer_;
@@ -358,7 +313,7 @@ class WriteBuffer : Buffer
 	/// Allocator.
 	protected shared Allocator allocator;
 
-    invariant
+    @nogc invariant
     {
         assert(blockSize > 0);
         // position can refer to an element outside the buffer if the buffer is full.
@@ -373,6 +328,7 @@ class WriteBuffer : Buffer
 	 * 	allocator = Allocator.
      */
     this(size_t size = 8192, shared Allocator allocator = defaultAllocator)
+	@nogc
     {
 		this.allocator = allocator;
         blockSize = size;
@@ -383,7 +339,7 @@ class WriteBuffer : Buffer
     /**
      * Deallocates the internal buffer.
      */
-    ~this()
+    ~this() @nogc
     {
         allocator.dispose(buffer_);
     }
@@ -462,7 +418,7 @@ class WriteBuffer : Buffer
      * Params:
      *     buffer = Buffer chunk got with $(D_PSYMBOL buffer).
      */
-    WriteBuffer opOpAssign(string op)(ubyte[] buffer)
+    WriteBuffer opOpAssign(string op)(ubyte[] buffer) @nogc
         if (op == "~")
     {
         size_t end, start;
