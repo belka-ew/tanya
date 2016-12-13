@@ -60,21 +60,21 @@ body
 	final switch (mode) with (PaddingMode)
 	{
 		case zero:
-			allocator.expandArray(input, needed);
+			allocator.resizeArray(input, input.length + needed);
 			break;
 		case pkcs7:
 			if (needed)
 			{
-				allocator.expandArray(input, needed);
+				allocator.resizeArray(input, input.length + needed);
 				input[input.length - needed ..$].each!((ref e) => e = needed);
 			}
 			else
 			{
-				allocator.expandArray(input, blockSize);
+				allocator.resizeArray(input, input.length + blockSize);
 			}
 			break;
 		case ansiX923:
-			allocator.expandArray(input, needed ? needed : blockSize);
+			allocator.resizeArray(input, input.length + (needed ? needed : blockSize));
 			input[$ - 1] = needed;
 			break;
 	}
@@ -220,7 +220,7 @@ body
 		case ansiX923:
 			immutable last = input[$ - 1];
 
-			allocator.shrinkArray(input, last ? last : blockSize);
+			allocator.resizeArray(input, input.length - (last ? last : blockSize));
 			break;
 	}
 
