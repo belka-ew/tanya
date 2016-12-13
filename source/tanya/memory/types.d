@@ -36,13 +36,81 @@ struct RefCounted(T)
 	{
 		private alias Payload = T*;
 	}
-	private Payload payload_;
 
-	private uint counter;
+	private class Storage
+	{
+		private Payload payload;
+		private size_t counter = 1;
+
+		private final size_t opUnary(string op)() pure nothrow @safe @nogc
+			if (op == "--")
+		in
+		{
+			assert(counter > 0);
+		}
+		body
+		{
+			return --counter;
+		}
+
+		private final size_t opUnary(string op)() pure nothrow @safe @nogc
+			if (op == "++")
+		out
+		{
+			assert(counter > 0);
+		}
+		body
+		{
+			return ++counter;
+		}
+
+		private final int opCmp(size_t counter) const pure nothrow @safe @nogc
+		{
+			if (this.counter > counter)
+			{
+				return 1;
+			}
+			else if (this.counter < counter)
+			{
+				return -1;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+
+		private final int opEquals(size_t counter) const pure nothrow @safe @nogc
+		{
+			return this.counter == counter;
+		}
+	}
+
+	private final class RefCountedStorage : Storage
+	{
+		private shared Allocator allocator;
+
+		this(shared Allocator allocator) pure nothrow @safe @nogc
+		in
+		{
+			assert(allocator !is null);
+		}
+		body
+		{
+			this.allocator = allocator;
+		}
+
+		~this() nothrow @nogc
+		{
+			allocator.dispose(payload);
+		}
+	}
+
+	private Storage storage;
 
 	invariant
 	{
-		assert(counter == 0 || allocator !is null);
+		assert(storage is null || allocator !is null);
 	}
 
 	private shared Allocator allocator;
@@ -61,12 +129,12 @@ struct RefCounted(T)
 	this(Payload value, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
-		move(value, payload_);
-		counter = 1;
+		storage = allocator.make!RefCountedStorage(allocator);
+		move(value, storage.payload);
 	}
 
 	/// Ditto.
-	this(shared Allocator allocator) pure nothrow @safe @nogc
+	this(shared Allocator allocator)
 	in
 	{
 		assert(allocator !is null);
@@ -81,9 +149,9 @@ struct RefCounted(T)
 	 */
 	this(this) pure nothrow @safe @nogc
 	{
-		if (count)
+		if (storage !is null)
 		{
-			++counter;
+			++storage;
 		}
 	}
 
@@ -92,15 +160,11 @@ struct RefCounted(T)
 	 *
 	 * If the counter reaches 0, destroys the owned value.
 	 */
-	~this()
+	~this() @trusted
 	{
-		if (count && !--counter)
+		if (storage !is null && !--storage)
 		{
-			static if (isReference!T)
-			{
-				allocator.dispose(payload_);
-				payload_ = null;
-			}
+			allocator.dispose(storage);
 		}
 	}
 
@@ -124,25 +188,26 @@ struct RefCounted(T)
 		{
 			allocator = defaultAllocator;
 		}
+		if (storage is null)
+		{
+			storage = allocator.make!RefCountedStorage(allocator);
+
+			static if (!isReference!T)
+			{
+				storage.payload = cast(T*) allocator.allocate(stateSize!T).ptr;
+			}
+
+		}
 		static if (isReference!T)
 		{
-			if (counter > 1)
+			if (storage > 1)
 			{
-				--counter;
-			}
-			else if (counter == 1)
-			{
-				allocator.dispose(payload_);
+				--storage;
 			}
 			else
 			{
-				counter = 1;
+				allocator.dispose(storage.payload);
 			}
-		}
-		else if (!count)
-		{
-			payload_ = cast(T*) allocator.allocate(stateSize!T).ptr;
-			counter = 1;
 		}
 		move(rhs, payload);
 		return payload;
@@ -152,9 +217,7 @@ struct RefCounted(T)
 	ref typeof(this) opAssign(typeof(this) rhs)
 	{
 		swap(allocator, rhs.allocator);
-		swap(counter, rhs.counter);
-		swap(payload, rhs.payload);
-
+		swap(storage, rhs.storage);
 		return this;
 	}
 
@@ -178,17 +241,17 @@ struct RefCounted(T)
 	ref inout(T) get() inout pure nothrow @safe @nogc
 	in
 	{
-		assert(counter, "Attempted to access an uninitialized reference.");
+		assert(storage !is null, "Attempted to access an uninitialized reference.");
 	}
 	body
 	{
 		static if (isReference!T)
 		{
-			return payload_;
+			return storage.payload;
 		}
 		else
 		{
-			return *payload_;
+			return *storage.payload;
 		}
 	}
 
@@ -197,9 +260,9 @@ struct RefCounted(T)
 	 *          ownership over the same pointer (including $(D_KEYWORD this)).
 	 *          If this $(D_PSYMBOL RefCounted) isn't initialized, returns 0.
 	 */
-	@property uint count() const pure nothrow @safe @nogc
+	@property size_t count() const pure nothrow @safe @nogc
 	{
-		return counter;
+		return storage is null ? 0 : storage.counter;
 	}
 
 	pragma(inline, true)
@@ -207,11 +270,11 @@ struct RefCounted(T)
 	{
 		static if (isReference!T)
 		{
-			return payload_;
+			return storage.payload;
 		}
 		else
 		{
-			return *payload_;
+			return *storage.payload;
 		}
 	}
 
@@ -308,10 +371,10 @@ private unittest
 	auto val = defaultAllocator.make!int(5);
 	auto rc = RefCounted!int(val);
 
-	static assert(is(typeof(rc.payload_) == int*));
+	//static assert(is(typeof(rc.payload_) == int*));
 	static assert(is(typeof(cast(int) rc) == int));
 
-	static assert(is(typeof(RefCounted!(int*).payload_) == int*));
+	//static assert(is(typeof(RefCounted!(int*).payload_) == int*));
 
 	static assert(is(typeof(cast(A) (RefCounted!A())) == A));
 	static assert(is(typeof(cast(Object) (RefCounted!A())) == Object));
@@ -336,21 +399,21 @@ private unittest
 RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
 	if (!is(T == interface) && !isAbstractClass!T)
 {
+	auto rc = typeof(return)(allocator);
 	static if (isDynamicArray!T)
 	{
-		return typeof(return)(allocator.makeArray!(ForeachType!T)(args), allocator);
+		rc = allocator.makeArray!(ForeachType!T)(args);
 	}
 	else static if (isReference!T)
 	{
-		return typeof(return)(allocator.make!T(args), allocator);
+		rc = allocator.make!T(args);
 	}
 	else
 	{
-		auto rc = typeof(return)(allocator);
-		rc.counter = 1;
-		rc.payload_ = allocator.make!T(args);
-		return rc;
+		rc.storage = allocator.make!(RefCounted!T.RefCountedStorage)(allocator);
+		rc.storage.payload = allocator.make!T(args);
 	}
+	return rc;
 }
 
 ///
@@ -380,7 +443,7 @@ private unittest
 	struct E
 	{
 	}
-	static assert(is(typeof(defaultAllocator.refCounted!bool(false))));
+	//static assert(is(typeof(defaultAllocator.refCounted!bool(false))));
 	static assert(is(typeof(defaultAllocator.refCounted!B(5))));
 	static assert(!is(typeof(defaultAllocator.refCounted!B())));
 

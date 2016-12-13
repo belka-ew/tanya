@@ -10,14 +10,13 @@
  */
 module tanya.memory;
 
-import core.exception;
-public import std.experimental.allocator : make, makeArray, expandArray,
-                                           stateSize, shrinkArray;
+public import std.experimental.allocator : make, makeArray;
 import std.traits;
 public import tanya.memory.allocator;
 public import tanya.memory.types;
 
-private extern (C) void _d_monitordelete(Object h, bool det) @nogc;
+// From druntime
+private extern (C) void _d_monitordelete(Object h, bool det) nothrow @nogc;
 
 shared Allocator allocator;
 
@@ -35,6 +34,25 @@ shared static this() nothrow @safe @nogc
 @property void defaultAllocator(shared(Allocator) allocator) nothrow @safe @nogc
 {
 	.allocator = allocator;
+}
+
+/**
+ * Returns the size in bytes of the state that needs to be allocated to hold an
+ * object of type $(D_PARAM T).
+ *
+ * Params:
+ * 	T = Object type.
+ */
+template stateSize(T)
+{
+	static if (is(T == class) || is(T == interface))
+	{
+		enum stateSize = __traits(classInstanceSize, T);
+	}
+	else
+	{
+		enum stateSize = T.sizeof;
+	}
 }
 
 /**
@@ -89,7 +107,7 @@ unittest
 }
 
 private void deStruct(T)(ref T s)
-	if (is(S == struct))
+	if (is(T == struct))
 {
 	static if (__traits(hasMember, T, "__xdtor")
 	      &&   __traits(isSame, T, __traits(parent, s.__xdtor)))
@@ -150,43 +168,42 @@ void dispose(T)(shared Allocator allocator, T p)
 		alias ob = p;
 	}
 	auto ptr = cast(void *) ob;
+
 	auto support = ptr[0 .. typeid(ob).initializer.length];
+	scope (success)
+	{
+		allocator.deallocate(support);
+	}
 
 	auto ppv = cast(void**) ptr;
 	if (!*ppv)
 	{
 		return;
 	}
-
 	auto pc = cast(ClassInfo*) *ppv;
-	try
-	{
-		auto c = *pc;
-		do
-		{
-			if (c.destructor) // call destructor
-			{
-				(cast(void function (Object)) c.destructor)(cast(Object) ptr);
-			}
-		}
-		while ((c = c.base) !is null);
-
-		if (ppv[1]) // if monitor is not null
-		{
-			_d_monitordelete(cast(Object) ptr, true);
-		}
-		auto w = (*pc).initializer;
-		ptr[0 .. w.length] = w[];
-	}
-	catch (Exception e)
-	{
-		onFinalizeError(*pc, e);
-	}
-	finally
+	scope (exit)
 	{
 		*ppv = null;
 	}
-	allocator.deallocate(support);
+
+	auto c = *pc;
+	do
+	{
+		// Assume the destructor is @nogc. Leave it nothrow since the destructor
+		// shouldn't throw and if it does, it is an error anyway.
+		if (c.destructor)
+		{
+			(cast(void function (Object) nothrow @nogc) c.destructor)(ob);
+		}
+	}
+	while ((c = c.base) !is null);
+
+	if (ppv[1]) // if monitor is not null
+	{
+		_d_monitordelete(cast(Object) ptr, true);
+	}
+	auto w = (*pc).initializer;
+	ptr[0 .. w.length] = w[];
 }
 
 /// Ditto.
