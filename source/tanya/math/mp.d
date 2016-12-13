@@ -23,7 +23,7 @@ import tanya.memory;
  */
 struct Integer
 {
-	private RefCounted!(ubyte[]) rep;
+	private ubyte[] rep;
 	private bool sign;
 	private shared Allocator allocator;
 
@@ -42,7 +42,7 @@ struct Integer
 	 *
 	 * Precondition: $(D_INLINECODE allocator !is null)
 	 */
-	this(T)(in T value, shared Allocator allocator = defaultAllocator)
+	this(T)(in auto ref T value, shared Allocator allocator = defaultAllocator)
 	nothrow @safe @nogc
 		if (isIntegral!T || is(T == Integer))
 	{
@@ -53,10 +53,10 @@ struct Integer
 		}
 		else
 		{
-			rep = RefCounted!(ubyte[])(() @trusted {
+			rep = () @trusted {
 				return cast(ubyte[]) allocator.allocate(value.length);
-			}(), allocator);
-			value.rep.get.copy(rep.get);
+			}();
+			value.rep.copy(rep);
 			sign = value.sign;
 		}
 	}
@@ -83,6 +83,24 @@ struct Integer
 		assert(h2.length == 1);
 		assert(h2.rep[0] == 2);
 		assert(h2.sign);
+	}
+
+	~this() nothrow @safe @nogc
+	in
+	{
+		assert(allocator !is null || !rep.length);
+	}
+	body
+	{
+		if (allocator !is null)
+		{
+			allocator.dispose(rep);
+		}
+	}
+
+	private @nogc unittest
+	{
+		Integer h; // allocator isn't set, but the destructor should work
 	}
 
 	/*
@@ -121,13 +139,13 @@ struct Integer
 		}
 		if (rep.count)
 		{
-			allocator.resizeArray(rep.get, size);
+			allocator.resizeArray(rep, size);
 		}
 		else
 		{
-			rep = RefCounted!(ubyte[])(() @trusted {
+			rep = () @trusted {
 				return cast(ubyte[]) allocator.allocate(size);
-			}(), allocator);
+			}();
 		}
 		/* Work backward through the int, masking off each byte (up to the
 		   first 0 byte) and copy it into the internal representation in
@@ -149,33 +167,20 @@ struct Integer
 	 *
 	 * Returns: $(D_KEYWORD this).
 	 */
-	ref Integer opAssign(T)(in T value) nothrow @safe @nogc
+	ref Integer opAssign(T)(in auto ref T value) nothrow @safe @nogc
 		if (isIntegral!T || is(T == Integer))
 	{
-		if (allocator is null)
-		{
-			allocator = defaultAllocator;
-		}
+		initialize();
 		static if (isIntegral!T)
 		{
 			assignInt(value);
 		}
 		else
 		{
-			if (rep.count)
-			{
-				allocator.resizeArray(rep, value.length);
-			}
-			else
-			{
-				rep = RefCounted!(ubyte[])(() @trusted {
-					return cast(ubyte[]) allocator.allocate(value.length);
-				}(), allocator);
-			}
-			value.rep.get.copy(rep.get);
+			allocator.resizeArray(rep, value.length);
+			value.rep.copy(rep);
 			sign = value.sign;
 		}
-
 		return this;
 	}
 
@@ -202,7 +207,7 @@ struct Integer
 	 */
 	@property size_t length() const pure nothrow @safe @nogc
 	{
-		return rep.get.length;
+		return rep.length;
 	}
 
 	/**
@@ -215,6 +220,12 @@ struct Integer
     {
         return rep == h.rep;
     }
+
+	/// Ditto.
+	bool opEquals(in ref Integer h) const nothrow @safe @nogc
+	{
+        return rep == h.rep;
+	}
 
 	///
 	unittest
@@ -232,7 +243,7 @@ struct Integer
      * Returns: A positive number if $(D_INLINECODE this > h), a negative
      *          number if $(D_INLINECODE this > h), `0` otherwise.
      */
-    int opCmp(in Integer h) const nothrow @safe @nogc
+    int opCmp(in ref Integer h) const nothrow @safe @nogc
     {
         if (length > h.length)
         {
@@ -262,6 +273,12 @@ struct Integer
         return 0;
     }
 
+	/// Ditto.
+    int opCmp(in Integer h) const nothrow @safe @nogc
+    {
+		return opCmp(h);
+	}
+
 	///
     unittest
     {
@@ -276,7 +293,7 @@ struct Integer
 		assert(h1 > h2);
     }
 
-	private void add(in ref RefCounted!(ubyte[]) h) nothrow @safe @nogc
+	private void add(in ref ubyte[] h) nothrow @safe @nogc
 	{
 		uint sum;
 		uint carry = 0;
@@ -319,7 +336,7 @@ struct Integer
 
 	}
 
-	private void subtract(in ref RefCounted!(ubyte[]) h) nothrow @safe @nogc
+	private void subtract(in ref ubyte[] h) nothrow @safe @nogc
 	{
 		auto i = rep.length;
 		auto j = h.length;
@@ -350,7 +367,7 @@ struct Integer
 		}
 		// Go through the representation array and see how many of the
 		// left-most bytes are unused. Remove them and resize the array.
-		immutable offset = rep.get.countUntil!((const ref a) => a != 0);
+		immutable offset = rep.countUntil!((const ref a) => a != 0);
 		if (offset > 0)
 		{
 			ubyte[] tmp = allocator.makeArray!ubyte(rep.length - offset);
@@ -372,7 +389,7 @@ struct Integer
 	 *
 	 * Returns: $(D_KEYWORD this).
 	 */
-	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
+	ref Integer opOpAssign(string op)(in auto ref Integer h) nothrow @safe @nogc
 		if ((op == "+") || (op == "-"))
 	out
 	{
@@ -485,7 +502,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
+	ref Integer opOpAssign(string op)(in auto ref Integer h) nothrow @safe @nogc
 		if (op == "*")
 	out
 	{
@@ -526,7 +543,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	ref Integer opOpAssign(string op)(in Integer h) nothrow @safe @nogc
+	ref Integer opOpAssign(string op)(in auto ref Integer h) nothrow @safe @nogc
 		if ((op == "/") || (op == "%"))
 	in
 	{
@@ -576,7 +593,8 @@ struct Integer
 
 		static if (op == "/")
 		{
-			rep = quotient;
+			swap(rep, quotient);
+			allocator.dispose(quotient);
 			sign = sign == h.sign ? false : true;
 		}
 		return this;
@@ -607,7 +625,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	ref Integer opOpAssign(string op)(in Integer exp) nothrow @safe @nogc
+	ref Integer opOpAssign(string op)(in auto ref Integer exp) nothrow @safe @nogc
 		if (op == "^^")
 	out
 	{
@@ -674,7 +692,7 @@ struct Integer
 		}
 		else static if (op == "~")
 		{
-			h.rep.get.each!((ref a) => a = ~a);
+			h.rep.each!((ref a) => a = ~a);
 		}
 		return h;
 	}
@@ -712,7 +730,7 @@ struct Integer
 
 	private void decrement() nothrow @safe @nogc
 	{
-		immutable size = rep.get.retro.countUntil!((const ref a) => a != 0);
+		immutable size = rep.retro.countUntil!((const ref a) => a != 0);
 		if (rep[0] == 1)
 		{
 			allocator.resizeArray(rep, rep.length - 1);
@@ -728,13 +746,12 @@ struct Integer
 	private void increment() nothrow @safe @nogc
 	{
 		auto size = rep
-				   .get
 				   .retro
 				   .countUntil!((const ref a) => a != typeof(rep[0]).max);
 		if (size == -1)
 		{
 			size = length;
-			allocator.resizeArray(rep.get, rep.length + 1);
+			allocator.resizeArray(rep, rep.length + 1);
 			rep[0] = 1;
 		}
 		else
@@ -838,10 +855,6 @@ struct Integer
 		{
 			allocator = defaultAllocator;
 		}
-		if (!rep.count)
-		{
-			rep = allocator.refCounted!(ubyte[])(0);
-		}
 	}
 
 	/**
@@ -901,7 +914,7 @@ struct Integer
 	 *
 	 * Returns: An $(D_PSYMBOL Integer) shifted by $(D_PARAM n) bits.
 	 */
-	ref Integer opOpAssign(string op)(in size_t n) nothrow @safe @nogc
+	ref Integer opOpAssign(string op)(in auto ref size_t n) nothrow @safe @nogc
 		if (op == ">>")
 	out
 	{
@@ -978,7 +991,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	ref Integer opOpAssign(string op)(in size_t n) nothrow @safe @nogc
+	ref Integer opOpAssign(string op)(in auto ref size_t n) nothrow @safe @nogc
 		if (op == "<<")
 	out
 	{
@@ -1027,7 +1040,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	Integer opBinary(string op)(in size_t n) nothrow @safe @nogc
+	Integer opBinary(string op)(in auto ref size_t n) nothrow @safe @nogc
 		if (op == "<<" || op == ">>" || op == "+" || op == "-" || op == "/"
 		 || op == "*" || op == "^^" || op == "%")
 	{
@@ -1049,7 +1062,7 @@ struct Integer
 	}
 
 	/// Ditto.
-	Integer opBinary(string op)(in Integer h) nothrow @safe @nogc
+	Integer opBinary(string op)(in auto ref Integer h) nothrow @safe @nogc
 		if (op == "+" || op == "-" || op == "/"
 		 || op == "*" || op == "^^" || op == "%")
 	{
