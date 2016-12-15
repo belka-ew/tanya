@@ -10,6 +10,7 @@
  */  
 module tanya.math.mp;
 
+import core.exception;
 import std.algorithm.iteration;
 import std.algorithm.searching;
 import std.algorithm.mutation;
@@ -29,7 +30,7 @@ struct Integer
 
 	pure nothrow @safe @nogc invariant
 	{
-		assert(!rep.count || rep.length || !sign, "0 should be positive.");
+		assert(rep.length || !sign, "0 should be positive.");
 	}
 
 	/**
@@ -137,16 +138,14 @@ struct Integer
 			}
 			--size;
 		}
-		if (rep.count)
-		{
-			allocator.resizeArray(rep, size);
-		}
-		else
-		{
-			rep = () @trusted {
-				return cast(ubyte[]) allocator.allocate(size);
-			}();
-		}
+		rep = () @trusted {
+			void[] rep = this.rep;
+			if (!allocator.reallocate(rep, size))
+			{
+				onOutOfMemoryError();
+			}
+			return cast(ubyte[]) rep;
+		}();
 		/* Work backward through the int, masking off each byte (up to the
 		   first 0 byte) and copy it into the internal representation in
 		   big-endian format. */

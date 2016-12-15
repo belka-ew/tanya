@@ -11,6 +11,7 @@
 module tanya.container.vector;
 
 import std.algorithm.comparison;
+import std.range.primitives;
 import std.traits;
 import tanya.memory;
 
@@ -20,18 +21,18 @@ import tanya.memory;
  * Params:
  * 	T = Content type.
  */
-class Vector(T)
+template Vector(T)
 {
 	/**
 	 * Defines the container's primary range.
 	 */
-	struct Range(V)
+	struct Range
 	{
-		private V[1] data;
+		private Vector* data;
 
-		private @property ref inout(V) outer() inout
+		private @property ref inout(Vector) outer() inout return
 		{
-			return data[0];
+			return *data;
 		}
 
 		private size_t start, end;
@@ -39,13 +40,12 @@ class Vector(T)
 		invariant
 		{
 			assert(start <= end);
+			assert(start == 0 || end > 0);
 		}
 
-		private alias ElementType = typeof(data[0].vector[0]);
-
-		protected this(V data, in size_t a, in size_t b)
+		protected this(ref Vector data, in size_t a, in size_t b)
 		{
-			this.data = data;
+			this.data = &data;
 			start = a;
 			end = b;
 		}
@@ -57,7 +57,7 @@ class Vector(T)
 
 		@property bool empty() inout const
 		{
-			return start >= end;
+			return start == end;
 		}
 
 		@property size_t length() inout const
@@ -67,7 +67,7 @@ class Vector(T)
 
 		alias opDollar = length;
 
-		@property ref inout(ElementType) front() inout
+		@property ref inout(T) front() inout
 		in
 		{
 			assert(!empty);
@@ -77,7 +77,7 @@ class Vector(T)
 			return outer[start];
 		}
 
-		@property ref inout(ElementType) back() inout
+		@property ref inout(T) back() inout
 		in
 		{
 			assert(!empty);
@@ -107,7 +107,7 @@ class Vector(T)
 			--end;
 		}
 
-		ref inout(ElementType) opIndex(in size_t i) inout
+		ref inout(T) opIndex(in size_t i) inout
 		in
 		{
 			assert(start + i < end);
@@ -133,12 +133,12 @@ class Vector(T)
 			return typeof(return)(outer, start + i, start + j);
 		}
 
-		Range!(const(V)) opIndex() const
+		Range opIndex()
 		{
 			return typeof(return)(outer, start, end);
 		}
 
-		Range!(const(V)) opSlice(in size_t i, in size_t j) const
+		Range opSlice(in size_t i, in size_t j)
 		in
 		{
 			assert(i <= j);
@@ -149,9 +149,9 @@ class Vector(T)
 			return typeof(return)(outer, start + i, start + j);
 		}
 
-		static if (isMutable!V)
+		static if (isMutable!Vector)
 		{
-			Range opIndexAssign(in ElementType value)
+			Range opIndexAssign(in T value)
 			in
 			{
 				assert(end <= outer.length);
@@ -161,7 +161,7 @@ class Vector(T)
 				return outer[start .. end] = value;
 			}
 
-			Range opSliceAssign(in ElementType value, in size_t i, in size_t j)
+			Range opSliceAssign(in T value, in size_t i, in size_t j)
 			in
 			{
 				assert(start + j <= end);
@@ -171,7 +171,7 @@ class Vector(T)
 				return outer[start + i .. start + j] = value;
 			}
 
-			Range opSliceAssign(in Range!Vector value, in size_t i, in size_t j)
+			Range opSliceAssign(in Range value, in size_t i, in size_t j)
 			in
 			{
 				assert(length == value.length);
@@ -193,589 +193,676 @@ class Vector(T)
 		}
 	}
 
-	/**
-	 * Creates an empty $(D_PSYMBOL Vector).
-	 *
-	 * Params:
-	 * 	allocator = The allocator should be used for the element
-	 * 	            allocations.
-	 */
-	this(shared Allocator allocator = defaultAllocator)
+	struct Vector
 	{
-		this.allocator = allocator;
-	}
+		private size_t length_;
 
-	/**
-	 * Creates a new $(D_PSYMBOL Vector).
-	 *
-	 * Params:
-	 *  U      = Variadic template for the constructor parameters.
-	 * 	params = Values to initialize the array with. The last parameter can
-	 * 	         be an allocator, if not, $(D_PSYMBOL defaultAllocator) is used.
-	 */
-	this(U...)(U params)
-	{
-		static if (isImplicitlyConvertible!(typeof(params[$ - 1]), Allocator))
+		invariant
 		{
-			allocator = params[$ - 1];
-			auto values = params[0 .. $ - 1];
-		}
-		else
-		{
-			allocator = defaultAllocator;
-			alias values = params;
+			assert(length_ <= vector.length);
 		}
 
-		resizeArray!T(allocator, vector, values.length);
-		foreach (i, v; values)
+		/// Internal representation.
+		private T[] vector;
+
+		/// The allocator.
+		private shared Allocator allocator;
+
+		/**
+		 * Creates an empty $(D_PSYMBOL Vector).
+		 *
+		 * Params:
+		 * 	allocator = The allocator should be used for the element
+		 * 	            allocations.
+		 */
+		this(shared Allocator allocator)
 		{
-			vector[i] = v;
+			this.allocator = allocator;
 		}
-	}
 
-	/**
-	 * Destroys this $(D_PSYMBOL Vector).
-	 */
-	~this()
-	{
-		dispose(allocator, vector);
-	}
-
-	/**
-	 * Removes all elements.
-	 */
-	void clear()
-	{
-		resizeArray!T(allocator, vector, 0);
-	}
-
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int)(18, 20, 15);
-
-		v.clear();
-		assert(v.length == 0);
-	}
-
-	/**
-	 * Returns: Vector length.
-	 */
-	@property size_t length() inout const
-	{
-		return vector.length;
-	}
-
-	/// Ditto.
-	size_t opDollar() inout const
-	{
-		return length;
-	}
-
-	/**
-	 * Expands/shrinks the vector.
-	 *
-	 * Params:
-	 * 	length = New length.
-	 */
-	@property void length(in size_t length)
-	{
-		resizeArray!T(allocator, vector, length);
-	}
-
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int);
-
-		v.length = 5;
-		assert(v.length == 5);
-
-		v.length = 7;
-		assert(v.length == 7);
-
-		v.length = 0;
-		assert(v.length == 0);
-	}
-
-	/**
-	 * Returns: $(D_KEYWORD true) if the vector is empty.
-	 */
-	@property bool empty() inout const
-	{
-		return vector.length == 0;
-	}
-
-	/**
-	 * Removes $(D_PARAM howMany) elements from the vector.
-	 *
-	 * This method doesn't fail if it could not remove $(D_PARAM howMany)
-	 * elements. Instead, if $(D_PARAM howMany) is greater than the vector
-	 * length, all elements are removed.
-	 *
-	 * Params:
-	 * 	howMany = How many elements should be removed.
-	 *
-	 * Returns: The number of elements removed
-	 */
-	size_t removeBack(in size_t howMany)
-	{
-		immutable toRemove = min(howMany, length);
-
-		static if (hasElaborateDestructor!T)
+		/**
+		 * Creates a new $(D_PSYMBOL Vector).
+		 *
+		 * Params:
+		 *  U      = Variadic template for the constructor parameters.
+		 * 	params = Values to initialize the array with. The last parameter can
+		 * 	         be an allocator, if not, $(D_PSYMBOL defaultAllocator) is used.
+		 */
+		this(U...)(U params)
 		{
-			foreach (ref e; vector[$ - toRemove ..$])
+			static if (isImplicitlyConvertible!(typeof(params[$ - 1]), Allocator))
 			{
-				allocator.dispose(e);
+				allocator = params[$ - 1];
+				auto values = params[0 .. $ - 1];
+			}
+			else
+			{
+				allocator = defaultAllocator;
+				alias values = params;
+			}
+
+			resizeArray!T(allocator, vector, values.length);
+			length_ = values.length;
+
+			foreach (i, v; values)
+			{
+				vector[i] = v;
 			}
 		}
-		length = length - toRemove;
 
-		return toRemove;
-	}
-
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int)(5, 18, 17);
-
-		assert(v.removeBack(0) == 0);
-		assert(v.removeBack(2) == 2);
-		assert(v.removeBack(3) == 1);
-		assert(v.removeBack(3) == 0);
-
-		defaultAllocator.dispose(v);
-	}
-
-	/**
-	 * Assigns a value to the element with the index $(D_PARAM pos).
-	 *
-	 * Params:
-	 * 	value = Value.
-	 *
-	 * Returns: Assigned value.
-	 *
-	 * Precondition: $(D_INLINECODE length > pos)
-	 */
-	T opIndexAssign(in T value, in size_t pos)
-	in
-	{
-		assert(length > pos);
-	}
-	body
-	{
-		return vector[pos] = value;
-	}
-
-	/// Ditto.
-	Range!Vector opIndexAssign(in T value)
-	{
-		vector[0..$] = value;
-		return opIndex();
-	}
-
-	///
-	unittest
-	{
-		auto v1 = defaultAllocator.make!(Vector!int)(12, 1, 7);
-
-		v1[] = 3;
-		assert(v1[0] == 3);
-		assert(v1[1] == 3);
-		assert(v1[2] == 3);
-
-		defaultAllocator.dispose(v1);
-	}
-
-
-	/**
-	 * Returns: The value on index $(D_PARAM pos).
-	 *
-	 * Precondition: $(D_INLINECODE length > pos)
-	 */
-	ref inout(T) opIndex(in size_t pos) inout
-	in
-	{
-		assert(length > pos);
-	}
-	body
-	{
-		return vector[pos];
-	}
-
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int)(6, 123, 34, 5);
-
-		assert(v[0] == 6);
-		assert(v[1] == 123);
-		assert(v[2] == 34);
-		assert(v[3] == 5);
-
-		defaultAllocator.dispose(v);
-	}
-
-	/**
-	 * Comparison for equality.
-	 *
-	 * Params:
-	 * 	o = The vector to compare with.
-	 *
-	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
-	 *          otherwise.
-	 */
-	override bool opEquals(Object o)
-	{
-		auto v = cast(Vector) o;
-
-		return v is null ? super.opEquals(o) : vector == v.vector;
-	}
-
-	///
-	unittest
-	{
-		auto v1 = defaultAllocator.make!(Vector!int);
-		auto v2 = defaultAllocator.make!(Vector!int);
-
-		assert(v1 == v2);
-
-		v1.length = 1;
-		v2.length = 2;
-		assert(v1 != v2);
-
-		v1.length = 2;
-		v1[0] = v2[0] = 2;
-		v1[1] = 3;
-		v2[1] = 4;
-		assert(v1 != v2);
-
-		v2[1] = 3;
-		assert(v1 == v2);
-
-		defaultAllocator.dispose(v1);
-		defaultAllocator.dispose(v2);
-	}
-
-	/**
-	 * $(D_KEYWORD foreach) iteration.
-	 *
-	 * Params:
-	 * 	dg = $(D_KEYWORD foreach) body.
-	 */
-	int opApply(scope int delegate(ref T) dg)
-	{
-		int result;
-
-		foreach (e; vector)
+		/**
+		 * Destroys this $(D_PSYMBOL Vector).
+		 */
+		~this()
 		{
-			if ((result = dg(e)) != 0)
+			if (allocator is null)
 			{
-				return result;
+				allocator = defaultAllocator;
+			}
+			dispose(allocator, vector);
+		}
+
+		/**
+		 * Removes all elements.
+		 */
+		void clear()
+		{
+			length_ = 0;
+		}
+
+		///
+		unittest
+		{
+			auto v = defaultAllocator.make!(Vector!int)(18, 20, 15);
+			v.clear();
+			assert(v.length == 0);
+		}
+
+		/**
+		 * Returns: How many elements the vector can contain without reallocating.
+		 */
+		@property size_t capacity() inout const
+		{
+			return vector.length;
+		}
+
+		/**
+		 * Returns: Vector length.
+		 */
+		@property size_t length() inout const
+		{
+			return length_;
+		}
+
+		/// Ditto.
+		size_t opDollar() inout const
+		{
+			return length;
+		}
+
+		/**
+		 * Reserves space for $(D_PARAM n) elements.
+		 */
+		void reserve(in size_t n)
+		{
+			if (allocator is null)
+			{
+				allocator = defaultAllocator;
+			}
+			if (vector.length < n)
+			{
+				allocator.resizeArray!T(vector, n);
 			}
 		}
-		return result;
-	}
 
-	/// Ditto.
-	int opApply(scope int delegate(ref size_t i, ref T) dg)
-	{
-		int result;
-
-		foreach (i, e; vector)
+		///
+		unittest
 		{
-			if ((result = dg(i, e)) != 0)
+			Vector!int v;
+			assert(v.capacity == 0);
+			assert(v.length == 0);
+
+			v.reserve(3);
+			assert(v.capacity == 3);
+			assert(v.length == 0);
+		}
+
+		/**
+		 * Expands/shrinks the vector.
+		 *
+		 * Params:
+		 * 	len = New length.
+		 */
+		@property void length(in size_t len)
+		{
+			reserve(len);
+			length_ = len;
+		}
+
+		///
+		unittest
+		{
+			Vector!int v;
+
+			v.length = 5;
+			assert(v.length == 5);
+			assert(v.capacity == 5);
+
+			v.length = 7;
+			assert(v.length == 7);
+			assert(v.capacity == 7);
+
+			v.length = 0;
+			assert(v.length == 0);
+			assert(v.capacity == 7);
+		}
+
+		/**
+		 * Returns: $(D_KEYWORD true) if the vector is empty.
+		 */
+		@property bool empty() inout const
+		{
+			return length == 0;
+		}
+
+		/**
+		 * Removes $(D_PARAM howMany) elements from the vector.
+		 *
+		 * This method doesn't fail if it could not remove $(D_PARAM howMany)
+		 * elements. Instead, if $(D_PARAM howMany) is greater than the vector
+		 * length, all elements are removed.
+		 *
+		 * Params:
+		 * 	howMany = How many elements should be removed.
+		 *
+		 * Returns: The number of elements removed
+		 */
+		size_t removeBack(in size_t howMany = 1)
+		{
+			immutable toRemove = min(howMany, length);
+
+			static if (hasElaborateDestructor!T)
 			{
-				return result;
+				foreach (ref e; vector[$ - toRemove ..$])
+				{
+					allocator.dispose(e);
+				}
+			}
+			length_ -= toRemove;
+
+			return toRemove;
+		}
+
+		/// Ditto.
+		alias remove = removeBack;
+
+		///
+		unittest
+		{
+			auto v = Vector!int(5, 18, 17);
+
+			assert(v.removeBack(0) == 0);
+			assert(v.removeBack(2) == 2);
+			assert(v.removeBack(3) == 1);
+			assert(v.removeBack(3) == 0);
+		}
+
+		/**
+		 * Inserts the $(D_PARAM el) into the vector.
+		 *
+		 * Returns: The number of elements inserted.
+		 */
+		size_t insertBack(in T el)
+		{
+			reserve(length + 1);
+			vector[length] = el;
+			++length_;
+			return 1;
+		}
+
+		/// Ditto.
+		size_t insertBack(in Range el)
+		{
+			immutable newLength = length + el.length;
+
+			reserve(newLength);
+			vector[length .. newLength] = el.data.vector[el.start .. el.end];
+			length_ = newLength;
+
+			return el.length;
+		}
+
+		/// Ditto.
+		size_t insertBack(R)(R el)
+			if (isInputRange!R && isImplicitlyConvertible!(ElementType!R, T))
+		{
+			immutable rLen = walkLength(el);
+
+			reserve(length + rLen);
+			while (!el.empty)
+			{
+				vector[length_] = el.front;
+				el.popFront();
+				length_++;
+			}
+			return rLen;
+		}
+
+		/// Ditto.
+		alias insert = insertBack;
+
+		///
+		unittest
+		{
+			struct TestRange
+			{
+				int counter = 6;
+
+				int front()
+				{
+					return counter;
+				}
+
+				void popFront()
+				{
+					counter -= 2;
+				}
+
+				bool empty()
+				{
+					return counter == 0;
+				}
+			}
+
+			Vector!int v1;
+
+			assert(v1.insertBack(5) == 1);
+			assert(v1.length == 1);
+			assert(v1.capacity == 1);
+			assert(v1.back == 5);
+
+			assert(v1.insertBack(TestRange()) == 3);
+			assert(v1.length == 4);
+			assert(v1.capacity == 4);
+			assert(v1[0] == 5 && v1[1] == 6 && v1[2] == 4 && v1[3] == 2);
+
+			auto v2 = Vector!int(34, 234);
+			assert(v1.insertBack(v2[]) == 2);
+			assert(v1.length == 6);
+			assert(v1.capacity == 6);
+			assert(v1[4] == 34 && v1[5] == 234);
+		}
+
+		/**
+		 * Assigns a value to the element with the index $(D_PARAM pos).
+		 *
+		 * Params:
+		 * 	value = Value.
+		 * 	pos   = Position.
+		 *
+		 * Returns: Assigned value.
+		 *
+		 * Precondition: $(D_INLINECODE length > pos)
+		 */
+		T opIndexAssign(in T value, in size_t pos)
+		in
+		{
+			assert(length > pos);
+		}
+		body
+		{
+			return vector[pos] = value;
+		}
+
+		/// Ditto.
+		Range opIndexAssign(in T value)
+		{
+			vector[0 .. $] = value;
+			return opIndex();
+		}
+
+		///
+		unittest
+		{
+			auto v1 = Vector!int(12, 1, 7);
+
+			v1[] = 3;
+			assert(v1[0] == 3);
+			assert(v1[1] == 3);
+			assert(v1[2] == 3);
+		}
+
+		/**
+		 * Returns: The value on index $(D_PARAM pos) or a range that iterates over
+		 *          elements of the vector, in forward order.
+		 *
+		 * Precondition: $(D_INLINECODE length > pos)
+		 */
+		ref inout(T) opIndex(in size_t pos) inout
+		in
+		{
+			assert(length > pos);
+		}
+		body
+		{
+			return vector[pos];
+		}
+
+		/// Ditto.
+		Range opIndex()
+		{
+			return typeof(return)(this, 0, length);
+		}
+
+		///
+		unittest
+		{
+			auto v = Vector!int(6, 123, 34, 5);
+
+			assert(v[0] == 6);
+			assert(v[1] == 123);
+			assert(v[2] == 34);
+			assert(v[3] == 5);
+		}
+
+		/**
+		 * Comparison for equality.
+		 *
+		 * Params:
+		 * 	o = The vector to compare with.
+		 *
+		 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
+		 *          otherwise.
+		 */
+		bool opEquals(typeof(this) v)
+		{
+			return opEquals(v);
+		}
+
+		/// Ditto.
+		bool opEquals(ref typeof(this) v)
+		{
+			return vector == v.vector;
+		}
+
+		///
+		unittest
+		{
+			Vector!int v1, v2;
+			assert(v1 == v2);
+
+			v1.length = 1;
+			v2.length = 2;
+			assert(v1 != v2);
+
+			v1.length = 2;
+			v1[0] = v2[0] = 2;
+			v1[1] = 3;
+			v2[1] = 4;
+			assert(v1 != v2);
+
+			v2[1] = 3;
+			assert(v1 == v2);
+		}
+
+		/**
+		 * $(D_KEYWORD foreach) iteration.
+		 *
+		 * Params:
+		 * 	dg = $(D_KEYWORD foreach) body.
+		 */
+		int opApply(scope int delegate(ref T) dg)
+		{
+			int result;
+
+			foreach (e; vector)
+			{
+				if ((result = dg(e)) != 0)
+				{
+					return result;
+				}
+			}
+			return result;
+		}
+
+		/// Ditto.
+		int opApply(scope int delegate(ref size_t i, ref T) dg)
+		{
+			int result;
+
+			foreach (i, e; vector)
+			{
+				if ((result = dg(i, e)) != 0)
+				{
+					return result;
+				}
+			}
+			return result;
+		}
+
+		/// Ditto.
+		int opApplyReverse(scope int delegate(ref T) dg)
+		{
+			int result;
+
+			foreach_reverse (e; vector)
+			{
+				if ((result = dg(e)) != 0)
+				{
+					return result;
+				}
+			}
+			return result;
+		}
+
+		/// Ditto.
+		int opApplyReverse(scope int delegate(ref size_t i, ref T) dg)
+		{
+			int result;
+
+			foreach_reverse (i, e; vector)
+			{
+				if ((result = dg(i, e)) != 0)
+				{
+					return result;
+				}
+			}
+			return result;
+		}
+
+		///
+		unittest
+		{
+			auto v = Vector!int(5, 15, 8);
+
+			size_t i;
+			foreach (j, ref e; v)
+			{
+				i = j;
+			}
+			assert(i == 2);
+
+			foreach (j, e; v)
+			{
+				assert(j != 0 || e == 5);
+				assert(j != 1 || e == 15);
+				assert(j != 2 || e == 8);
 			}
 		}
-		return result;
-	}
 
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int)(5, 15, 8);
-
-		size_t i;
-		foreach (j, ref e; v)
+		///
+		unittest
 		{
-			i = j;
-		}
-		assert(i == 2);
+			auto v = Vector!int(5, 15, 8);
+			size_t i;
 
-		foreach (j, e; v)
-		{
-			assert(j != 0 || e == 5);
-			assert(j != 1 || e == 15);
-			assert(j != 2 || e == 8);
-		}
-		defaultAllocator.dispose(v);
-	}
-
-	/**
-	 * $(D_KEYWORD foreach) iteration.
-	 *
-	 * Params:
-	 * 	dg = $(D_KEYWORD foreach) body.
-	 */
-	int opApplyReverse(scope int delegate(ref T) dg)
-	{
-		int result;
-
-		foreach_reverse (e; vector)
-		{
-			if ((result = dg(e)) != 0)
+			foreach_reverse (j, ref e; v)
 			{
-				return result;
+				i = j;
+			}
+			assert(i == 0);
+
+			foreach_reverse (j, e; v)
+			{
+				assert(j != 2 || e == 8);
+				assert(j != 1 || e == 15);
+				assert(j != 0 || e == 5);
 			}
 		}
-		return result;
-	}
 
-	/// Ditto.
-	int opApplyReverse(scope int delegate(ref size_t i, ref T) dg)
-	{
-		int result;
-
-		foreach_reverse (i, e; vector)
+		/**
+		 * Returns: The first element.
+		 *
+		 * Precondition: $(D_INLINECODE length > 0)
+		 */
+		@property ref inout(T) front() inout
+		in
 		{
-			if ((result = dg(i, e)) != 0)
-			{
-				return result;
-			}
+			assert(!empty);
 		}
-		return result;
-	}
-
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int)(5, 15, 8);
-		size_t i;
-
-		foreach_reverse (j, ref e; v)
+		body
 		{
-			i = j;
+			return vector[0];
 		}
-		assert(i == 0);
 
-		foreach_reverse (j, e; v)
+		///
+		unittest
 		{
-			assert(j != 2 || e == 8);
-			assert(j != 1 || e == 15);
-			assert(j != 0 || e == 5);
+			auto v = Vector!int(5);
+
+			assert(v.front == 5);
+
+			v.length = 2;
+			v[1] = 15;
+			assert(v.front == 5);
 		}
-		defaultAllocator.dispose(v);
+
+		/**
+		 * Returns: The last element.
+		 *
+		 * Precondition: $(D_INLINECODE length > 0)
+		 */
+		@property ref inout(T) back() inout
+		in
+		{
+			assert(!empty);
+		}
+		body
+		{
+			return vector[$ - 1];
+		}
+
+		///
+		unittest
+		{
+			auto v = Vector!int(5);
+
+			assert(v.back == 5);
+
+			v.length = 2;
+			v[1] = 15;
+			assert(v.back == 15);
+		}
+
+		/**
+		 * Params:
+		 * 	i = Slice start.
+		 * 	j = Slice end.
+		 *
+		 * Returns: A range that iterates over elements of the container from
+		 *          index $(D_PARAM i) up to (excluding) index $(D_PARAM j).
+		 *
+		 * Precondition: $(D_INLINECODE i <= j && j <= length)
+		 */
+		Range opSlice(in size_t i, in size_t j)
+		in
+		{
+			assert(i <= j);
+			assert(j <= length);
+		}
+		body
+		{
+			return typeof(return)(this, i, j);
+		}
+
+		/**
+		 * Slicing assignment.
+		 *
+		 * Params:
+		 * 	value = New value.
+		 * 	i     = Slice start.
+		 * 	j     = Slice end.
+		 *
+		 * Returns: Assigned value.
+		 *
+		 * Precondition: $(D_INLINECODE i <= j && j <= length);
+		 *               The lenghts of the ranges and slices match.
+		 */
+		Range opSliceAssign(in T value, in size_t i, in size_t j)
+		in
+		{
+			assert(i <= j);
+			assert(j <= length);
+		}
+		body
+		{
+			vector[i .. j] = value;
+			return opSlice(i, j);
+		}
+
+		/// Ditto.
+		Range opSliceAssign(in Range value, in size_t i, in size_t j)
+		in
+		{
+			assert(j - i == value.length);
+		}
+		body
+		{
+			vector[i .. j] = value.outer.vector[value.start .. value.end];
+			return opSlice(i, j);
+		}
+
+		/// Ditto.
+		Range opSliceAssign(in T[] value, in size_t i, in size_t j)
+		in
+		{
+			assert(j - i == value.length);
+		}
+		body
+		{
+			vector[i .. j] = value;
+			return opSlice(i, j);
+		}
+
+		///
+		unittest
+		{
+			auto v1 = Vector!int(3, 3, 3);
+			auto v2 = Vector!int(1, 2);
+
+			v1[0 .. 2] = 286;
+			assert(v1[0] == 286);
+			assert(v1[1] == 286);
+			assert(v1[2] == 3);
+
+			v2[0 .. $] = v1[1 .. 3];
+			assert(v2[0] == 286);
+			assert(v2[1] == 3);
+		}
 	}
-
-	/**
-	 * Returns: The first element.
-	 *
-	 * Precondition: $(D_INLINECODE length > 0)
-	 */
-	@property ref inout(T) front() inout
-	in
-	{
-		assert(vector.length > 0);
-	}
-	body
-	{
-		return vector[0];
-	}
-
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int)(5);
-
-		assert(v.front == 5);
-
-		v.length = 2;
-		v[1] = 15;
-		assert(v.front == 5);
-
-		defaultAllocator.dispose(v);
-	}
-
-	/**
-	 * Returns: The last element.
-	 *
-	 * Precondition: $(D_INLINECODE length > 0)
-	 */
-	@property ref inout(T) back() inout
-	in
-	{
-		assert(vector.length > 0);
-	}
-	body
-	{
-		return vector[$ - 1];
-	}
-
-	///
-	unittest
-	{
-		auto v = defaultAllocator.make!(Vector!int)(5);
-
-		assert(v.back == 5);
-
-		v.length = 2;
-		v[1] = 15;
-		assert(v.back == 15);
-
-		defaultAllocator.dispose(v);
-	}
-
-	/**
-	 * Returns: A range that iterates over elements of the container, in
-	 *          forward order.
-	 */
-	Range!Vector opIndex()
-	{
-		return typeof(return)(this, 0, length);
-	}
-
-	/// Ditto.
-	Range!(const Vector) opIndex() const
-	{
-		return typeof(return)(this, 0, length);
-	}
-
-	/// Ditto.
-	Range!(immutable Vector) opIndex() immutable
-	{
-		return typeof(return)(this, 0, length);
-	}
-
-	/**
-	 * Params:
-	 * 	i = Slice start.
-	 * 	j = Slice end.
-	 *
-	 * Returns: A range that iterates over elements of the container from
-	 *          index $(D_PARAM i) up to (excluding) index $(D_PARAM j).
-	 *
-	 * Precondition: $(D_INLINECODE i <= j && j <= length)
-	 */
-	Range!Vector opSlice(in size_t i, in size_t j)
-	in
-	{
-		assert(i <= j);
-		assert(j <= length);
-	}
-	body
-	{
-		return typeof(return)(this, i, j);
-	}
-
-	/// Ditto.
-	Range!(const Vector) opSlice(in size_t i, in size_t j) const
-	in
-	{
-		assert(i <= j);
-		assert(j <= length);
-	}
-	body
-	{
-		return typeof(return)(this, i, j);
-	}
-
-	/// Ditto.
-	Range!(immutable Vector) opSlice(in size_t i, in size_t j) immutable
-	in
-	{
-		assert(i <= j);
-		assert(j <= length);
-	}
-	body
-	{
-		return typeof(return)(this, i, j);
-	}
-
-	/**
-	 * Slicing assignment.
-	 *
-	 * Params:
-	 * 	value = New value.
-	 * 	i     = Slice start.
-	 * 	j     = Slice end.
-	 *
-	 * Returns: Assigned value.
-	 *
-	 * Precondition: $(D_INLINECODE i <= j && j <= length);
-	 *               The lenghts of the ranges and slices match.
-	 */
-	Range!Vector opSliceAssign(in T value, in size_t i, in size_t j)
-	in
-	{
-		assert(i <= j);
-		assert(j <= length);
-	}
-	body
-	{
-		vector[i .. j] = value;
-		return opSlice(i, j);
-	}
-
-	/// Ditto.
-	Range!Vector opSliceAssign(in Range!Vector value, in size_t i, in size_t j)
-	in
-	{
-		assert(j - i == value.length);
-	}
-	body
-	{
-		vector[i .. j] = value.outer.vector[value.start .. value.end];
-		return opSlice(i, j);
-	}
-
-	/// Ditto.
-	Range!Vector opSliceAssign(in T[] value, in size_t i, in size_t j)
-	in
-	{
-		assert(j - i == value.length);
-	}
-	body
-	{
-		vector[i .. j] = value;
-		return opSlice(i, j);
-	}
-
-	///
-	unittest
-	{
-		auto v1 = defaultAllocator.make!(Vector!int)(3, 3, 3);
-		auto v2 = defaultAllocator.make!(Vector!int)(1, 2);
-
-		v1[0..2] = 286;
-		assert(v1[0] == 286);
-		assert(v1[1] == 286);
-		assert(v1[2] == 3);
-
-		v2[0..$] = v1[1..3];
-		assert(v2[0] == 286);
-		assert(v2[1] == 3);
-
-		defaultAllocator.dispose(v2);
-		defaultAllocator.dispose(v1);
-	}
-
-	/// Internal representation.
-	protected T[] vector;
-
-	/// The allocator.
-	protected shared Allocator allocator;
 }
 
 ///
 unittest
 {
-	auto v = defaultAllocator.make!(Vector!int)(5, 15, 8);
+	auto v = Vector!int(5, 15, 8);
 
 	assert(v.front == 5);
 	assert(v[1] == 15);
 	assert(v.back == 8);
+}
 
-	defaultAllocator.dispose(v);
+private unittest
+{
+//	const Vector!int v;
 }

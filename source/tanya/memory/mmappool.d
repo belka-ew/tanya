@@ -47,17 +47,8 @@ else version (Windows)
  * |  N   |    -----------> next|            ||   N  |     |                  |
  * |      |     |         |     |            ||      |     |                  |
  * --------------------------------------------------- ------------------------
- *
- * TODO:
- * 	$(UL
- * 		$(LI Thread safety (core.atomic.cas))
- * 		$(LI If two neighbour blocks are free, they can be merged)
- * 		$(LI Reallocation shoud check if there is enough free space in the
- * 		next block instead of always moving the memory)
- * 		$(LI Make 64 KB regions mininmal region size on Linux)
- * 	)
  */
-class MmapPool : Allocator
+final class MmapPool : Allocator
 {
 @nogc:
 	shared static this()
@@ -80,9 +71,9 @@ class MmapPool : Allocator
 	 * Params:
 	 * 	size = Amount of memory to allocate.
 	 *
-	 * Returns: The pointer to the new allocated memory.
+	 * Returns: Pointer to the new allocated memory.
 	 */
-	void[] allocate(size_t size, TypeInfo ti = null) shared nothrow @trusted
+	void[] allocate(size_t size) shared nothrow @trusted
 	{
 		if (!size)
 		{

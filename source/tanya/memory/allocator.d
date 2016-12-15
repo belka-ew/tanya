@@ -15,8 +15,10 @@ module tanya.memory.allocator;
  */
 interface Allocator
 {
-@nogc:
-	@property uint alignment() const shared pure nothrow @safe;
+	/**
+	 * Returns: Alignment.
+	 */
+	@property uint alignment() const shared pure nothrow @safe @nogc;
 
 	/**
 	 * Allocates $(D_PARAM size) bytes of memory.
@@ -24,9 +26,9 @@ interface Allocator
 	 * Params:
 	 * 	size = Amount of memory to allocate.
 	 *
-	 * Returns: The pointer to the new allocated memory.
+	 * Returns: Pointer to the new allocated memory.
 	 */
-	void[] allocate(size_t size, TypeInfo ti = null) shared nothrow @safe;
+	void[] allocate(size_t size) shared nothrow @safe @nogc;
 
 	/**
 	 * Deallocates a memory block.
@@ -36,7 +38,7 @@ interface Allocator
 	 *
 	 * Returns: Whether the deallocation was successful.
 	 */
-	bool deallocate(void[] p) shared nothrow @safe;
+	bool deallocate(void[] p) shared nothrow @safe @nogc;
 
 	/**
 	 * Increases or decreases the size of a memory block.
@@ -45,7 +47,7 @@ interface Allocator
 	 * 	p    = A pointer to the memory block.
 	 * 	size = Size of the reallocated block.
 	 *
-	 * Returns: Whether the reallocation was successful.
+	 * Returns: Pointer to the allocated memory.
 	 */
-	bool reallocate(ref void[] p, size_t size) shared nothrow @safe;
+	bool reallocate(ref void[] p, size_t size) shared nothrow @safe @nogc;
 }
