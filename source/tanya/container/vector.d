@@ -10,10 +10,22 @@
  */  
 module tanya.container.vector;
 
+import core.exception;
 import std.algorithm.comparison;
 import std.range.primitives;
 import std.traits;
 import tanya.memory;
+
+version (unittest)
+{
+	import tanya.traits;
+	struct TestA
+	{
+		~this() @nogc
+		{
+		}
+	}
+}
 
 /**
  * One dimensional array.
@@ -26,11 +38,13 @@ template Vector(T)
 	/**
 	 * Defines the container's primary range.
 	 */
-	struct Range
+	struct Range(V)
 	{
-		private Vector* data;
+		private alias E = typeof(data.vector[0]);
 
-		private @property ref inout(Vector) outer() inout return
+		private V* data;
+
+		private @property ref inout(V) outer() inout return
 		{
 			return *data;
 		}
@@ -40,10 +54,15 @@ template Vector(T)
 		invariant
 		{
 			assert(start <= end);
-			assert(start == 0 || end > 0);
 		}
 
-		protected this(ref Vector data, in size_t a, in size_t b)
+		private this(ref inout V data, in size_t a, in size_t b) inout
+		in
+		{
+			assert(a <= b);
+			assert(b <= data.length);
+		}
+		body
 		{
 			this.data = &data;
 			start = a;
@@ -67,22 +86,12 @@ template Vector(T)
 
 		alias opDollar = length;
 
-		@property ref inout(T) front() inout
-		in
-		{
-			assert(!empty);
-		}
-		body
+		@property ref inout(E) front() inout
 		{
 			return outer[start];
 		}
 
-		@property ref inout(T) back() inout
-		in
-		{
-			assert(!empty);
-		}
-		body
+		@property ref inout(E) back() inout
 		{
 			return outer[end - 1];
 		}
@@ -107,12 +116,7 @@ template Vector(T)
 			--end;
 		}
 
-		ref inout(T) opIndex(in size_t i) inout
-		in
-		{
-			assert(start + i < end);
-		}
-		body
+		ref inout(E) opIndex(in size_t i) inout
 		{
 			return outer[start + i];
 		}
@@ -133,60 +137,24 @@ template Vector(T)
 			return typeof(return)(outer, start + i, start + j);
 		}
 
-		Range opIndex()
+		static if (isMutable!V)
 		{
-			return typeof(return)(outer, start, end);
-		}
-
-		Range opSlice(in size_t i, in size_t j)
-		in
-		{
-			assert(i <= j);
-			assert(start + j <= end);
-		}
-		body
-		{
-			return typeof(return)(outer, start + i, start + j);
-		}
-
-		static if (isMutable!Vector)
-		{
-			Range opIndexAssign(in T value)
-			in
-			{
-				assert(end <= outer.length);
-			}
-			body
+			Range opIndexAssign(T value)
 			{
 				return outer[start .. end] = value;
 			}
 
-			Range opSliceAssign(in T value, in size_t i, in size_t j)
-			in
-			{
-				assert(start + j <= end);
-			}
-			body
+			Range opSliceAssign(T value, in size_t i, in size_t j)
 			{
 				return outer[start + i .. start + j] = value;
 			}
 
-			Range opSliceAssign(in Range value, in size_t i, in size_t j)
-			in
-			{
-				assert(length == value.length);
-			}
-			body
+			Range opSliceAssign(Range value, in size_t i, in size_t j)
 			{
 				return outer[start + i .. start + j] = value;
 			}
 
-			Range opSliceAssign(in T[] value, in size_t i, in size_t j)
-			in
-			{
-				assert(j - i == value.length);
-			}
-			body
+			Range opSliceAssign(T[] value, in size_t i, in size_t j)
 			{
 				return outer[start + i .. start + j] = value;
 			}
@@ -205,49 +173,92 @@ template Vector(T)
 		/// Internal representation.
 		private T[] vector;
 
-		/// The allocator.
-		private shared Allocator allocator;
-
-		/**
-		 * Creates an empty $(D_PSYMBOL Vector).
-		 *
-		 * Params:
-		 * 	allocator = The allocator should be used for the element
-		 * 	            allocations.
-		 */
-		this(shared Allocator allocator)
-		{
-			this.allocator = allocator;
-		}
-
 		/**
 		 * Creates a new $(D_PSYMBOL Vector).
 		 *
 		 * Params:
-		 *  U      = Variadic template for the constructor parameters.
-		 * 	params = Values to initialize the array with. The last parameter can
-		 * 	         be an allocator, if not, $(D_PSYMBOL defaultAllocator) is used.
+		 * 	U         = Type of the static array with the initial elements.
+		 * 	params    = Values to initialize the array with. Use $(D_PSYMBOL IL)
+		 * 	            to generate a list.
+		 * 	allocator = Allocator.
 		 */
-		this(U...)(U params)
+		this(U)(U init, shared Allocator allocator = defaultAllocator)
+			if (isStaticArray!U)
+		in
 		{
-			static if (isImplicitlyConvertible!(typeof(params[$ - 1]), Allocator))
+			static assert(init.length > 0);
+		}
+		body
+		{
+			this(allocator);
+			vector = cast(T[]) allocator.allocate(init.length * T.sizeof);
+			if (vector is null)
 			{
-				allocator = params[$ - 1];
-				auto values = params[0 .. $ - 1];
+				onOutOfMemoryError();
 			}
-			else
-			{
-				allocator = defaultAllocator;
-				alias values = params;
-			}
+			vector[0 .. $] = init[0 .. $];
+			length_ = init.length;
+		}
 
-			resizeArray!T(allocator, vector, values.length);
-			length_ = values.length;
-
-			foreach (i, v; values)
+		/// Ditto.
+		this(U)(U init, shared Allocator allocator = defaultAllocator) const
+			if (isStaticArray!U)
+		in
+		{
+			static assert(init.length > 0);
+		}
+		body
+		{
+			allocator_ = cast(const shared Allocator) allocator;
+			auto buf = cast(T[]) allocator.allocate(init.length * T.sizeof);
+			if (buf is null)
 			{
-				vector[i] = v;
+				onOutOfMemoryError();
 			}
+			buf[0 .. $] = init[0 .. $];
+			vector = cast(const (T[])) buf;
+			length_ = init.length;
+		}
+
+		/// Ditto.
+		this(U)(U init, shared Allocator allocator = defaultAllocator) immutable
+			if (isStaticArray!U)
+		in
+		{
+			static assert(init.length > 0);
+		}
+		body
+		{
+			allocator_ = cast(immutable Allocator) allocator;
+			auto buf = cast(T[]) allocator.allocate(init.length * T.sizeof);
+			if (buf is null)
+			{
+				onOutOfMemoryError();
+			}
+			buf[0 .. $] = init[0 .. $];
+			vector = cast(immutable(T[])) buf;
+			length_ = init.length;
+		}
+
+		/// Ditto.
+		this(shared Allocator allocator)
+		in
+		{
+			assert(allocator !is null);
+		}
+		body
+		{
+			allocator_ = allocator;
+		}
+
+		///
+		unittest
+		{
+			auto v = Vector!int(IL(3, 8, 2));
+
+			assert(v.capacity == 3);
+			assert(v.length == 3);
+			assert(v[0] == 3 && v[1] == 8 && v[2] == 2);
 		}
 
 		/**
@@ -255,11 +266,7 @@ template Vector(T)
 		 */
 		~this()
 		{
-			if (allocator is null)
-			{
-				allocator = defaultAllocator;
-			}
-			dispose(allocator, vector);
+			allocator.dispose(vector);
 		}
 
 		/**
@@ -267,15 +274,16 @@ template Vector(T)
 		 */
 		void clear()
 		{
-			length_ = 0;
+			length = 0;
 		}
 
 		///
 		unittest
 		{
-			auto v = defaultAllocator.make!(Vector!int)(18, 20, 15);
+			auto v = Vector!int(IL(18, 20, 15));
 			v.clear();
 			assert(v.length == 0);
+			assert(v.capacity == 3);
 		}
 
 		/**
@@ -295,37 +303,7 @@ template Vector(T)
 		}
 
 		/// Ditto.
-		size_t opDollar() inout const
-		{
-			return length;
-		}
-
-		/**
-		 * Reserves space for $(D_PARAM n) elements.
-		 */
-		void reserve(in size_t n)
-		{
-			if (allocator is null)
-			{
-				allocator = defaultAllocator;
-			}
-			if (vector.length < n)
-			{
-				allocator.resizeArray!T(vector, n);
-			}
-		}
-
-		///
-		unittest
-		{
-			Vector!int v;
-			assert(v.capacity == 0);
-			assert(v.length == 0);
-
-			v.reserve(3);
-			assert(v.capacity == 3);
-			assert(v.length == 0);
-		}
+		alias opDollar = length;
 
 		/**
 		 * Expands/shrinks the vector.
@@ -335,7 +313,25 @@ template Vector(T)
 		 */
 		@property void length(in size_t len)
 		{
-			reserve(len);
+			if (len > length)
+			{
+				reserve(len);
+				vector[length .. len] = T.init;
+			}
+			else if (len < length)
+			{
+				static if (hasElaborateDestructor!T)
+				{
+					foreach (ref e; vector[len - 1 .. length_])
+					{
+						destroy(e);
+					}
+				}
+			}
+			else
+			{
+				return;
+			}
 			length_ = len;
 		}
 
@@ -352,9 +348,80 @@ template Vector(T)
 			assert(v.length == 7);
 			assert(v.capacity == 7);
 
+			assert(v[$ - 1] == 0);
+			v[$ - 1] = 3;
+			assert(v[$ - 1] == 3);
+
 			v.length = 0;
 			assert(v.length == 0);
 			assert(v.capacity == 7);
+		}
+
+		/**
+		 * Reserves space for $(D_PARAM size) elements.
+		 *
+		 * Params:
+		 * 	size = Desired size.
+		 */
+		void reserve(in size_t size) @trusted
+		{
+			if (vector.length < size)
+			{
+				void[] buf = vector;
+				allocator.reallocate(buf, size * T.sizeof);
+				vector = cast(T[]) buf;
+			}
+		}
+
+		///
+		unittest
+		{
+			Vector!int v;
+			assert(v.capacity == 0);
+			assert(v.length == 0);
+
+			v.reserve(3);
+			assert(v.capacity == 3);
+			assert(v.length == 0);
+		}
+
+		/**
+		 * Requests the vector to reduce its capacity to fit the $(D_PARAM size).
+		 *
+		 * The request is non-binding. The vector won't become smaller than the
+		 * $(D_PARAM length).
+		 *
+		 * Params:
+		 * 	size = Desired size.
+		 */
+		void shrink(in size_t size) @trusted
+		{
+			auto n = max(length, size);
+			void[] buf = vector;
+			allocator.reallocate(buf, n * T.sizeof);
+			vector = cast(T[]) buf;
+		}
+
+		///
+		unittest
+		{
+			Vector!int v;
+			assert(v.capacity == 0);
+			assert(v.length == 0);
+
+			v.reserve(5);
+			v.insertBack(1);
+			v.insertBack(3);
+			assert(v.capacity == 5);
+			assert(v.length == 2);
+
+			v.shrink(4);
+			assert(v.capacity == 4);
+			assert(v.length == 2);
+
+			v.shrink(1);
+			assert(v.capacity == 2);
+			assert(v.length == 2);
 		}
 
 		/**
@@ -381,14 +448,7 @@ template Vector(T)
 		{
 			immutable toRemove = min(howMany, length);
 
-			static if (hasElaborateDestructor!T)
-			{
-				foreach (ref e; vector[$ - toRemove ..$])
-				{
-					allocator.dispose(e);
-				}
-			}
-			length_ -= toRemove;
+			length = length - toRemove;
 
 			return toRemove;
 		}
@@ -399,7 +459,7 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v = Vector!int(5, 18, 17);
+			auto v = Vector!int(IL(5, 18, 17));
 
 			assert(v.removeBack(0) == 0);
 			assert(v.removeBack(2) == 2);
@@ -412,7 +472,7 @@ template Vector(T)
 		 *
 		 * Returns: The number of elements inserted.
 		 */
-		size_t insertBack(in T el)
+		size_t insertBack(T el)
 		{
 			reserve(length + 1);
 			vector[length] = el;
@@ -421,12 +481,12 @@ template Vector(T)
 		}
 
 		/// Ditto.
-		size_t insertBack(in Range el)
+		size_t insertBack(Range!Vector el)
 		{
 			immutable newLength = length + el.length;
 
 			reserve(newLength);
-			vector[length .. newLength] = el.data.vector[el.start .. el.end];
+			vector[length .. newLength] = el.outer.vector[el.start .. el.end];
 			length_ = newLength;
 
 			return el.length;
@@ -486,7 +546,7 @@ template Vector(T)
 			assert(v1.capacity == 4);
 			assert(v1[0] == 5 && v1[1] == 6 && v1[2] == 4 && v1[3] == 2);
 
-			auto v2 = Vector!int(34, 234);
+			auto v2 = Vector!int(IL(34, 234));
 			assert(v1.insertBack(v2[]) == 2);
 			assert(v1.length == 6);
 			assert(v1.capacity == 6);
@@ -504,7 +564,7 @@ template Vector(T)
 		 *
 		 * Precondition: $(D_INLINECODE length > pos)
 		 */
-		T opIndexAssign(in T value, in size_t pos)
+		T opIndexAssign(T value, in size_t pos)
 		in
 		{
 			assert(length > pos);
@@ -515,7 +575,7 @@ template Vector(T)
 		}
 
 		/// Ditto.
-		Range opIndexAssign(in T value)
+		Range!Vector opIndexAssign(T value)
 		{
 			vector[0 .. $] = value;
 			return opIndex();
@@ -524,7 +584,7 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v1 = Vector!int(12, 1, 7);
+			auto v1 = Vector!int(IL(12, 1, 7));
 
 			v1[] = 3;
 			assert(v1[0] == 3);
@@ -549,7 +609,19 @@ template Vector(T)
 		}
 
 		/// Ditto.
-		Range opIndex()
+		Range!Vector opIndex()
+		{
+			return typeof(return)(this, 0, length);
+		}
+
+		/// Ditto.
+		Range!(const Vector) opIndex() const
+		{
+			return typeof(return)(this, 0, length);
+		}
+
+		/// Ditto.
+		Range!(immutable Vector) opIndex() immutable
 		{
 			return typeof(return)(this, 0, length);
 		}
@@ -557,12 +629,18 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v = Vector!int(6, 123, 34, 5);
+			const v1 = Vector!int(IL(6, 123, 34, 5));
 
-			assert(v[0] == 6);
-			assert(v[1] == 123);
-			assert(v[2] == 34);
-			assert(v[3] == 5);
+			assert(v1[0] == 6);
+			assert(v1[1] == 123);
+			assert(v1[2] == 34);
+			assert(v1[3] == 5);
+			static assert(is(typeof(v1[0]) == const(int)));
+			static assert(is(typeof(v1[])));
+
+			auto v2 = immutable Vector!int(IL(6, 123, 34, 5));
+			static assert(is(typeof(v2[0]) == immutable(int)));
+			static assert(is(typeof(v2[])));
 		}
 
 		/**
@@ -574,13 +652,13 @@ template Vector(T)
 		 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
 		 *          otherwise.
 		 */
-		bool opEquals(typeof(this) v)
+		bool opEquals(typeof(this) v) const
 		{
 			return opEquals(v);
 		}
 
 		/// Ditto.
-		bool opEquals(ref typeof(this) v)
+		bool opEquals(ref typeof(this) v) const
 		{
 			return vector == v.vector;
 		}
@@ -673,7 +751,7 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v = Vector!int(5, 15, 8);
+			auto v = Vector!int(IL(5, 15, 8));
 
 			size_t i;
 			foreach (j, ref e; v)
@@ -693,7 +771,7 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v = Vector!int(5, 15, 8);
+			auto v = Vector!int(IL(5, 15, 8));
 			size_t i;
 
 			foreach_reverse (j, ref e; v)
@@ -728,7 +806,7 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v = Vector!int(5);
+			auto v = Vector!int(IL(5));
 
 			assert(v.front == 5);
 
@@ -755,7 +833,7 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v = Vector!int(5);
+			auto v = Vector!int(IL(5));
 
 			assert(v.back == 5);
 
@@ -774,7 +852,7 @@ template Vector(T)
 		 *
 		 * Precondition: $(D_INLINECODE i <= j && j <= length)
 		 */
-		Range opSlice(in size_t i, in size_t j)
+		Range!Vector opSlice(in size_t i, in size_t j)
 		in
 		{
 			assert(i <= j);
@@ -798,7 +876,7 @@ template Vector(T)
 		 * Precondition: $(D_INLINECODE i <= j && j <= length);
 		 *               The lenghts of the ranges and slices match.
 		 */
-		Range opSliceAssign(in T value, in size_t i, in size_t j)
+		Range!Vector opSliceAssign(T value, in size_t i, in size_t j)
 		in
 		{
 			assert(i <= j);
@@ -811,7 +889,7 @@ template Vector(T)
 		}
 
 		/// Ditto.
-		Range opSliceAssign(in Range value, in size_t i, in size_t j)
+		Range!Vector opSliceAssign(Range!Vector value, in size_t i, in size_t j)
 		in
 		{
 			assert(j - i == value.length);
@@ -823,7 +901,7 @@ template Vector(T)
 		}
 
 		/// Ditto.
-		Range opSliceAssign(in T[] value, in size_t i, in size_t j)
+		Range!Vector opSliceAssign(T[] value, in size_t i, in size_t j)
 		in
 		{
 			assert(j - i == value.length);
@@ -837,8 +915,8 @@ template Vector(T)
 		///
 		unittest
 		{
-			auto v1 = Vector!int(3, 3, 3);
-			auto v2 = Vector!int(1, 2);
+			auto v1 = Vector!int(IL(3, 3, 3));
+			auto v2 = Vector!int(IL(1, 2));
 
 			v1[0 .. 2] = 286;
 			assert(v1[0] == 286);
@@ -849,20 +927,69 @@ template Vector(T)
 			assert(v2[0] == 286);
 			assert(v2[1] == 3);
 		}
+
+		mixin DefaultAllocator;
 	}
 }
 
 ///
 unittest
 {
-	auto v = Vector!int(5, 15, 8);
+	auto v = Vector!int(IL(5, 15, 8));
 
 	assert(v.front == 5);
 	assert(v[1] == 15);
 	assert(v.back == 8);
 }
 
-private unittest
+private @nogc unittest
 {
-//	const Vector!int v;
+	// Test the destructor can be called at the end of the scope.
+	auto a = Vector!A();
+
+	// Test that structs can be members of the vector.
+	static assert(is(typeof(Vector!TestA())));
+	static assert(is(typeof(immutable Vector!TestA(IL(TestA())))));
+	static assert(is(typeof(const Vector!TestA(IL(TestA())))));
+}
+
+private @nogc unittest
+{
+	const v1 = Vector!int();
+	const Vector!int v2;
+	const v3 = Vector!int(IL(1, 5, 8));
+	static assert(is(typeof(v3.vector) == const(int[])));
+	static assert(is(typeof(v3.vector[0]) == const(int)));
+
+	immutable v4 = immutable Vector!int();
+	immutable v5 = immutable Vector!int(IL(2, 5, 8));
+	static assert(is(typeof(v4.vector) == immutable(int[])));
+	static assert(is(typeof(v4.vector[0]) == immutable(int)));
+}
+
+private @nogc unittest
+{
+	// Test that immutable/const vectors return usable ranges.
+	auto v = immutable Vector!int(IL(1, 2, 4));
+	auto r = v[];
+
+	assert(r.back == 4);
+	r.popBack();
+	assert(r.back == 2);
+	r.popBack();
+	assert(r.back == 1);
+	r.popBack();
+}
+
+private @nogc unittest
+{
+	Vector!int v1;
+	const Vector!int v2;
+
+	auto r1 = v1[];
+	auto r2 = v1[];
+
+	assert(r1.length == 0);
+	assert(r2.empty);
+	assert(r1 == r2);
 }

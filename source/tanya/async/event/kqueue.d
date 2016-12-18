@@ -165,8 +165,8 @@ class KqueueLoop : SelectorLoop
 		{
 			throw MmapPool.instance.make!BadLoopException("epoll initialization failed");
 		}
-		events = MmapPool.instance.makeArray!kevent_t(64);
-		changes = MmapPool.instance.makeArray!kevent_t(64);
+		MmapPool.instance.resizeArray(events, 64);
+		MmapPool.instance.resizeArray(changes, 64);
 	}
 
 	/**

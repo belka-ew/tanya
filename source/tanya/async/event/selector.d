@@ -116,7 +116,7 @@ abstract class SelectorLoop : Loop
 	this() @nogc
 	{
 		super();
-		connections = MmapPool.instance.makeArray!ConnectionWatcher(maxEvents);
+		MmapPool.instance.resizeArray(connections, maxEvents);
 	}
 
 	~this() @nogc

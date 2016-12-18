@@ -26,12 +26,6 @@ struct Integer
 {
 	private ubyte[] rep;
 	private bool sign;
-	private shared Allocator allocator;
-
-	pure nothrow @safe @nogc invariant
-	{
-		assert(rep.length || !sign, "0 should be positive.");
-	}
 
 	/**
 	 * Creates a multiple precision integer.
@@ -52,25 +46,29 @@ struct Integer
 		{
 			assignInt(value);
 		}
-		else
+		else if (value.length > 0)
 		{
 			rep = () @trusted {
-				return cast(ubyte[]) allocator.allocate(value.length);
+				return cast(ubyte[]) allocator_.allocate(value.length);
 			}();
+			if (rep is null)
+			{
+				onOutOfMemoryError();
+			}
 			value.rep.copy(rep);
 			sign = value.sign;
 		}
 	}
 
 	/// Ditto.
-	this(shared Allocator allocator) nothrow @safe @nogc
+	this(shared Allocator allocator) pure nothrow @safe @nogc
 	in
 	{
 		assert(allocator !is null);
 	}
 	body
 	{
-		this.allocator = allocator;
+		allocator_ = allocator;
 	}
 
 	private @nogc unittest
@@ -86,22 +84,12 @@ struct Integer
 		assert(h2.sign);
 	}
 
+	/**
+	 * Destroys the internal representation.
+	 */
 	~this() nothrow @safe @nogc
-	in
 	{
-		assert(allocator !is null || !rep.length);
-	}
-	body
-	{
-		if (allocator !is null)
-		{
-			allocator.dispose(rep);
-		}
-	}
-
-	private @nogc unittest
-	{
-		Integer h; // allocator isn't set, but the destructor should work
+		allocator.dispose(rep);
 	}
 
 	/*
@@ -113,7 +101,6 @@ struct Integer
 	in
 	{
 		static assert(isIntegral!T);
-		assert(allocator !is null);
 	}
 	body
 	{
@@ -169,7 +156,6 @@ struct Integer
 	ref Integer opAssign(T)(in auto ref T value) nothrow @safe @nogc
 		if (isIntegral!T || is(T == Integer))
 	{
-		initialize();
 		static if (isIntegral!T)
 		{
 			assignInt(value);
@@ -215,10 +201,10 @@ struct Integer
 	 *
 	 * Returns: Whether the two integers are equal.
 	 */
-    bool opEquals(in Integer h) const nothrow @safe @nogc
-    {
-        return rep == h.rep;
-    }
+	bool opEquals(in Integer h) const nothrow @safe @nogc
+	{
+		return rep == h.rep;
+	}
 
 	/// Ditto.
 	bool opEquals(in ref Integer h) const nothrow @safe @nogc
@@ -235,52 +221,52 @@ struct Integer
 		assert(h1 != Integer(109));
 	}
 
-    /**
+	/**
 	 * Params:
 	 * 	h = The second integer.
-     *
-     * Returns: A positive number if $(D_INLINECODE this > h), a negative
-     *          number if $(D_INLINECODE this > h), `0` otherwise.
-     */
-    int opCmp(in ref Integer h) const nothrow @safe @nogc
-    {
-        if (length > h.length)
-        {
-            return 1;
-        }
-        if (length < h.length)
-        {
-            return -1;
-        }
-        // Otherwise, keep searching through the representational integers
-        // until one is bigger than another - once we've found one, it's
-        // safe to stop, since the lower order bytes can't affect the
-        // comparison
-        for (size_t i, j; i < length && j < h.length; ++i, ++j)
-        {
-            if (rep[i] < h.rep[j])
-            {
-                return -1;
-            }
-            else if (rep[i] > h.rep[j])
-            {
-                return 1;
-            }
-        }
-        // if we got all the way to the end without a comparison, the
-        // two are equal
-        return 0;
-    }
+	 *
+	 * Returns: A positive number if $(D_INLINECODE this > h), a negative
+	 *          number if $(D_INLINECODE this > h), `0` otherwise.
+	 */
+	int opCmp(in ref Integer h) const nothrow @safe @nogc
+	{
+		if (length > h.length)
+		{
+		    return 1;
+		}
+		if (length < h.length)
+		{
+		    return -1;
+		}
+		// Otherwise, keep searching through the representational integers
+		// until one is bigger than another - once we've found one, it's
+		// safe to stop, since the lower order bytes can't affect the
+		// comparison
+		for (size_t i, j; i < length && j < h.length; ++i, ++j)
+		{
+		    if (rep[i] < h.rep[j])
+		    {
+			return -1;
+		    }
+		    else if (rep[i] > h.rep[j])
+		    {
+			return 1;
+		    }
+		}
+		// if we got all the way to the end without a comparison, the
+		// two are equal
+		return 0;
+	}
 
 	/// Ditto.
-    int opCmp(in Integer h) const nothrow @safe @nogc
-    {
+	int opCmp(in Integer h) const nothrow @safe @nogc
+	{
 		return opCmp(h);
 	}
 
 	///
-    unittest
-    {
+	unittest
+	{
 		auto h1 = Integer(1019);
 		auto h2 = Integer(1019);
 		assert(h1 == h2);
@@ -290,18 +276,24 @@ struct Integer
 
 		h2 = 688;
 		assert(h1 > h2);
-    }
+	}
 
-	private void add(in ref ubyte[] h) nothrow @safe @nogc
+	private void add(in ref ubyte[] h) nothrow @trusted @nogc
 	{
 		uint sum;
 		uint carry = 0;
+		ubyte[] tmp;
 
 		if (h.length > length)
 		{
-			auto tmp = allocator.makeArray!ubyte(h.length);
+			tmp = cast(ubyte[]) allocator.allocate(h.length);
+			if (tmp is null)
+			{
+				onOutOfMemoryError();
+			}
+			tmp[0 .. h.length] = 0;
 			tmp[h.length - length .. $] = rep[0 .. length];
-			rep = tmp;
+			swap(rep, tmp);
 		}
 
 		auto i = length;
@@ -327,15 +319,16 @@ struct Integer
 		if (carry)
 		{
 			// Still overflowed; allocate more space
-			auto tmp = allocator.makeArray!ubyte(length + 1);
-			tmp[1 .. $] = rep[0..length];
+			void[]* vtmp = cast(void[]*) &tmp;
+			allocator.reallocate(*vtmp, length + 1);
+			tmp[1 .. $] = rep[0 .. length];
 			tmp[0] = 0x01;
-			rep = tmp;
+			swap(rep, tmp);
 		}
-
+		allocator.deallocate(tmp);
 	}
 
-	private void subtract(in ref ubyte[] h) nothrow @safe @nogc
+	private void subtract(in ref ubyte[] h) nothrow @trusted @nogc
 	{
 		auto i = rep.length;
 		auto j = h.length;
@@ -369,13 +362,14 @@ struct Integer
 		immutable offset = rep.countUntil!((const ref a) => a != 0);
 		if (offset > 0)
 		{
-			ubyte[] tmp = allocator.makeArray!ubyte(rep.length - offset);
+			ubyte[] tmp = cast(ubyte[]) allocator.allocate(rep.length - offset);
 			rep[offset .. $].copy(tmp);
+			allocator.deallocate(rep);
 			rep = tmp;
 		}
 		else if (offset == -1)
 		{
-			allocator.resizeArray(rep, 0);
+			allocator.dispose(rep);
 		}
 	}
 
@@ -392,11 +386,11 @@ struct Integer
 		if ((op == "+") || (op == "-"))
 	out
 	{
+		assert(rep.length || !sign, "0 should be positive.");
 		assert(!rep.length || rep[0]);
 	}
 	body
 	{
-		initialize();
 		static if (op == "+")
 		{
 			if (h.sign == sign)
@@ -505,6 +499,7 @@ struct Integer
 		if (op == "*")
 	out
 	{
+		assert(rep.length || !sign, "0 should be positive.");
 		assert(!rep.length || rep[0]);
 	}
 	body
@@ -550,8 +545,6 @@ struct Integer
 	}
 	body
 	{
-		initialize();
-
 		auto divisor = Integer(h, allocator);
 		size_t bitSize;
 
@@ -562,7 +555,9 @@ struct Integer
 		}
 		static if (op == "/")
 		{
-			auto quotient = allocator.makeArray!ubyte(bitSize / 8 + 1);
+			auto quotient = (() @trusted =>
+				cast(ubyte[]) allocator.allocate(bitSize / 8 + 1)
+			)();
 		}
 
 		// "bitPosition" keeps track of which bit, of the quotient,
@@ -592,8 +587,8 @@ struct Integer
 
 		static if (op == "/")
 		{
-			swap(rep, quotient);
-			allocator.dispose(quotient);
+			() @trusted { allocator.deallocate(rep); }();
+			rep = quotient;
 			sign = sign == h.sign ? false : true;
 		}
 		return this;
@@ -628,6 +623,7 @@ struct Integer
 		if (op == "^^")
 	out
 	{
+		assert(rep.length || !sign, "0 should be positive.");
 		assert(!rep.length || rep[0]);
 	}
 	body
@@ -683,7 +679,6 @@ struct Integer
 	Integer opUnary(string op)() nothrow @safe @nogc
 		if ((op == "+") || (op == "-") || (op == "~"))
 	{
-		initialize();
 		auto h = Integer(this, allocator);
 		static if (op == "-")
 		{
@@ -772,12 +767,11 @@ struct Integer
 		if ((op == "++") || (op == "--"))
 	out
 	{
+		assert(rep.length || !sign, "0 should be positive.");
 		assert(!rep.length || rep[0]);
 	}
 	body
 	{
-		initialize();
-
 		static if (op == "++")
 		{
 			if (sign)
@@ -848,14 +842,6 @@ struct Integer
 		assert(h.rep[0] == 0x01);
 	}
 
-	private void initialize() nothrow @safe @nogc
-	{
-		if (allocator is null)
-		{
-			allocator = defaultAllocator;
-		}
-	}
-
 	/**
 	 * Casting.
 	 *
@@ -917,13 +903,13 @@ struct Integer
 		if (op == ">>")
 	out
 	{
+		assert(rep.length || !sign, "0 should be positive.");
 		assert(!rep.length || rep[0]);
 	}
 	body
 	{
 		immutable step = n / 8;
 
-		initialize();
 		if (step >= rep.length)
 		{
 			allocator.resizeArray(rep, 0);
@@ -994,6 +980,7 @@ struct Integer
 		if (op == "<<")
 	out
 	{
+		assert(rep.length || !sign, "0 should be positive.");
 		assert(!rep.length || rep[0]);
 	}
 	body
@@ -1004,7 +991,6 @@ struct Integer
 		immutable bit = n % 8;
 		immutable delta = 8 - bit;
 
-		initialize();
 		if (cast(ubyte) (rep[0] >> delta))
 		{
 			allocator.resizeArray(rep, i + n / 8 + 1);
@@ -1043,7 +1029,6 @@ struct Integer
 		if (op == "<<" || op == ">>" || op == "+" || op == "-" || op == "/"
 		 || op == "*" || op == "^^" || op == "%")
 	{
-		initialize();
 		auto ret = Integer(this, allocator);
 		mixin("ret " ~ op ~ "= n;");
 		return ret;
@@ -1065,9 +1050,10 @@ struct Integer
 		if (op == "+" || op == "-" || op == "/"
 		 || op == "*" || op == "^^" || op == "%")
 	{
-		initialize();
 		auto ret = Integer(this, allocator);
 		mixin("ret " ~ op ~ "= h;");
 		return ret;
 	}
+
+	mixin DefaultAllocator;
 }

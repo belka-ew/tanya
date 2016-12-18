@@ -48,7 +48,7 @@ class EpollLoop : SelectorLoop
 			throw MmapPool.instance.make!BadLoopException("epoll initialization failed");
 		}
 		super();
-		events = MmapPool.instance.makeArray!epoll_event(maxEvents);
+		MmapPool.instance.resizeArray(events, maxEvents);
 	}
 
 	/**

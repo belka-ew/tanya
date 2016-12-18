@@ -73,7 +73,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Pointer to the new allocated memory.
 	 */
-	void[] allocate(size_t size) shared nothrow @trusted
+	void[] allocate(size_t size) shared nothrow
 	{
 		if (!size)
 		{
@@ -91,7 +91,7 @@ final class MmapPool : Allocator
 	}
 
 	///
-	@safe nothrow unittest
+	nothrow unittest
 	{
 		auto p = MmapPool.instance.allocate(20);
 
@@ -167,7 +167,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Whether the deallocation was successful.
 	 */
-	bool deallocate(void[] p) shared nothrow @trusted
+	bool deallocate(void[] p) shared nothrow
 	{
 		if (p is null)
 		{
@@ -207,7 +207,7 @@ final class MmapPool : Allocator
 	}
 
 	///
-	@safe nothrow unittest
+	nothrow unittest
 	{
 		auto p = MmapPool.instance.allocate(20);
 
@@ -223,7 +223,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Whether the reallocation was successful.
 	 */
-	bool reallocate(ref void[] p, size_t size) shared nothrow @trusted
+	bool reallocate(ref void[] p, size_t size) shared nothrow
 	{
 		void[] reallocP;
 
@@ -291,7 +291,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Global $(D_PSYMBOL MmapPool) instance.
 	 */
-	static @property ref shared(MmapPool) instance() nothrow @trusted
+	static @property ref shared(MmapPool) instance() nothrow
 	{
 		if (instance_ is null)
 		{
@@ -310,7 +310,7 @@ final class MmapPool : Allocator
 	}
 
 	///
-	@safe nothrow unittest
+	nothrow unittest
 	{
 		assert(instance is instance);
 	}

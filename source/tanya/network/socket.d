@@ -425,9 +425,10 @@ else version (Windows)
 			DWORD dwBytes;
 			overlapped.handle = cast(HANDLE) socket;
 			overlapped.event = OverlappedSocketEvent.accept;
-			overlapped.buffer.len = (sockaddr_in.sizeof + 16) * 2;
-			overlapped.buffer.buf = makeArray!char(defaultAllocator,
-			                                       overlapped.buffer.len).ptr;
+
+			immutable len = (sockaddr_in.sizeof + 16) * 2;
+			overlapped.buffer.len = len;
+			overlapped.buffer.buf = cast(char*) defaultAllocator.allocate(len).ptr;
 
 			// We don't want to get any data now, but only start to accept the connections
 			BOOL result = acceptExtension(handle_,
@@ -1267,12 +1268,12 @@ class InternetAddress : Address
 		port_ = port;
 
 		// Make C-string from host.
-		char[] node = defaultAllocator.makeArray!char(host.length + 1);
+		auto node = cast(char[]) allocator.allocate(host.length + 1);
 		node[0.. $ - 1] = host;
 		node[$ - 1] = '\0';
 		scope (exit)
 		{
-			defaultAllocator.dispose(node);
+			allocator.deallocate(node);
 		}
 
 		// Convert port to a C-string.

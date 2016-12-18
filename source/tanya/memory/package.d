@@ -20,7 +20,7 @@ private extern (C) void _d_monitordelete(Object h, bool det) nothrow @nogc;
 
 shared Allocator allocator;
 
-shared static this() nothrow @safe @nogc
+shared static this() nothrow @trusted @nogc
 {
 	import tanya.memory.mmappool;
 	allocator = MmapPool.instance;
@@ -75,17 +75,20 @@ bool resizeArray(T)(shared Allocator allocator,
 	void[] buf = array;
 	immutable oldLength = array.length;
 
-	if (!allocator.reallocate(buf, length * T.sizeof))
-	{
-		return false;
-	}
-	// Casting from void[] is unsafe, but we know we cast to the original type
-	array = () @trusted { return cast(T[]) buf; }();
-	if (oldLength < length)
+	auto result = () @trusted {
+		if (!allocator.reallocate(buf, length * T.sizeof))
+		{
+			return false;
+		}
+		// Casting from void[] is unsafe, but we know we cast to the original type.
+		array = cast(T[]) buf;
+		return true;
+	}();
+	if (result && oldLength < length)
 	{
 		array[oldLength .. $] = init;
 	}
-	return true;
+	return result;
 }
 
 ///
@@ -106,26 +109,6 @@ unittest
 	assert(p is null);
 }
 
-private void deStruct(T)(ref T s)
-	if (is(T == struct))
-{
-	static if (__traits(hasMember, T, "__xdtor")
-	      &&   __traits(isSame, T, __traits(parent, s.__xdtor)))
-	{
-		s.__xdtor();
-	}
-	auto buf = (cast(ubyte*) &s)[0 .. T.sizeof];
-	auto init = cast(ubyte[])typeid(T).initializer();
-	if (init.ptr is null) // null ptr means initialize to 0s
-	{
-		buf[] = 0;
-	}
-	else
-	{
-		buf[] = init[];
-	}
-}
-
 /**
  * Destroys and deallocates $(D_PARAM p) of type $(D_PARAM T).
  * It is assumed the respective entities had been allocated with the same
@@ -136,17 +119,18 @@ private void deStruct(T)(ref T s)
  * 	allocator = Allocator the $(D_PARAM p) was allocated with.
  * 	p         = Object or array to be destroyed.
  */
-void dispose(T)(shared Allocator allocator, T* p)
+void dispose(T)(shared Allocator allocator, auto ref T* p)
 {
-    static if (hasElaborateDestructor!T)
-    {
-		deStruct(*p);
-    }
-    allocator.deallocate((cast(void*) p)[0 .. T.sizeof]);
+	static if (hasElaborateDestructor!T)
+	{
+		destroy(*p);
+	}
+	() @trusted { allocator.deallocate((cast(void*) p)[0 .. T.sizeof]); }();
+	p = null;
 }
 
 /// Ditto.
-void dispose(T)(shared Allocator allocator, T p)
+void dispose(T)(shared Allocator allocator, auto ref T p)
 	if (is(T == class) || is(T == interface))
 {
 	if (p is null)
@@ -172,7 +156,8 @@ void dispose(T)(shared Allocator allocator, T p)
 	auto support = ptr[0 .. typeid(ob).initializer.length];
 	scope (success)
 	{
-		allocator.deallocate(support);
+		() @trusted { allocator.deallocate(support); }();
+		p = null;
 	}
 
 	auto ppv = cast(void**) ptr;
@@ -193,7 +178,7 @@ void dispose(T)(shared Allocator allocator, T p)
 		// shouldn't throw and if it does, it is an error anyway.
 		if (c.destructor)
 		{
-			(cast(void function (Object) nothrow @nogc) c.destructor)(ob);
+			(cast(void function (Object) nothrow @safe @nogc) c.destructor)(ob);
 		}
 	}
 	while ((c = c.base) !is null);
@@ -202,19 +187,18 @@ void dispose(T)(shared Allocator allocator, T p)
 	{
 		_d_monitordelete(cast(Object) ptr, true);
 	}
-	auto w = (*pc).initializer;
-	ptr[0 .. w.length] = w[];
 }
 
 /// Ditto.
-void dispose(T)(shared Allocator allocator, T[] array)
+void dispose(T)(shared Allocator allocator, auto ref T[] array)
 {
-    static if (hasElaborateDestructor!(typeof(array[0])))
-    {
-        foreach (ref e; array)
-        {
-            deStruct(e);
-        }
-    }
-    allocator.deallocate(array);
+	static if (hasElaborateDestructor!(typeof(array[0])))
+	{
+	foreach (ref e; array)
+	{
+	    destroy(e);
+	}
+	}
+	() @trusted { allocator.deallocate(array); }();
+	array = null;
 }

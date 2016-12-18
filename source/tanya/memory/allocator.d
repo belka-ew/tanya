@@ -28,7 +28,7 @@ interface Allocator
 	 *
 	 * Returns: Pointer to the new allocated memory.
 	 */
-	void[] allocate(size_t size) shared nothrow @safe @nogc;
+	void[] allocate(size_t size) shared nothrow @nogc;
 
 	/**
 	 * Deallocates a memory block.
@@ -38,7 +38,7 @@ interface Allocator
 	 *
 	 * Returns: Whether the deallocation was successful.
 	 */
-	bool deallocate(void[] p) shared nothrow @safe @nogc;
+	bool deallocate(void[] p) shared nothrow @nogc;
 
 	/**
 	 * Increases or decreases the size of a memory block.
@@ -49,5 +49,32 @@ interface Allocator
 	 *
 	 * Returns: Pointer to the allocated memory.
 	 */
-	bool reallocate(ref void[] p, size_t size) shared nothrow @safe @nogc;
+	bool reallocate(ref void[] p, size_t size) shared nothrow @nogc;
+}
+
+/**
+ * The mixin generates common methods for classes and structs using
+ * allocators. It provides a protected member and a read-only property,
+ * that checks if an allocator was already set and sets it to the default
+ * one, if not (useful for structs which don't have a default constructor).
+ */
+mixin template DefaultAllocator()
+{
+	/// Allocator.
+	protected shared Allocator allocator_;
+
+	/**
+	 * This property checks if the allocator was set in the constructor
+	 * and sets it to the default one, if not.
+	 *
+	 * Returns: Used allocator.
+	 */
+	@property shared(Allocator) allocator() nothrow @safe @nogc
+	{
+		if (allocator_ is null)
+		{
+			allocator_ = defaultAllocator;
+		}
+		return allocator_;
+	}
 }

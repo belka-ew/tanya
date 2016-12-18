@@ -11,6 +11,7 @@
 module tanya.traits;
 
 import std.traits;
+import std.meta;
 
 /**
  * Params:
@@ -21,3 +22,36 @@ import std.traits;
  */
 enum bool isReference(T) = isDynamicArray!T || isPointer!T
                         || is(T == class) || is(T == interface);
+
+/**
+ * Initializer list.
+ *
+ * Generates a static array with elements from $(D_PARAM args). All elements
+ * should have the same type. It can be used in constructors which accept a
+ * list of the elements of the same type in the situations where variadic
+ * functions and templates can't be used.
+ *
+ * Params:
+ * 	Args = Argument type.
+ * 	args = Arguments.
+ */
+static enum IL(Args...)(Args args)
+	if (Args.length > 0)
+{
+	alias BaseType = typeof(args[0]);
+
+	BaseType[args.length] result;
+
+	foreach (i, a; args)
+	{
+		static assert(isImplicitlyConvertible!(typeof(a), BaseType));
+		result[i] = a;
+	}
+	return result;
+}
+
+///
+unittest
+{
+	static assert(IL(1, 5, 8).length == 3);
+}
