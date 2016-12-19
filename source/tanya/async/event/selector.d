@@ -30,7 +30,7 @@ class SelectorStreamTransport : StreamTransport
 	private ConnectedSocket socket_;
 
 	/// Input buffer.
-	package WriteBuffer input;
+	package WriteBuffer!ubyte input;
 
 	private SelectorLoop loop;
 
@@ -46,15 +46,7 @@ class SelectorStreamTransport : StreamTransport
 	{
 		socket_ = socket;
 		this.loop = loop;
-		input = MmapPool.instance.make!WriteBuffer(8192, MmapPool.instance);
-	}
-
-	/**
-	 * Close the transport and deallocate the data buffers.
-	 */
-	~this() @nogc
-	{
-		MmapPool.instance.dispose(input);
+		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 	}
 
 	/**

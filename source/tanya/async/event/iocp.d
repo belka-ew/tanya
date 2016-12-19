@@ -30,7 +30,7 @@ class IOCPStreamTransport : StreamTransport
 {
 	private OverlappedConnectedSocket socket_;
 
-	private WriteBuffer input;
+	private WriteBuffer!ubyte input;
 
 	/**
 	 * Creates new completion port transport.
@@ -45,12 +45,7 @@ class IOCPStreamTransport : StreamTransport
 	body
 	{
 		socket_ = socket;
-		input = MmapPool.instance.make!WriteBuffer(8192, MmapPool.instance);
-	}
-
-	~this()
-	{
-		MmapPool.instance.dispose(input);
+		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 	}
 
 	@property inout(OverlappedConnectedSocket) socket()

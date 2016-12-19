@@ -54,10 +54,9 @@ interface Allocator
 
 /**
  * The mixin generates common methods for classes and structs using
- * allocators. It provides a protected member, constructor and a read-only
- * property, that checks if an allocator was already set and sets it to the
- * default one, if not (useful for structs which don't have a default
- * constructor).
+ * allocators. It provides a protected member, constructor and a read-only property,
+ * that checks if an allocator was already set and sets it to the default
+ * one, if not (useful for structs which don't have a default constructor).
  */
 mixin template DefaultAllocator()
 {

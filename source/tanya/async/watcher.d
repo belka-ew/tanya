@@ -139,7 +139,7 @@ class IOWatcher : ConnectionWatcher
 	/**
 	 * Returns: Underlying output buffer.
 	 */
-	package ReadBuffer output;
+	package ReadBuffer!ubyte output;
 
 	/**
 	 * Params:
@@ -157,7 +157,7 @@ class IOWatcher : ConnectionWatcher
 		super();
 		transport_ = transport;
 		protocol_ = protocol;
-		output = MmapPool.instance.make!ReadBuffer(8192, 1024, MmapPool.instance);
+		output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
 		active = true;
 	}
 
@@ -166,7 +166,6 @@ class IOWatcher : ConnectionWatcher
 	 */
 	protected ~this() @nogc
 	{
-		MmapPool.instance.dispose(output);
 		MmapPool.instance.dispose(protocol_);
 	}
 
