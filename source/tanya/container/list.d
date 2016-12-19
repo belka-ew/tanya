@@ -10,28 +10,17 @@
  */  
 module tanya.container.list;
 
+import tanya.container.entry;
 import tanya.memory;
 
 /**
- * Singly linked list.
+ * Singly-linked list.
  *
  * Params:
  * 	T = Content type.
  */
-class SList(T)
+struct SList(T)
 {
-	/**
-	 * Creates a new $(D_PSYMBOL SList).
-	 *
-	 * Params:
-	 * 	allocator = The allocator should be used for the element
-	 * 	            allocations.
-	 */
-	this(shared Allocator allocator = defaultAllocator)
-	{
-		this.allocator = allocator;
-	}
-
 	/**
 	 * Removes all elements from the list.
 	 */
@@ -41,7 +30,7 @@ class SList(T)
 	}
 
 	/**
-	 * Remove all contents from the $(D_PSYMBOL SList).
+	 * Removes all contents from the list.
 	 */
 	void clear()
 	{
@@ -54,14 +43,12 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		SList!int l;
 
 		l.insertFront(8);
 		l.insertFront(5);
 		l.clear();
 		assert(l.empty);
-
-		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -83,13 +70,19 @@ class SList(T)
 	 * Params:
 	 * 	x = New element.
 	 */
-	void insertFront(T x)
+	void insertFront(ref T x)
 	{
-		Entry* temp = make!Entry(allocator);
+		auto temp = allocator.make!(Entry!T);
 		
 		temp.content = x;
 		temp.next = first.next;
 		first.next = temp;
+	}
+
+	/// Ditto.
+	void insertFront(T x)
+	{
+		insertFront(x);
 	}
 
 	/// Ditto.
@@ -98,20 +91,18 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		SList!int l;
 
 		l.insertFront(8);
 		assert(l.front == 8);
 		l.insertFront(9);
 		assert(l.front == 9);
-
-		dispose(defaultAllocator, l);
 	}
 
 	/**
 	 * Returns: $(D_KEYWORD true) if the list is empty.
 	 */
-	@property bool empty() inout const
+	@property bool empty() const
 	{
 		return first.next is null;
 	}
@@ -121,7 +112,7 @@ class SList(T)
 	 *
 	 * Returns: The first element.
 	 */
-	T popFront()
+	void popFront()
 	in
 	{
 		assert(!empty);
@@ -129,26 +120,21 @@ class SList(T)
 	body
 	{
 		auto n = first.next.next;
-		auto content = first.next.content;
 
-		dispose(allocator, first.next);
+		allocator.dispose(first.next);
 		first.next = n;
-
-		return content;
 	}
 
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		SList!int l;
 
 		l.insertFront(8);
 		l.insertFront(9);
 		assert(l.front == 9);
 		l.popFront();
 		assert(l.front == 8);
-
-		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -179,7 +165,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		SList!int l;
 
 		l.insertFront(8);
 		l.insertFront(5);
@@ -188,8 +174,6 @@ class SList(T)
 		assert(l.removeFront(2) == 2);
 		assert(l.removeFront(3) == 1);
 		assert(l.removeFront(3) == 0);
-
-		dispose(defaultAllocator, l);
 	}
 
 	/**
@@ -235,7 +219,7 @@ class SList(T)
 	///
 	unittest
 	{
-		auto l = make!(SList!int)(defaultAllocator);
+		SList!int l;
 
 		l.insertFront(5);
 		l.insertFront(4);
@@ -246,32 +230,18 @@ class SList(T)
 			assert(i != 1 || e == 4);
 			assert(i != 2 || e == 5);
 		}
-		dispose(defaultAllocator, l);
-	}
-
-	/**
-	 * List entry.
-	 */
-	protected struct Entry
-	{
-		/// List item content.
-		T content;
-
-		/// Next list item.
-		Entry* next;
 	}
 
 	/// 0th element of the list.
-	protected Entry first;
+	private Entry!T first;
 
-	/// Allocator.
-	protected shared Allocator allocator;
+	mixin DefaultAllocator;
 }
 
 ///
 unittest
 {
-	auto l = make!(SList!int)(defaultAllocator);
+	SList!int l;
 	size_t i;
 
 	l.insertFront(5);
@@ -285,8 +255,6 @@ unittest
 		++i;
 	}
 	assert(i == 3);
-
-	dispose(defaultAllocator, l);
 }
 
 private unittest
@@ -294,8 +262,5 @@ private unittest
 	interface Stuff
 	{
 	}
-
-	auto l = make!(SList!Stuff)(defaultAllocator);
-
-	dispose(defaultAllocator, l);
+	static assert(is(SList!Stuff));
 }

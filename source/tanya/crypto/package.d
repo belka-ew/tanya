@@ -10,9 +10,7 @@
  */
 module tanya.crypto;
 
-public
-{
-    import tanya.crypto.des;
-    import tanya.crypto.mode;
-    import tanya.crypto.symmetric;
-}
+public import tanya.crypto.bit;
+public import tanya.crypto.des;
+public import tanya.crypto.mode;
+public import tanya.crypto.symmetric;

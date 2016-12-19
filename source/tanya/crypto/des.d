@@ -10,7 +10,7 @@
  */
 module tanya.crypto.des;
 
-import tanya.container.bit;
+import tanya.crypto.bit;
 import tanya.crypto.symmetric;
 
 /// Initial permutation table.

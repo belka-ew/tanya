@@ -8,7 +8,7 @@
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
  */
-module tanya.container.bit;
+module tanya.crypto.bit;
 
 /**
  * Wrapper that allows bit manipulation on $(D_KEYWORD ubyte[]) array.
