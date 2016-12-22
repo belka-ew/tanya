@@ -10,6 +10,7 @@
  */
 module tanya.memory;
 
+import core.exception;
 public import std.experimental.allocator : make, makeArray;
 import std.traits;
 public import tanya.memory.allocator;
@@ -57,39 +58,68 @@ template stateSize(T)
 
 /**
  * Params:
+ * 	size      = Raw size.
+ * 	alignment = Alignment.
+ *
+ * Returns: Aligned size.
+ */
+size_t alignedSize(in size_t size, in size_t alignment = 8) pure nothrow @safe @nogc
+{
+	return (size - 1) / alignment * alignment + alignment;
+}
+
+/**
+ * Internal function used to create, resize or destroy a dynamic array. It
+ * throws $(D_PSYMBOL OutOfMemoryError) if $(D_PARAM Throws) is set. The new
+ * allocated part of the array is initialized only if $(D_PARAM Init) 
+ * is set. This function can be trusted only in the data structures that
+ * can ensure that the array is allocated/rellocated/deallocated with the
+ * same allocator.
+ *
+ * Params:
  * 	T         = Element type of the array being created.
+ *      Init      = If should be initialized.
+ *      Throws    = If $(D_PSYMBOL OutOfMemoryError) should be throwsn.
  * 	allocator = The allocator used for getting memory.
  * 	array     = A reference to the array being changed.
  * 	length    = New array length.
- * 	init      = The value to fill the new part of the array with if it becomes
- * 	            larger.
  *
  * Returns: $(D_KEYWORD true) upon success, $(D_KEYWORD false) if memory could
  *          not be reallocated. In the latter
  */
-bool resizeArray(T)(shared Allocator allocator,
-                    ref T[] array,
-                    in size_t length,
-                    T init = T.init)
+package(tanya) bool resize(T,
+                           bool Init = true,
+                           bool Throws = true)
+                          (shared Allocator allocator,
+                           ref T[] array,
+                           in size_t length) @trusted
 {
 	void[] buf = array;
-	immutable oldLength = array.length;
-
-	auto result = () @trusted {
-		if (!allocator.reallocate(buf, length * T.sizeof))
-		{
-			return false;
-		}
-		// Casting from void[] is unsafe, but we know we cast to the original type.
-		array = cast(T[]) buf;
-		return true;
-	}();
-	if (result && oldLength < length)
+	static if (Init)
 	{
-		array[oldLength .. $] = init;
+		immutable oldLength = array.length;
 	}
-	return result;
+	if (!allocator.reallocate(buf, length * T.sizeof))
+	{
+		static if (Throws)
+		{
+			onOutOfMemoryError;
+		}
+		return false;
+	}
+	// Casting from void[] is unsafe, but we know we cast to the original type.
+	array = cast(T[]) buf;
+
+	static if (Init)
+	{
+		if (oldLength < length)
+		{
+			array[oldLength .. $] = T.init;
+		}
+	}
+	return true;
 }
+package(tanya) alias resizeArray = resize;
 
 ///
 unittest

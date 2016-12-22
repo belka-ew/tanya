@@ -16,7 +16,6 @@ import std.algorithm.mutation;
 import std.conv;
 import std.traits;
 import tanya.memory;
-import tanya.traits;
 
 /**
  * Reference-counted object containing a $(D_PARAM T) value as payload.
@@ -28,7 +27,7 @@ import tanya.traits;
  */
 struct RefCounted(T)
 {
-	static if (isReference!T)
+	static if (is(T == class) || is(T == interface))
 	{
 		private alias Payload = T;
 	}
@@ -43,25 +42,14 @@ struct RefCounted(T)
 		private size_t counter = 1;
 
 		private final size_t opUnary(string op)() pure nothrow @safe @nogc
-			if (op == "--")
+			if (op == "--" || op == "++")
 		in
 		{
 			assert(counter > 0);
 		}
 		body
 		{
-			return --counter;
-		}
-
-		private final size_t opUnary(string op)() pure nothrow @safe @nogc
-			if (op == "++")
-		out
-		{
-			assert(counter > 0);
-		}
-		body
-		{
-			return ++counter;
+			mixin("return " ~ op ~ "counter;");
 		}
 
 		private final int opCmp(size_t counter) const pure nothrow @safe @nogc
@@ -110,10 +98,8 @@ struct RefCounted(T)
 
 	invariant
 	{
-		assert(storage is null || allocator !is null);
+		assert(storage is null || allocator_ !is null);
 	}
-
-	private shared Allocator allocator;
 
 	/**
 	 * Takes ownership over $(D_PARAM value), setting the counter to 1.
@@ -141,15 +127,15 @@ struct RefCounted(T)
 	}
 	body
 	{
-		this.allocator = allocator;
+		this.allocator_ = allocator;
 	}
 
 	/**
 	 * Increases the reference counter by one.
 	 */
-	this(this) pure nothrow @safe @nogc
+	this(this)
 	{
-		if (storage !is null)
+		if (count != 0)
 		{
 			++storage;
 		}
@@ -158,13 +144,13 @@ struct RefCounted(T)
 	/**
 	 * Decreases the reference counter by one.
 	 *
-	 * If the counter reaches 0, destroys the owned value.
+	 * If the counter reaches 0, destroys the owned object.
 	 */
-	~this() @trusted
+	~this()
 	{
-		if (storage !is null && !--storage)
+		if (storage !is null && !(storage.counter && --storage))
 		{
-			allocator.dispose(storage);
+			allocator_.dispose(storage);
 		}
 	}
 
@@ -175,110 +161,144 @@ struct RefCounted(T)
 	 * If it is the last reference of the previously owned object,
 	 * it will be destroyed.
 	 *
+	 * To reset the $(D_PSYMBOL RefCounted) assign $(D_KEYWORD null).
+	 *
 	 * If the allocator wasn't set before, $(D_PSYMBOL defaultAllocator) will
 	 * be used. If you need a different allocator, create a new
-	 * $(D_PSYMBOL RefCounted).
+	 * $(D_PSYMBOL RefCounted) and assign it.
 	 *
 	 * Params:
-	 * 	rhs = Object whose ownership is taken over.
+	 * 	rhs = $(D_KEYWORD this).
 	 */
-	ref T opAssign(T rhs)
+	ref typeof(this) opAssign(Payload rhs)
 	{
-		if (allocator is null)
-		{
-			allocator = defaultAllocator;
-		}
 		if (storage is null)
 		{
 			storage = allocator.make!RefCountedStorage(allocator);
-
-			static if (!isReference!T)
-			{
-				storage.payload = cast(T*) allocator.allocate(stateSize!T).ptr;
-			}
-
 		}
-		static if (isReference!T)
+		else if (storage > 1)
 		{
-			if (storage > 1)
-			{
-				--storage;
-			}
-			else
-			{
-				allocator.dispose(storage.payload);
-			}
+			--storage;
+			storage = allocator.make!RefCountedStorage(allocator);
 		}
-		move(rhs, payload);
-		return payload;
+		else if (cast(RefCountedStorage) storage is null)
+		{
+			// Created with refCounted. Always destroyed togethter with the pointer.
+			assert(storage.counter != 0);
+			allocator.dispose(storage);
+			storage = allocator.make!RefCountedStorage(allocator);
+		}
+		else
+		{
+			allocator.dispose(storage.payload);
+		}
+		move(rhs, storage.payload);
+		return this;
+	}
+
+	/// Ditto.
+	ref typeof(this) opAssign(typeof(null))
+	{
+		if (storage is null)
+		{
+			return this;
+		}
+		else if (storage > 1)
+		{
+			--storage;
+			storage = null;
+		}
+		else if (cast(RefCountedStorage) storage is null)
+		{
+			// Created with refCounted. Always destroyed togethter with the pointer.
+			assert(storage.counter != 0);
+			allocator.dispose(storage);
+			return this;
+		}
+		else
+		{
+			allocator.dispose(storage.payload);
+		}
+		return this;
 	}
 
 	/// Ditto.
 	ref typeof(this) opAssign(typeof(this) rhs)
 	{
-		swap(allocator, rhs.allocator);
+		swap(allocator_, rhs.allocator_);
 		swap(storage, rhs.storage);
 		return this;
 	}
 
 	/**
-	 * Defines the casting to the original type.
-	 *
-	 * Params:
-	 * 	T = Target type.
-	 *
-	 * Returns: Owned value.
-	 */
-	inout(T2) opCast(T2)() inout pure nothrow @safe @nogc
-		if (is(T : T2))
-	{
-		return get;
-	}
-
-	/**
 	 * Returns: Reference to the owned object.
 	 */
-	ref inout(T) get() inout pure nothrow @safe @nogc
+	inout(Payload) get() inout pure nothrow @safe @nogc
 	in
 	{
-		assert(storage !is null, "Attempted to access an uninitialized reference.");
+		assert(count > 0, "Attempted to access an uninitialized reference.");
 	}
 	body
 	{
-		static if (isReference!T)
-		{
-			return storage.payload;
-		}
-		else
+		return storage.payload;
+	}
+
+	static if (isPointer!Payload)
+	{
+		/**
+		 * Params:
+		 * 	op = Operation. 
+		 *
+		 * Dereferences the pointer. It is defined only for pointers, not for
+		 * reference types like classes, that can be accessed directly.
+		 *
+		 * Returns: Reference to the pointed value.
+		 */
+		ref T opUnary(string op)()
+			if (op == "*")
 		{
 			return *storage.payload;
 		}
+	}
+
+	/**
+	 * Returns: Whether this $(D_PSYMBOL RefCounted) already has an internal 
+	 *          storage.
+	 */
+	@property bool isInitialized() const
+	{
+		return storage !is null;
 	}
 
 	/**
 	 * Returns: The number of $(D_PSYMBOL RefCounted) instances that share
 	 *          ownership over the same pointer (including $(D_KEYWORD this)).
-	 *          If this $(D_PSYMBOL RefCounted) isn't initialized, returns 0.
+	 *          If this $(D_PSYMBOL RefCounted) isn't initialized, returns `0`.
 	 */
-	@property size_t count() const pure nothrow @safe @nogc
+	@property size_t count() const
 	{
 		return storage is null ? 0 : storage.counter;
 	}
 
-	pragma(inline, true)
-	private ref inout(T) payload() inout return pure nothrow @safe @nogc
-	{
-		static if (isReference!T)
-		{
-			return storage.payload;
-		}
-		else
-		{
-			return *storage.payload;
-		}
-	}
-
+	mixin DefaultAllocator;
 	alias get this;
+}
+
+///
+unittest
+{
+	auto rc = RefCounted!int(defaultAllocator.make!int(5), defaultAllocator);
+	auto val = rc.get;
+
+	*val = 8;
+	assert(*rc.storage.payload == 8);
+
+	val = null;
+	assert(rc.storage.payload !is null);
+	assert(*rc.storage.payload == 8);
+
+	*rc = 9;
+	assert(*rc.storage.payload == 9);
 }
 
 version (unittest)
@@ -287,12 +307,12 @@ version (unittest)
 	{
 		uint *destroyed;
 
-		this(ref uint destroyed)
+		this(ref uint destroyed) @nogc
 		{
 			this.destroyed = &destroyed;
 		}
 
-		~this()
+		~this() @nogc
 		{
 			++(*destroyed);
 		}
@@ -302,42 +322,11 @@ version (unittest)
 	{
 		int prop;
 		@disable this();
-		this(int param1)
+		this(int param1) @nogc
 		{
 			prop = param1;
 		}
 	}
-}
-
-///
-unittest
-{
-	struct S
-	{
-		RefCounted!(ubyte[]) member;
-
-		this(ref ubyte[] member)
-		{
-			assert(!this.member.count);
-			this.member = member;
-			assert(this.member.count);
-		}
-	}
-
-	auto arr = defaultAllocator.makeArray!ubyte(2);
-	{
-		auto a = S(arr);
-		assert(a.member.count == 1);
-
-		void func(S a)
-		{
-			assert(a.member.count == 2);
-		}
-		func(a);
-
-		assert(a.member.count == 1);
-	}
-	// arr is destroyed.
 }
 
 private unittest
@@ -347,7 +336,7 @@ private unittest
 
 	assert(destroyed == 0);
 	{
-		auto rc = RefCounted!A(a);
+		auto rc = RefCounted!A(a, defaultAllocator);
 		assert(rc.count == 1);
 
 		void func(RefCounted!A rc)
@@ -362,23 +351,14 @@ private unittest
 
 	RefCounted!int rc;
 	assert(rc.count == 0);
-	rc = 8;
+	rc = defaultAllocator.make!int(8);
 	assert(rc.count == 1);
 }
 
 private unittest
 {
-	auto val = defaultAllocator.make!int(5);
-	auto rc = RefCounted!int(val);
-
-	//static assert(is(typeof(rc.payload_) == int*));
-	static assert(is(typeof(cast(int) rc) == int));
-
-	//static assert(is(typeof(RefCounted!(int*).payload_) == int*));
-
-	static assert(is(typeof(cast(A) (RefCounted!A())) == A));
-	static assert(is(typeof(cast(Object) (RefCounted!A())) == Object));
-	static assert(!is(typeof(cast(int) (RefCounted!A()))));
+	static assert(is(typeof(RefCounted!int.storage.payload) == int*));
+	static assert(is(typeof(RefCounted!A.storage.payload) == A));
 
 	static assert(is(RefCounted!B));
 	static assert(is(RefCounted!A));
@@ -389,6 +369,10 @@ private unittest
  * $(D_PSYMBOL RefCounted) using $(D_PARAM args) as the parameter list for
  * the constructor of $(D_PARAM T).
  *
+ * This function is more efficient than the using of $(D_PSYMBOL RefCounted)
+ * directly, since it allocates only ones (the internal storage and the
+ * object).
+ *
  * Params:
  * 	T    = Type of the constructed object.
  * 	A    = Types of the arguments to the constructor of $(D_PARAM T).
@@ -397,21 +381,33 @@ private unittest
  * Returns: Newly created $(D_PSYMBOL RefCounted!T).
  */
 RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
-	if (!is(T == interface) && !isAbstractClass!T)
+	if (!is(T == interface) && !isAbstractClass!T
+         && !isArray!T && !isAssociativeArray!T)
 {
 	auto rc = typeof(return)(allocator);
-	static if (isDynamicArray!T)
+
+	immutable storageSize = alignedSize(stateSize!(RefCounted!T.Storage));
+	immutable size = alignedSize(stateSize!T + storageSize);
+
+	auto mem = (() @trusted => allocator.allocate(size))();
+	if (mem is null)
 	{
-		rc = allocator.makeArray!(ForeachType!T)(args);
+		onOutOfMemoryError();
 	}
-	else static if (isReference!T)
+	scope (failure)
 	{
-		rc = allocator.make!T(args);
+		() @trusted { allocator.deallocate(mem); }();
+	}
+	rc.storage = emplace!(RefCounted!T.Storage)(mem[0 .. storageSize]);
+
+	static if (is(T == class))
+	{
+		rc.storage.payload = emplace!T(mem[storageSize .. $], args);
 	}
 	else
 	{
-		rc.storage = allocator.make!(RefCounted!T.RefCountedStorage)(allocator);
-		rc.storage.payload = allocator.make!T(args);
+		auto ptr = (() @trusted => (cast(T*) mem[storageSize .. $].ptr))();
+		rc.storage.payload = emplace!T(ptr, args);
 	}
 	return rc;
 }
@@ -438,13 +434,14 @@ unittest
 	assert(rc.count == 1);
 }
 
-private unittest
+private @nogc unittest
 {
 	struct E
 	{
 	}
-	//static assert(is(typeof(defaultAllocator.refCounted!bool(false))));
-	static assert(is(typeof(defaultAllocator.refCounted!B(5))));
+	auto b = defaultAllocator.refCounted!B(15);
+	static assert(is(typeof(b.storage.payload) == B*));
+	static assert(is(typeof(b.prop) == int));
 	static assert(!is(typeof(defaultAllocator.refCounted!B())));
 
 	static assert(is(typeof(defaultAllocator.refCounted!E())));

@@ -82,13 +82,35 @@ mixin template DefaultAllocator()
 	 * and sets it to the default one, if not.
 	 *
 	 * Returns: Used allocator.
+	 *
+	 * Postcondition: $(D_INLINECODE allocator_ !is null)
 	 */
-	@property shared(Allocator) allocator() nothrow @safe @nogc
+	protected @property shared(Allocator) allocator() nothrow @safe @nogc
+	out (allocator)
+	{
+		assert(allocator !is null);
+	}
+	body
 	{
 		if (allocator_ is null)
 		{
 			allocator_ = defaultAllocator;
 		}
 		return allocator_;
+	}
+
+	/// Ditto.
+	@property shared(Allocator) allocator() const nothrow @trusted @nogc
+	out (allocator)
+	{
+		assert(allocator !is null);
+	}
+	body
+	{
+		if (allocator_ is null)
+		{
+			return defaultAllocator;
+		}
+		return cast(shared Allocator) allocator_;
 	}
 }
