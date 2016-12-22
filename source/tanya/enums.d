@@ -3,25 +3,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * Generic enum templates.
+ *
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
  */
-module tanya.traits;
+module tanya.enums;
 
 import std.traits;
-import std.meta;
-
-/**
- * Params:
- * 	T = Type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a reference type or a pointer,
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isReference(T) = isDynamicArray!T || isPointer!T
-                        || is(T == class) || is(T == interface);
 
 /**
  * Initializer list.
@@ -35,7 +26,7 @@ enum bool isReference(T) = isDynamicArray!T || isPointer!T
  * 	Args = Argument type.
  * 	args = Arguments.
  */
-static enum IL(Args...)(Args args)
+enum IL(Args...)(Args args)
 	if (Args.length > 0)
 {
 	alias BaseType = typeof(args[0]);
@@ -54,4 +45,5 @@ static enum IL(Args...)(Args args)
 unittest
 {
 	static assert(IL(1, 5, 8).length == 3);
+	static assert(IL(1, 5, 8).sizeof == 3 * int.sizeof);
 }
