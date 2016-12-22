@@ -14,11 +14,11 @@ import core.exception;
 import std.algorithm.comparison;
 import std.range.primitives;
 import std.traits;
+public import tanya.enums : IL;
 import tanya.memory;
 
 version (unittest)
 {
-	import tanya.traits;
 	struct TestA
 	{
 		~this() @nogc
@@ -186,16 +186,13 @@ template Vector(T)
 			if (isStaticArray!U)
 		in
 		{
+			assert(allocator !is null);
 			static assert(init.length > 0);
 		}
 		body
 		{
 			this(allocator);
-			vector = cast(T[]) allocator.allocate(init.length * T.sizeof);
-			if (vector is null)
-			{
-				onOutOfMemoryError();
-			}
+			allocator.resize!(T, false)(vector, init.length);
 			vector[0 .. $] = init[0 .. $];
 			length_ = init.length;
 		}
@@ -205,18 +202,17 @@ template Vector(T)
 			if (isStaticArray!U)
 		in
 		{
+			assert(allocator !is null);
 			static assert(init.length > 0);
 		}
 		body
 		{
 			allocator_ = cast(const shared Allocator) allocator;
-			auto buf = cast(T[]) allocator.allocate(init.length * T.sizeof);
-			if (buf is null)
-			{
-				onOutOfMemoryError();
-			}
+
+			T[] buf;
+			allocator.resize!(T, false)(buf, init.length);
 			buf[0 .. $] = init[0 .. $];
-			vector = cast(const (T[])) buf;
+			vector = cast(const(T[])) buf;
 			length_ = init.length;
 		}
 
@@ -225,16 +221,15 @@ template Vector(T)
 			if (isStaticArray!U)
 		in
 		{
+			assert(allocator !is null);
 			static assert(init.length > 0);
 		}
 		body
 		{
 			allocator_ = cast(immutable Allocator) allocator;
-			auto buf = cast(T[]) allocator.allocate(init.length * T.sizeof);
-			if (buf is null)
-			{
-				onOutOfMemoryError();
-			}
+
+			T[] buf;
+			allocator.resize!(T, false)(buf, init.length);
 			buf[0 .. $] = init[0 .. $];
 			vector = cast(immutable(T[])) buf;
 			length_ = init.length;
@@ -593,8 +588,10 @@ template Vector(T)
 		}
 
 		/**
-		 * Returns: The value on index $(D_PARAM pos) or a range that iterates over
-		 *          elements of the vector, in forward order.
+		 * Params:
+		 * 	pos = Index.
+		 *
+		 * Returns: The value at a specified index.
 		 *
 		 * Precondition: $(D_INLINECODE length > pos)
 		 */
@@ -608,7 +605,10 @@ template Vector(T)
 			return vector[pos];
 		}
 
-		/// Ditto.
+		/**
+		 * Returns: Random access range that iterates over elements of the vector, in
+		 *          forward order.
+		 */
 		Range!Vector opIndex()
 		{
 			return typeof(return)(this, 0, length);
@@ -827,7 +827,7 @@ template Vector(T)
 		}
 		body
 		{
-			return vector[$ - 1];
+			return vector[length_ - 1];
 		}
 
 		///
