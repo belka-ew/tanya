@@ -524,8 +524,13 @@ struct WriteBuffer(T = ubyte)
 		assert(b.capacity == 8);
 		assert(b.buffer_[0] == 23 && b.buffer_[1] == 255
 		    && b.buffer_[2] == 48 && b.buffer_[3] == 23 && b.buffer_[4] == 255);
+	}
 
-		b = WriteBuffer!ubyte(2);
+	///
+	unittest
+	{
+		auto b = WriteBuffer!ubyte(2);
+		ubyte[3] buf = [48, 23, 255];
 
 		b ~= buf;
 		assert(b.start == 0);
@@ -688,5 +693,5 @@ struct WriteBuffer(T = ubyte)
 
 private unittest
 {
-	static assert(is(WriteBuffer!int));
+	static assert(is(typeof(WriteBuffer!int(5))));
 }
