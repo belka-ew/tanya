@@ -10,7 +10,9 @@
  */  
 module tanya.math;
 
+import std.traits;
 public import tanya.math.mp;
+public import tanya.math.random;
 
 version (unittest)
 {
@@ -20,26 +22,32 @@ version (unittest)
 /**
  * Computes $(D_PARAM x) to the power $(D_PARAM y) modulo $(D_PARAM z).
  *
+ * If $(D_PARAM I) is an $(D_PSYMBOL Integer), the allocator of $(D_PARAM x)
+ * is used to allocate the result.
+ *
  * Params:
+ * 	I = Base type.
+ * 	G = Exponent type.
+ * 	H = Divisor type:
  * 	x = Base.
  * 	y = Exponent.
  * 	z = Divisor.
  *
  * Returns: Reminder of the division of $(D_PARAM x) to the power $(D_PARAM y)
  *          by $(D_PARAM z).
+ *
+ * Precondition: $(D_INLINECODE z > 0)
  */
-ulong pow(ulong x, ulong y, ulong z) nothrow pure @safe @nogc
+H pow(I, G, H)(in auto ref I x, in auto ref G y, in auto ref H z)
+	if (isIntegral!I && isIntegral!G && isIntegral!H)
 in
 {
-	assert(z > 0);
-}
-out (result)
-{
-	assert(result >= 0);
+	assert(z > 0, "Division by zero.");
 }
 body
 {
-    ulong mask = ulong.max / 2 + 1, result;
+	G mask = G.max / 2 + 1;
+	H result;
 
 	if (y == 0)
 	{
@@ -49,40 +57,92 @@ body
 	{
 		return x % z;
 	}
-    do
-    {
-        auto bit = y & mask;
-        if (!result && bit)
-        {
-            result = x;
-            continue;
-        }
+	do
+	{
+		immutable bit = y & mask;
+		if (!result && bit)
+		{
+			result = x;
+			continue;
+		}
 
-        result *= result;
-        if (bit)
-        {
-            result *= x;
-        }
-        result %= z;
-
-    }
-    while (mask >>= 1);
+		result *= result;
+		if (bit)
+		{
+			result *= x;
+		}
+		result %= z;
+	}
+	while (mask >>= 1);
 
 	return result;
+}
+
+/// Ditto.
+I pow(I)(in auto ref I x, in auto ref I y, in auto ref I z)
+	if (is(I == Integer))
+in
+{
+	assert(z.length > 0, "Division by zero.");
+}
+body
+{
+	size_t i = y.length;
+	auto tmp2 = Integer(x.allocator), tmp1 = Integer(x, x.allocator);
+	Integer result = Integer(x.allocator);
+
+	if (x.length == 0 && i != 0)
+	{
+		i = 0;
+	}
+	else
+	{
+		result = 1;
+	}
+	while (i)
+	{
+		--i;
+		for (ubyte mask = 0x01; mask; mask <<= 1)
+		{
+			if (y.rep[i] & mask)
+			{
+				result *= tmp1;
+				result %= z;
+			}
+			tmp2 = tmp1;
+			tmp1 *= tmp2;
+			tmp1 %= z;
+		}
+	}
+	return result;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+	assert(pow(3, 5, 7) == 5);
+	assert(pow(2, 2, 1) == 0);
+	assert(pow(3, 3, 3) == 0);
+	assert(pow(7, 4, 2) == 1);
+	assert(pow(53, 0, 2) == 1);
+	assert(pow(53, 1, 3) == 2);
+	assert(pow(53, 2, 5) == 4);
+	assert(pow(0, 0, 5) == 1);
+	assert(pow(0, 5, 5) == 0);
 }
 
 ///
 unittest
 {
-    assert(pow(3, 5, 7) == 5);
-    assert(pow(2, 2, 1) == 0);
-    assert(pow(3, 3, 3) == 0);
-    assert(pow(7, 4, 2) == 1);
-    assert(pow(53, 0, 2) == 1);
-    assert(pow(53, 1, 3) == 2);
-    assert(pow(53, 2, 5) == 4);
-    assert(pow(0, 0, 5) == 1);
-    assert(pow(0, 5, 5) == 0);
+	assert(cast(long) pow(Integer(3), Integer(5), Integer(7)) == 5);
+	assert(cast(long) pow(Integer(2), Integer(2), Integer(1)) == 0);
+	assert(cast(long) pow(Integer(3), Integer(3), Integer(3)) == 0);
+	assert(cast(long) pow(Integer(7), Integer(4), Integer(2)) == 1);
+	assert(cast(long) pow(Integer(53), Integer(0), Integer(2)) == 1);
+	assert(cast(long) pow(Integer(53), Integer(1), Integer(3)) == 2);
+	assert(cast(long) pow(Integer(53), Integer(2), Integer(5)) == 4);
+	assert(cast(long) pow(Integer(0), Integer(0), Integer(5)) == 1);
+	assert(cast(long) pow(Integer(0), Integer(5), Integer(5)) == 0);
 }
 
 /**

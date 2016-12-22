@@ -10,7 +10,6 @@
  */  
 module tanya.math.mp;
 
-import core.exception;
 import std.algorithm.iteration;
 import std.algorithm.searching;
 import std.algorithm.mutation;
@@ -24,7 +23,7 @@ import tanya.memory;
  */
 struct Integer
 {
-	private ubyte[] rep;
+	package ubyte[] rep;
 	private bool sign;
 
 	/**
@@ -48,14 +47,8 @@ struct Integer
 		}
 		else if (value.length > 0)
 		{
-			rep = () @trusted {
-				return cast(ubyte[]) allocator_.allocate(value.length);
-			}();
-			if (rep is null)
-			{
-				onOutOfMemoryError();
-			}
-			value.rep.copy(rep);
+			allocator.resize!(ubyte, false)(rep, value.length);
+			rep[] = value.rep[];
 			sign = value.sign;
 		}
 	}
@@ -83,6 +76,8 @@ struct Integer
 		assert(h2.rep[0] == 2);
 		assert(h2.sign);
 	}
+
+	@disable this(this);
 
 	/**
 	 * Destroys the internal representation.
@@ -125,14 +120,8 @@ struct Integer
 			}
 			--size;
 		}
-		rep = () @trusted {
-			void[] rep = this.rep;
-			if (!allocator.reallocate(rep, size))
-			{
-				onOutOfMemoryError();
-			}
-			return cast(ubyte[]) rep;
-		}();
+		allocator.resize!(ubyte, false)(rep, size);
+
 		/* Work backward through the int, masking off each byte (up to the
 		   first 0 byte) and copy it into the internal representation in
 		   big-endian format. */
@@ -162,8 +151,8 @@ struct Integer
 		}
 		else
 		{
-			allocator.resizeArray(rep, value.length);
-			value.rep.copy(rep);
+			allocator.resize!(ubyte, false)(rep, value.length);
+			rep[0 .. $] = value.rep[0 .. $];
 			sign = value.sign;
 		}
 		return this;
@@ -209,7 +198,7 @@ struct Integer
 	/// Ditto.
 	bool opEquals(in ref Integer h) const nothrow @safe @nogc
 	{
-        return rep == h.rep;
+		return rep == h.rep;
 	}
 
 	///
@@ -278,7 +267,7 @@ struct Integer
 		assert(h1 > h2);
 	}
 
-	private void add(in ref ubyte[] h) nothrow @trusted @nogc
+	private void add(in ref ubyte[] h) nothrow @safe @nogc
 	{
 		uint sum;
 		uint carry = 0;
@@ -286,11 +275,7 @@ struct Integer
 
 		if (h.length > length)
 		{
-			tmp = cast(ubyte[]) allocator.allocate(h.length);
-			if (tmp is null)
-			{
-				onOutOfMemoryError();
-			}
+			allocator.resize!(ubyte, false)(tmp, h.length);
 			tmp[0 .. h.length] = 0;
 			tmp[h.length - length .. $] = rep[0 .. length];
 			swap(rep, tmp);
@@ -319,13 +304,12 @@ struct Integer
 		if (carry)
 		{
 			// Still overflowed; allocate more space
-			void[]* vtmp = cast(void[]*) &tmp;
-			allocator.reallocate(*vtmp, length + 1);
+			allocator.resize!(ubyte, false)(tmp, length + 1);
 			tmp[1 .. $] = rep[0 .. length];
 			tmp[0] = 0x01;
 			swap(rep, tmp);
 		}
-		allocator.deallocate(tmp);
+		allocator.dispose(tmp);
 	}
 
 	private void subtract(in ref ubyte[] h) nothrow @trusted @nogc
@@ -363,7 +347,7 @@ struct Integer
 		if (offset > 0)
 		{
 			ubyte[] tmp = cast(ubyte[]) allocator.allocate(rep.length - offset);
-			rep[offset .. $].copy(tmp);
+			tmp[0 .. $] = rep[offset .. $];
 			allocator.deallocate(rep);
 			rep = tmp;
 		}
@@ -505,6 +489,15 @@ struct Integer
 	body
 	{
 		auto i = h.rep.length;
+		if (length == 0)
+		{
+			return this;
+		}
+		else if (i == 0)
+		{
+			opAssign(0);
+			return this;
+		}
 		auto temp = Integer(this, allocator);
 		immutable sign = sign == h.sign ? false : true;
 
@@ -536,6 +529,11 @@ struct Integer
 		assert(cast(long) h1 == 56088);
 	}
 
+	private unittest
+	{
+		assert((Integer(1) * Integer()).length == 0);
+	}
+
 	/// Ditto.
 	ref Integer opOpAssign(string op)(in auto ref Integer h) nothrow @safe @nogc
 		if ((op == "/") || (op == "%"))
@@ -555,9 +553,8 @@ struct Integer
 		}
 		static if (op == "/")
 		{
-			auto quotient = (() @trusted =>
-				cast(ubyte[]) allocator.allocate(bitSize / 8 + 1)
-			)();
+			ubyte[] quotient;
+			allocator.resize!(ubyte, false)(quotient, bitSize / 8 + 1);
 		}
 
 		// "bitPosition" keeps track of which bit, of the quotient,
@@ -587,7 +584,7 @@ struct Integer
 
 		static if (op == "/")
 		{
-			() @trusted { allocator.deallocate(rep); }();
+			allocator.dispose(rep);
 			rep = quotient;
 			sign = sign == h.sign ? false : true;
 		}
@@ -727,7 +724,7 @@ struct Integer
 		immutable size = rep.retro.countUntil!((const ref a) => a != 0);
 		if (rep[0] == 1)
 		{
-			allocator.resizeArray(rep, rep.length - 1);
+			allocator.resize!(ubyte, false)(rep, rep.length - 1);
 			rep[0 .. $] = typeof(rep[0]).max;
 		}
 		else
@@ -739,13 +736,11 @@ struct Integer
 
 	private void increment() nothrow @safe @nogc
 	{
-		auto size = rep
-				   .retro
-				   .countUntil!((const ref a) => a != typeof(rep[0]).max);
+		auto size = rep.retro.countUntil!((const ref a) => a != typeof(rep[0]).max);
 		if (size == -1)
 		{
 			size = length;
-			allocator.resizeArray(rep, rep.length + 1);
+			allocator.resize!(ubyte, false)(rep, rep.length + 1);
 			rep[0] = 1;
 		}
 		else
@@ -856,22 +851,28 @@ struct Integer
 		return length == 0 ? false : true;
 	}
 
-	/**
-	 * Casting to integer types.
-	 *
-	 * Params:
-	 * 	T = Target type.
-	 *
-	 * Returns: Signed integer.
-	 */
-	T opCast(T : long)() const pure nothrow @safe @nogc
+	/// Ditto.
+	T opCast(T)() const pure nothrow @safe @nogc
+		if (isIntegral!T && isSigned!T)
 	{
 		ulong ret;
-		for (size_t i = length, j; i > 0 && j <= 32; --i, j += 8)
+		for (size_t i = length, j; i > 0 && j <= T.sizeof * 4; --i, j += 8)
 		{
-			ret |= cast(long) (rep[i - 1]) << j;
+			ret |= cast(T) (rep[i - 1]) << j;
 		}
 		return sign ? -ret : ret;
+	}
+
+	/// Ditto.
+	T opCast(T)() const pure nothrow @safe @nogc
+		if (isIntegral!T && isUnsigned!T)
+	{
+		ulong ret;
+		for (size_t i = length, j; i > 0 && j <= T.sizeof * 8; --i, j += 8)
+		{
+			ret |= cast(T) (rep[i - 1]) << j;
+		}
+		return ret;
 	}
 
 	///
@@ -912,7 +913,7 @@ struct Integer
 
 		if (step >= rep.length)
 		{
-			allocator.resizeArray(rep, 0);
+			allocator.resize!(ubyte, false)(rep, 0);
 			return this;
 		}
 
@@ -934,7 +935,7 @@ struct Integer
 			rep[j] = (rep[i] >> bit | oldCarry);
 			++j;
 		}
-		allocator.resizeArray(rep, rep.length - n / 8 - (i == j ? 0 : 1));
+		allocator.resize!(ubyte, false)(rep, rep.length - n / 8 - (i == j ? 0 : 1));
 
 		return this;
 	}
@@ -993,12 +994,12 @@ struct Integer
 
 		if (cast(ubyte) (rep[0] >> delta))
 		{
-			allocator.resizeArray(rep, i + n / 8 + 1);
+			allocator.resize!(ubyte, false)(rep, i + n / 8 + 1);
 			j = i + 1;
 		}
 		else
 		{
-			allocator.resizeArray(rep, i + n / 8);
+			allocator.resize!(ubyte, false)(rep, i + n / 8);
 			j = i;
 		}
 		do
