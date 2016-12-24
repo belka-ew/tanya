@@ -17,17 +17,17 @@
  * {
  * 	private DuplexTransport transport;
  *
- * 	void received(ubyte[] data)
+ * 	void received(ubyte[] data) @nogc
  * 	{
  * 		transport.write(data);
  * 	}
  *
- * 	void connected(DuplexTransport transport)
+ * 	void connected(DuplexTransport transport) @nogc
  * 	{
  * 		this.transport = transport;
  * 	}
  *
- * 	void disconnected(SocketException e = null)
+ * 	void disconnected(SocketException e = null) @nogc
  * 	{
  * 	}
  * }

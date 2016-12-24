@@ -239,7 +239,7 @@ abstract class SelectorLoop : Loop
 			if (io is null)
 			{
 				io = MmapPool.instance.make!IOWatcher(transport,
-													  connection.protocol);
+				                                      connection.protocol);
 				connections[client.handle] = io;
 			}
 			else

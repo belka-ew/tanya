@@ -6,115 +6,29 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
 module tanya.async.event.kqueue;
-
-version (OSX)
-{
-	version = MissingKevent;
-}
-else version (iOS)
-{
-	version = MissingKevent;
-}
-else version (TVOS)
-{
-	version = MissingKevent;
-}
-else version (WatchOS)
-{
-	version = MissingKevent;
-}
-else version (OpenBSD)
-{
-	version = MissingKevent;
-}
-else version (DragonFlyBSD)
-{
-	version = MissingKevent;
-}
-
-version (MissingKevent)
-{
-	extern (C):
-	nothrow:
-	@nogc:
-
-	import core.stdc.stdint;    // intptr_t, uintptr_t
-	import core.sys.posix.time; // timespec
-
-	enum : short
-	{
-		EVFILT_READ     =  -1,
-		EVFILT_WRITE    =  -2,
-		EVFILT_AIO      =  -3, /* attached to aio requests */
-		EVFILT_VNODE    =  -4, /* attached to vnodes */
-		EVFILT_PROC     =  -5, /* attached to struct proc */
-		EVFILT_SIGNAL   =  -6, /* attached to struct proc */
-		EVFILT_TIMER    =  -7, /* timers */
-		EVFILT_MACHPORT =  -8, /* Mach portsets */
-		EVFILT_FS       =  -9, /* filesystem events */
-		EVFILT_USER     = -10, /* User events */
-		EVFILT_VM       = -12, /* virtual memory events */
-		EVFILT_SYSCOUNT =  11
-	}
-
-	extern(D) void EV_SET(kevent_t* kevp, typeof(kevent_t.tupleof) args)
-	{
-		*kevp = kevent_t(args);
-	}
-
-	struct kevent_t
-	{
-		uintptr_t    ident; /* identifier for this event */
-		short       filter; /* filter for event */
-		ushort       flags;
-		uint        fflags;
-		intptr_t      data;
-		void        *udata; /* opaque user data identifier */
-	}
-
-	enum
-	{
-		/* actions */
-		EV_ADD      = 0x0001, /* add event to kq (implies enable) */
-		EV_DELETE   = 0x0002, /* delete event from kq */
-		EV_ENABLE   = 0x0004, /* enable event */
-		EV_DISABLE  = 0x0008, /* disable event (not reported) */
-
-		/* flags */
-		EV_ONESHOT  = 0x0010, /* only report one occurrence */
-		EV_CLEAR    = 0x0020, /* clear event state after reporting */
-		EV_RECEIPT  = 0x0040, /* force EV_ERROR on success, data=0 */
-		EV_DISPATCH = 0x0080, /* disable event after reporting */
-
-		EV_SYSFLAGS = 0xF000, /* reserved by system */
-		EV_FLAG1    = 0x2000, /* filter-specific flag */
-
-		/* returned values */
-		EV_EOF      = 0x8000, /* EOF detected */
-		EV_ERROR    = 0x4000, /* error, data contains errno */
-	}
-
-	int kqueue();
-	int kevent(int kq, const kevent_t *changelist, int nchanges,
-			   kevent_t *eventlist, int nevents,
-			   const timespec *timeout);
-}
 
 version (OSX)
 {
 	version = MacBSD;
 }
 else version (iOS)
+{
+	version = MacBSD;
+}
+else version (TVOS)
+{
+	version = MacBSD;
+}
+else version (WatchOS)
 {
 	version = MacBSD;
 }
 else version (FreeBSD)
 {
 	version = MacBSD;
-	public import core.sys.freebsd.sys.event;
 }
 else version (OpenBSD)
 {
@@ -126,6 +40,67 @@ else version (DragonFlyBSD)
 }
 
 version (MacBSD):
+
+import core.stdc.stdint;    // intptr_t, uintptr_t
+import core.sys.posix.time; // timespec
+
+void EV_SET(kevent_t* kevp, typeof(kevent_t.tupleof) args) pure nothrow @nogc
+{
+	*kevp = kevent_t(args);
+}
+
+enum : short
+{
+	EVFILT_READ     =  -1,
+	EVFILT_WRITE    =  -2,
+	EVFILT_AIO      =  -3, /* attached to aio requests */
+	EVFILT_VNODE    =  -4, /* attached to vnodes */
+	EVFILT_PROC     =  -5, /* attached to struct proc */
+	EVFILT_SIGNAL   =  -6, /* attached to struct proc */
+	EVFILT_TIMER    =  -7, /* timers */
+	EVFILT_MACHPORT =  -8, /* Mach portsets */
+	EVFILT_FS       =  -9, /* filesystem events */
+	EVFILT_USER     = -10, /* User events */
+	EVFILT_VM       = -12, /* virtual memory events */
+	EVFILT_SYSCOUNT =  11
+}
+
+struct kevent_t
+{
+	uintptr_t    ident; /* identifier for this event */
+	short       filter; /* filter for event */
+	ushort       flags;
+	uint        fflags;
+	intptr_t      data;
+	void        *udata; /* opaque user data identifier */
+}
+
+enum
+{
+	/* actions */
+	EV_ADD      = 0x0001, /* add event to kq (implies enable) */
+	EV_DELETE   = 0x0002, /* delete event from kq */
+	EV_ENABLE   = 0x0004, /* enable event */
+	EV_DISABLE  = 0x0008, /* disable event (not reported) */
+
+	/* flags */
+	EV_ONESHOT  = 0x0010, /* only report one occurrence */
+	EV_CLEAR    = 0x0020, /* clear event state after reporting */
+	EV_RECEIPT  = 0x0040, /* force EV_ERROR on success, data=0 */
+	EV_DISPATCH = 0x0080, /* disable event after reporting */
+
+	EV_SYSFLAGS = 0xF000, /* reserved by system */
+	EV_FLAG1    = 0x2000, /* filter-specific flag */
+
+	/* returned values */
+	EV_EOF      = 0x8000, /* EOF detected */
+	EV_ERROR    = 0x4000, /* error, data contains errno */
+}
+
+extern(C) int kqueue() nothrow @nogc;
+extern(C) int kevent(int kq, const kevent_t *changelist, int nchanges,
+                     kevent_t *eventlist, int nevents, const timespec *timeout)
+                     nothrow @nogc;
 
 import tanya.async.event.selector;
 import tanya.async.loop;
@@ -206,8 +181,8 @@ class KqueueLoop : SelectorLoop
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
 	override protected bool reify(ConnectionWatcher watcher,
-								  EventMask oldEvents,
-								  EventMask events) @nogc
+	                              EventMask oldEvents,
+	                              EventMask events) @nogc
 	{
 		if (events != oldEvents)
 		{
@@ -251,7 +226,7 @@ class KqueueLoop : SelectorLoop
 		{
 			if (errno != EINTR)
 			{
-				throw defaultAllocatorAllocator.make!BadLoopException();
+				throw defaultAllocator.make!BadLoopException();
 			}
 			return;
 		}

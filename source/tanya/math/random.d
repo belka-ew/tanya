@@ -12,7 +12,6 @@
  */  
 module tanya.math.random;
 
-import std.experimental.allocator;
 import std.digest.sha;
 import std.typecons;
 import tanya.memory;
@@ -167,7 +166,7 @@ class Entropy
 
 	private ubyte sourceCount_;
 
-	private IAllocator allocator;
+	private shared Allocator allocator;
 
 	/// Entropy accumulator.
 	protected SHA!(maxGather * 8, 512) accumulator;
