@@ -90,7 +90,7 @@ struct ReadBuffer(T = ubyte)
 	     in size_t minAvailable = 1024,
 	     shared Allocator allocator = defaultAllocator) @trusted
 	{
-		this(allocator_);
+		this(allocator);
 		this.minAvailable = minAvailable;
 		this.blockSize = size;
 		buffer_ = cast(T[]) allocator_.allocate(size * T.sizeof);

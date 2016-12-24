@@ -133,6 +133,7 @@ abstract class Loop
 	/// Pending watchers.
 	protected Queue!Watcher* pendings;
 
+	/// Ditto.
 	protected Queue!Watcher* swapPendings;
 
 	/**
@@ -150,8 +151,8 @@ abstract class Loop
 	 */
 	this() @nogc
 	{
-		pendings = MmapPool.instance.make!(Queue!Watcher);
-		swapPendings = MmapPool.instance.make!(Queue!Watcher);
+		pendings = MmapPool.instance.make!(Queue!Watcher)(MmapPool.instance);
+		swapPendings = MmapPool.instance.make!(Queue!Watcher)(MmapPool.instance);
 	}
 
 	/**

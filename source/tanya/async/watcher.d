@@ -53,7 +53,7 @@ class ConnectionWatcher : Watcher
 	/// Protocol factory.
 	protected Protocol delegate() @nogc protocolFactory;
 
-	package Queue!IOWatcher* incoming;
+	package Queue!IOWatcher incoming;
 
 	/**
 	 * Params:
@@ -62,7 +62,6 @@ class ConnectionWatcher : Watcher
 	this(Socket socket) @nogc
 	{
 		socket_ = socket;
-		incoming = MmapPool.instance.make!(Queue!IOWatcher);
 	}
 
 	/// Ditto.
@@ -72,14 +71,13 @@ class ConnectionWatcher : Watcher
 
 	~this() @nogc
 	{
-		foreach (w; *incoming)
+		foreach (w; incoming)
 		{
 			MmapPool.instance.dispose(w);
 		}
-		MmapPool.instance.dispose(incoming);
 	}
 
-	/*
+	/**
 	 * Params:
 	 * 	P = Protocol should be used.
 	 */
@@ -114,7 +112,7 @@ class ConnectionWatcher : Watcher
 	 */
 	override void invoke() @nogc
 	{
-		foreach (io; *incoming)
+		foreach (io; incoming)
 		{
 			io.protocol.connected(cast(DuplexTransport) io.transport);
 		}
@@ -164,7 +162,7 @@ class IOWatcher : ConnectionWatcher
 	/**
 	 * Destroys the watcher.
 	 */
-	protected ~this() @nogc
+	~this() @nogc
 	{
 		MmapPool.instance.dispose(protocol_);
 	}
