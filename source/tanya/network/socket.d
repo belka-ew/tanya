@@ -6,7 +6,7 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
 module tanya.network.socket;
 
@@ -134,25 +134,42 @@ else version (Windows)
 	extern (Windows) @nogc nothrow
 	{
 		private SOCKET WSASocketW(int af,
-								  int type,
-								  int protocol,
-								  LPWSAPROTOCOL_INFO lpProtocolInfo,
-								  GROUP g,
-								  DWORD dwFlags);
+		                          int type,
+		                          int protocol,
+		                          LPWSAPROTOCOL_INFO lpProtocolInfo,
+		                          GROUP g,
+		                          DWORD dwFlags);
 		int WSARecv(SOCKET s,
-					LPWSABUF lpBuffers,
-					DWORD dwBufferCount,
-					LPDWORD lpNumberOfBytesRecvd,
-					LPDWORD lpFlags,
-					LPOVERLAPPED lpOverlapped,
-					LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+		            LPWSABUF lpBuffers,
+		            DWORD dwBufferCount,
+		            LPDWORD lpNumberOfBytesRecvd,
+		            LPDWORD lpFlags,
+		            LPOVERLAPPED lpOverlapped,
+		            LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
 		int WSASend(SOCKET s,
-					LPWSABUF lpBuffers,
-					DWORD dwBufferCount,
-					LPDWORD lpNumberOfBytesRecvd,
-					DWORD lpFlags,
-					LPOVERLAPPED lpOverlapped,
-					LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+		            LPWSABUF lpBuffers,
+		            DWORD dwBufferCount,
+		            LPDWORD lpNumberOfBytesRecvd,
+		            DWORD lpFlags,
+		            LPOVERLAPPED lpOverlapped,
+		            LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+		int WSAIoctl(SOCKET s,
+		             uint dwIoControlCode,
+		             void* lpvInBuffer,
+		             uint cbInBuffer,
+		             void* lpvOutBuffer,
+		             uint cbOutBuffer,
+		             uint* lpcbBytesReturned,
+		             LPWSAOVERLAPPED lpOverlapped,
+		             LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+		alias LPFN_ACCEPTEX = BOOL function(SOCKET,
+		                                    SOCKET,
+		                                    PVOID,
+		                                    DWORD,
+		                                    DWORD,
+		                                    DWORD,
+		                                    LPDWORD,
+		                                    LPOVERLAPPED);
 	}
 	alias WSASocket = WSASocketW;
 
