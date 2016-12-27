@@ -949,8 +949,6 @@ private @nogc unittest
 
 	// Test that structs can be members of the vector.
 	static assert(is(typeof(Vector!TestA())));
-	static assert(is(typeof(immutable Vector!TestA(IL(TestA())))));
-	static assert(is(typeof(const Vector!TestA(IL(TestA())))));
 }
 
 private @nogc unittest

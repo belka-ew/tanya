@@ -21,8 +21,14 @@ Tanya consists of the following packages:
 * `container`: Queue, Vector, Singly linked list.
 * `crypto`: Work in progress TLS implementation.
 * `math`: Multiple precision integer and a set of functions.
-* `memory`: Tools for manual memory management (allocator, reference counting, helper functions).
+* `memory`: Tools for manual memory management (allocator, reference counting,
+helper functions).
 * `network`: URL-Parsing, sockets.
+
+### Supported compilers
+
+* dmd 2.072.1
+* dmd 2.071.2
 
 ### Current status
 
@@ -42,22 +48,17 @@ testing and work on its performance.
 I'm currently mostly working on `crypto` that is not a complete cryptographic
 suite, but contains (will contain) algorithm implementations required by TLS.
 
-### Other properties
+### Further characteristics
 
-* Tanya is a native D library (only D and Assembler are tolerated).
+* Tanya is a native D library.
 
-* It is important for me to document the code and attach at least a few unit
-tests where possible. So the documentation and usage examples can be found in
-the source code.
+* Documentation and usage examples can be found in the source code.
+Online documentation will be published soon.
 
-* Tanya is mostly tested on a 64-bit Linux and some features are
-platform-dependant, but not because it is a Linux-only library. Therefore any
-help to bring better support for Windows and BSD systems would be accepted.
+* Tanya is cross-platform. The development happens on a 64-bit Linux, but it
+* is being tested on Windows and FreeBSD as well.
 
 * The library isn't thread-safe. Thread-safity should be added later.
-
-* I'm working with the latest dmd version, but will be looking to support other
-D compilers and keep compatibility with the elder dmd versions in the future.
 
 ## Contributing
 
