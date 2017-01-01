@@ -56,7 +56,7 @@ suite, but contains (will contain) algorithm implementations required by TLS.
 Online documentation will be published soon.
 
 * Tanya is cross-platform. The development happens on a 64-bit Linux, but it
-* is being tested on Windows and FreeBSD as well.
+is being tested on Windows and FreeBSD as well.
 
 * The library isn't thread-safe. Thread-safity should be added later.
 
