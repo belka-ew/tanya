@@ -21,10 +21,23 @@ import tanya.memory;
 
 version (unittest)
 {
-	struct TestA
+	struct SWithDtor
 	{
+		bool opEquals(ref SWithDtor that)
+		{
+			return true;
+		}
+
 		~this() @nogc
 		{
+		}
+	}
+
+	struct SConstEquals
+	{
+		bool opEquals(in ref SConstEquals that) const
+		{
+			return true;
 		}
 	}
 }
@@ -387,7 +400,7 @@ struct Vector(T)
 	/**
 	 * Destroys this $(D_PSYMBOL Vector).
 	 */
-	~this()
+	~this() @trusted
 	{
 		static if (hasElaborateDestructor!T)
 		{
@@ -404,7 +417,7 @@ struct Vector(T)
 
 	private unittest
 	{
-		auto v = Vector!TestA(); // Destructor can destroy empty vectors.
+		auto v = Vector!SWithDtor(); // Destructor can destroy empty vectors.
 	}
 
 	/**
@@ -810,21 +823,44 @@ struct Vector(T)
 	/**
 	 * Comparison for equality.
 	 *
-	 * Params:
-	 * 	o = The vector to compare with.
+	 * Params: o = The vector to compare with.
 	 *
 	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
 	 *          otherwise.
 	 */
-	bool opEquals(typeof(this) v) const
+	bool opEquals()(auto ref typeof(this) v) @trusted
 	{
-		return opEquals(v);
+		if (length_ != v.length_)
+		{
+			return false;
+		}
+		const T* end = vector + length_;
+		for (T* v1 = vector, v2 = v.vector; v1 != end; ++v1, ++v2)
+		{
+			if (*v1 != *v2)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/// Ditto.
-	bool opEquals(ref typeof(this) v) const @trusted
+	bool opEquals()(in auto ref typeof(this) v) const @trusted
 	{
-		return vector[0 .. length_] == v.vector[0 .. v.length_];
+		if (length_ != v.length_)
+		{
+			return false;
+		}
+		const T* end = vector + length_;
+		for (const(T)* v1 = vector, v2 = v.vector; v1 != end; ++v1, ++v2)
+		{
+			if (*v1 != *v2)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	///
@@ -845,6 +881,21 @@ struct Vector(T)
 
 		v2[1] = 3;
 		assert(v1 == v2);
+	}
+
+	private unittest
+	{
+		auto v1 = Vector!SConstEquals();
+		auto v2 = Vector!SConstEquals();
+		assert(v1 == v2);
+
+		auto v3 = const Vector!SConstEquals();
+		auto v4 = const Vector!SConstEquals();
+		assert(v3 == v4);
+
+		auto v7 = Vector!SWithDtor();
+		auto v8 = Vector!SWithDtor();
+		assert(v7 == v8);
 	}
 
 	/**
@@ -1192,7 +1243,7 @@ private @nogc unittest
 	auto a = Vector!A();
 
 	// Test that structs can be members of the vector.
-	static assert(is(typeof(Vector!TestA())));
+	static assert(is(typeof(Vector!SWithDtor())));
 }
 
 private @nogc unittest
