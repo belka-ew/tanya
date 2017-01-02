@@ -161,8 +161,42 @@ private struct Range(E)
 		return typeof(return)(begin + i, begin + j);
 	}
 
+	bool opEquals()(Range that) const @trusted
+	{
+		if (length != that.length)
+		{
+			return false;
+		}
+		for (const(E)* i = begin; i != end; ++i)
+		{
+			if (*i != that.front)
+			{
+				return false;
+			}
+			that.popFront();
+		}
+		return true;
+	}
+
 	static if (isMutable!E)
 	{
+		bool opEquals(Range that)
+		{
+			if (length != that.length)
+			{
+				return false;
+			}
+			for (E* i = begin; i != end; ++i)
+			{
+				if (*i != that.front)
+				{
+					return false;
+				}
+				that.popFront();
+			}
+			return true;
+		}
+
 		ref E opIndexAssign(ref E value, in size_t pos) @trusted
 		in
 		{
@@ -803,7 +837,9 @@ struct Vector(T)
 	/**
 	 * Comparison for equality.
 	 *
-	 * Params: o = The vector to compare with.
+	 * Params:
+	 * 	R = Right hand side type.
+	 * 	v = The vector to compare with.
 	 *
 	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
 	 *          otherwise.
@@ -839,6 +875,45 @@ struct Vector(T)
 			{
 				return false;
 			}
+		}
+		return true;
+	}
+
+	/// Ditto.
+	bool opEquals(Range!T v) @trusted
+	{
+		if (length_ != v.length)
+		{
+			return false;
+		}
+		const T* end = vector + length_;
+		for (T* v1 = vector; v1 != end; ++v1)
+		{
+			if (*v1 != v.front)
+			{
+				return false;
+			}
+			v.popFront();
+		}
+		return true;
+	}
+
+	/// Ditto.
+	bool opEquals(R)(Range!R v) const @trusted
+		if (is(Unqual!R == T))
+	{
+		if (length_ != v.length)
+		{
+			return false;
+		}
+		const T* end = vector + length_;
+		for (const(T)* v1 = vector; v1 != end; ++v1)
+		{
+			if (*v1 != v.front)
+			{
+				return false;
+			}
+			v.popFront();
 		}
 		return true;
 	}
@@ -1244,6 +1319,12 @@ unittest
 	assert(r1 == r2);
 
 	v1.insertBack(1, 2, 4);
+	assert(v1[] == v1);
+	assert(v2[] == v2);
+	assert(v2[] != v1);
+	assert(v1[] != v2);
+	assert(v1[] == v1[]);
+	assert(v2[] == v2[]);
 }
 
 @nogc unittest
@@ -1251,14 +1332,23 @@ unittest
 	auto v1 = Vector!ConstEqualsStruct();
 	auto v2 = Vector!ConstEqualsStruct();
 	assert(v1 == v2);
+	assert(v1[] == v2);
+	assert(v1 == v2[]);
+	assert(v1[] == v2[]);
 
 	auto v3 = const Vector!ConstEqualsStruct();
 	auto v4 = const Vector!ConstEqualsStruct();
 	assert(v3 == v4);
+	assert(v3[] == v4);
+	assert(v3 == v4[]);
+	assert(v3[] == v4[]);
 
 	auto v7 = Vector!MutableEqualsStruct();
 	auto v8 = Vector!MutableEqualsStruct();
 	assert(v7 == v8);
+	assert(v7[] == v8);
+	assert(v7 == v8[]);
+	assert(v7[] == v8[]);
 }
 
 @nogc unittest
