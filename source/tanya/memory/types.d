@@ -303,7 +303,7 @@ unittest
 
 version (unittest)
 {
-	class A
+	private class A
 	{
 		uint *destroyed;
 
@@ -318,7 +318,7 @@ version (unittest)
 		}
 	}
 
-	struct B
+	private struct B
 	{
 		int prop;
 		@disable this();

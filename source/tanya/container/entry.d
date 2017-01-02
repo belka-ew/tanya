@@ -16,7 +16,7 @@ version (unittest)
 {
 	package struct ConstEqualsStruct
 	{
-		int opEquals(typeof(this) that) const
+		int opEquals(typeof(this) that) const @nogc
 		{
 			return true;
 		}
@@ -24,7 +24,7 @@ version (unittest)
 
 	package struct MutableEqualsStruct
 	{
-		int opEquals(typeof(this) that)
+		int opEquals(typeof(this) that) @nogc
 		{
 			return true;
 		}

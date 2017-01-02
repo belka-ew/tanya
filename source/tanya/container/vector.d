@@ -21,23 +21,11 @@ import tanya.memory;
 
 version (unittest)
 {
+	import tanya.container.entry;
 	struct SWithDtor
 	{
-		bool opEquals(ref SWithDtor that)
-		{
-			return true;
-		}
-
 		~this() @nogc
 		{
-		}
-	}
-
-	struct SConstEquals
-	{
-		bool opEquals(in ref SConstEquals that) const
-		{
-			return true;
 		}
 	}
 }
@@ -324,12 +312,6 @@ struct Vector(T)
 		insertBack(init);
 	}
 
-	private unittest
-	{
-		// Implicitly convertible works.
-		auto v = Vector!int(IL(cast(short) 1, cast(short) 2));
-	}
-
 	/**
 	 * Creates a new $(D_PSYMBOL Vector).
 	 *
@@ -413,11 +395,6 @@ struct Vector(T)
 		allocator.deallocate(cast(void[]) vector[0 .. capacity_]);
 		vector = null;
 		capacity_ = length_ = 0;
-	}
-
-	private unittest
-	{
-		auto v = Vector!SWithDtor(); // Destructor can destroy empty vectors.
 	}
 
 	/**
@@ -638,22 +615,25 @@ struct Vector(T)
 	 * Inserts the $(D_PARAM el) into the vector.
 	 *
 	 * Params:
-	 * 	R  = Parameter type (single value or range).
-	 * 	el = Value should be inserted.
+	 * 	R  = Parameter type (single values or a range).
+	 * 	el = Values should be inserted.
 	 *
 	 * Returns: The number of elements inserted.
 	 */
-	size_t insertBack(R)(auto ref R el) @trusted
-		if (isImplicitlyConvertible!(R, T))
+	size_t insertBack(R...)(auto ref R el) @trusted
+		if (isImplicitlyConvertible!(R[0], T))
 	{
-		reserve(length_ + 1);
+		reserve(length_ + el.length);
 		if (capacity_ <= length_)
 		{
 			onOutOfMemoryError();
 		}
-		emplace(vector + length_, el);
-		++length_;
-		return 1;
+		foreach (i; el)
+		{
+			emplace(vector + length_, i);
+			++length_;
+		}
+		return el.length;
 	}
 
 	/// Ditto.
@@ -881,21 +861,6 @@ struct Vector(T)
 
 		v2[1] = 3;
 		assert(v1 == v2);
-	}
-
-	private unittest
-	{
-		auto v1 = Vector!SConstEquals();
-		auto v2 = Vector!SConstEquals();
-		assert(v1 == v2);
-
-		auto v3 = const Vector!SConstEquals();
-		auto v4 = const Vector!SConstEquals();
-		assert(v3 == v4);
-
-		auto v7 = Vector!SWithDtor();
-		auto v8 = Vector!SWithDtor();
-		assert(v7 == v8);
 	}
 
 	/**
@@ -1237,16 +1202,7 @@ unittest
 	assert(r.front == v.front);
 }
 
-private @nogc unittest
-{
-	// Test the destructor can be called at the end of the scope.
-	auto a = Vector!A();
-
-	// Test that structs can be members of the vector.
-	static assert(is(typeof(Vector!SWithDtor())));
-}
-
-private @nogc unittest
+@nogc unittest
 {
 	const v1 = Vector!int();
 	const Vector!int v2;
@@ -1254,7 +1210,7 @@ private @nogc unittest
 	static assert(is(PointerTarget!(typeof(v3.vector)) == const(int)));
 }
 
-private @nogc unittest
+@nogc unittest
 {
 	// Test that const vectors return usable ranges.
 	auto v = const Vector!int(IL(1, 2, 4));
@@ -1275,7 +1231,7 @@ private @nogc unittest
 	static assert(is(typeof(r2[])));
 }
 
-private @nogc unittest
+@nogc unittest
 {
 	Vector!int v1;
 	const Vector!int v2;
@@ -1286,4 +1242,32 @@ private @nogc unittest
 	assert(r1.length == 0);
 	assert(r2.empty);
 	assert(r1 == r2);
+
+	v1.insertBack(1, 2, 4);
+}
+
+@nogc unittest
+{
+	auto v1 = Vector!ConstEqualsStruct();
+	auto v2 = Vector!ConstEqualsStruct();
+	assert(v1 == v2);
+
+	auto v3 = const Vector!ConstEqualsStruct();
+	auto v4 = const Vector!ConstEqualsStruct();
+	assert(v3 == v4);
+
+	auto v7 = Vector!MutableEqualsStruct();
+	auto v8 = Vector!MutableEqualsStruct();
+	assert(v7 == v8);
+}
+
+@nogc unittest
+{
+	// Implicitly convertible works.
+	auto v = Vector!int(IL(cast(short) 1, cast(short) 2));
+}
+
+@nogc unittest
+{
+	auto v = Vector!SWithDtor(); // Destructor can destroy empty vectors.
 }
