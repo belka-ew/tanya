@@ -15,8 +15,9 @@ import core.exception;
 import std.algorithm.comparison;
 import std.conv;
 import std.range.primitives;
+import std.meta;
 import std.traits;
-public import tanya.enums : IL;
+public import tanya.meta.gen : IL;
 import tanya.memory;
 
 version (unittest)
@@ -631,9 +632,6 @@ struct Vector(T)
 		return toRemove;
 	}
 
-	/// Ditto.
-	alias remove = removeBack;
-
 	///
 	unittest
 	{
@@ -655,7 +653,7 @@ struct Vector(T)
 	 * Returns: The number of elements inserted.
 	 */
 	size_t insertBack(R...)(auto ref R el) @trusted
-		if (isImplicitlyConvertible!(R[0], T))
+		if (allSatisfy!(ApplyRight!(isImplicitlyConvertible, T), R))
 	{
 		reserve(length_ + el.length);
 		if (capacity_ <= length_)
