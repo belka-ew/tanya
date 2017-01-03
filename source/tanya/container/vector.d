@@ -644,6 +644,51 @@ struct Vector(T)
 	}
 
 	/**
+	 * Remove all elements beloning to $(D_PARAM r).
+	 *
+	 * Params:
+	 * 	r = Range originally obtained from this vector.
+	 *
+	 * Returns: Elements in $(D_PARAM r) after removing.
+	 */
+	Range!T remove(Range!T r) @trusted
+	in
+	{
+		assert(r.begin >= vector && r.end <= vector + length_);
+	}
+	body
+	{
+		const T* end = vector + length_;
+		for (T* a = r.begin, b = r.end; b != end; ++a, ++b)
+		{
+			*a = *b;
+		}
+		length_ -= r.length;
+		return r;
+	}
+
+	///
+	unittest
+	{
+		auto v = Vector!int(IL(5, 18, 17, 2, 4, 6, 1));
+
+		v.remove(v[1..3]);
+		assert(v == Vector!int(IL(5, 2, 4, 6, 1)));
+
+		v.remove(v[4..4]);
+		assert(v == Vector!int(IL(5, 2, 4, 6, 1)));
+
+		v.remove(v[4..5]);
+		assert(v == Vector!int(IL(5, 2, 4, 6)));
+
+		v.remove(v[]);
+		assert(v.empty);
+
+		v.remove(v[]);
+		assert(v.empty);
+	}
+
+	/**
 	 * Inserts the $(D_PARAM el) into the vector.
 	 *
 	 * Params:
