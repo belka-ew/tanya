@@ -650,6 +650,8 @@ struct Vector(T)
 	 * 	r = Range originally obtained from this vector.
 	 *
 	 * Returns: Elements in $(D_PARAM r) after removing.
+	 *
+	 * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
 	 */
 	Range!T remove(Range!T r) @trusted
 	in
@@ -663,7 +665,7 @@ struct Vector(T)
 		{
 			*a = *b;
 		}
-		length_ -= r.length;
+		length = length_ - r.length;
 		return r;
 	}
 
@@ -790,7 +792,7 @@ struct Vector(T)
 	ref T opIndexAssign(ref T value, in size_t pos) @trusted
 	in
 	{
-		assert(length > pos);
+		assert(length_ > pos);
 	}
 	body
 	{
