@@ -12,7 +12,6 @@ module tanya.memory.mmappool;
 
 import tanya.memory.allocator;
 import core.atomic;
-import core.exception;
 import core.stdc.string;
 
 version (Posix)
@@ -334,17 +333,13 @@ final class MmapPool : Allocator
 		version (Posix)
 		{
 			void* p = mmap(null,
-						   regionSize,
-						   PROT_READ | PROT_WRITE,
-						   MAP_PRIVATE | MAP_ANON,
-						   -1,
-						   0);
+			               regionSize,
+			               PROT_READ | PROT_WRITE,
+			               MAP_PRIVATE | MAP_ANON,
+			               -1,
+			               0);
 			if (p is MAP_FAILED)
 			{
-				if (errno == ENOMEM)
-				{
-					onOutOfMemoryError();
-				}
 				return null;
 			}
 		}
@@ -356,10 +351,6 @@ final class MmapPool : Allocator
 			                       PAGE_READWRITE);
 			if (p is null)
 			{
-				if (GetLastError() == ERROR_NOT_ENOUGH_MEMORY)
-				{
-					onOutOfMemoryError();
-				}
 				return null;
 			}
 		}
