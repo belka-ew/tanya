@@ -391,7 +391,7 @@ struct Integer
 				{
 					auto tmp = Integer(h);
 					tmp.subtract(rep);
-					rep = tmp.rep;
+					swap(rep, tmp.rep);
 					sign = length == 0 ? false : h.sign;
 				}
 			}
@@ -408,7 +408,7 @@ struct Integer
 				{
 					auto tmp = Integer(h);
 					tmp.subtract(rep);
-					rep = tmp.rep;
+					swap(rep, tmp.rep);
 					sign = length == 0 ? false : !sign;
 				}
 			}

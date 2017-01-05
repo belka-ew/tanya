@@ -27,7 +27,7 @@ else version (Windows)
 }
 
 /**
- * This allocator allocates memory in regions (multiple of 4 KB for example).
+ * This allocator allocates memory in regions (multiple of 64 KB for example).
  * Each region is then splitted in blocks. So it doesn't request the memory
  * from the operating system on each call, but only if there are no large
  * enough free blocks in the available regions.
@@ -117,30 +117,17 @@ final class MmapPool : Allocator
 		{ // Split the block if needed
 			Block block2 = cast(Block) (cast(void*) block1 + blockEntrySize + size);
 			block2.prev = block1;
-			if (block1.next is null)
-			{
-				block2.next = null;
-			}
-			else
-			{
-				block2.next = block1.next.next;
-			}
-			block1.next = block2;
-
-			block1.free = false;
+			block2.next = block1.next;
 			block2.free = true;
-
 			block2.size = block1.size - blockEntrySize - size;
-			block1.size = size;
-
 			block2.region = block1.region;
-			atomicOp!"+="(block1.region.blocks, 1);
+
+			block1.next = block2;
+			block1.size = size;
 		}
-		else
-		{
-			block1.free = false;
-			atomicOp!"+="(block1.region.blocks, 1);
-		}
+		block1.free = false;
+		atomicOp!"+="(block1.region.blocks, 1);
+
 		return cast(void*) block1 + blockEntrySize;
 	}
 
@@ -185,7 +172,29 @@ final class MmapPool : Allocator
 		}
 		else
 		{
-			block.free = true;
+			// Merge blocks if neigbours are free.
+			if (block.next !is null && block.next.free)
+			{
+				block.size = blockEntrySize + block.next.size;
+				if (block.next.next !is null)
+				{
+					block.next.next.prev = block;
+				}
+				block.next = block.next.next;
+			}
+			if (block.prev !is null && block.prev.free)
+			{
+				block.size = blockEntrySize + block.size;
+				if (block.next !is null)
+				{
+					block.next.prev = block.prev;
+				}
+				block.prev.next = block.next;
+			}
+			else
+			{
+				block.free = true;
+			}
 			atomicOp!"-="(block.region.blocks, 1);
 			return true;
 		}

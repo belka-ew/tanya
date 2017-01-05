@@ -78,8 +78,8 @@ size_t alignedSize(in size_t size, in size_t alignment = 8) pure nothrow @safe @
  *
  * Params:
  * 	T         = Element type of the array being created.
- *      Init      = If should be initialized.
- *      Throws    = If $(D_PSYMBOL OutOfMemoryError) should be throwsn.
+ * 	Init      = If should be initialized.
+ * 	Throws    = If $(D_PSYMBOL OutOfMemoryError) should be throwsn.
  * 	allocator = The allocator used for getting memory.
  * 	array     = A reference to the array being changed.
  * 	length    = New array length.

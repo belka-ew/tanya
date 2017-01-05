@@ -298,6 +298,7 @@ struct Vector(T)
 	}
 
 	// Reserves memory to store len objects and initializes it.
+	// Doesn't change the length.
 	private void initialize(in size_t len)
 	{
 		reserve(len);
@@ -316,7 +317,7 @@ struct Vector(T)
                 }
                 else
                 {
-                    memset(vector + length_, 0, len * T.sizeof);
+			memset(vector + length_, 0, (len - length_) * T.sizeof);
                 }
 	}
 
