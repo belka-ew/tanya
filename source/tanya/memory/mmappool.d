@@ -13,6 +13,7 @@ module tanya.memory.mmappool;
 import tanya.memory.allocator;
 import core.atomic;
 import core.exception;
+import core.stdc.string;
 
 version (Posix)
 {
@@ -50,21 +51,6 @@ else version (Windows)
  */
 final class MmapPool : Allocator
 {
-@nogc:
-	shared static this()
-	{
-		version (Posix)
-		{
-			pageSize = sysconf(_SC_PAGE_SIZE);
-		}
-		else version (Windows)
-		{
-			SYSTEM_INFO si;
-			GetSystemInfo(&si);
-			pageSize = si.dwPageSize;
-		}
-	}
-
 	/**
 	 * Allocates $(D_PARAM size) bytes of memory.
 	 *
@@ -73,7 +59,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Pointer to the new allocated memory.
 	 */
-	void[] allocate(size_t size) shared nothrow
+	void[] allocate(size_t size) shared nothrow @nogc
 	{
 		if (!size)
 		{
@@ -109,7 +95,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Data the block points to or $(D_KEYWORD null).
 	 */
-	private void* findBlock(size_t size) shared nothrow
+	private void* findBlock(size_t size) shared nothrow @nogc
 	{
 		Block block1;
 		RegionLoop: for (auto r = head; r !is null; r = r.next)
@@ -167,7 +153,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Whether the deallocation was successful.
 	 */
-	bool deallocate(void[] p) shared nothrow
+	bool deallocate(void[] p) shared nothrow @nogc
 	{
 		if (p is null)
 		{
@@ -223,7 +209,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Whether the reallocation was successful.
 	 */
-	bool reallocate(ref void[] p, size_t size) shared nothrow
+	bool reallocate(ref void[] p, size_t size) shared nothrow @nogc
 	{
 		void[] reallocP;
 
@@ -291,17 +277,33 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Global $(D_PSYMBOL MmapPool) instance.
 	 */
-	static @property ref shared(MmapPool) instance() nothrow
+	static @property ref shared(MmapPool) instance() nothrow @nogc
 	{
 		if (instance_ is null)
 		{
+			// Get system dependend page size.
+			version (Posix)
+			{
+				pageSize = sysconf(_SC_PAGE_SIZE);
+				if (pageSize < 65536)
+				{
+					atomicOp!"*="(pageSize, 65536 / pageSize);
+				}
+			}
+			else version (Windows)
+			{
+				SYSTEM_INFO si;
+				GetSystemInfo(&si);
+				pageSize = si.dwPageSize;
+			}
+
 			immutable instanceSize = addAlignment(__traits(classInstanceSize, MmapPool));
 
 			Region head; // Will become soon our region list head
 			void* data = initializeRegion(instanceSize, head);
 			if (data !is null)
 			{
-				data[0..instanceSize] = typeid(MmapPool).initializer[];
+				memcpy(data, typeid(MmapPool).initializer.ptr, instanceSize);
 				instance_ = cast(shared MmapPool) data;
 				instance_.head = head;
 			}
@@ -324,8 +326,8 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: A pointer to the data.
 	 */
-	private static void* initializeRegion(size_t size,
-										  ref Region head) nothrow
+	private static void* initializeRegion(size_t size, ref Region head)
+	nothrow @nogc
 	{
 		immutable regionSize = calculateRegionSize(size);
 		
@@ -349,9 +351,9 @@ final class MmapPool : Allocator
 		else version (Windows)
 		{
 			void* p = VirtualAlloc(null,
-								   regionSize,
-								   MEM_COMMIT,
-								   PAGE_READWRITE);
+			                       regionSize,
+			                       MEM_COMMIT,
+			                       PAGE_READWRITE);
 			if (p is null)
 			{
 				if (GetLastError() == ERROR_NOT_ENOUGH_MEMORY)
@@ -398,7 +400,7 @@ final class MmapPool : Allocator
 	}
 
 	/// Ditto.
-	private void* initializeRegion(size_t size) shared nothrow
+	private void* initializeRegion(size_t size) shared nothrow @nogc
 	{
 		return initializeRegion(size, head);
 	}
@@ -411,7 +413,7 @@ final class MmapPool : Allocator
 	 */
 	pragma(inline)
 	private static immutable(size_t) addAlignment(size_t x)
-	@safe pure nothrow
+	pure nothrow @safe @nogc
 	out (result)
 	{
 		assert(result > 0);
@@ -429,7 +431,7 @@ final class MmapPool : Allocator
 	 */
 	pragma(inline)
 	private static immutable(size_t) calculateRegionSize(size_t x)
-	@safe pure nothrow
+	nothrow @safe @nogc
 	out (result)
 	{
 		assert(result > 0);
@@ -440,7 +442,7 @@ final class MmapPool : Allocator
 		return x / pageSize * pageSize + pageSize;
 	}
 
-	@property uint alignment() shared const pure nothrow @safe
+	@property uint alignment() shared const pure nothrow @safe @nogc
 	{
 		return alignment_;
 	}
@@ -448,7 +450,7 @@ final class MmapPool : Allocator
 
 	private static shared MmapPool instance_;
 
-	private shared static immutable size_t pageSize;
+	private shared static size_t pageSize;
 
 	private shared struct RegionEntry
 	{

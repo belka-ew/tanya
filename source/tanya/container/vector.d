@@ -661,11 +661,19 @@ struct Vector(T)
 	body
 	{
 		const T* end = vector + length_;
-		for (T* a = r.begin, b = r.end; b != end; ++a, ++b)
+		T* a = r.begin;
+		for (T* b = r.end; b != end; ++a, ++b)
 		{
 			*a = *b;
 		}
-		length = length_ - r.length;
+		for (; a != end; ++a)
+		{
+			static if (hasElaborateDestructor!T)
+			{
+				destroy(*a);
+			}
+			--length_;
+		}
 		return r;
 	}
 
