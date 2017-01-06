@@ -58,7 +58,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Pointer to the new allocated memory.
 	 */
-	void[] allocate(size_t size) shared nothrow @nogc
+	void[] allocate(in size_t size) shared nothrow @nogc
 	{
 		if (!size)
 		{
@@ -90,11 +90,11 @@ final class MmapPool : Allocator
 	 * into two blocks if the block is too large.
 	 *
 	 * Params:
-	 * 	size = Minimum size the block should have.
+	 * 	size = Minimum size the block should have (aligned).
 	 *
 	 * Returns: Data the block points to or $(D_KEYWORD null).
 	 */
-	private void* findBlock(size_t size) shared nothrow @nogc
+	private void* findBlock(in ref size_t size) shared nothrow @nogc
 	{
 		Block block1;
 		RegionLoop: for (auto r = head; r !is null; r = r.next)
@@ -122,11 +122,15 @@ final class MmapPool : Allocator
 			block2.size = block1.size - blockEntrySize - size;
 			block2.region = block1.region;
 
+			if (block1.next !is null)
+			{
+				block1.next.prev = block2;
+			}
 			block1.next = block2;
 			block1.size = size;
 		}
 		block1.free = false;
-		atomicOp!"+="(block1.region.blocks, 1);
+		block1.region.blocks = block1.region.blocks + 1;
 
 		return cast(void*) block1 + blockEntrySize;
 	}
@@ -170,34 +174,31 @@ final class MmapPool : Allocator
 				return VirtualFree(cast(void*) block.region, 0, MEM_RELEASE) == 0;
 			}
 		}
+		// Merge blocks if neigbours are free.
+		if (block.next !is null && block.next.free)
+		{
+			block.size = block.size + blockEntrySize + block.next.size;
+			if (block.next.next !is null)
+			{
+				block.next.next.prev = block;
+			}
+			block.next = block.next.next;
+		}
+		if (block.prev !is null && block.prev.free)
+		{
+			block.prev.size = block.prev.size + blockEntrySize + block.size;
+			if (block.next !is null)
+			{
+				block.next.prev = block.prev;
+			}
+			block.prev.next = block.next;
+		}
 		else
 		{
-			// Merge blocks if neigbours are free.
-			if (block.next !is null && block.next.free)
-			{
-				block.size = blockEntrySize + block.next.size;
-				if (block.next.next !is null)
-				{
-					block.next.next.prev = block;
-				}
-				block.next = block.next.next;
-			}
-			if (block.prev !is null && block.prev.free)
-			{
-				block.size = blockEntrySize + block.size;
-				if (block.next !is null)
-				{
-					block.next.prev = block.prev;
-				}
-				block.prev.next = block.next;
-			}
-			else
-			{
-				block.free = true;
-			}
-			atomicOp!"-="(block.region.blocks, 1);
-			return true;
+			block.free = true;
 		}
+		block.region.blocks = block.region.blocks - 1;
+		return true;
 	}
 
 	///
@@ -217,7 +218,7 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: Whether the reallocation was successful.
 	 */
-	bool reallocate(ref void[] p, size_t size) shared nothrow @nogc
+	bool reallocate(ref void[] p, in size_t size) shared nothrow @nogc
 	{
 		void[] reallocP;
 

@@ -28,7 +28,7 @@ interface Allocator
 	 *
 	 * Returns: Pointer to the new allocated memory.
 	 */
-	void[] allocate(size_t size) shared nothrow @nogc;
+	void[] allocate(in size_t size) shared nothrow @nogc;
 
 	/**
 	 * Deallocates a memory block.
@@ -49,7 +49,7 @@ interface Allocator
 	 *
 	 * Returns: Pointer to the allocated memory.
 	 */
-	bool reallocate(ref void[] p, size_t size) shared nothrow @nogc;
+	bool reallocate(ref void[] p, in size_t size) shared nothrow @nogc;
 }
 
 /**
