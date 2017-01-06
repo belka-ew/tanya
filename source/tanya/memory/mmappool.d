@@ -10,9 +10,9 @@
  */
 module tanya.memory.mmappool;
 
-import tanya.memory.allocator;
-import core.atomic;
 import core.stdc.string;
+import std.typecons;
+import tanya.memory.allocator;
 
 version (Posix)
 {
@@ -72,7 +72,7 @@ final class MmapPool : Allocator
 			data = initializeRegion(dataSize);
 		}
 
-		return data is null ? null : data[0..size];
+		return data is null ? null : data[0 .. size];
 	}
 
 	///
@@ -99,7 +99,7 @@ final class MmapPool : Allocator
 		Block block1;
 		RegionLoop: for (auto r = head; r !is null; r = r.next)
 		{
-			block1 = cast(Block) (cast(void*) r + regionEntrySize);
+			block1 = cast(Block) (cast(void*) r + RegionEntry.sizeof);
 			do
 			{
 				if (block1.free && block1.size >= size)
@@ -113,13 +113,13 @@ final class MmapPool : Allocator
 		{
 			return null;
 		}
-		else if (block1.size >= size + alignment + blockEntrySize)
+		else if (block1.size >= size + alignment_ + BlockEntry.sizeof)
 		{ // Split the block if needed
-			Block block2 = cast(Block) (cast(void*) block1 + blockEntrySize + size);
+			Block block2 = cast(Block) (cast(void*) block1 + BlockEntry.sizeof + size);
 			block2.prev = block1;
 			block2.next = block1.next;
 			block2.free = true;
-			block2.size = block1.size - blockEntrySize - size;
+			block2.size = block1.size - BlockEntry.sizeof - size;
 			block2.region = block1.region;
 
 			if (block1.next !is null)
@@ -132,7 +132,18 @@ final class MmapPool : Allocator
 		block1.free = false;
 		block1.region.blocks = block1.region.blocks + 1;
 
-		return cast(void*) block1 + blockEntrySize;
+		return cast(void*) block1 + BlockEntry.sizeof;
+	}
+
+	// Merge block with the next one.
+	private void mergeNext(Block block) shared const pure nothrow @safe @nogc
+	{
+		block.size = block.size + BlockEntry.sizeof + block.next.size;
+		if (block.next.next !is null)
+		{
+			block.next.next.prev = block;
+		}
+		block.next = block.next.next;
 	}
 
 	/**
@@ -150,7 +161,7 @@ final class MmapPool : Allocator
 			return true;
 		}
 
-		Block block = cast(Block) (p.ptr - blockEntrySize);
+		Block block = cast(Block) (p.ptr - BlockEntry.sizeof);
 		if (block.region.blocks <= 1)
 		{
 			if (block.region.prev !is null)
@@ -177,16 +188,11 @@ final class MmapPool : Allocator
 		// Merge blocks if neigbours are free.
 		if (block.next !is null && block.next.free)
 		{
-			block.size = block.size + blockEntrySize + block.next.size;
-			if (block.next.next !is null)
-			{
-				block.next.next.prev = block;
-			}
-			block.next = block.next.next;
+			mergeNext(block);
 		}
 		if (block.prev !is null && block.prev.free)
 		{
-			block.prev.size = block.prev.size + blockEntrySize + block.size;
+			block.prev.size = block.prev.size + BlockEntry.sizeof + block.size;
 			if (block.next !is null)
 			{
 				block.next.prev = block.prev;
@@ -207,6 +213,96 @@ final class MmapPool : Allocator
 		auto p = MmapPool.instance.allocate(20);
 
 		assert(MmapPool.instance.deallocate(p));
+	}
+
+	/**
+	 * Expands a memory block in place.
+	 *
+	 * Params:
+	 * 	p    = A pointer to the memory block.
+	 * 	size = Size of the reallocated block.
+	 *
+	 * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
+	 */
+	bool expand(ref void[] p, in size_t size) shared nothrow @nogc
+	{
+		if (size <= p.length)
+		{
+			return true;
+		}
+		if (p is null)
+		{
+			return false;
+		}
+		Block block1 = cast(Block) (p.ptr - BlockEntry.sizeof);
+
+		if (block1.size >= size)
+		{
+			// Enough space in the current block. Can happen because of the alignment.
+			p = p.ptr[0 .. size];
+			return true;
+		}
+		immutable dataSize = addAlignment(size);
+		immutable delta = dataSize - p.length;
+
+		if (block1.next is null || block1.next.size + BlockEntry.sizeof < delta)
+		{
+			// It is the last block in the region or the next block is too small.
+			return false;
+		}
+		if (block1.next.size >= delta + alignment_)
+		{
+			// We should move the start position of the next block. The order may be
+			// important because the old block and the new one can overlap.
+			auto block2 = cast(Block) (p.ptr + dataSize);
+			block2.free = true;
+			block2.size = block1.next.size - delta;
+			block2.region = block1.next.region;
+			block2.next = block1.next.next;
+			block2.prev = block1;
+
+			block1.size = block1.size + delta;
+
+			if (block1.next.next !is null)
+			{
+				block1.next.next.prev = block2;
+			}
+			block1.next = block2;
+		}
+		else
+		{
+			// The next block has enough space, but is too small for further
+			// allocations. Merge it with the current block.
+			mergeNext(block1);
+		}
+
+		p = p.ptr[0 .. size];
+		return true;
+	}
+
+	///
+	nothrow unittest
+	{
+		void[] p;
+		assert(!MmapPool.instance.expand(p, 5));
+		assert(p is null);
+
+		p = MmapPool.instance.allocate(1);
+		auto orig = p.ptr;
+
+		assert(MmapPool.instance.expand(p, 2));
+		assert(p.length == 2);
+		assert(p.ptr == orig);
+
+		assert(MmapPool.instance.expand(p, 4));
+		assert(p.length == 4);
+		assert(p.ptr == orig);
+
+		assert(MmapPool.instance.expand(p, 2));
+		assert(p.length == 4);
+		assert(p.ptr == orig);
+
+		MmapPool.instance.deallocate(p);
 	}
 
 	/**
@@ -296,7 +392,7 @@ final class MmapPool : Allocator
 				pageSize = sysconf(_SC_PAGE_SIZE);
 				if (pageSize < 65536)
 				{
-					atomicOp!"*="(pageSize, 65536 / pageSize);
+					pageSize = pageSize * 65536 / pageSize;
 				}
 			}
 			else version (Windows)
@@ -326,7 +422,7 @@ final class MmapPool : Allocator
 		assert(instance is instance);
 	}
 
-	/**
+	/*
 	 * Initializes a region for one element.
 	 *
 	 * Params:
@@ -379,13 +475,13 @@ final class MmapPool : Allocator
 		head = region;
 
 		// Initialize the data block
-		void* memoryPointer = p + regionEntrySize;
+		void* memoryPointer = p + RegionEntry.sizeof;
 		Block block1 = cast(Block) memoryPointer;
 		block1.size = size;
 		block1.free = false;
 
 		// It is what we want to return
-		void* data = memoryPointer + blockEntrySize;
+		void* data = memoryPointer + BlockEntry.sizeof;
 
 		// Free block after data
 		memoryPointer = data + size;
@@ -393,26 +489,37 @@ final class MmapPool : Allocator
 		block1.prev = block2.next = null;
 		block1.next = block2;
 		block2.prev = block1;
-		block2.size = regionSize - size - regionEntrySize - blockEntrySize * 2;
+		block2.size = regionSize - size - RegionEntry.sizeof - BlockEntry.sizeof * 2;
 		block2.free = true;
 		block1.region = block2.region = region;
 
 		return data;
 	}
 
-	/// Ditto.
 	private void* initializeRegion(size_t size) shared nothrow @nogc
 	{
 		return initializeRegion(size, head);
 	}
 
 	/**
+	 * Returns $(D Ternary.yes) if no memory is currently allocated from this
+	 * allocator, $(D Ternary.no) if some allocations are currently active, or
+	 * $(D Ternary.unknown) if not supported.
+	 *
+	 * Returns: Whether any memory is currently allocated.
+	 */
+	Ternary empty() shared pure nothrow @safe @nogc
+	{
+		// MmapPool always owns some memory because it allocates itself.
+		return Ternary.no;
+	}
+
+	/*
 	 * Params:
 	 * 	x = Space to be aligned.
 	 *
 	 * Returns: Aligned size of $(D_PARAM x).
 	 */
-	pragma(inline)
 	private static immutable(size_t) addAlignment(size_t x)
 	pure nothrow @safe @nogc
 	out (result)
@@ -424,13 +531,12 @@ final class MmapPool : Allocator
 		return (x - 1) / alignment_ * alignment_ + alignment_;
 	}
 
-	/**
+	/*
 	 * Params:
 	 * 	x = Required space.
 	 *
 	 * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
 	 */
-	pragma(inline)
 	private static immutable(size_t) calculateRegionSize(size_t x)
 	nothrow @safe @nogc
 	out (result)
@@ -439,18 +545,20 @@ final class MmapPool : Allocator
 	}
 	body
 	{
-		x += regionEntrySize + blockEntrySize * 2;
+		x += RegionEntry.sizeof + BlockEntry.sizeof * 2;
 		return x / pageSize * pageSize + pageSize;
 	}
 
+	/**
+	 * Returns: Alignment offered.
+	 */
 	@property uint alignment() shared const pure nothrow @safe @nogc
 	{
 		return alignment_;
 	}
 	private enum alignment_ = 8;
 
-	private static shared MmapPool instance_;
-
+	private shared static MmapPool instance_;
 	private shared static size_t pageSize;
 
 	private shared struct RegionEntry
@@ -461,18 +569,15 @@ final class MmapPool : Allocator
 		size_t size;
 	}
 	private alias Region = shared RegionEntry*;
-	private enum regionEntrySize = 32;
-
 	private shared Region head;
 
 	private shared struct BlockEntry
 	{
 		Block prev;
 		Block next;
-		bool free;
-		size_t size;
 		Region region;
+		size_t size;
+		bool free;
 	}
 	private alias Block = shared BlockEntry*;
-	private enum blockEntrySize = 40;
 }

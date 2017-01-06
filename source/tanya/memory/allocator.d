@@ -10,13 +10,15 @@
  */
 module tanya.memory.allocator;
 
+import std.typecons;
+
 /**
  * Abstract class implementing a basic allocator.
  */
 interface Allocator
 {
 	/**
-	 * Returns: Alignment.
+	 * Returns: Alignment offered.
 	 */
 	@property uint alignment() const shared pure nothrow @safe @nogc;
 
@@ -50,6 +52,26 @@ interface Allocator
 	 * Returns: Pointer to the allocated memory.
 	 */
 	bool reallocate(ref void[] p, in size_t size) shared nothrow @nogc;
+
+	/**
+	 * Expands a memory block in place.
+	 *
+	 * Params:
+	 * 	p    = A pointer to the memory block.
+	 * 	size = Size of the reallocated block.
+	 *
+	 * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
+	 */
+	bool expand(ref void[] p, in size_t size) shared nothrow @nogc;
+
+	/**
+	 * Returns $(D Ternary.yes) if no memory is currently allocated from this
+	 * allocator, $(D Ternary.no) if some allocations are currently active, or
+	 * $(D Ternary.unknown) if not supported.
+	 *
+	 * Returns: Whether any memory is currently allocated.
+	 */
+	Ternary empty() shared nothrow @nogc;
 }
 
 /**
