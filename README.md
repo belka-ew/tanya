@@ -1,7 +1,8 @@
 # Tanya
 
 [![Build Status](https://travis-ci.org/caraus-ecms/tanya.svg?branch=master)](https://travis-ci.org/caraus-ecms/tanya)
-[![Dub Version](https://img.shields.io/dub/v/tanya.svg)](https://code.dlang.org/packages/tanya)
+[![Dub version](https://img.shields.io/dub/v/tanya.svg)](https://code.dlang.org/packages/tanya)
+[![Dub downloads](https://img.shields.io/dub/dt/tanya.svg)](https://code.dlang.org/packages/tanya)
 [![License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://raw.githubusercontent.com/caraus-ecms/tanya/master/LICENSE)
 
 Tanya is a general purpose library for D programming language that doesn't
