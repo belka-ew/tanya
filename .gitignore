@@ -5,3 +5,4 @@
 .dub
 __test__*__
 __test__*__.core
+/docs/

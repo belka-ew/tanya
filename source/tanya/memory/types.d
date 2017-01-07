@@ -374,9 +374,10 @@ private unittest
  * object).
  *
  * Params:
- * 	T    = Type of the constructed object.
- * 	A    = Types of the arguments to the constructor of $(D_PARAM T).
- * 	args = Constructor arguments of $(D_PARAM T).
+ * 	T         = Type of the constructed object.
+ * 	A         = Types of the arguments to the constructor of $(D_PARAM T).
+ * 	allocator = Allocator.
+ * 	args      = Constructor arguments of $(D_PARAM T).
  * 
  * Returns: Newly created $(D_PSYMBOL RefCounted!T).
  */

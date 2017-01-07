@@ -632,7 +632,7 @@ struct WriteBuffer(T = ubyte)
 	 * written.
 	 *
 	 * $(D_PSYMBOL opIndex) may return only part of the data. You may need
-	 * to call it (and set $(D_KEYWORD +=) several times until
+	 * to call it and set $(D_KEYWORD +=) several times until
 	 * $(D_PSYMBOL length) is 0. If all the data can be written,
 	 * maximally 3 calls are required.
 	 *
@@ -677,7 +677,7 @@ struct WriteBuffer(T = ubyte)
 	 * written.
 	 *
 	 * $(D_PSYMBOL opIndex) may return only part of the data. You may need
-	 * to call it (and set $(D_KEYWORD +=) several times until
+	 * to call it and set $(D_KEYWORD +=) several times until
 	 * $(D_PSYMBOL length) is 0. If all the data can be written,
 	 * maximally 3 calls are required.
 	 *

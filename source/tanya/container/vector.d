@@ -353,7 +353,6 @@ struct Vector(T)
 	 *
 	 * Params:
 	 * 	len       = Initial length of the vector.
-	 *      init      = Initial value to fill the vector with.
 	 * 	allocator = Allocator.
 	 */
 	this(size_t len, shared Allocator allocator = defaultAllocator) @trusted
@@ -369,7 +368,14 @@ struct Vector(T)
 		capacity_ = length_ = len;
 	}
 
-	/// Ditto.
+	/**
+	 * Creates a new $(D_PSYMBOL Vector).
+	 *
+	 * Params:
+	 * 	len       = Initial length of the vector.
+	 * 	init      = Initial value to fill the vector with.
+	 * 	allocator = Allocator.
+	 */
 	this(size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
 	{
 		this(allocator);
@@ -892,7 +898,6 @@ struct Vector(T)
 	 * Comparison for equality.
 	 *
 	 * Params:
-	 * 	R = Right hand side type.
 	 * 	v = The vector to compare with.
 	 *
 	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
@@ -952,7 +957,16 @@ struct Vector(T)
 		return true;
 	}
 
-	/// Ditto.
+	/**
+	 * Comparison for equality.
+	 *
+	 * Params:
+	 * 	R = Right hand side type.
+	 * 	v = The vector to compare with.
+	 *
+	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
+	 *          otherwise.
+	 */
 	bool opEquals(R)(Range!R v) const @trusted
 		if (is(Unqual!R == T))
 	{
