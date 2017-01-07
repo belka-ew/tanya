@@ -11,7 +11,7 @@
 module tanya.memory.mmappool;
 
 import core.stdc.string;
-import std.typecons;
+import std.algorithm.comparison;
 import tanya.memory.allocator;
 
 version (Posix)
@@ -245,9 +245,12 @@ final class MmapPool : Allocator
 		immutable dataSize = addAlignment(size);
 		immutable delta = dataSize - p.length;
 
-		if (block1.next is null || block1.next.size + BlockEntry.sizeof < delta)
+		if (block1.next is null
+		 || !block1.next.free
+		 || block1.next.size + BlockEntry.sizeof < delta)
 		{
-			// It is the last block in the region or the next block is too small.
+			// It is the last block in the region or the next block is too small or not
+			// free.
 			return false;
 		}
 		if (block1.next.size >= delta + alignment_)
@@ -255,9 +258,9 @@ final class MmapPool : Allocator
 			// We should move the start position of the next block. The order may be
 			// important because the old block and the new one can overlap.
 			auto block2 = cast(Block) (p.ptr + dataSize);
-			block2.free = true;
 			block2.size = block1.next.size - delta;
-			block2.region = block1.next.region;
+			block2.free = true;
+			block2.region = block1.region;
 			block2.next = block1.next.next;
 			block2.prev = block1;
 
@@ -316,31 +319,34 @@ final class MmapPool : Allocator
 	 */
 	bool reallocate(ref void[] p, in size_t size) shared nothrow @nogc
 	{
-		void[] reallocP;
-
-		if (size == p.length)
+		if (size == 0)
+		{
+			if (deallocate(p))
+			{
+				p = null;
+				return true;
+			}
+			return false;
+		}
+		else if (size <= p.length)
+		{
+			// Leave the block as is.
+			p = p.ptr[0 .. size];
+			return true;
+		}
+		else if (expand(p, size))
 		{
 			return true;
 		}
-		else if (size > 0)
+		// Can't extend, allocate a new block, copy and delete the previous.
+		void[] reallocP = allocate(size);
+		if (reallocP is null)
 		{
-			reallocP = allocate(size);
-			if (reallocP is null)
-			{
-				return false;
-			}
+			return false;
 		}
-
 		if (p !is null)
 		{
-			if (size > p.length)
-			{
-				reallocP[0..p.length] = p[0..$];
-			}
-			else if (size > 0)
-			{
-				reallocP[0..size] = p[0..size];
-			}
+			memcpy(reallocP.ptr, p.ptr, min(p.length, size));
 			deallocate(p);
 		}
 		p = reallocP;
@@ -499,19 +505,6 @@ final class MmapPool : Allocator
 	private void* initializeRegion(size_t size) shared nothrow @nogc
 	{
 		return initializeRegion(size, head);
-	}
-
-	/**
-	 * Returns $(D Ternary.yes) if no memory is currently allocated from this
-	 * allocator, $(D Ternary.no) if some allocations are currently active, or
-	 * $(D Ternary.unknown) if not supported.
-	 *
-	 * Returns: Whether any memory is currently allocated.
-	 */
-	Ternary empty() shared pure nothrow @safe @nogc
-	{
-		// MmapPool always owns some memory because it allocates itself.
-		return Ternary.no;
 	}
 
 	/*
