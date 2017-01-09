@@ -12,7 +12,6 @@ module tanya.container.vector;
 
 import core.checkedint;
 import core.exception;
-import core.stdc.string;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.conv;
