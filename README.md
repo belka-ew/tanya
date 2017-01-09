@@ -5,8 +5,7 @@
 [![Dub downloads](https://img.shields.io/dub/dt/tanya.svg)](https://code.dlang.org/packages/tanya)
 [![License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://raw.githubusercontent.com/caraus-ecms/tanya/master/LICENSE)
 
-Tanya is a general purpose library for D programming language that doesn't
-rely on the Garbage Collector.
+Tanya is a general purpose library for D programming language.
 
 Its aim is to simplify the manual memory management in D and to provide a
 guarantee with @nogc attribute that there are no hidden allocations on the
@@ -36,11 +35,11 @@ helper functions).
 The library is currently under development, but some parts of it can already be
 used.
 
+`network` and `async` exist for quite some time and could be better tested than
+other components.
+
 Containers were newly reworked and the API won't change significantly, but will
 be only extended. The same is true for the `memory` package.
-
-`network` and `async` packages should be reviewed in the future and the API may
-change.
 
 `math` package contains an arbitrary precision integer implementation that has
 a stable API (that mostly consists of operator overloads), but still needs

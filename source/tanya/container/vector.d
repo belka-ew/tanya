@@ -10,9 +10,11 @@
  */  
 module tanya.container.vector;
 
-import core.stdc.string;
+import core.checkedint;
 import core.exception;
+import core.stdc.string;
 import std.algorithm.comparison;
+import std.algorithm.mutation;
 import std.conv;
 import std.range.primitives;
 import std.meta;
@@ -297,30 +299,6 @@ struct Vector(T)
 		assert(capacity_ == 0 || vector !is null);
 	}
 
-	// Reserves memory to store len objects and initializes it.
-	// Doesn't change the length.
-	private void initialize(in size_t len)
-	{
-		reserve(len);
-		if (capacity_ < len)
-		{
-			onOutOfMemoryError();
-		}
-		const init = typeid(T).initializer();
-		if (init.ptr)
-		{
-			const T* end = vector + len;
-			for (void* v = vector + length_; v != end; v += init.length)
-			{
-				memcpy(v, init.ptr, init.length);
-			}
-                }
-                else
-                {
-			memset(vector + length_, 0, (len - length_) * T.sizeof);
-                }
-	}
-
 	/**
 	 * Creates a new $(D_PSYMBOL Vector).
 	 *
@@ -364,7 +342,8 @@ struct Vector(T)
 		{
 			return;
 		}
-		initialize(len);
+		reserve(len);
+		initializeAll(vector[0 .. len]);
 		capacity_ = length_ = len;
 	}
 
@@ -385,9 +364,9 @@ struct Vector(T)
 		{
 			return;
 		}
-		initialize(len);
+		reserve(len);
+		uninitializedFill(vector[0 .. len], init);
 		capacity_ = length_ = len;
-		opSliceAssign(init, 0, length_);
 	}
 
 	/// Ditto.
@@ -503,7 +482,8 @@ struct Vector(T)
 		}
 		else if (len > length_)
 		{
-			initialize(len);
+			reserve(len);
+			initializeAll(vector[length_ .. len]);
 		}
 		else
 		{
@@ -549,13 +529,41 @@ struct Vector(T)
 	 */
 	void reserve(in size_t size) @trusted
 	{
-		if (capacity_ < size)
+		if (capacity_ >= size)
 		{
-			void[] buf = vector[0 .. capacity_];
-			allocator.reallocate(buf, size * T.sizeof);
-			vector = cast(T*) buf;
-			capacity_ = size;
+			return;
 		}
+		bool overflow;
+		immutable byteSize = mulu(size, T.sizeof, overflow);
+		if (overflow)
+		{
+			onOutOfMemoryErrorNoGC();
+		}
+		void[] buf = vector[0 .. capacity_];
+		if (!allocator.expand(buf, byteSize))
+		{
+			buf = allocator.allocate(byteSize);
+			if (buf is null)
+			{
+				onOutOfMemoryErrorNoGC();
+			}
+			scope (failure)
+			{
+				allocator.deallocate(buf);
+			}
+			const T* end = vector + length_;
+			for (T* src = vector, dest = cast(T*) buf; src != end; ++src, ++dest)
+			{
+				moveEmplace(*src, *dest);
+				static if (hasElaborateDestructor!T)
+				{
+					destroy(*src);
+				}
+			}
+			allocator.deallocate(vector[0 .. capacity_]);
+			vector = cast(T*) buf;
+		}
+		capacity_ = size;
 	}
 
 	///
@@ -718,10 +726,6 @@ struct Vector(T)
 		if (allSatisfy!(ApplyRight!(isImplicitlyConvertible, T), R))
 	{
 		reserve(length_ + el.length);
-		if (capacity_ <= length_)
-		{
-			onOutOfMemoryError();
-		}
 		foreach (i; el)
 		{
 			emplace(vector + length_, i);
@@ -737,8 +741,10 @@ struct Vector(T)
 		 && isImplicitlyConvertible!(ElementType!R, T))
 	{
 		immutable rLen = walkLength(el);
+		immutable newLen = length_ + rLen;
 
-		initialize(length_ + rLen);
+		reserve(newLen);
+		initializeAll(vector[length_ .. newLen]);
 		T* pos = vector + length_;
 		foreach (e; el)
 		{
@@ -1270,11 +1276,7 @@ struct Vector(T)
 	}
 	body
 	{
-		const T* end = vector + j;
-		for (T* v = vector + i; v != end; ++v)
-		{
-			*v = value;
-		}
+		fill(vector[i .. j], value);
 		return opSlice(i, j);
 	}
 
