@@ -273,8 +273,7 @@ private struct Range(E)
 		}
 
 		Range opSliceAssign(R)(R value, in size_t i, in size_t j)
-			if ((isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
-			 || is(R == Vector))
+			if (isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
 		{
 			return opSliceAssign(value[], i, j);
 		}
@@ -535,10 +534,8 @@ struct Vector(T)
 		}
 		bool overflow;
 		immutable byteSize = mulu(size, T.sizeof, overflow);
-		if (overflow)
-		{
-			onOutOfMemoryErrorNoGC();
-		}
+		assert(!overflow);
+
 		void[] buf = vector[0 .. capacity_];
 		if (!allocator.expand(buf, byteSize))
 		{
@@ -741,14 +738,12 @@ struct Vector(T)
 		 && isImplicitlyConvertible!(ElementType!R, T))
 	{
 		immutable rLen = walkLength(el);
-		immutable newLen = length_ + rLen;
 
-		reserve(newLen);
-		initializeAll(vector[length_ .. newLen]);
+		reserve(length_ + rLen);
 		T* pos = vector + length_;
 		foreach (e; el)
 		{
-			*pos = e;
+			emplace(pos, e);
 			++length_, ++pos;
 		}
 		return rLen;
@@ -1259,14 +1254,14 @@ struct Vector(T)
 	 * Slicing assignment.
 	 *
 	 * Params:
-	 * 	value = New value.
+	 * 	value = New value (single value or input range).
 	 * 	i     = Slice start.
 	 * 	j     = Slice end.
 	 *
 	 * Returns: Slice with the assigned part of the vector.
 	 *
 	 * Precondition: $(D_INLINECODE i <= j && j <= length);
-	 *               The lenghts of the ranges and slices match.
+	 *               The lenghts of the range and slice match.
 	 */
 	Range!T opSliceAssign(ref T value, in size_t i, in size_t j) @trusted
 	in
@@ -1276,7 +1271,7 @@ struct Vector(T)
 	}
 	body
 	{
-		fill(vector[i .. j], value);
+		vector[i .. j] = value;
 		return opSlice(i, j);
 	}
 
@@ -1293,6 +1288,8 @@ struct Vector(T)
 		 && isImplicitlyConvertible!(ElementType!R, T))
 	in
 	{
+		assert(i <= j);
+		assert(j <= length);
 		assert(j - i == walkLength(value));
 	}
 	body
@@ -1307,8 +1304,7 @@ struct Vector(T)
 
 	/// Ditto.
 	Range!T opSliceAssign(R)(R value, in size_t i, in size_t j)
-		if ((isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
-	         || is(R == Vector))
+		if (isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
 	{
 		return opSliceAssign(value[], i, j);
 	}
