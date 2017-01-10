@@ -306,22 +306,88 @@ struct Vector(T)
 	 * 	            to generate a list.
 	 * 	allocator = Allocator.
 	 */
-	this(R)(auto ref R init, shared Allocator allocator = defaultAllocator)
-		if ((isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
-	         || is(R == Vector))
+	this(R)(auto in ref R init, shared Allocator allocator = defaultAllocator)
+		if (isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
 	{
 		this(allocator);
 		insertBack(init[]);
 	}
 
 	/// Ditto.
-	this(R)(R init, shared Allocator allocator = defaultAllocator)
+	this(R)(auto in ref R init, shared Allocator allocator = defaultAllocator)
 		if (!isInfinite!R
 		 && isInputRange!R
 		 && isImplicitlyConvertible!(ElementType!R, T))
 	{
 		this(allocator);
 		insertBack(init);
+	}
+
+	/**
+	 * Initializes this vector from another one.
+	 *
+	 * If $(D_PARAM init) is passed by value, it won't be copied, but moved
+	 * If the allocator of ($D_PARAM init) matches $(D_PARAM allocator),
+	 * $(D_KEYWORD this) will just take the ownership over $(D_PARAM init)'s
+	 * storage, otherwise, the storage will be allocated with
+	 * $(D_PARAM allocator) and all elements will be moved;
+	 * $(D_PARAM init) will be destroyed at the end.
+	 *
+	 * If $(D_PARAM init) is passed by reference, it will be copied.
+	 *
+	 * Params:
+	 * 	init      = Source vector.
+	 * 	allocator = Allocator.
+	 */
+	this(ref Vector init, shared Allocator allocator = defaultAllocator) @trusted
+	{
+		this(allocator);
+		insertBack(init[]);
+	}
+
+	/// Ditto.
+	this(Vector init, shared Allocator allocator = defaultAllocator) @trusted
+	{
+		if (allocator is init.allocator)
+		{
+			// Just steal all references and the allocator.
+			this(init.allocator);
+			vector = init.vector;
+			length_ = init.length_;
+			capacity_ = init.capacity_;
+
+			// Reset the source vector, so it can't destroy the moved storage.
+			init.length_ = init.capacity_ = 0;
+			init.vector = null;
+		}
+		else
+		{
+			// Move each element.
+			this(allocator);
+			reserve(init.length);
+
+			const T* end = vector + init.length;
+			for (T* src = init.vector, dest = vector; dest != end; ++src, ++dest)
+			{
+				moveEmplace(*src, *dest);
+			}
+			length_ = init.length;
+			// Destructor of init should destroy it here.
+		}
+	}
+
+	///
+	@nogc @safe unittest
+	{
+		auto v1 = Vector!int(IL(1, 2, 3));
+		auto v2 = Vector!int(v1);
+		assert(v1.vector !is v2.vector);
+		assert(v1 == v2);
+
+		auto v3 = Vector!int(Vector!int(IL(1, 2, 3)));
+		assert(v1 == v3);
+		assert(v3.length == 3);
+		assert(v3.capacity == 3);
 	}
 
 	/**
@@ -342,7 +408,7 @@ struct Vector(T)
 		}
 		reserve(len);
 		initializeAll(vector[0 .. len]);
-		capacity_ = length_ = len;
+		length_ = len;
 	}
 
 	/**
@@ -364,7 +430,7 @@ struct Vector(T)
 		}
 		reserve(len);
 		uninitializedFill(vector[0 .. len], init);
-		capacity_ = length_ = len;
+		length_ = len;
 	}
 
 	/// Ditto.
@@ -396,6 +462,11 @@ struct Vector(T)
 		assert(v.capacity == 3);
 		assert(v.length == 3);
 		assert(v[0] == 5 && v[1] == 5 && v[2] == 5);
+	}
+
+	@safe unittest
+	{
+		auto v1 = Vector!int(defaultAllocator);
 	}
 
 	/**
