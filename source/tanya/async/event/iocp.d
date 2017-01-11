@@ -218,11 +218,11 @@ class IOCPLoop : Loop
 				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket);
 				auto io = MmapPool.instance.make!IOWatcher(transport, connection.protocol);
 
-				connection.incoming.insertBack(io);
+				connection.incoming.enqueue(io);
 
 				reify(io, EventMask(Event.none), EventMask(Event.read, Event.write));
 
-				swapPendings.insertBack(connection);
+				swapPendings.enqueue(connection);
 				listener.beginAccept(overlapped);
 				break;
 			case OverlappedSocketEvent.read:
@@ -264,7 +264,7 @@ class IOCPLoop : Loop
 					{
 						transport.socket.beginReceive(io.output[], overlapped);
 					}
-					swapPendings.insertBack(io);
+					swapPendings.enqueue(io);
 				}
 				break;
 			case OverlappedSocketEvent.write:

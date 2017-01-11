@@ -184,8 +184,10 @@ abstract class Loop
 			poll();
 
 			// Invoke pendings
-			swapPendings.each!((ref p) @nogc => p.invoke());
-
+			foreach (ref w; *swapPendings)
+			{
+				w.invoke();
+			}
 			swap(pendings, swapPendings);
 		}
 		while (!done_);
@@ -283,7 +285,7 @@ abstract class Loop
 		defaultAllocator.dispose(watcher.socket);
 		MmapPool.instance.dispose(watcher.transport);
 		watcher.exception = exception;
-		swapPendings.insertBack(watcher);
+		swapPendings.enqueue(watcher);
 	}
 
 	/**

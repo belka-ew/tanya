@@ -1341,7 +1341,7 @@ struct Vector(T)
 	}
 	body
 	{
-		vector[i .. j] = value;
+		vector[i .. j].fill(value);
 		return opSlice(i, j);
 	}
 

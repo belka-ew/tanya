@@ -10,8 +10,9 @@
  */  
 module tanya.container.queue;
 
-import tanya.container.entry;
 import std.traits;
+import std.algorithm.mutation;
+import tanya.container.entry;
 import tanya.memory;
 
 /**
@@ -27,30 +28,22 @@ struct Queue(T)
 	 */
 	~this()
 	{
-		clear();
+		while (!empty)
+		{
+			dequeue();
+		}
 	}
 
 	/**
 	 * Removes all elements from the queue.
 	 */
+	deprecated
 	void clear()
 	{
 		while (!empty)
 		{
-			popFront();
+			dequeue();
 		}
-	}
-
-	///
-	unittest
-	{
-		Queue!int q;
-
-		assert(q.empty);
-		q.insertBack(8);
-		q.insertBack(9);
-		q.clear();
-		assert(q.empty);
 	}
 
 	/**
@@ -75,18 +68,18 @@ struct Queue(T)
 		Queue!int q;
 
 		assert(q.length == 0);
-		q.insertBack(5);
+		q.enqueue(5);
 		assert(q.length == 1);
-		q.insertBack(4);
+		q.enqueue(4);
 		assert(q.length == 2);
-		q.insertBack(9);
+		q.enqueue(9);
 		assert(q.length == 3);
 
-		q.popFront();
+		q.dequeue();
 		assert(q.length == 2);
-		q.popFront();
+		q.dequeue();
 		assert(q.length == 1);
-		q.popFront();
+		q.dequeue();
 		assert(q.length == 0);
 	}
 
@@ -97,14 +90,17 @@ struct Queue(T)
 		 *
 		 * Returns: Whether $(D_KEYWORD this) and $(D_PARAM that) are equal.
 		 */
+		deprecated
 		int opEquals(ref typeof(this) that);
 
 		/// Ditto.
+		deprecated
 		int opEquals(typeof(this) that);
 	}
 	else static if (!hasMember!(T, "opEquals")
 	             || (functionAttributes!(T.opEquals) & FunctionAttribute.const_))
 	{
+		deprecated
 		bool opEquals(in ref typeof(this) that) const
 		{
 			const(Entry!T)* i = first.next;
@@ -121,7 +117,7 @@ struct Queue(T)
 			return i is null && j is null;
 		}
 
-		/// Ditto.
+		deprecated
 		bool opEquals(in typeof(this) that) const
 		{
 			return opEquals(that);
@@ -129,11 +125,7 @@ struct Queue(T)
 	}
 	else
 	{
-		/**
-		 * Compares two queues. Checks if all elements of the both queues are equal.
-		 *
-		 * Returns: How many elements are in the queue.
-		 */
+		deprecated
 		bool opEquals(ref typeof(this) that)
 		{
 			Entry!T* i = first.next;
@@ -150,46 +142,17 @@ struct Queue(T)
 			return i is null && j is null;
 		}
 
-		/// Ditto.
+		deprecated
 		bool opEquals(typeof(this) that)
 		{
 			return opEquals(that);
 		}
 	}
 
-	///
-	unittest
-	{
-		Queue!int q1, q2;
-
-		q1.insertBack(5);
-		q1.insertBack(4);
-		q2.insertBack(5);
-		assert(q1 != q2);
-		q2.insertBack(4);
-		assert(q1 == q2);
-
-		q2.popFront();
-		assert(q1 != q2);
-
-		q1.popFront();
-		assert(q1 == q2);
-
-		q1.popFront();
-		q2.popFront();
-		assert(q1 == q2);
-	}
-
-	private unittest
-	{
-		static assert(is(Queue!ConstEqualsStruct));
-		static assert(is(Queue!MutableEqualsStruct));
-		static assert(is(Queue!NoEqualsStruct));
-	}
-
 	/**
 	 * Returns: First element.
 	 */
+	deprecated("Use dequeue instead.")
 	@property ref inout(T) front() inout
 	in
 	{
@@ -205,13 +168,12 @@ struct Queue(T)
 	 *
 	 * Params:
 	 * 	x = New element.
+	 *
+	 * Returns: $(D_KEYWORD this).
 	 */
-	void insertBack(ref T x)
+	ref typeof(this) enqueue(ref T x)
 	{
-		auto temp = allocator.make!(Entry!T);
-		
-		temp.content = x;
-
+		auto temp = allocator.make!(Entry!T)(x);
 		if (empty)
 		{
 			first.next = rear = temp;
@@ -221,16 +183,20 @@ struct Queue(T)
 			rear.next = temp;
 			rear = rear.next;
 		}
+		return this;
 	}
 
 	/// Ditto.
-	void insertBack(T x)
+	ref typeof(this) enqueue(T x)
 	{
-		insertBack(x);
+		return enqueue(x);
 	}
 
-	/// Ditto.
-	alias insert = insertBack;
+	deprecated("Use enqueue instead.")
+	alias insert = enqueue;
+
+	deprecated("Use enqueue instead.")
+	alias insertBack = enqueue;
 
 	///
 	unittest
@@ -238,10 +204,9 @@ struct Queue(T)
 		Queue!int q;
 
 		assert(q.empty);
-		q.insertBack(8);
-		assert(q.front == 8);
-		q.insertBack(9);
-		assert(q.front == 8);
+		q.enqueue(8).enqueue(9);
+		assert(q.dequeue() == 8);
+		assert(q.dequeue() == 9);
 	}
 
 	/**
@@ -259,14 +224,16 @@ struct Queue(T)
 		int value = 7;
 
 		assert(q.empty);
-		q.insertBack(value);
+		q.enqueue(value);
 		assert(!q.empty);
 	}
 
 	/**
 	 * Move the position to the next element.
+	 *
+	 * Returns: Dequeued element.
 	 */
-	void popFront()
+	T dequeue()
 	in
 	{
 		assert(!empty);
@@ -275,21 +242,24 @@ struct Queue(T)
 	body
 	{
 		auto n = first.next.next;
+		T ret = move(first.next.content);
 
 		dispose(allocator, first.next);
 		first.next = n;
+		return ret;
 	}
+
+	deprecated("Use dequeue instead.")
+	alias popFront = dequeue;
 
 	///
 	unittest
 	{
 		Queue!int q;
 
-		q.insertBack(8);
-		q.insertBack(9);
-		assert(q.front == 8);
-		q.popFront();
-		assert(q.front == 9);
+		q.enqueue(8).enqueue(9);
+		assert(q.dequeue() == 8);
+		assert(q.dequeue() == 9);
 	}
 
 	/**
@@ -305,11 +275,11 @@ struct Queue(T)
 
 		for (size_t i = 0; !empty; ++i)
 		{
-			if ((result = dg(i, front)) != 0)
+			auto e = dequeue();
+			if ((result = dg(i, e)) != 0)
 			{
 				return result;
 			}
-			popFront();
 		}
 		return result;
 	}
@@ -321,11 +291,11 @@ struct Queue(T)
 
 		while (!empty)
 		{
-			if ((result = dg(front)) != 0)
+			auto e = dequeue();
+			if ((result = dg(e)) != 0)
 			{
 				return result;
 			}
-			popFront();
 		}
 		return result;
 	}
@@ -336,9 +306,7 @@ struct Queue(T)
 		Queue!int q;
 
 		size_t j;
-		q.insertBack(5);
-		q.insertBack(4);
-		q.insertBack(9);
+		q.enqueue(5).enqueue(4).enqueue(9);
 		foreach (i, e; q)
 		{
 			assert(i != 2 || e == 9);
@@ -350,9 +318,7 @@ struct Queue(T)
 		assert(q.empty);
 
 		j = 0;
-		q.insertBack(5);
-		q.insertBack(4);
-		q.insertBack(9);
+		q.enqueue(5).enqueue(4).enqueue(9);
 		foreach (e; q)
 		{
 			assert(j != 2 || e == 9);
@@ -378,17 +344,12 @@ unittest
 {
 	Queue!int q;
 
-	q.insertBack(5);
+	q.enqueue(5);
 	assert(!q.empty);
 
-	q.insertBack(4);
-	assert(q.front == 5);
+	q.enqueue(4).enqueue(9);
 
-	q.insertBack(9);
-	assert(q.front == 5);
-
-	q.popFront();
-	assert(q.front == 4);
+	assert(q.dequeue() == 5);
 
 	foreach (i, ref e; q)
 	{

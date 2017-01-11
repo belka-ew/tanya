@@ -248,12 +248,12 @@ abstract class SelectorLoop : Loop
 			}
 
 			reify(io, EventMask(Event.none), EventMask(Event.read, Event.write));
-			connection.incoming.insertBack(io);
+			connection.incoming.enqueue(io);
 		}
 
 		if (!connection.incoming.empty)
 		{
-			swapPendings.insertBack(connection);
+			swapPendings.enqueue(connection);
 		}
 	}
 }

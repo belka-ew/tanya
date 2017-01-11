@@ -159,7 +159,7 @@ class EpollLoop : SelectorLoop
 				}
 				else if (io.output.length)
 				{
-					swapPendings.insertBack(io);
+					swapPendings.enqueue(io);
 				}
 			}
 			else if (events[i].events & EPOLLOUT)
