@@ -1083,7 +1083,7 @@ struct Vector(T)
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
 	 */
-	int opApply(scope int delegate(ref T) dg)
+	int opApply(scope int delegate(ref T) @nogc dg)
 	{
 		T* end = vector + length_ - 1;
 		for (T* begin = vector; begin != end; ++begin)
@@ -1098,7 +1098,7 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	int opApply(scope int delegate(ref size_t i, ref T) dg)
+	int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
 	{
 		for (size_t i = 0; i < length_; ++i)
 		{
@@ -1393,6 +1393,19 @@ struct Vector(T)
 		v2[0 .. $] = v1[1 .. 3];
 		assert(v2[0] == 286);
 		assert(v2[1] == 3);
+	}
+
+	/**
+	 * Returns an array used internally by the vector to store its owned elements.
+	 * The length of the returned array may differ from the size of the allocated
+	 * memory for the vector: the array contains only initialized elements, but
+	 * not the reserved memory.
+	 *
+	 * Returns: The array with elements of this vector.
+	 */
+	inout(T[]) data() inout
+	{
+		return vector[0 .. length];
 	}
 
 	mixin DefaultAllocator;

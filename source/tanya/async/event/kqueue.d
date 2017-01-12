@@ -41,8 +41,19 @@ else version (DragonFlyBSD)
 
 version (MacBSD):
 
-import core.stdc.stdint;    // intptr_t, uintptr_t
+import core.stdc.errno;
 import core.sys.posix.time; // timespec
+import core.sys.posix.unistd;
+import core.time;
+import std.algorithm.comparison;
+import tanya.async.event.selector;
+import tanya.async.loop;
+import tanya.async.transport;
+import tanya.async.watcher;
+import tanya.container.vector;
+import tanya.memory;
+import tanya.memory.mmappool;
+import tanya.network.socket;
 
 void EV_SET(kevent_t* kevp, typeof(kevent_t.tupleof) args) pure nothrow @nogc
 {
@@ -102,24 +113,11 @@ extern(C) int kevent(int kq, const kevent_t *changelist, int nchanges,
                      kevent_t *eventlist, int nevents, const timespec *timeout)
                      nothrow @nogc;
 
-import tanya.async.event.selector;
-import tanya.async.loop;
-import tanya.async.transport;
-import tanya.async.watcher;
-import tanya.memory;
-import tanya.memory.mmappool;
-import tanya.network.socket;
-import core.stdc.errno;
-import core.sys.posix.unistd;
-import core.sys.posix.sys.time;
-import core.time;
-import std.algorithm.comparison;
-
 class KqueueLoop : SelectorLoop
 {
 	protected int fd;
-	private kevent_t[] events;
-	private kevent_t[] changes;
+	private Vector!kevent_t events;
+	private Vector!kevent_t changes;
 	private size_t changeCount;
 
 	/**
@@ -138,19 +136,18 @@ class KqueueLoop : SelectorLoop
 
 		if ((fd = kqueue()) == -1)
 		{
-			throw MmapPool.instance.make!BadLoopException("epoll initialization failed");
+			throw make!BadLoopException(defaultAllocator,
+			                            "kqueue initialization failed");
 		}
-		MmapPool.instance.resizeArray(events, 64);
-		MmapPool.instance.resizeArray(changes, 64);
+		events = Vector!kevent_t(64, MmapPool.instance);
+		changes = Vector!kevent_t(64, MmapPool.instance);
 	}
 
 	/**
-	 * Free loop internals.
+	 * Frees loop internals.
 	 */
 	~this() @nogc
 	{
-		MmapPool.instance.dispose(events);
-		MmapPool.instance.dispose(changes);
 		close(fd);
 	}
 
@@ -158,7 +155,7 @@ class KqueueLoop : SelectorLoop
 	{
 		if (changes.length <= changeCount)
 		{
-			MmapPool.instance.resizeArray(changes, changeCount + maxEvents);
+			changes.length = changeCount + maxEvents;
 		}
 		EV_SET(&changes[changeCount],
 			   cast(ulong) socket,
@@ -216,10 +213,15 @@ class KqueueLoop : SelectorLoop
 
 		if (changeCount > maxEvents) 
 		{
-			MmapPool.instance.resizeArray(events, changes.length);
+			events.length = changes.length;
 		}
 
-		auto eventCount = kevent(fd, changes.ptr, cast(int) changeCount, events.ptr, maxEvents, &ts);
+		auto eventCount = kevent(fd,
+		                         changes.data.ptr,
+		                         cast(int) changeCount,
+		                         events.data.ptr,
+		                         maxEvents,
+		                         &ts);
 		changeCount = 0;
 
 		if (eventCount < 0)

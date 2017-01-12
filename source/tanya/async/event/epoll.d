@@ -18,6 +18,7 @@ import tanya.async.event.selector;
 import tanya.async.loop;
 import tanya.async.transport;
 import tanya.async.watcher;
+import tanya.container.vector;
 import tanya.memory;
 import tanya.memory.mmappool;
 import tanya.network.socket;
@@ -36,7 +37,7 @@ extern (C) nothrow @nogc
 class EpollLoop : SelectorLoop
 {
 	protected int fd;
-	private epoll_event[] events;
+	private Vector!epoll_event events;
 
 	/**
 	 * Initializes the loop.
@@ -48,15 +49,14 @@ class EpollLoop : SelectorLoop
 			throw MmapPool.instance.make!BadLoopException("epoll initialization failed");
 		}
 		super();
-		MmapPool.instance.resizeArray(events, maxEvents);
+		events = Vector!epoll_event(maxEvents, MmapPool.instance);
 	}
 
 	/**
-	 * Free loop internals.
+	 * Frees loop internals.
 	 */
 	~this() @nogc
 	{
-		MmapPool.instance.dispose(events);
 		close(fd);
 	}
 
@@ -97,8 +97,8 @@ class EpollLoop : SelectorLoop
 
 		ev.data.fd = watcher.socket.handle;
 		ev.events = (events & (Event.read | Event.accept) ? EPOLLIN | EPOLLPRI : 0)
-				  | (events & Event.write ? EPOLLOUT : 0)
-				  | EPOLLET;
+		          | (events & Event.write ? EPOLLOUT : 0)
+		          | EPOLLET;
 
 		return epoll_ctl(fd, op, watcher.socket.handle, &ev) == 0;
 	}
@@ -110,7 +110,7 @@ class EpollLoop : SelectorLoop
 	{
 		// Don't block
 		immutable timeout = cast(immutable int) blockTime.total!"msecs";
-		auto eventCount = epoll_wait(fd, events.ptr, maxEvents, timeout);
+		auto eventCount = epoll_wait(fd, events.data.ptr, maxEvents, timeout);
 
 		if (eventCount < 0)
 		{

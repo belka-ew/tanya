@@ -16,11 +16,10 @@ import tanya.async.loop;
 import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.buffer;
+import tanya.container.vector;
 import tanya.memory;
 import tanya.memory.mmappool;
 import tanya.network.socket;
-import core.sys.posix.netinet.in_;
-import core.stdc.errno;
 
 /**
  * Transport for stream sockets.
@@ -103,12 +102,12 @@ class SelectorStreamTransport : StreamTransport
 abstract class SelectorLoop : Loop
 {
 	/// Pending connections.
-	protected ConnectionWatcher[] connections;
+	protected Vector!ConnectionWatcher connections;
 
 	this() @nogc
 	{
 		super();
-		MmapPool.instance.resizeArray(connections, maxEvents);
+		connections = Vector!ConnectionWatcher(maxEvents, MmapPool.instance);
 	}
 
 	~this() @nogc
@@ -124,7 +123,6 @@ abstract class SelectorLoop : Loop
 				connection = null;
 			}
 		}
-		MmapPool.instance.dispose(connections);
 	}
 
 	/**
@@ -188,7 +186,7 @@ abstract class SelectorLoop : Loop
 
 		if (connections.length <= watcher.socket)
 		{
-			MmapPool.instance.resizeArray(connections, watcher.socket.handle + maxEvents / 2);
+			connections.length = watcher.socket.handle + maxEvents / 2;
 		}
 		connections[watcher.socket.handle] = watcher;
 
@@ -234,7 +232,7 @@ abstract class SelectorLoop : Loop
 			}
 			else
 			{
-				MmapPool.instance.resizeArray(connections, client.handle + maxEvents / 2);
+				connections.length = client.handle + maxEvents / 2;
 			}
 			if (io is null)
 			{
