@@ -203,7 +203,7 @@ struct ReadBuffer(T = ubyte)
 		numberRead = fillBuffer(b[], b.free, 0, 10);
 		b += numberRead;
 
-		result = b[0..$];
+		result = b[0 .. $];
 		assert(result[0] == 0);
 		assert(result[1] == 1);
 		assert(result[9] == 9);
@@ -261,7 +261,6 @@ struct ReadBuffer(T = ubyte)
 					allocator.reallocate(buf, (cap + blockSize) * T.sizeof);
 					buffer_ = cast(T[]) buf;
 				}();
-				buffer_[cap .. $] = T.init;
 			}
 			ring = length_;
 			return buffer_[length_ .. $];
@@ -280,7 +279,7 @@ struct ReadBuffer(T = ubyte)
 		b += numberRead;
 
 		assert(b.length == 10);
-		result = b[0..$];
+		result = b[0 .. $];
 		assert(result[0] == 0);
 		assert(result[9] == 9);
 		b.clear();
@@ -337,32 +336,24 @@ struct WriteBuffer(T = ubyte)
 	 * 	size      = Initial buffer size and the size by which the buffer will
 	 * 	            grow.
 	 * 	allocator = Allocator.
+	 *
+	 * Precondition: $(D_INLINECODE size > 0 && allocator !is null)
 	 */
 	this(in size_t size, shared Allocator allocator = defaultAllocator) @trusted
 	in
 	{
 		assert(size > 0);
+		assert(allocator !is null);
 	}
 	body
 	{
 		blockSize = size;
 		ring = size - 1;
-		this(allocator);
+		allocator_ = allocator;
 		buffer_ = cast(T[]) allocator_.allocate(size * T.sizeof);
 	}
 
 	@disable this();
-
-	/// Ditto.
-	this(shared Allocator allocator)
-	in
-	{
-		assert(allocator !is null);
-	}
-	body
-	{
-		allocator_ = allocator;
-	}
 
 	/**
 	 * Deallocates the internal buffer.

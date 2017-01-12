@@ -124,8 +124,8 @@ class KqueueLoop : SelectorLoop
 	 * Returns: Maximal event count can be got at a time
 	 *          (should be supported by the backend).
 	 */
-	override protected @property inout(uint) maxEvents()
-	inout const pure nothrow @safe @nogc
+	override protected @property uint maxEvents()
+	const pure nothrow @safe @nogc
 	{
 		return cast(uint) events.length;
 	}
@@ -158,12 +158,12 @@ class KqueueLoop : SelectorLoop
 			changes.length = changeCount + maxEvents;
 		}
 		EV_SET(&changes[changeCount],
-			   cast(ulong) socket,
-			   filter,
-			   flags,
-			   0U,
-			   0L,
-			   null);
+		       cast(ulong) socket,
+		       filter,
+		       flags,
+		       0U,
+		       0L,
+		       null);
 		++changeCount;
 	}
 

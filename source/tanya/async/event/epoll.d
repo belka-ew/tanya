@@ -46,7 +46,7 @@ class EpollLoop : SelectorLoop
 	{
 		if ((fd = epoll_create1(EPOLL_CLOEXEC)) < 0)
 		{
-			throw MmapPool.instance.make!BadLoopException("epoll initialization failed");
+			throw defaultAllocator.make!BadLoopException("epoll initialization failed");
 		}
 		super();
 		events = Vector!epoll_event(maxEvents, MmapPool.instance);
