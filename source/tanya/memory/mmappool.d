@@ -156,7 +156,7 @@ final class MmapPool : Allocator
 	 */
 	bool deallocate(void[] p) shared nothrow @nogc
 	{
-		if (p is null)
+		if (p.ptr is null)
 		{
 			return true;
 		}

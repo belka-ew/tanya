@@ -220,15 +220,26 @@ void dispose(T)(shared Allocator allocator, auto ref T p)
 }
 
 /// Ditto.
-void dispose(T)(shared Allocator allocator, auto ref T[] array)
+void dispose(T)(shared Allocator allocator, auto ref T[] p)
 {
-	static if (hasElaborateDestructor!(typeof(array[0])))
+	static if (hasElaborateDestructor!(typeof(p[0])))
 	{
-	foreach (ref e; array)
+		import std.algorithm.iteration;
+		p.each!(e => destroy(e));
+	}
+	() @trusted { allocator.deallocate(p); }();
+	p = null;
+}
+
+unittest
+{
+	struct S
 	{
-	    destroy(e);
+		~this()
+		{
+		}
 	}
-	}
-	() @trusted { allocator.deallocate(array); }();
-	array = null;
+	auto p = cast(S[]) defaultAllocator.allocate(S.sizeof);
+
+	defaultAllocator.dispose(p);
 }
