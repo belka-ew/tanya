@@ -1403,7 +1403,7 @@ struct Vector(T)
 	 *
 	 * Returns: The array with elements of this vector.
 	 */
-	inout(T[]) data() inout
+	@property inout(T[]) data() inout
 	{
 		return vector[0 .. length];
 	}

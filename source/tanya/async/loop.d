@@ -27,7 +27,7 @@
  * 		this.transport = transport;
  * 	}
  *
- * 	void disconnected(SocketException e = null) @nogc
+ * 	void disconnected(SocketException e) @nogc
  * 	{
  * 	}
  * }

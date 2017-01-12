@@ -39,7 +39,7 @@ interface Protocol
 	 * 	exception = $(D_PSYMBOL Exception) if an error caused
 	 * 	            the disconnect, $(D_KEYWORD null) otherwise.
 	 */
-	void disconnected(SocketException exception = null) @nogc;
+	void disconnected(SocketException exception) @nogc;
 }
 
 /**
