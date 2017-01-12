@@ -6,7 +6,7 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
 module tanya.async.watcher;
 
@@ -61,6 +61,7 @@ class ConnectionWatcher : Watcher
 	 */
 	this(Socket socket) @nogc
 	{
+		incoming = Queue!IOWatcher(MmapPool.instance);
 		socket_ = socket;
 	}
 
@@ -233,7 +234,7 @@ class IOWatcher : ConnectionWatcher
 	{
 		if (output.length)
 		{
-			protocol.received(output[0..$]);
+			protocol.received(output[0 .. $]);
 			output.clear();
 		}
 		else

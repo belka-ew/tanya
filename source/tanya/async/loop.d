@@ -6,7 +6,7 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  *
  * ---
  * import tanya.async;
@@ -131,10 +131,7 @@ alias EventMask = BitFlags!Event;
 abstract class Loop
 {
 	/// Pending watchers.
-	protected Queue!Watcher* pendings;
-
-	/// Ditto.
-	protected Queue!Watcher* swapPendings;
+	protected Queue!Watcher pendings;
 
 	/**
 	 * Returns: Maximal event count can be got at a time
@@ -151,8 +148,7 @@ abstract class Loop
 	 */
 	this() @nogc
 	{
-		pendings = MmapPool.instance.make!(Queue!Watcher)(MmapPool.instance);
-		swapPendings = MmapPool.instance.make!(Queue!Watcher)(MmapPool.instance);
+		pendings = Queue!Watcher(MmapPool.instance);
 	}
 
 	/**
@@ -160,17 +156,10 @@ abstract class Loop
 	 */
 	~this() @nogc
 	{
-		foreach (w; *pendings)
+		foreach (w; pendings)
 		{
 			MmapPool.instance.dispose(w);
 		}
-		MmapPool.instance.dispose(pendings);
-
-		foreach (w; *swapPendings)
-		{
-			MmapPool.instance.dispose(w);
-		}
-		MmapPool.instance.dispose(swapPendings);
 	}
 
 	/**
@@ -184,11 +173,10 @@ abstract class Loop
 			poll();
 
 			// Invoke pendings
-			foreach (ref w; *swapPendings)
+			foreach (ref w; pendings)
 			{
 				w.invoke();
 			}
-			swap(pendings, swapPendings);
 		}
 		while (!done_);
 	}
@@ -255,7 +243,7 @@ abstract class Loop
 	inout @safe pure nothrow @nogc
 	{
 		// Don't block if we have to do.
-		return swapPendings.empty ? blockTime_ : Duration.zero;
+		return pendings.empty ? blockTime_ : Duration.zero;
 	}
 
 	/**
@@ -285,7 +273,7 @@ abstract class Loop
 		defaultAllocator.dispose(watcher.socket);
 		MmapPool.instance.dispose(watcher.transport);
 		watcher.exception = exception;
-		swapPendings.enqueue(watcher);
+		pendings.enqueue(watcher);
 	}
 
 	/**

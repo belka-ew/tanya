@@ -271,7 +271,7 @@ class KqueueLoop : SelectorLoop
 				}
 				else if (io.output.length)
 				{
-					swapPendings.enqueue(io);
+					pendings.enqueue(io);
 				}
 			}
 			else if (events[i].filter == EVFILT_WRITE)

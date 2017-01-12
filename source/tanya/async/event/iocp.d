@@ -6,7 +6,7 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
 module tanya.async.event.iocp;
 
@@ -222,7 +222,7 @@ class IOCPLoop : Loop
 
 				reify(io, EventMask(Event.none), EventMask(Event.read, Event.write));
 
-				swapPendings.enqueue(connection);
+				pendings.enqueue(connection);
 				listener.beginAccept(overlapped);
 				break;
 			case OverlappedSocketEvent.read:
@@ -264,7 +264,7 @@ class IOCPLoop : Loop
 					{
 						transport.socket.beginReceive(io.output[], overlapped);
 					}
-					swapPendings.enqueue(io);
+					pendings.enqueue(io);
 				}
 				break;
 			case OverlappedSocketEvent.write:

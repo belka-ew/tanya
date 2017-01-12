@@ -6,7 +6,7 @@
  * Copyright: Eugene Wissner 2016.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:belka@caraus.de, Eugene Wissner)
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
 module tanya.async.event.selector;
 
@@ -253,7 +253,7 @@ abstract class SelectorLoop : Loop
 
 		if (!connection.incoming.empty)
 		{
-			swapPendings.enqueue(connection);
+			pendings.enqueue(connection);
 		}
 	}
 }
