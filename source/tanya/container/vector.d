@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -178,6 +178,11 @@ private struct Range(E)
 			that.popFront();
 		}
 		return true;
+	}
+
+	@property inout(E[]) data() inout
+	{
+		return begin[0 .. length];
 	}
 
 	static if (isMutable!E)
@@ -1406,6 +1411,21 @@ struct Vector(T)
 	@property inout(T[]) data() inout
 	{
 		return vector[0 .. length];
+	}
+
+	///
+	unittest
+	{
+		auto v = Vector!int(IL(1, 2, 4));
+
+		assert(v.data[0] == 1);
+		assert(v.data[1] == 2);
+		assert(v.data[2] == 4);
+		assert(v.data.length == 3);
+
+		auto data = v[1 .. 2].data;
+		assert(data[0] == 2);
+		assert(data.length == 1);
 	}
 
 	mixin DefaultAllocator;

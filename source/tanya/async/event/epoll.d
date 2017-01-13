@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -132,6 +132,7 @@ class EpollLoop : SelectorLoop
 			else if (events[i].events & EPOLLERR)
 			{
 				kill(io, null);
+				continue;
 			}
 			else if (events[i].events & (EPOLLIN | EPOLLPRI | EPOLLHUP))
 			{
@@ -156,13 +157,14 @@ class EpollLoop : SelectorLoop
 				if (transport.socket.disconnected)
 				{
 					kill(io, exception);
+					continue;
 				}
 				else if (io.output.length)
 				{
 					pendings.enqueue(io);
 				}
 			}
-			else if (events[i].events & EPOLLOUT)
+			if (events[i].events & EPOLLOUT)
 			{
 				auto transport = cast(SelectorStreamTransport) io.transport;
 				assert(transport !is null);

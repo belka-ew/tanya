@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -22,7 +22,7 @@ interface Protocol
 	 * Params:
 	 * 	data = Read data.
 	 */
-	void received(ubyte[] data) @nogc;
+	void received(in ubyte[] data) @nogc;
 
 	/**
 	 * Called when a connection is made.
