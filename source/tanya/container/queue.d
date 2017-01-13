@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -35,18 +35,6 @@ struct Queue(T)
 	}
 
 	/**
-	 * Removes all elements from the queue.
-	 */
-	deprecated
-	void clear()
-	{
-		while (!empty)
-		{
-			dequeue();
-		}
-	}
-
-	/**
 	 * Returns how many elements are in the queue. It iterates through the queue
 	 * to count the elements.
 	 *
@@ -55,7 +43,7 @@ struct Queue(T)
 	size_t length() const
 	{
 		size_t len;
-		for (const(Entry!T)* i = first.next; i !is null; i = i.next)
+		for (const(Entry!T)* i = first; i !is null; i = i.next)
 		{
 			++len;
 		}
@@ -83,86 +71,6 @@ struct Queue(T)
 		assert(q.length == 0);
 	}
 
-	version (D_Ddoc)
-	{
-		/**
-		 * Compares two queues. Checks if all elements of the both queues are equal.
-		 *
-		 * Returns: Whether $(D_KEYWORD this) and $(D_PARAM that) are equal.
-		 */
-		deprecated
-		int opEquals(ref typeof(this) that);
-
-		/// Ditto.
-		deprecated
-		int opEquals(typeof(this) that);
-	}
-	else static if (!hasMember!(T, "opEquals")
-	             || (functionAttributes!(T.opEquals) & FunctionAttribute.const_))
-	{
-		deprecated
-		bool opEquals(in ref typeof(this) that) const
-		{
-			const(Entry!T)* i = first.next;
-			const(Entry!T)* j = that.first.next;
-			while (i !is null && j !is null)
-			{
-				if (i.content != j.content)
-				{
-					return false;
-				}
-				i = i.next;
-				j = j.next;
-			}
-			return i is null && j is null;
-		}
-
-		deprecated
-		bool opEquals(in typeof(this) that) const
-		{
-			return opEquals(that);
-		}
-	}
-	else
-	{
-		deprecated
-		bool opEquals(ref typeof(this) that)
-		{
-			Entry!T* i = first.next;
-			Entry!T* j = that.first.next;
-			while (i !is null && j !is null)
-			{
-				if (i.content != j.content)
-				{
-					return false;
-				}
-				i = i.next;
-				j = j.next;
-			}
-			return i is null && j is null;
-		}
-
-		deprecated
-		bool opEquals(typeof(this) that)
-		{
-			return opEquals(that);
-		}
-	}
-
-	/**
-	 * Returns: First element.
-	 */
-	deprecated("Use dequeue instead.")
-	@property ref inout(T) front() inout
-	in
-	{
-		assert(!empty);
-	}
-	body
-	{
-		return first.next.content;
-	}
-
 	/**
 	 * Inserts a new element.
 	 *
@@ -176,7 +84,7 @@ struct Queue(T)
 		auto temp = allocator.make!(Entry!T)(x);
 		if (empty)
 		{
-			first.next = rear = temp;
+			first = rear = temp;
 		}
 		else
 		{
@@ -191,12 +99,6 @@ struct Queue(T)
 	{
 		return enqueue(x);
 	}
-
-	deprecated("Use enqueue instead.")
-	alias insert = enqueue;
-
-	deprecated("Use enqueue instead.")
-	alias insertBack = enqueue;
 
 	///
 	unittest
@@ -214,7 +116,7 @@ struct Queue(T)
 	 */
 	@property bool empty() const
 	{
-		return first.next is null;
+		return first is null;
 	}
 
 	///
@@ -237,20 +139,16 @@ struct Queue(T)
 	in
 	{
 		assert(!empty);
-		assert(allocator !is null);
 	}
 	body
 	{
-		auto n = first.next.next;
-		T ret = move(first.next.content);
+		auto n = first.next;
+		T ret = move(first.content);
 
-		dispose(allocator, first.next);
-		first.next = n;
+		allocator.dispose(first);
+		first = n;
 		return ret;
 	}
-
-	deprecated("Use dequeue instead.")
-	alias popFront = dequeue;
 
 	///
 	unittest
@@ -330,10 +228,7 @@ struct Queue(T)
 		assert(q.empty);
 	}
 
-	/// The first element of the list.
-	private Entry!T first;
-
-	/// The last element of the list.
+	private Entry!T* first;
 	private Entry!T* rear;
 
 	mixin DefaultAllocator;

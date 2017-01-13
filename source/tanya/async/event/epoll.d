@@ -110,7 +110,7 @@ class EpollLoop : SelectorLoop
 	{
 		// Don't block
 		immutable timeout = cast(immutable int) blockTime.total!"msecs";
-		auto eventCount = epoll_wait(fd, events.data.ptr, maxEvents, timeout);
+		auto eventCount = epoll_wait(fd, events.get().ptr, maxEvents, timeout);
 
 		if (eventCount < 0)
 		{

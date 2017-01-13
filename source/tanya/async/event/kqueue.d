@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -217,9 +217,9 @@ class KqueueLoop : SelectorLoop
 		}
 
 		auto eventCount = kevent(fd,
-		                         changes.data.ptr,
+		                         changes.get().ptr,
 		                         cast(int) changeCount,
-		                         events.data.ptr,
+		                         events.get().ptr,
 		                         maxEvents,
 		                         &ts);
 		changeCount = 0;

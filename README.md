@@ -35,11 +35,11 @@ helper functions).
 The library is currently under development, but some parts of it can already be
 used.
 
-`network` and `async` exist for quite some time and could be better tested than
+`network` and `async` exist for quite some time and are better tested than
 other components.
 
-Containers were newly reworked and the API won't change significantly, but will
-be only extended. The same is true for the `memory` package.
+`container`s were newly reworked and the API won't change significantly, but
+will be only extended. The same is true for the `memory` package.
 
 `math` package contains an arbitrary precision integer implementation that has
 a stable API (that mostly consists of operator overloads), but still needs

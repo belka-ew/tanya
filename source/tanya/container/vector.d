@@ -180,14 +180,14 @@ private struct Range(E)
 		return true;
 	}
 
-	@property inout(E[]) data() inout
+	inout(E[]) get() inout
 	{
 		return begin[0 .. length];
 	}
 
 	static if (isMutable!E)
 	{
-		bool opEquals(Range that)
+		bool opEquals(Range that) @trusted
 		{
 			if (length != that.length)
 			{
@@ -1408,7 +1408,7 @@ struct Vector(T)
 	 *
 	 * Returns: The array with elements of this vector.
 	 */
-	@property inout(T[]) data() inout
+	inout(T[]) get() inout
 	{
 		return vector[0 .. length];
 	}
@@ -1417,13 +1417,14 @@ struct Vector(T)
 	unittest
 	{
 		auto v = Vector!int(IL(1, 2, 4));
+		auto data = v.get();
 
-		assert(v.data[0] == 1);
-		assert(v.data[1] == 2);
-		assert(v.data[2] == 4);
-		assert(v.data.length == 3);
+		assert(data[0] == 1);
+		assert(data[1] == 2);
+		assert(data[2] == 4);
+		assert(data.length == 3);
 
-		auto data = v[1 .. 2].data;
+		data = v[1 .. 2].get();
 		assert(data[0] == 2);
 		assert(data.length == 1);
 	}
