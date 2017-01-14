@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -50,6 +50,21 @@ else version (Windows)
  */
 final class MmapPool : Allocator
 {
+	invariant
+	{
+		for (auto r = &head; *r !is null; r = &((*r).next))
+		{
+			auto block = cast(Block) (cast(void*) *r + RegionEntry.sizeof);
+			do
+			{
+				assert(block.prev is null || block.prev.next is block);
+				assert(block.next is null || block.next.prev is block);
+				assert(block.region is *r);
+			}
+			while ((block = block.next) !is null);
+		}
+	}
+
 	/**
 	 * Allocates $(D_PARAM size) bytes of memory.
 	 *
