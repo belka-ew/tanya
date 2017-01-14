@@ -243,7 +243,7 @@ final class MmapPool : Allocator
 			return true;
 		}
 		immutable dataSize = addAlignment(size);
-		immutable delta = dataSize - p.length;
+		immutable delta = dataSize - addAlignment(p.length);
 
 		if (block1.next is null
 		 || !block1.next.free
@@ -255,21 +255,17 @@ final class MmapPool : Allocator
 		}
 		if (block1.next.size >= delta + alignment_)
 		{
-			// We should move the start position of the next block. The order may be
-			// important because the old block and the new one can overlap.
-			auto block2 = cast(Block) (p.ptr + dataSize);
-			block2.size = block1.next.size - delta;
-			block2.free = true;
-			block2.region = block1.region;
-			block2.next = block1.next.next;
-			block2.prev = block1;
-
+			// Move size from block2 to block1.
+			block1.next.size = block1.next.size - delta;
 			block1.size = block1.size + delta;
 
+			auto block2 = cast(Block) (p.ptr + dataSize);
 			if (block1.next.next !is null)
 			{
 				block1.next.next.prev = block2;
 			}
+			// block1.next and block2 can overlap.
+			memmove(cast(void*) block2, cast(void*) block1.next, BlockEntry.sizeof);
 			block1.next = block2;
 		}
 		else
@@ -573,4 +569,62 @@ final class MmapPool : Allocator
 		bool free;
 	}
 	private alias Block = shared BlockEntry*;
+}
+
+// A lot of allocations/deallocations, but it is the minimum caused a
+// segmentation fault because MmapPool expand moves a block wrong.
+unittest
+{
+	auto a = MmapPool.instance.allocate(16);
+	auto d = MmapPool.instance.allocate(16);
+	auto b = MmapPool.instance.allocate(16);
+	auto e = MmapPool.instance.allocate(16);
+	auto c = MmapPool.instance.allocate(16);
+	auto f = MmapPool.instance.allocate(16);
+
+	MmapPool.instance.deallocate(a);
+	MmapPool.instance.deallocate(b);
+	MmapPool.instance.deallocate(c);
+
+	a = MmapPool.instance.allocate(50);
+	MmapPool.instance.expand(a, 64);
+	MmapPool.instance.deallocate(a);
+
+	a = MmapPool.instance.allocate(1);
+	auto tmp1 = MmapPool.instance.allocate(1);
+	auto h1 = MmapPool.instance.allocate(1);
+	auto tmp2 = cast(ubyte[]) MmapPool.instance.allocate(1);
+
+	auto h2 = MmapPool.instance.allocate(2);
+	tmp1 = MmapPool.instance.allocate(1);
+	MmapPool.instance.deallocate(h2);
+	MmapPool.instance.deallocate(h1);
+
+	h2 = MmapPool.instance.allocate(2);
+	h1 = MmapPool.instance.allocate(1);
+	MmapPool.instance.deallocate(h2);
+
+	auto rep = cast(void[]) tmp2;
+	MmapPool.instance.reallocate(rep, tmp1.length);
+	tmp2 = cast(ubyte[]) rep;
+
+	MmapPool.instance.reallocate(tmp1, 9);
+
+	rep = cast(void[]) tmp2;
+	MmapPool.instance.reallocate(rep, tmp1.length);
+	tmp2 = cast(ubyte[]) rep;
+	MmapPool.instance.reallocate(tmp1, 17);
+
+	tmp2[$ - 1] = 0;
+
+	MmapPool.instance.deallocate(tmp1);
+
+	b = MmapPool.instance.allocate(16);
+
+	MmapPool.instance.deallocate(h1);
+	MmapPool.instance.deallocate(a);
+	MmapPool.instance.deallocate(b);
+	MmapPool.instance.deallocate(d);
+	MmapPool.instance.deallocate(e);
+	MmapPool.instance.deallocate(f);
 }

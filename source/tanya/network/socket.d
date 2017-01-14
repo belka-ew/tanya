@@ -174,13 +174,13 @@ else version (Windows)
 	alias WSASocket = WSASocketW;
 
 	alias LPFN_GETACCEPTEXSOCKADDRS = VOID function(PVOID,
-													DWORD,
-													DWORD,
-													DWORD,
-													SOCKADDR**,
-													LPINT,
-													SOCKADDR**,
-													LPINT);
+	                                                DWORD,
+	                                                DWORD,
+	                                                DWORD,
+	                                                SOCKADDR**,
+	                                                LPINT,
+	                                                SOCKADDR**,
+	                                                LPINT);
 	const GUID WSAID_GETACCEPTEXSOCKADDRS = {0xb5367df2,0xcbac,0x11cf,[0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92]};
 
 	struct WSABUF {
@@ -248,23 +248,23 @@ else version (Windows)
 		 * Throws: $(D_PSYMBOL SocketException) if unable to receive.
 		 */
 		bool beginReceive(ubyte[] buffer,
-						  SocketState overlapped,
-						  Flags flags = Flags(Flag.none)) @nogc @trusted
+		                  SocketState overlapped,
+		                  Flags flags = Flags(Flag.none)) @nogc @trusted
 		{
 			auto receiveFlags = cast(DWORD) flags;
 
 			overlapped.handle = cast(HANDLE) handle_;
 			overlapped.event = OverlappedSocketEvent.read;
-			overlapped.buffer.len = buffer.length;
+			overlapped.buffer.len = cast(ULONG) buffer.length;
 			overlapped.buffer.buf = cast(char*) buffer.ptr;
 
 			auto result = WSARecv(handle_,
-								  &overlapped.buffer,
-								  1u,
-								  NULL,
-								  &receiveFlags,
-								  &overlapped.overlapped,
-								  NULL);
+			                      &overlapped.buffer,
+			                      1u,
+			                      NULL,
+			                      &receiveFlags,
+			                      &overlapped.overlapped,
+			                      NULL);
 
 			if (result == SOCKET_ERROR && !wouldHaveBlocked)
 			{
@@ -292,9 +292,9 @@ else version (Windows)
 		{
 			DWORD lpNumber;
 			BOOL result = GetOverlappedResult(overlapped.handle,
-											  &overlapped.overlapped,
-											  &lpNumber,
-											  FALSE);
+			                                  &overlapped.overlapped,
+			                                  &lpNumber,
+			                                  FALSE);
 			if (result == FALSE && !wouldHaveBlocked)
 			{
 				disconnected_ = true;
@@ -321,21 +321,21 @@ else version (Windows)
 		 * Throws: $(D_PSYMBOL SocketException) if unable to send.
 		 */
 		bool beginSend(ubyte[] buffer,
-					   SocketState overlapped,
-					   Flags flags = Flags(Flag.none)) @nogc @trusted
+		               SocketState overlapped,
+		               Flags flags = Flags(Flag.none)) @nogc @trusted
 		{
 			overlapped.handle = cast(HANDLE) handle_;
 			overlapped.event = OverlappedSocketEvent.write;
-			overlapped.buffer.len = buffer.length;
+			overlapped.buffer.len = cast(ULONG) buffer.length;
 			overlapped.buffer.buf = cast(char*) buffer.ptr;
 
 			auto result = WSASend(handle_,
-								  &overlapped.buffer,
-								  1u,
-								  NULL,
-								  cast(DWORD) flags,
-								  &overlapped.overlapped,
-								  NULL);
+			                      &overlapped.buffer,
+			                      1u,
+			                      NULL,
+			                      cast(DWORD) flags,
+			                      &overlapped.overlapped,
+			                      NULL);
 
 			if (result == SOCKET_ERROR && !wouldHaveBlocked)
 			{
@@ -364,9 +364,9 @@ else version (Windows)
 		{
 			DWORD lpNumber;
 			BOOL result = GetOverlappedResult(overlapped.handle,
-											  &overlapped.overlapped,
-											  &lpNumber,
-											  FALSE);
+			                                  &overlapped.overlapped,
+			                                  &lpNumber,
+			                                  FALSE);
 			if (result == FALSE && !wouldHaveBlocked)
 			{
 				disconnected_ = true;
@@ -385,7 +385,7 @@ else version (Windows)
 		 * Create a socket.
 		 *
 		 * Params:
-		 *     af       = Address family.
+		 *     af = Address family.
 		 *
 		 * Throws: $(D_PSYMBOL SocketException) on errors.
 		 */
@@ -402,14 +402,14 @@ else version (Windows)
 			DWORD dwBytes;
 
 			auto result = WSAIoctl(handle_,
-								   SIO_GET_EXTENSION_FUNCTION_POINTER,
-								   &guidAcceptEx,
-								   guidAcceptEx.sizeof,
-								   &acceptExtension,
-								   acceptExtension.sizeof,
-								   &dwBytes,
-								   NULL,
-								   NULL);
+			                       SIO_GET_EXTENSION_FUNCTION_POINTER,
+			                       &guidAcceptEx,
+			                       guidAcceptEx.sizeof,
+			                       &acceptExtension,
+			                       acceptExtension.sizeof,
+			                       &dwBytes,
+			                       NULL,
+			                       NULL);
 			if (!result == SOCKET_ERROR)
 			{
 				throw make!SocketException(defaultAllocator,
@@ -449,13 +449,13 @@ else version (Windows)
 
 			// We don't want to get any data now, but only start to accept the connections
 			BOOL result = acceptExtension(handle_,
-										  socket,
-										  overlapped.buffer.buf,
-										  0u,
-										  sockaddr_in.sizeof + 16,
-										  sockaddr_in.sizeof + 16,
-										  &dwBytes,
-										  &overlapped.overlapped);
+			                              socket,
+			                              overlapped.buffer.buf,
+			                              0u,
+			                              sockaddr_in.sizeof + 16,
+			                              sockaddr_in.sizeof + 16,
+			                              &dwBytes,
+			                              &overlapped.overlapped);
 			if (result == FALSE && !wouldHaveBlocked)
 			{
 				throw defaultAllocator.make!SocketException("Unable to accept socket connection");
@@ -478,7 +478,7 @@ else version (Windows)
 		{
 			scope (exit)
 			{
-				defaultAllocator.dispose(overlapped.buffer.buf[0..overlapped.buffer.len]);
+				defaultAllocator.dispose(overlapped.buffer.buf[0 .. overlapped.buffer.len]);
 			}
 			auto socket = make!OverlappedConnectedSocket(defaultAllocator,
 			                                             cast(socket_t) overlapped.handle,
@@ -539,9 +539,9 @@ shared static this()
 		auto ws2Lib = GetModuleHandle("ws2_32.dll");
 
 		getaddrinfoPointer = cast(typeof(getaddrinfoPointer))
-							 GetProcAddress(ws2Lib, "getaddrinfo");
+			GetProcAddress(ws2Lib, "getaddrinfo");
 		freeaddrinfoPointer = cast(typeof(freeaddrinfoPointer))
-							  GetProcAddress(ws2Lib, "freeaddrinfo");
+			GetProcAddress(ws2Lib, "freeaddrinfo");
 	}
 	else version (Posix)
 	{
@@ -754,10 +754,10 @@ abstract class Socket
 	{
 		auto length = cast(socklen_t) result.length;
 		if (getsockopt(handle_,
-					   cast(int) level,
-					   cast(int) option,
-					   result.ptr,
-					   &length) == SOCKET_ERROR)
+		               cast(int) level,
+		               cast(int) option,
+		               result.ptr,
+		               &length) == SOCKET_ERROR)
 		{
 			throw defaultAllocator.make!SocketException("Unable to get socket option");
 		}
@@ -821,10 +821,10 @@ abstract class Socket
 	                         void[] value) const @trusted @nogc
 	{
 		if (setsockopt(handle_,
-					   cast(int)level,
-					   cast(int)option,
-					   value.ptr,
-					   cast(uint) value.length) == SOCKET_ERROR)
+		               cast(int)level,
+		               cast(int)option,
+		               value.ptr,
+		               cast(uint) value.length) == SOCKET_ERROR)
 		{
 			throw defaultAllocator.make!SocketException("Unable to set socket option");
 		}
