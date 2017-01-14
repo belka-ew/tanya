@@ -10,6 +10,7 @@
  */  
 module tanya.container.queue;
 
+import core.exception;
 import std.traits;
 import std.algorithm.mutation;
 import tanya.container.entry;
@@ -71,6 +72,29 @@ struct Queue(T)
 		assert(q.length == 0);
 	}
 
+	private void enqueueEntry(ref Entry!T* entry)
+	{
+		if (empty)
+		{
+			first = rear = entry;
+		}
+		else
+		{
+			rear.next = entry;
+			rear = rear.next;
+		}
+	}
+
+	private Entry!T* allocateEntry()
+	{
+		auto temp = cast(Entry!T*) allocator.allocate(Entry!T.sizeof);
+		if (temp is null)
+		{
+			onOutOfMemoryError();
+		}
+		return temp;
+	}
+
 	/**
 	 * Inserts a new element.
 	 *
@@ -81,23 +105,27 @@ struct Queue(T)
 	 */
 	ref typeof(this) enqueue(ref T x)
 	{
-		auto temp = allocator.make!(Entry!T)(x);
-		if (empty)
-		{
-			first = rear = temp;
-		}
-		else
-		{
-			rear.next = temp;
-			rear = rear.next;
-		}
+		auto temp = allocateEntry();
+
+		*temp = Entry!T.init;
+		temp.content = x;
+
+		enqueueEntry(temp);
+
 		return this;
 	}
 
 	/// Ditto.
 	ref typeof(this) enqueue(T x)
 	{
-		return enqueue(x);
+		auto temp = allocateEntry();
+
+		moveEmplace(x, (*temp).content);
+		(*temp).next = null;
+
+		enqueueEntry(temp);
+
+		return this;
 	}
 
 	///
