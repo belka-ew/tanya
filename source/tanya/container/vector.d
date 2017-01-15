@@ -402,18 +402,10 @@ struct Vector(T)
 	 * 	len       = Initial length of the vector.
 	 * 	allocator = Allocator.
 	 */
-	this(size_t len, shared Allocator allocator = defaultAllocator) @trusted
+	this(size_t len, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
-
-		vector = cast(T*) allocator.allocate(len * T.sizeof);
-		if (len == 0)
-		{
-			return;
-		}
-		reserve(len);
-		initializeAll(vector[0 .. len]);
-		length_ = len;
+		length = len;
 	}
 
 	/**
@@ -477,19 +469,10 @@ struct Vector(T)
 	/**
 	 * Destroys this $(D_PSYMBOL Vector).
 	 */
-	~this() @trusted
+	~this()
 	{
-		static if (hasElaborateDestructor!T)
-		{
-			const T* end = vector + length_;
-			for (T* e = vector; e != end; ++e)
-			{
-				destroy(*e);
-			}
-		}
-		allocator.deallocate(cast(void[]) vector[0 .. capacity_]);
-		vector = null;
-		capacity_ = length_ = 0;
+		length = 0;
+		shrink(0);
 	}
 
 	/**
@@ -695,7 +678,7 @@ struct Vector(T)
 	 */
 	@property bool empty() const
 	{
-		return length_ == 0;
+		return length == 0;
 	}
 
 	/**
@@ -812,16 +795,17 @@ struct Vector(T)
 		 && isInputRange!R
 		 && isImplicitlyConvertible!(ElementType!R, T))
 	{
-		immutable rLen = walkLength(el);
-
-		reserve(length_ + rLen);
-		T* pos = vector + length_;
+		static if (hasLength!R)
+		{
+			reserve(length_ + el.length);
+		}
+		size_t retLength;
 		foreach (e; el)
 		{
-			emplace(pos, e);
-			++length_, ++pos;
+			insertBack(e);
+			++retLength;
 		}
-		return rLen;
+		return retLength;
 	}
 
 	/// Ditto.
