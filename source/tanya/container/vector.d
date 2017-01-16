@@ -20,30 +20,6 @@ import std.meta;
 import std.traits;
 import tanya.memory;
 
-version (unittest)
-{
-	struct SWithDtor
-	{
-		~this() @nogc
-		{
-		}
-	}
-	struct ConstEqualsStruct
-	{
-		int opEquals(typeof(this) that) const @nogc
-		{
-			return true;
-		}
-	}
-	struct MutableEqualsStruct
-	{
-		int opEquals(typeof(this) that) @nogc
-		{
-			return true;
-		}
-	}
-}
-
 // Defines the container's primary range.
 private struct Range(E)
 {
@@ -77,7 +53,7 @@ private struct Range(E)
 
 	alias opDollar = length;
 
-	@property ref inout(E) front() inout @trusted
+	@property ref inout(E) front() inout
 	in
 	{
 		assert(!empty);
@@ -282,7 +258,7 @@ struct Vector(T)
 	 * 	len       = Initial length of the vector.
 	 * 	allocator = Allocator.
 	 */
-	this(size_t len, shared Allocator allocator = defaultAllocator)
+	this(in size_t len, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
 		length = len;
@@ -296,15 +272,9 @@ struct Vector(T)
 	 * 	init      = Initial value to fill the vector with.
 	 * 	allocator = Allocator.
 	 */
-	this(size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
+	this(in size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
 	{
 		this(allocator);
-
-		vector = cast(T*) allocator.allocate(len * T.sizeof);
-		if (len == 0)
-		{
-			return;
-		}
 		reserve(len);
 		uninitializedFill(vector[0 .. len], init);
 		length_ = len;
@@ -745,13 +715,15 @@ struct Vector(T)
 	 * Precondition: $(D_INLINECODE length > pos)
 	 */
 	ref T opIndexAssign(ref T value, in size_t pos)
-	in
 	{
-		assert(length > pos);
+		return opIndex(pos) = value;
 	}
-	body
+
+	@safe unittest
 	{
-		return *(vector + pos) = value;
+		Vector!int a = Vector!int(1);
+		a[0] = 5;
+		assert(a[0] == 5);
 	}
 
 	/// Ditto.
@@ -858,56 +830,19 @@ struct Vector(T)
 	 */
 	bool opEquals()(auto ref typeof(this) v)
 	{
-		if (length != v.length)
-		{
-			return false;
-		}
-		const T* end = vector + length_;
-		for (T* v1 = vector, v2 = v.vector; v1 != end; ++v1, ++v2)
-		{
-			if (*v1 != *v2)
-			{
-				return false;
-			}
-		}
-		return true;
+		return equal(opIndex(), v[]);
 	}
 
 	/// Ditto.
 	bool opEquals()(in auto ref typeof(this) v) const
 	{
-		if (length != v.length)
-		{
-			return false;
-		}
-		const T* end = vector + length_;
-		for (const(T)* v1 = vector, v2 = v.vector; v1 != end; ++v1, ++v2)
-		{
-			if (*v1 != *v2)
-			{
-				return false;
-			}
-		}
-		return true;
+		return equal(opIndex(), v[]);
 	}
 
 	/// Ditto.
 	bool opEquals(Range!T v)
 	{
-		if (length != v.length)
-		{
-			return false;
-		}
-		const T* end = vector + length_;
-		for (T* v1 = vector; v1 != end; ++v1)
-		{
-			if (*v1 != v.front)
-			{
-				return false;
-			}
-			v.popFront();
-		}
-		return true;
+		return equal(opIndex(), v);
 	}
 
 	/**
@@ -915,28 +850,15 @@ struct Vector(T)
 	 *
 	 * Params:
 	 * 	R = Right hand side type.
-	 * 	v = The vector to compare with.
+	 * 	v = Right hand side vector range.
 	 *
-	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
-	 *          otherwise.
+	 * Returns: $(D_KEYWORD true) if the vector and the range are equal,
+	 *          $(D_KEYWORD false) otherwise.
 	 */
 	bool opEquals(R)(Range!R v) const
 		if (is(Unqual!R == T))
 	{
-		if (length != v.length)
-		{
-			return false;
-		}
-		const T* end = vector + length_;
-		for (const(T)* v1 = vector; v1 != end; ++v1)
-		{
-			if (*v1 != v.front)
-			{
-				return false;
-			}
-			v.popFront();
-		}
-		return true;
+		return equal(opIndex(), v);
 	}
 
 	///
@@ -1076,7 +998,7 @@ struct Vector(T)
 	 *
 	 * Precondition: $(D_INLINECODE length > 0)
 	 */
-	@property ref inout(T) front() inout @trusted
+	@property ref inout(T) front() inout
 	in
 	{
 		assert(!empty);
@@ -1087,7 +1009,7 @@ struct Vector(T)
 	}
 
 	///
-	unittest
+	@safe unittest
 	{
 		auto v = Vector!int([5]);
 
@@ -1212,8 +1134,8 @@ struct Vector(T)
 	 *
 	 * Returns: Slice with the assigned part of the vector.
 	 *
-	 * Precondition: $(D_INLINECODE i <= j && j <= length);
-	 *               The lenghts of the range and slice match.
+	 * Precondition: $(D_INLINECODE i <= j && j <= length
+	 *                           && value.length == j - i)
 	 */
 	Range!T opSliceAssign(ref T value, in size_t i, in size_t j)
 	in
@@ -1364,35 +1286,56 @@ unittest
 	assert(v2[] == v2);
 	assert(v2[] != v1);
 	assert(v1[] != v2);
-	assert(v1[] == v1[]);
-	assert(v2[] == v2[]);
+	assert(v1[].equal(v1[]));
+	assert(v2[].equal(v2[]));
+	assert(!v1[].equal(v2[]));
 }
 
 @nogc unittest
 {
+	struct MutableEqualsStruct
+	{
+		int opEquals(typeof(this) that) @nogc
+		{
+			return true;
+		}
+	}
+	struct ConstEqualsStruct
+	{
+		int opEquals(in typeof(this) that) const @nogc
+		{
+			return true;
+		}
+	}
 	auto v1 = Vector!ConstEqualsStruct();
 	auto v2 = Vector!ConstEqualsStruct();
 	assert(v1 == v2);
 	assert(v1[] == v2);
 	assert(v1 == v2[]);
-	assert(v1[] == v2[]);
+	assert(v1[].equal(v2[]));
 
 	auto v3 = const Vector!ConstEqualsStruct();
 	auto v4 = const Vector!ConstEqualsStruct();
 	assert(v3 == v4);
 	assert(v3[] == v4);
 	assert(v3 == v4[]);
-	assert(v3[] == v4[]);
+	assert(v3[].equal(v4[]));
 
 	auto v7 = Vector!MutableEqualsStruct(1, MutableEqualsStruct());
 	auto v8 = Vector!MutableEqualsStruct(1, MutableEqualsStruct());
 	assert(v7 == v8);
 	assert(v7[] == v8);
 	assert(v7 == v8[]);
-	assert(equal(v7[], v8[]));
+	assert(v7[].equal(v8[]));
 }
 
 @nogc unittest
 {
+	struct SWithDtor
+	{
+		~this() @nogc
+		{
+		}
+	}
 	auto v = Vector!SWithDtor(); // Destructor can destroy empty vectors.
 }
