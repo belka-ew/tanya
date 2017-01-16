@@ -18,16 +18,28 @@ import std.conv;
 import std.range.primitives;
 import std.meta;
 import std.traits;
-public import tanya.meta.gen : IL;
 import tanya.memory;
 
 version (unittest)
 {
-	import tanya.container.entry;
 	struct SWithDtor
 	{
 		~this() @nogc
 		{
+		}
+	}
+	struct ConstEqualsStruct
+	{
+		int opEquals(typeof(this) that) const @nogc
+		{
+			return true;
+		}
+	}
+	struct MutableEqualsStruct
+	{
+		int opEquals(typeof(this) that) @nogc
+		{
+			return true;
 		}
 	}
 }
@@ -43,22 +55,6 @@ private struct Range(E)
 	}
 
 	private this(E* begin, E* end)
-	in
-	{
-		assert(begin <= end);
-	}
-	body
-	{
-		this.begin = begin;
-		this.end = end;
-	}
-
-	private this(in E* begin, in E* end) const
-	in
-	{
-		assert(begin <= end);
-	}
-	body
 	{
 		this.begin = begin;
 		this.end = end;
@@ -136,12 +132,12 @@ private struct Range(E)
 		return typeof(return)(begin, end);
 	}
 
-	const(Range) opIndex() const
+	Range!(const E) opIndex() const
 	{
 		return typeof(return)(begin, end);
 	}
 
-	Range opSlice(in size_t i, in size_t j)
+	Range opSlice(in size_t i, in size_t j) @trusted
 	in
 	{
 		assert(i <= j);
@@ -152,7 +148,7 @@ private struct Range(E)
 		return typeof(return)(begin + i, begin + j);
 	}
 
-	const(Range) opSlice(in size_t i, in size_t j) const
+	Range!(const E) opSlice(in size_t i, in size_t j) const @trusted
 	in
 	{
 		assert(i <= j);
@@ -163,124 +159,9 @@ private struct Range(E)
 		return typeof(return)(begin + i, begin + j);
 	}
 
-	bool opEquals()(Range that) const @trusted
-	{
-		if (length != that.length)
-		{
-			return false;
-		}
-		for (const(E)* i = begin; i != end; ++i)
-		{
-			if (*i != that.front)
-			{
-				return false;
-			}
-			that.popFront();
-		}
-		return true;
-	}
-
-	inout(E[]) get() inout
+	inout(E[]) get() inout @trusted
 	{
 		return begin[0 .. length];
-	}
-
-	static if (isMutable!E)
-	{
-		bool opEquals(Range that) @trusted
-		{
-			if (length != that.length)
-			{
-				return false;
-			}
-			for (E* i = begin; i != end; ++i)
-			{
-				if (*i != that.front)
-				{
-					return false;
-				}
-				that.popFront();
-			}
-			return true;
-		}
-
-		ref E opIndexAssign(ref E value, in size_t pos) @trusted
-		in
-		{
-			assert(length > pos);
-		}
-		body
-		{
-			return *(begin + pos) = value;
-		}
-
-		/// Ditto.
-		E opIndexAssign(E value, in size_t pos)
-		{
-			return opIndexAssign(value, pos);
-		}
-
-		Range opIndexAssign(ref E value) @trusted
-		{
-			E* begin = this.begin;
-			for (E* e = this.begin; e != end; ++e)
-			{
-				*e = value;
-			}
-			return typeof(return)(begin, end);
-		}
-
-		Range opIndexAssign(E value)
-		{
-			return opIndexAssign(value);
-		}
-
-		Range opSliceAssign(ref E value, in size_t i, in size_t j) @trusted
-		in
-		{
-			assert(i <= j);
-			assert(j < length);
-		}
-		body
-		{
-			E* begin = this.begin + i;
-			E* end = this.begin + j;
-			for (E* e = begin; e != end; ++e)
-			{
-				*e = value;
-			}
-			return typeof(return)(begin, end);
-		}
-
-		Range opSliceAssign(E value)
-		{
-			return opSliceAssign(value);
-		}
-
-		Range opSliceAssign(R)(R value, in size_t i, in size_t j) @trusted
-			if (!isInfinite!R
-			 && isInputRange!R
-			 && isImplicitlyConvertible!(ElementType!R, T))
-		in
-		{
-			assert(j - i == walkLength(value));
-		}
-		body
-		{
-			T* begin = this.begin + i;
-			const T* end = this.begin + j;
-			for (T* v = begin; v != end; ++v, value.popFront())
-			{
-				*v = value.front;
-			}
-			return typeof(return)(begin, end);
-		}
-
-		Range opSliceAssign(R)(R value, in size_t i, in size_t j)
-			if (isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
-		{
-			return opSliceAssign(value[], i, j);
-		}
 	}
 }
 
@@ -303,16 +184,16 @@ struct Vector(T)
 	}
 
 	/**
-	 * Creates a new $(D_PSYMBOL Vector).
+	 * Creates a new $(D_PSYMBOL Vector) with the elements from another input
+	 * range or a static array $(D_PARAM init).
 	 *
 	 * Params:
-	 * 	R         = Type of the static array with the initial elements.
-	 * 	init      = Values to initialize the array with. Use $(D_PSYMBOL IL).
+	 * 	R         = Type of the initial range or size of the static array.
+	 * 	init      = Values to initialize the array with.
 	 * 	            to generate a list.
 	 * 	allocator = Allocator.
 	 */
-	this(R)(auto in ref R init, shared Allocator allocator = defaultAllocator)
-		if (isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
+	this(size_t R)(auto in ref T[R] init, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
 		insertBack(init[]);
@@ -344,7 +225,7 @@ struct Vector(T)
 	 * 	init      = Source vector.
 	 * 	allocator = Allocator.
 	 */
-	this(ref Vector init, shared Allocator allocator = defaultAllocator) @trusted
+	this(ref Vector init, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
 		insertBack(init[]);
@@ -353,10 +234,10 @@ struct Vector(T)
 	/// Ditto.
 	this(Vector init, shared Allocator allocator = defaultAllocator) @trusted
 	{
+		this(allocator);
 		if (allocator is init.allocator)
 		{
 			// Just steal all references and the allocator.
-			this(init.allocator);
 			vector = init.vector;
 			length_ = init.length_;
 			capacity_ = init.capacity_;
@@ -368,7 +249,6 @@ struct Vector(T)
 		else
 		{
 			// Move each element.
-			this(allocator);
 			reserve(init.length);
 
 			const T* end = vector + init.length;
@@ -382,14 +262,14 @@ struct Vector(T)
 	}
 
 	///
-	@nogc @safe unittest
+	unittest
 	{
-		auto v1 = Vector!int(IL(1, 2, 3));
+		auto v1 = Vector!int([1, 2, 3]);
 		auto v2 = Vector!int(v1);
 		assert(v1.vector !is v2.vector);
 		assert(v1 == v2);
 
-		auto v3 = Vector!int(Vector!int(IL(1, 2, 3)));
+		auto v3 = Vector!int(Vector!int([1, 2, 3]));
 		assert(v1 == v3);
 		assert(v3.length == 3);
 		assert(v3.capacity == 3);
@@ -444,7 +324,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(3, 8, 2));
+		auto v = Vector!int([3, 8, 2]);
 
 		assert(v.capacity == 3);
 		assert(v.length == 3);
@@ -497,7 +377,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(18, 20, 15));
+		auto v = Vector!int([18, 20, 15]);
 		v.clear();
 		assert(v.length == 0);
 		assert(v.capacity == 3);
@@ -705,7 +585,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(5, 18, 17));
+		auto v = Vector!int([5, 18, 17]);
 
 		assert(v.removeBack(0) == 0);
 		assert(v.removeBack(2) == 2);
@@ -750,16 +630,16 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(5, 18, 17, 2, 4, 6, 1));
+		auto v = Vector!int([5, 18, 17, 2, 4, 6, 1]);
 
 		v.remove(v[1..3]);
-		assert(v == Vector!int(IL(5, 2, 4, 6, 1)));
+		assert(v == Vector!int([5, 2, 4, 6, 1]));
 
 		v.remove(v[4..4]);
-		assert(v == Vector!int(IL(5, 2, 4, 6, 1)));
+		assert(v == Vector!int([5, 2, 4, 6, 1]));
 
 		v.remove(v[4..5]);
-		assert(v == Vector!int(IL(5, 2, 4, 6)));
+		assert(v == Vector!int([5, 2, 4, 6]));
 
 		v.remove(v[]);
 		assert(v.empty);
@@ -846,7 +726,7 @@ struct Vector(T)
 		assert(v1.capacity == 4);
 		assert(v1[0] == 5 && v1[1] == 6 && v1[2] == 4 && v1[3] == 2);
 
-		auto v2 = Vector!int(IL(34, 234));
+		auto v2 = Vector!int([34, 234]);
 		assert(v1.insertBack(v2[]) == 2);
 		assert(v1.length == 6);
 		assert(v1.capacity == 6);
@@ -864,10 +744,10 @@ struct Vector(T)
 	 *
 	 * Precondition: $(D_INLINECODE length > pos)
 	 */
-	ref T opIndexAssign(ref T value, in size_t pos) @trusted
+	ref T opIndexAssign(ref T value, in size_t pos)
 	in
 	{
-		assert(length_ > pos);
+		assert(length > pos);
 	}
 	body
 	{
@@ -881,31 +761,44 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	Range!T opIndexAssign(ref T value) @trusted
+	Range!T opIndexAssign()(auto ref T value)
 	{
-		const T* end = vector + length_;
-		for (T* v = vector; v != end; ++v)
-		{
-			*v = value;
-		}
-		return opIndex();
+		return opSliceAssign(value, 0, length);
 	}
 
-	/// Ditto.
-	Range!T opIndexAssign(T value)
+	/**
+	 * Assigns a range. The range should have the same length as the vector.
+	 *
+	 * Params:
+	 * 	R     = Range type.
+	 * 	value = Value.
+	 *
+	 * Returns: Assigned value.
+	 *
+	 * Precondition: $(D_INLINECODE length == value.length)
+	 */
+	Range!T opIndexAssign(R)(R value)
+		if ((!isInfinite!R && isInputRange!R
+		 && isImplicitlyConvertible!(ElementType!R, T))
+		 || isStaticArray!R && is(ElementType!R == T))
 	{
-		return opIndexAssign(value);
+		return opSliceAssign(value, 0, length);
 	}
 
 	///
 	unittest
 	{
-		auto v1 = Vector!int(IL(12, 1, 7));
+		auto v1 = Vector!int([12, 1, 7]);
 
 		v1[] = 3;
 		assert(v1[0] == 3);
 		assert(v1[1] == 3);
 		assert(v1[2] == 3);
+
+		v1[] = [7, 1, 12];
+		assert(v1[0] == 7);
+		assert(v1[1] == 1);
+		assert(v1[2] == 12);
 	}
 
 	/**
@@ -919,7 +812,7 @@ struct Vector(T)
 	ref inout(T) opIndex(in size_t pos) inout @trusted
 	in
 	{
-		assert(length_ > pos);
+		assert(length > pos);
 	}
 	body
 	{
@@ -944,7 +837,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		const v1 = Vector!int(IL(6, 123, 34, 5));
+		const v1 = Vector!int([6, 123, 34, 5]);
 
 		assert(v1[0] == 6);
 		assert(v1[1] == 123);
@@ -963,9 +856,9 @@ struct Vector(T)
 	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
 	 *          otherwise.
 	 */
-	bool opEquals()(auto ref typeof(this) v) @trusted
+	bool opEquals()(auto ref typeof(this) v)
 	{
-		if (length_ != v.length_)
+		if (length != v.length)
 		{
 			return false;
 		}
@@ -981,9 +874,9 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	bool opEquals()(in auto ref typeof(this) v) const @trusted
+	bool opEquals()(in auto ref typeof(this) v) const
 	{
-		if (length_ != v.length_)
+		if (length != v.length)
 		{
 			return false;
 		}
@@ -999,9 +892,9 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	bool opEquals(Range!T v) @trusted
+	bool opEquals(Range!T v)
 	{
-		if (length_ != v.length)
+		if (length != v.length)
 		{
 			return false;
 		}
@@ -1027,10 +920,10 @@ struct Vector(T)
 	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
 	 *          otherwise.
 	 */
-	bool opEquals(R)(Range!R v) const @trusted
+	bool opEquals(R)(Range!R v) const
 		if (is(Unqual!R == T))
 	{
-		if (length_ != v.length)
+		if (length != v.length)
 		{
 			return false;
 		}
@@ -1141,7 +1034,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(5, 15, 8));
+		auto v = Vector!int([5, 15, 8]);
 
 		size_t i;
 		foreach (j, ref e; v)
@@ -1161,7 +1054,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(5, 15, 8));
+		auto v = Vector!int([5, 15, 8]);
 		size_t i;
 
 		foreach_reverse (j, ref e; v)
@@ -1196,7 +1089,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(5));
+		auto v = Vector!int([5]);
 
 		assert(v.front == 5);
 
@@ -1223,7 +1116,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(5));
+		auto v = Vector!int([5]);
 
 		assert(v.back == 5);
 
@@ -1242,11 +1135,11 @@ struct Vector(T)
 	 *
 	 * Precondition: $(D_INLINECODE i <= j && j <= length)
 	 */
-	Range!T opSlice(in size_t i, in size_t j)
+	Range!T opSlice(in size_t i, in size_t j) @trusted
 	in
 	{
 		assert(i <= j);
-		assert(j <= length_);
+		assert(j <= length);
 	}
 	body
 	{
@@ -1254,7 +1147,7 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	Range!(const T) opSlice(in size_t i, in size_t j) const
+	Range!(const T) opSlice(in size_t i, in size_t j) const @trusted
 	in
 	{
 		assert(i <= j);
@@ -1277,7 +1170,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(1, 2, 3));
+		auto v = Vector!int([1, 2, 3]);
 		auto r = v[];
 
 		assert(r.front == 1);
@@ -1295,7 +1188,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(1, 2, 3, 4));
+		auto v = Vector!int([1, 2, 3, 4]);
 		auto r = v[1 .. 4];
 		assert(r.length == 3);
 		assert(r[0] == 2);
@@ -1322,7 +1215,7 @@ struct Vector(T)
 	 * Precondition: $(D_INLINECODE i <= j && j <= length);
 	 *               The lenghts of the range and slice match.
 	 */
-	Range!T opSliceAssign(ref T value, in size_t i, in size_t j) @trusted
+	Range!T opSliceAssign(ref T value, in size_t i, in size_t j)
 	in
 	{
 		assert(i <= j);
@@ -1330,7 +1223,7 @@ struct Vector(T)
 	}
 	body
 	{
-		vector[i .. j].fill(value);
+		fill((() @trusted => vector[i .. j])(), value);
 		return opSlice(i, j);
 	}
 
@@ -1342,9 +1235,9 @@ struct Vector(T)
 
 	/// Ditto.
 	Range!T opSliceAssign(R)(R value, in size_t i, in size_t j)
-		if (!isInfinite!R
-		 && isInputRange!R
+		if ((!isInfinite!R && isInputRange!R
 		 && isImplicitlyConvertible!(ElementType!R, T))
+		 || isStaticArray!R && is(ElementType!R == T))
 	in
 	{
 		assert(i <= j);
@@ -1353,26 +1246,15 @@ struct Vector(T)
 	}
 	body
 	{
-		const T* end = vector + j;
-		for (T* v = vector + i; v != end; ++v, value.popFront())
-		{
-			*v = value.front;
-		}
+		copy(value, (() @trusted => vector[i .. j])());
 		return opSlice(i, j);
 	}
 
-	/// Ditto.
-	Range!T opSliceAssign(R)(R value, in size_t i, in size_t j)
-		if (isStaticArray!R && isImplicitlyConvertible!(ElementType!R, T))
-	{
-		return opSliceAssign(value[], i, j);
-	}
-
 	///
-	unittest
+	@safe unittest
 	{
-		auto v1 = Vector!int(IL(3, 3, 3));
-		auto v2 = Vector!int(IL(1, 2));
+		auto v1 = Vector!int([3, 3, 3]);
+		auto v2 = Vector!int([1, 2]);
 
 		v1[0 .. 2] = 286;
 		assert(v1[0] == 286);
@@ -1382,6 +1264,11 @@ struct Vector(T)
 		v2[0 .. $] = v1[1 .. 3];
 		assert(v2[0] == 286);
 		assert(v2[1] == 3);
+
+		v1[0 .. 2] = [5, 8];
+		assert(v1[0] == 5);
+		assert(v1[1] == 8);
+		assert(v1[2] == 3);
 	}
 
 	/**
@@ -1392,7 +1279,7 @@ struct Vector(T)
 	 *
 	 * Returns: The array with elements of this vector.
 	 */
-	inout(T[]) get() inout
+	inout(T[]) get() inout @trusted
 	{
 		return vector[0 .. length];
 	}
@@ -1400,7 +1287,7 @@ struct Vector(T)
 	///
 	unittest
 	{
-		auto v = Vector!int(IL(1, 2, 4));
+		auto v = Vector!int([1, 2, 4]);
 		auto data = v.get();
 
 		assert(data[0] == 1);
@@ -1419,7 +1306,7 @@ struct Vector(T)
 ///
 unittest
 {
-	auto v = Vector!int(IL(5, 15, 8));
+	auto v = Vector!int([5, 15, 8]);
 
 	assert(v.front == 5);
 	assert(v[1] == 15);
@@ -1435,14 +1322,14 @@ unittest
 {
 	const v1 = Vector!int();
 	const Vector!int v2;
-	const v3 = Vector!int(IL(1, 5, 8));
+	const v3 = Vector!int([1, 5, 8]);
 	static assert(is(PointerTarget!(typeof(v3.vector)) == const(int)));
 }
 
 @nogc unittest
 {
 	// Test that const vectors return usable ranges.
-	auto v = const Vector!int(IL(1, 2, 4));
+	auto v = const Vector!int([1, 2, 4]);
 	auto r1 = v[];
 
 	assert(r1.back == 4);
@@ -1497,18 +1384,12 @@ unittest
 	assert(v3 == v4[]);
 	assert(v3[] == v4[]);
 
-	auto v7 = Vector!MutableEqualsStruct();
-	auto v8 = Vector!MutableEqualsStruct();
+	auto v7 = Vector!MutableEqualsStruct(1, MutableEqualsStruct());
+	auto v8 = Vector!MutableEqualsStruct(1, MutableEqualsStruct());
 	assert(v7 == v8);
 	assert(v7[] == v8);
 	assert(v7 == v8[]);
-	assert(v7[] == v8[]);
-}
-
-@nogc unittest
-{
-	// Implicitly convertible works.
-	auto v = Vector!int(IL(cast(short) 1, cast(short) 2));
+	assert(equal(v7[], v8[]));
 }
 
 @nogc unittest

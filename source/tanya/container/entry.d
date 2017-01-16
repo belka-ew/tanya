@@ -12,29 +12,6 @@
  */  
 module tanya.container.entry;
 
-version (unittest)
-{
-	package struct ConstEqualsStruct
-	{
-		int opEquals(typeof(this) that) const @nogc
-		{
-			return true;
-		}
-	}
-
-	package struct MutableEqualsStruct
-	{
-		int opEquals(typeof(this) that) @nogc
-		{
-			return true;
-		}
-	}
-
-	package struct NoEqualsStruct
-	{
-	}
-}
-
 package struct Entry(T)
 {
 	/// Item content.
