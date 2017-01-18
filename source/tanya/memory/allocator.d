@@ -52,7 +52,10 @@ interface Allocator
 	bool reallocate(ref void[] p, in size_t size) shared nothrow @nogc;
 
 	/**
-	 * Expands a memory block in place.
+	 * Reallocates a memory block in place if possible or returns
+	 * $(D_KEYWORD false). This function cannot be used to allocate or
+	 * deallocate memory, so if $(D_PARAM p) is $(D_KEYWORD null) or
+	 * $(D_PARAM size) is `0`, it should return $(D_KEYWORD false).
 	 *
 	 * Params:
 	 * 	p    = A pointer to the memory block.
@@ -60,7 +63,7 @@ interface Allocator
 	 *
 	 * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
 	 */
-	bool expand(ref void[] p, in size_t size) shared nothrow @nogc;
+	bool reallocateInPlace(ref void[] p, in size_t size) shared nothrow @nogc;
 }
 
 /**

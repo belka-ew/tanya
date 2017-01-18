@@ -231,7 +231,10 @@ final class MmapPool : Allocator
 	}
 
 	/**
-	 * Expands a memory block in place.
+	 * Reallocates a memory block in place if possible or returns
+	 * $(D_KEYWORD false). This function cannot be used to allocate or
+	 * deallocate memory, so if $(D_PARAM p) is $(D_KEYWORD null) or
+	 * $(D_PARAM size) is `0`, it should return $(D_KEYWORD false).
 	 *
 	 * Params:
 	 * 	p    = A pointer to the memory block.
@@ -239,15 +242,17 @@ final class MmapPool : Allocator
 	 *
 	 * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
 	 */
-	bool expand(ref void[] p, in size_t size) shared nothrow @nogc
+	bool reallocateInPlace(ref void[] p, in size_t size) shared nothrow @nogc
 	{
-		if (size <= p.length)
-		{
-			return true;
-		}
-		if (p is null)
+		if (p is null || size == 0)
 		{
 			return false;
+		}
+		if (size <= p.length)
+		{
+			// Leave the block as is.
+			p = p.ptr[0 .. size];
+			return true;
 		}
 		Block block1 = cast(Block) (p.ptr - BlockEntry.sizeof);
 
@@ -298,22 +303,22 @@ final class MmapPool : Allocator
 	nothrow unittest
 	{
 		void[] p;
-		assert(!MmapPool.instance.expand(p, 5));
+		assert(!MmapPool.instance.reallocateInPlace(p, 5));
 		assert(p is null);
 
 		p = MmapPool.instance.allocate(1);
 		auto orig = p.ptr;
 
-		assert(MmapPool.instance.expand(p, 2));
+		assert(MmapPool.instance.reallocateInPlace(p, 2));
 		assert(p.length == 2);
 		assert(p.ptr == orig);
 
-		assert(MmapPool.instance.expand(p, 4));
+		assert(MmapPool.instance.reallocateInPlace(p, 4));
 		assert(p.length == 4);
 		assert(p.ptr == orig);
 
-		assert(MmapPool.instance.expand(p, 2));
-		assert(p.length == 4);
+		assert(MmapPool.instance.reallocateInPlace(p, 2));
+		assert(p.length == 2);
 		assert(p.ptr == orig);
 
 		MmapPool.instance.deallocate(p);
@@ -339,17 +344,12 @@ final class MmapPool : Allocator
 			}
 			return false;
 		}
-		else if (size <= p.length)
-		{
-			// Leave the block as is.
-			p = p.ptr[0 .. size];
-			return true;
-		}
-		else if (expand(p, size))
+		else if (reallocateInPlace(p, size))
 		{
 			return true;
 		}
-		// Can't extend, allocate a new block, copy and delete the previous.
+		// Can't reallocate in place, allocate a new block,
+		// copy and delete the previous one.
 		void[] reallocP = allocate(size);
 		if (reallocP is null)
 		{
@@ -587,7 +587,7 @@ final class MmapPool : Allocator
 }
 
 // A lot of allocations/deallocations, but it is the minimum caused a
-// segmentation fault because MmapPool expand moves a block wrong.
+// segmentation fault because MmapPool reallocateInPlace moves a block wrong.
 unittest
 {
 	auto a = MmapPool.instance.allocate(16);
@@ -602,7 +602,7 @@ unittest
 	MmapPool.instance.deallocate(c);
 
 	a = MmapPool.instance.allocate(50);
-	MmapPool.instance.expand(a, 64);
+	MmapPool.instance.reallocateInPlace(a, 64);
 	MmapPool.instance.deallocate(a);
 
 	a = MmapPool.instance.allocate(1);

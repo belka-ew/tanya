@@ -117,7 +117,7 @@ private struct Range(E)
 	in
 	{
 		assert(i <= j);
-		assert(j < length);
+		assert(j <= length);
 	}
 	body
 	{
@@ -128,7 +128,7 @@ private struct Range(E)
 	in
 	{
 		assert(i <= j);
-		assert(j < length);
+		assert(j <= length);
 	}
 	body
 	{
@@ -445,7 +445,7 @@ struct Vector(T)
 		assert(!overflow);
 
 		void[] buf = vector[0 .. capacity_];
-		if (!allocator.expand(buf, byteSize))
+		if (!allocator.reallocateInPlace(buf, byteSize))
 		{
 			buf = allocator.allocate(byteSize);
 			if (buf is null)
@@ -494,11 +494,16 @@ struct Vector(T)
 	 */
 	void shrink(in size_t size) @trusted
 	{
-		auto n = max(length, size);
+		if (capacity_ <= size)
+		{
+			return;
+		}
+		immutable n = max(length, size);
 		void[] buf = vector[0 .. capacity_];
-		allocator.reallocate(buf, n * T.sizeof);
-		vector = cast(T*) buf;
-		capacity_ = n;
+		if (allocator.reallocateInPlace(buf, n * T.sizeof))
+		{
+			capacity_ = n;
+		}
 	}
 
 	///
@@ -733,16 +738,22 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	Range!T opIndexAssign()(auto ref T value)
+	Range!T opIndexAssign(T value)
+	{
+		return opSliceAssign(value, 0, length);
+	}
+
+	/// Ditto.
+	Range!T opIndexAssign(ref T value)
 	{
 		return opSliceAssign(value, 0, length);
 	}
 
 	/**
-	 * Assigns a range. The range should have the same length as the vector.
+	 * Assigns a range or a static array.
 	 *
 	 * Params:
-	 * 	R     = Range type.
+	 * 	R     = Range type or static array length.
 	 * 	value = Value.
 	 *
 	 * Returns: Assigned value.
@@ -750,15 +761,20 @@ struct Vector(T)
 	 * Precondition: $(D_INLINECODE length == value.length)
 	 */
 	Range!T opIndexAssign(R)(R value)
-		if ((!isInfinite!R && isInputRange!R
+		if (!isInfinite!R && isInputRange!R
 		 && isImplicitlyConvertible!(ElementType!R, T))
-		 || isStaticArray!R && is(ElementType!R == T))
 	{
-		return opSliceAssign(value, 0, length);
+		return opSliceAssign!R(value, 0, length);
+	}
+
+	/// Ditto.
+	Range!T opIndexAssign(size_t R)(T[R] value)
+	{
+		return opSliceAssign!R(value, 0, length);
 	}
 
 	///
-	unittest
+	@nogc unittest
 	{
 		auto v1 = Vector!int([12, 1, 7]);
 
@@ -1073,7 +1089,7 @@ struct Vector(T)
 	in
 	{
 		assert(i <= j);
-		assert(j <= length_);
+		assert(j <= length);
 	}
 	body
 	{
@@ -1128,7 +1144,9 @@ struct Vector(T)
 	 * Slicing assignment.
 	 *
 	 * Params:
-	 * 	value = New value (single value or input range).
+	 *	R     = Type of the assigned slice or length of the static array should be
+	 *	        assigned.
+	 * 	value = New value (single value, input range or static array).
 	 * 	i     = Slice start.
 	 * 	j     = Slice end.
 	 *
@@ -1137,6 +1155,28 @@ struct Vector(T)
 	 * Precondition: $(D_INLINECODE i <= j && j <= length
 	 *                           && value.length == j - i)
 	 */
+	Range!T opSliceAssign(R)(R value, in size_t i, in size_t j)
+		if (!isInfinite!R && isInputRange!R
+		 && isImplicitlyConvertible!(ElementType!R, T))
+	in
+	{
+		assert(i <= j);
+		assert(j <= length);
+		assert(j - i == walkLength(value));
+	}
+	body
+	{
+		copy(value, opSlice(i, j));
+		return opSlice(i, j);
+	}
+
+	/// Ditto.
+	Range!T opSliceAssign(size_t R)(T[R] value, in size_t i, in size_t j)
+	{
+		return opSliceAssign!(T[])(value[], i, j);
+	}
+
+	/// Ditto.
 	Range!T opSliceAssign(ref T value, in size_t i, in size_t j)
 	in
 	{
@@ -1145,7 +1185,7 @@ struct Vector(T)
 	}
 	body
 	{
-		fill((() @trusted => vector[i .. j])(), value);
+		fill(opSlice(i, j), value);
 		return opSlice(i, j);
 	}
 
@@ -1155,25 +1195,8 @@ struct Vector(T)
 		return opSliceAssign(value, i, j);
 	}
 
-	/// Ditto.
-	Range!T opSliceAssign(R)(R value, in size_t i, in size_t j)
-		if ((!isInfinite!R && isInputRange!R
-		 && isImplicitlyConvertible!(ElementType!R, T))
-		 || isStaticArray!R && is(ElementType!R == T))
-	in
-	{
-		assert(i <= j);
-		assert(j <= length);
-		assert(j - i == walkLength(value));
-	}
-	body
-	{
-		copy(value, (() @trusted => vector[i .. j])());
-		return opSlice(i, j);
-	}
-
 	///
-	@safe unittest
+	@nogc @safe unittest
 	{
 		auto v1 = Vector!int([3, 3, 3]);
 		auto v2 = Vector!int([1, 2]);
