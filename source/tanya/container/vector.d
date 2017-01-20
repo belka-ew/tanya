@@ -169,14 +169,14 @@ struct Vector(T)
 	 * 	            to generate a list.
 	 * 	allocator = Allocator.
 	 */
-	this(size_t R)(auto in ref T[R] init, shared Allocator allocator = defaultAllocator)
+	this(size_t R)(in T[R] init, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
-		insertBack(init[]);
+		insertBack(init);
 	}
 
 	/// Ditto.
-	this(R)(auto in ref R init, shared Allocator allocator = defaultAllocator)
+	this(R)(R init, shared Allocator allocator = defaultAllocator)
 		if (!isInfinite!R
 		 && isInputRange!R
 		 && isImplicitlyConvertible!(ElementType!R, T))
@@ -198,17 +198,20 @@ struct Vector(T)
 	 * If $(D_PARAM init) is passed by reference, it will be copied.
 	 *
 	 * Params:
+	 * 	R         = Vector type.
 	 * 	init      = Source vector.
 	 * 	allocator = Allocator.
 	 */
-	this(ref Vector init, shared Allocator allocator = defaultAllocator)
+	this(R)(ref R init, shared Allocator allocator = defaultAllocator)
+		if (is(Unqual!R == Vector))
 	{
 		this(allocator);
 		insertBack(init[]);
 	}
 
 	/// Ditto.
-	this(Vector init, shared Allocator allocator = defaultAllocator) @trusted
+	this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
+		if (is(R == Vector))
 	{
 		this(allocator);
 		if (allocator is init.allocator)
@@ -246,6 +249,19 @@ struct Vector(T)
 		assert(v1 == v2);
 
 		auto v3 = Vector!int(Vector!int([1, 2, 3]));
+		assert(v1 == v3);
+		assert(v3.length == 3);
+		assert(v3.capacity == 3);
+	}
+
+	unittest // const constructor tests
+	{
+		auto v1 = const Vector!int([1, 2, 3]);
+		auto v2 = Vector!int(v1);
+		assert(v1.vector !is v2.vector);
+		assert(v1 == v2);
+
+		auto v3 = const Vector!int(Vector!int([1, 2, 3]));
 		assert(v1 == v3);
 		assert(v3.length == 3);
 		assert(v3.capacity == 3);
@@ -627,25 +643,29 @@ struct Vector(T)
 	 * Inserts the $(D_PARAM el) into the vector.
 	 *
 	 * Params:
-	 * 	R  = Parameter type (single values or a range).
+	 * 	R  = Parameter type (single value, range or static array).
 	 * 	el = Values should be inserted.
 	 *
 	 * Returns: The number of elements inserted.
 	 */
-	size_t insertBack(R...)(auto ref R el) @trusted
-		if (allSatisfy!(ApplyRight!(isImplicitlyConvertible, T), R))
+	size_t insertBack(R)(auto ref R el) @trusted
+		if (isImplicitlyConvertible!(R, T))
 	{
-		reserve(length_ + el.length);
-		foreach (i; el)
+		reserve(length_ + 1);
+		static if (__traits(isRef, el))
 		{
-			emplace(vector + length_, i);
-			++length_;
+			emplace(vector + length_, el);
 		}
-		return el.length;
+		else
+		{
+			moveEmplace(el, *(vector + length_));
+		}
+		++length_;
+		return 1;
 	}
 
 	/// Ditto.
-	size_t insertBack(R)(R el) @trusted
+	size_t insertBack(R)(R el)
 		if (!isInfinite!R
 		 && isInputRange!R
 		 && isImplicitlyConvertible!(ElementType!R, T))
@@ -657,10 +677,20 @@ struct Vector(T)
 		size_t retLength;
 		foreach (e; el)
 		{
-			insertBack(e);
-			++retLength;
+			retLength += insertBack(e);
 		}
 		return retLength;
+	}
+
+	/// Ditto.
+	size_t insertBack(size_t R)(in T[R] el)
+	{
+		reserve(length_ + el.length);
+		foreach (e; el)
+		{
+			insertBack(e);
+		}
+		return el.length;
 	}
 
 	/// Ditto.
@@ -1304,7 +1334,7 @@ unittest
 	assert(r2.empty);
 	assert(r1 == r2);
 
-	v1.insertBack(1, 2, 4);
+	v1.insertBack([1, 2, 4]);
 	assert(v1[] == v1);
 	assert(v2[] == v2);
 	assert(v2[] != v1);
