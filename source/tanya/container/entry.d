@@ -12,11 +12,11 @@
  */  
 module tanya.container.entry;
 
-package struct Entry(T)
+package struct SEntry(T)
 {
 	/// Item content.
 	T content;
 
 	/// Next item.
-	Entry* next;
+	SEntry* next;
 }

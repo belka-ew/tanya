@@ -44,7 +44,7 @@ struct Queue(T)
 	size_t length() const
 	{
 		size_t len;
-		for (const(Entry!T)* i = first; i !is null; i = i.next)
+		for (const(SEntry!T)* i = first; i !is null; i = i.next)
 		{
 			++len;
 		}
@@ -72,7 +72,7 @@ struct Queue(T)
 		assert(q.length == 0);
 	}
 
-	private void enqueueEntry(ref Entry!T* entry)
+	private void enqueueEntry(ref SEntry!T* entry)
 	{
 		if (empty)
 		{
@@ -85,9 +85,9 @@ struct Queue(T)
 		}
 	}
 
-	private Entry!T* allocateEntry()
+	private SEntry!T* allocateEntry()
 	{
-		auto temp = cast(Entry!T*) allocator.allocate(Entry!T.sizeof);
+		auto temp = cast(SEntry!T*) allocator.allocate(SEntry!T.sizeof);
 		if (temp is null)
 		{
 			onOutOfMemoryError();
@@ -107,7 +107,7 @@ struct Queue(T)
 	{
 		auto temp = allocateEntry();
 
-		*temp = Entry!T.init;
+		*temp = SEntry!T.init;
 		temp.content = x;
 
 		enqueueEntry(temp);
@@ -256,8 +256,8 @@ struct Queue(T)
 		assert(q.empty);
 	}
 
-	private Entry!T* first;
-	private Entry!T* rear;
+	private SEntry!T* first;
+	private SEntry!T* rear;
 
 	mixin DefaultAllocator;
 }

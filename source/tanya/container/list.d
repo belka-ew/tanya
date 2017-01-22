@@ -72,7 +72,7 @@ struct SList(T)
 	 */
 	void insertFront(ref T x)
 	{
-		auto temp = allocator.make!(Entry!T);
+		auto temp = allocator.make!(SEntry!T);
 		
 		temp.content = x;
 		temp.next = first.next;
@@ -233,7 +233,7 @@ struct SList(T)
 	}
 
 	/// 0th element of the list.
-	private Entry!T first;
+	private SEntry!T first;
 
 	mixin DefaultAllocator;
 }

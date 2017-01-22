@@ -169,10 +169,10 @@ struct Vector(T)
 	 * 	            to generate a list.
 	 * 	allocator = Allocator.
 	 */
-	this(size_t R)(in T[R] init, shared Allocator allocator = defaultAllocator)
+	this(size_t R)(T[R] init, shared Allocator allocator = defaultAllocator)
 	{
 		this(allocator);
-		insertBack(init);
+		insertBack!(T[])(init[]);
 	}
 
 	/// Ditto.
@@ -229,12 +229,7 @@ struct Vector(T)
 		{
 			// Move each element.
 			reserve(init.length);
-
-			const T* end = vector + init.length;
-			for (T* src = init.vector, dest = vector; dest != end; ++src, ++dest)
-			{
-				moveEmplace(*src, *dest);
-			}
+			moveEmplaceAll(init.vector[0 .. init.length_], vector[0 .. init.length_]);
 			length_ = init.length;
 			// Destructor of init should destroy it here.
 		}
@@ -335,21 +330,21 @@ struct Vector(T)
 	/**
 	 * Destroys this $(D_PSYMBOL Vector).
 	 */
-	~this()
+	~this() @trusted
 	{
-		length = 0;
-		shrink(0);
+		clear();
+		allocator.deallocate(vector[0 .. capacity_]);
 	}
 
 	/**
 	 * Copies the vector.
 	 */
-	this(this) @trusted
+	this(this)
 	{
-		auto buf = vector;
-		immutable oldLen = length_;
+		auto buf = opIndex();
 		length_ = capacity_ = 0;
-		insertBack(buf[0 .. oldLen]);
+		vector = null;
+		insertBack(buf);
 	}
 
 	/**
@@ -357,7 +352,7 @@ struct Vector(T)
 	 */
 	void clear()
 	{
-		length_ = 0;
+		length = 0;
 	}
 
 	///
@@ -399,11 +394,11 @@ struct Vector(T)
 	 */
 	@property void length(in size_t len) @trusted
 	{
-		if (len == length_)
+		if (len == length)
 		{
 			return;
 		}
-		else if (len > length_)
+		else if (len > length)
 		{
 			reserve(len);
 			initializeAll(vector[length_ .. len]);
@@ -597,70 +592,71 @@ struct Vector(T)
 	Range!T remove(Range!T r) @trusted
 	in
 	{
-		assert(r.begin >= vector && r.end <= vector + length_);
+		assert(r.begin >= vector);
+		assert(r.end <= vector + length_);
 	}
 	body
 	{
-		const T* end = vector + length_;
-		T* a = r.begin;
-		for (T* b = r.end; b != end; ++a, ++b)
-		{
-			*a = *b;
-		}
-		for (; a != end; ++a)
-		{
-			static if (hasElaborateDestructor!T)
-			{
-				destroy(*a);
-			}
-			--length_;
-		}
+		auto end = vector + length_;
+		moveAll(Range!T(r.end, end), Range!T(r.begin, end));
+		length = length - r.length;
 		return r;
 	}
 
 	///
-	unittest
+	@safe @nogc unittest
 	{
 		auto v = Vector!int([5, 18, 17, 2, 4, 6, 1]);
 
-		v.remove(v[1..3]);
-		assert(v == Vector!int([5, 2, 4, 6, 1]));
+		assert(v.remove(v[1 .. 3]).length == 2);
+		assert(v[0] == 5 && v[1] == 2 && v[2] == 4 && v[3] == 6 && v[4] == 1);
+		assert(v.length == 5);
 
-		v.remove(v[4..4]);
-		assert(v == Vector!int([5, 2, 4, 6, 1]));
+		assert(v.remove(v[4 .. 4]).length == 0);
+		assert(v[0] == 5 && v[1] == 2 && v[2] == 4 && v[3] == 6 && v[4] == 1);
+		assert(v.length == 5);
 
-		v.remove(v[4..5]);
-		assert(v == Vector!int([5, 2, 4, 6]));
+		assert(v.remove(v[4 .. 5]).length == 1);
+		assert(v[0] == 5 && v[1] == 2 && v[2] == 4 && v[3] == 6);
+		assert(v.length == 4);
 
-		v.remove(v[]);
+		assert(v.remove(v[]).length == 4);
 		assert(v.empty);
 
-		v.remove(v[]);
+		assert(v.remove(v[]).length == 0);
 		assert(v.empty);
+	}
+
+	private void moveBack(R)(ref R el) @trusted
+		if (isImplicitlyConvertible!(R, T))
+	{
+		reserve(length + 1);
+		moveEmplace(el, *(vector + length_));
+		++length_;
 	}
 
 	/**
 	 * Inserts the $(D_PARAM el) into the vector.
 	 *
 	 * Params:
-	 * 	R  = Parameter type (single value, range or static array).
-	 * 	el = Values should be inserted.
+	 * 	R  = Type of the inserted value(s) (single value, range or static array).
+	 * 	el = Value(s) should be inserted.
 	 *
 	 * Returns: The number of elements inserted.
 	 */
 	size_t insertBack(R)(auto ref R el) @trusted
 		if (isImplicitlyConvertible!(R, T))
 	{
-		reserve(length_ + 1);
 		static if (__traits(isRef, el))
 		{
+			reserve(length + 1);
 			emplace(vector + length_, el);
+			++length_;
 		}
 		else
 		{
-			moveEmplace(el, *(vector + length_));
+			moveBack(el);
 		}
-		++length_;
 		return 1;
 	}
 
@@ -672,7 +668,7 @@ struct Vector(T)
 	{
 		static if (hasLength!R)
 		{
-			reserve(length_ + el.length);
+			reserve(length + el.length);
 		}
 		size_t retLength;
 		foreach (e; el)
@@ -683,14 +679,9 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	size_t insertBack(size_t R)(in T[R] el)
+	size_t insertBack(size_t R)(T[R] el)
 	{
-		reserve(length_ + el.length);
-		foreach (e; el)
-		{
-			insertBack(e);
-		}
-		return el.length;
+		return insertBack!(T[])(el[]);
 	}
 
 	/// Ditto.
@@ -731,11 +722,189 @@ struct Vector(T)
 		assert(v1.capacity == 4);
 		assert(v1[0] == 5 && v1[1] == 6 && v1[2] == 4 && v1[3] == 2);
 
-		auto v2 = Vector!int([34, 234]);
-		assert(v1.insertBack(v2[]) == 2);
+		assert(v1.insertBack([34, 234]) == 2);
 		assert(v1.length == 6);
 		assert(v1.capacity == 6);
 		assert(v1[4] == 34 && v1[5] == 234);
+	}
+
+	/**
+	 * Inserts $(D_PARAM el) before or after $(D_PARAM r).
+	 *
+	 * Params:
+	 * 	R  = Type of the inserted value(s) (single value, range or static array).
+	 * 	r = Range originally obtained from this vector.
+	 * 	el = Value(s) should be inserted.
+	 *
+	 * Returns: The number of elements inserted.
+	 */
+	size_t insertAfter(R)(Range!T r, R el)
+		if (!isInfinite!R
+		 && isInputRange!R
+		 && isImplicitlyConvertible!(ElementType!R, T))
+	in
+	{
+		assert(r.begin >= vector);
+		assert(r.end <= vector + length_);
+	}
+	body
+	{
+		immutable oldLen = length;
+		immutable offset = r.end - vector;
+		immutable inserted = insertBack(el);
+		bringToFront(vector[offset .. oldLen], vector[oldLen .. length]);
+		return inserted;
+	}
+
+	/// Ditto.
+	size_t insertAfter(size_t R)(Range!T r, T[R] el)
+	{
+		return insertAfter!(T[])(r, el[]);
+	}
+
+	/// Ditto.
+	size_t insertAfter(R)(Range!T r, auto ref R el)
+		if (isImplicitlyConvertible!(R, T))
+	in
+	{
+		assert(r.begin >= vector);
+		assert(r.end <= vector + length_);
+	}
+	body
+	{
+		immutable oldLen = length;
+		immutable offset = r.end - vector;
+
+		static if (__traits(isRef, el))
+		{
+			insertBack(el);
+		}
+		else
+		{
+			moveBack(el);
+		}
+		bringToFront(vector[offset .. oldLen], vector[oldLen .. length_]);
+
+		return 1;
+	}
+
+	/// Ditto.
+	size_t insertBefore(R)(Range!T r, R el)
+		if (!isInfinite!R
+		 && isInputRange!R
+		 && isImplicitlyConvertible!(ElementType!R, T))
+	in
+	{
+		assert(r.begin >= vector);
+		assert(r.end <= vector + length_);
+	}
+	body
+	{
+		return insertAfter(Range!T(vector, r.begin), el);
+	}
+
+	/// Ditto.
+	size_t insertBefore(size_t R)(Range!T r, T[R] el)
+	{
+		return insertBefore!(T[])(r, el[]);
+	}
+
+	/// Ditto.
+	size_t insertBefore(R)(Range!T r, auto ref R el)
+		if (isImplicitlyConvertible!(R, T))
+	in
+	{
+		assert(r.begin >= vector);
+		assert(r.end <= vector + length_);
+	}
+	body
+	{
+		immutable oldLen = length;
+		immutable offset = r.begin - vector;
+
+		static if (__traits(isRef, el))
+		{
+			insertBack(el);
+		}
+		else
+		{
+			moveBack(el);
+		}
+		bringToFront(vector[offset .. oldLen], vector[oldLen .. length_]);
+
+		return 1;
+	}
+
+	///
+	unittest
+	{
+		Vector!int v1;
+		v1.insertAfter(v1[], [2, 8]);
+		assert(v1[0] == 2);
+		assert(v1[1] == 8);
+		assert(v1.length == 2);
+
+		v1.insertAfter(v1[], [1, 2]);
+		assert(v1[0] == 2);
+		assert(v1[1] == 8);
+		assert(v1[2] == 1);
+		assert(v1[3] == 2);
+		assert(v1.length == 4);
+
+		v1.insertAfter(v1[0 .. 0], [1, 2]);
+		assert(v1[0] == 1);
+		assert(v1[1] == 2);
+		assert(v1[2] == 2);
+		assert(v1[3] == 8);
+		assert(v1[4] == 1);
+		assert(v1[5] == 2);
+		assert(v1.length == 6);
+
+		v1.insertAfter(v1[0 .. 4], 9);
+		assert(v1[0] == 1);
+		assert(v1[1] == 2);
+		assert(v1[2] == 2);
+		assert(v1[3] == 8);
+		assert(v1[4] == 9);
+		assert(v1[5] == 1);
+		assert(v1[6] == 2);
+		assert(v1.length == 7);
+	}
+
+	///
+	unittest
+	{
+		Vector!int v1;
+		v1.insertBefore(v1[], [2, 8]);
+		assert(v1[0] == 2);
+		assert(v1[1] == 8);
+		assert(v1.length == 2);
+
+		v1.insertBefore(v1[], [1, 2]);
+		assert(v1[0] == 1);
+		assert(v1[1] == 2);
+		assert(v1[2] == 2);
+		assert(v1[3] == 8);
+		assert(v1.length == 4);
+
+		v1.insertBefore(v1[0 .. 1], [1, 2]);
+		assert(v1[0] == 1);
+		assert(v1[1] == 2);
+		assert(v1[2] == 1);
+		assert(v1[3] == 2);
+		assert(v1[4] == 2);
+		assert(v1[5] == 8);
+		assert(v1.length == 6);
+
+		v1.insertBefore(v1[2 .. $], 9);
+		assert(v1[0] == 1);
+		assert(v1[1] == 2);
+		assert(v1[2] == 9);
+		assert(v1[3] == 1);
+		assert(v1[4] == 2);
+		assert(v1[5] == 2);
+		assert(v1[6] == 8);
+		assert(v1.length == 7);
 	}
 
 	/**
@@ -841,13 +1010,13 @@ struct Vector(T)
 	 * Returns: Random access range that iterates over elements of the vector, in
 	 *          forward order.
 	 */
-	Range!T opIndex()
+	Range!T opIndex() @trusted
 	{
 		return typeof(return)(vector, vector + length_);
 	}
 
 	/// Ditto.
-	Range!(const T) opIndex() const
+	Range!(const T) opIndex() const @trusted
 	{
 		return typeof(return)(vector, vector + length_);
 	}
@@ -874,15 +1043,15 @@ struct Vector(T)
 	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
 	 *          otherwise.
 	 */
-	bool opEquals()(auto ref typeof(this) v)
+	bool opEquals()(auto ref typeof(this) v) @trusted
 	{
-		return equal(opIndex(), v[]);
+		return equal(vector[0 .. length_], v.vector[0 .. v.length_]);
 	}
 
 	/// Ditto.
-	bool opEquals()(in auto ref typeof(this) v) const
+	bool opEquals()(in auto ref typeof(this) v) const @trusted
 	{
-		return equal(opIndex(), v[]);
+		return equal(vector[0 .. length_], v.vector[0 .. length_]);
 	}
 
 	/// Ditto.
@@ -1185,8 +1354,9 @@ struct Vector(T)
 	 * Precondition: $(D_INLINECODE i <= j && j <= length
 	 *                           && value.length == j - i)
 	 */
-	Range!T opSliceAssign(R)(R value, in size_t i, in size_t j)
-		if (!isInfinite!R && isInputRange!R
+	Range!T opSliceAssign(R)(R value, in size_t i, in size_t j) @trusted
+		if (!isInfinite!R
+		 && isInputRange!R
 		 && isImplicitlyConvertible!(ElementType!R, T))
 	in
 	{
@@ -1196,7 +1366,7 @@ struct Vector(T)
 	}
 	body
 	{
-		copy(value, opSlice(i, j));
+		copy(value, vector[i .. j]);
 		return opSlice(i, j);
 	}
 
@@ -1207,7 +1377,7 @@ struct Vector(T)
 	}
 
 	/// Ditto.
-	Range!T opSliceAssign(ref T value, in size_t i, in size_t j)
+	Range!T opSliceAssign(ref T value, in size_t i, in size_t j) @trusted
 	in
 	{
 		assert(i <= j);
@@ -1215,7 +1385,7 @@ struct Vector(T)
 	}
 	body
 	{
-		fill(opSlice(i, j), value);
+		fill(vector[i .. j], value);
 		return opSlice(i, j);
 	}
 
@@ -1391,4 +1561,13 @@ unittest
 		}
 	}
 	auto v = Vector!SWithDtor(); // Destructor can destroy empty vectors.
+}
+
+unittest
+{
+	class A
+	{
+	}
+	A a1, a2;
+	auto v1 = Vector!A([a1, a2]);
 }
