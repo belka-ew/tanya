@@ -10,8 +10,62 @@
  */  
 module tanya.container.list;
 
+import std.traits;
 import tanya.container.entry;
 import tanya.memory;
+
+private struct Range(E)
+	if (__traits(isSame, TemplateOf!E, SEntry))
+{
+	private alias T = typeof(E.content);
+
+	private E* head;
+
+	private this(E* head)
+	{
+		this.head = head;
+	}
+
+	@property Range save()
+	{
+		return this;
+	}
+
+	@property bool empty() const
+	{
+		return head is null;
+	}
+
+	@property ref inout(T) front() inout
+	in
+	{
+		assert(!empty);
+	}
+	body
+	{
+		return head.content;
+	}
+
+	void popFront()
+	in
+	{
+		assert(!empty);
+	}
+	body
+	{
+		head = head.next;
+	}
+
+	Range opIndex()
+	{
+		return typeof(return)(head);
+	}
+
+	Range!(const E) opIndex() const
+	{
+		return typeof(return)(head);
+	}
+}
 
 /**
  * Singly-linked list.
@@ -21,6 +75,11 @@ import tanya.memory;
  */
 struct SList(T)
 {
+	private alias Entry = SEntry!T;
+
+	// 0th element of the list.
+	private Entry* head;
+
 	/**
 	 * Removes all elements from the list.
 	 */
@@ -36,7 +95,7 @@ struct SList(T)
 	{
 		while (!empty)
 		{
-			popFront();
+			removeFront();
 		}
 	}
 
@@ -61,7 +120,7 @@ struct SList(T)
 	}
 	body
 	{
-		return first.next.content;
+		return head.content;
 	}
 
 	/**
@@ -72,11 +131,11 @@ struct SList(T)
 	 */
 	void insertFront(ref T x)
 	{
-		auto temp = allocator.make!(SEntry!T);
+		auto temp = allocator.make!Entry;
 		
 		temp.content = x;
-		temp.next = first.next;
-		first.next = temp;
+		temp.next = head;
+		head = temp;
 	}
 
 	/// Ditto.
@@ -104,25 +163,27 @@ struct SList(T)
 	 */
 	@property bool empty() const
 	{
-		return first.next is null;
+		return head is null;
 	}
 
 	/**
 	 * Returns the first element and moves to the next one.
 	 *
 	 * Returns: The first element.
+	 *
+	 * Precondition: $(D_INLINECODE !empty)
 	 */
-	void popFront()
+	void removeFront()
 	in
 	{
 		assert(!empty);
 	}
 	body
 	{
-		auto n = first.next.next;
+		auto n = head.next;
 
-		allocator.dispose(first.next);
-		first.next = n;
+		allocator.dispose(head);
+		head = n;
 	}
 
 	///
@@ -133,14 +194,16 @@ struct SList(T)
 		l.insertFront(8);
 		l.insertFront(9);
 		assert(l.front == 9);
-		l.popFront();
+		l.removeFront();
 		assert(l.front == 8);
+		l.removeFront();
+		assert(l.empty);
 	}
 
 	/**
 	 * Removes $(D_PARAM howMany) elements from the list.
 	 *
-	 * Unlike $(D_PSYMBOL popFront()), this method doesn't fail, if it could not
+	 * Unlike $(D_PSYMBOL removeFront()), this method doesn't fail, if it could not
 	 * remove $(D_PARAM howMany) elements. Instead, if $(D_PARAM howMany) is
 	 * greater than the list length, all elements are removed.
 	 *
@@ -149,12 +212,17 @@ struct SList(T)
 	 *
 	 * Returns: The number of elements removed.
 	 */
-	size_t removeFront(in size_t howMany = 1)
+	size_t removeFront(in size_t howMany)
+	out (removed)
+	{
+		assert(removed <= howMany);
+	}
+	body
 	{
 		size_t i;
 		for (; i < howMany && !empty; ++i)
 		{
-			popFront();
+			removeFront();
 		}
 		return i;
 	}
@@ -182,12 +250,12 @@ struct SList(T)
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
 	 */
-	int opApply(scope int delegate(ref size_t i, ref T) dg)
+	int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
 	{
 		int result;
 		size_t i;
 
-		for (auto pos = first.next; pos; pos = pos.next, ++i)
+		for (auto pos = head; pos; pos = pos.next, ++i)
 		{
 			result = dg(i, pos.content);
 
@@ -200,11 +268,11 @@ struct SList(T)
 	}
 
 	/// Ditto.
-	int opApply(scope int delegate(ref T) dg)
+	int opApply(scope int delegate(ref T) @nogc dg)
 	{
 		int result;
 
-		for (auto pos = first.next; pos; pos = pos.next)
+		for (auto pos = head; pos; pos = pos.next)
 		{
 			result = dg(pos.content);
 
@@ -232,8 +300,15 @@ struct SList(T)
 		}
 	}
 
-	/// 0th element of the list.
-	private SEntry!T first;
+	Range!Entry opIndex()
+	{
+		return typeof(return)(head);
+	}
+
+	Range!(const Entry) opIndex() const
+	{
+		return typeof(return)(head);
+	}
 
 	mixin DefaultAllocator;
 }
@@ -257,7 +332,7 @@ unittest
 	assert(i == 3);
 }
 
-private unittest
+unittest
 {
 	interface Stuff
 	{

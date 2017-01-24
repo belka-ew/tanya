@@ -548,6 +548,23 @@ struct Vector(T)
 	}
 
 	/**
+	 * Removes the value at the back of the vector.
+	 *
+	 * Returns: The number of elements removed
+	 *
+	 * Precondition: $(D_INLINECODE !empty)
+	 */
+	void removeBack()
+	in
+	{
+		assert(!empty);
+	}
+	body
+	{
+		length = length - 1;
+	}
+
+	/**
 	 * Removes $(D_PARAM howMany) elements from the vector.
 	 *
 	 * This method doesn't fail if it could not remove $(D_PARAM howMany)
@@ -559,11 +576,16 @@ struct Vector(T)
 	 *
 	 * Returns: The number of elements removed
 	 */
-	size_t removeBack(in size_t howMany = 1)
+	size_t removeBack(in size_t howMany)
+	out (removed)
 	{
-		immutable toRemove = min(howMany, length_);
+		assert(removed <= howMany);
+	}
+	body
+	{
+		immutable toRemove = min(howMany, length);
 
-		length = length_ - toRemove;
+		length = length - toRemove;
 
 		return toRemove;
 	}
@@ -1119,9 +1141,9 @@ struct Vector(T)
 	/// Ditto.
 	int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
 	{
-		for (size_t i = 0; i < length_; ++i)
+		for (size_t i = 0; i < length; ++i)
 		{
-			assert(i < length_);
+			assert(i < length);
 			int result = dg(i, *(vector + i));
 
 			if (result != 0)
@@ -1135,7 +1157,7 @@ struct Vector(T)
 	/// Ditto.
 	int opApplyReverse(scope int delegate(ref T) dg)
 	{
-		for (T* end = vector + length_ - 1; vector != end; --end)
+		for (T* end = vector + length - 1; vector != end; --end)
 		{
 			int result = dg(*end);
 			if (result != 0)
@@ -1149,13 +1171,13 @@ struct Vector(T)
 	/// Ditto.
 	int opApplyReverse(scope int delegate(ref size_t i, ref T) dg)
 	{
-		if (length_ > 0)
+		if (length > 0)
 		{
-			size_t i = length_;
+			size_t i = length;
 			do
 			{
 				--i;
-				assert(i < length_);
+				assert(i < length);
 				int result = dg(i, *(vector + i));
 
 				if (result != 0)
@@ -1211,7 +1233,7 @@ struct Vector(T)
 	/**
 	 * Returns: The first element.
 	 *
-	 * Precondition: $(D_INLINECODE length > 0)
+	 * Precondition: $(D_INLINECODE !empty)
 	 */
 	@property ref inout(T) front() inout
 	in
@@ -1238,7 +1260,7 @@ struct Vector(T)
 	/**
 	 * Returns: The last element.
 	 *
-	 * Precondition: $(D_INLINECODE length > 0)
+	 * Precondition: $(D_INLINECODE !empty)
 	 */
 	@property ref inout(T) back() inout @trusted
 	in
