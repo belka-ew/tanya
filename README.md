@@ -19,7 +19,6 @@ Tanya consists of the following packages:
 
 * `async`: Event loop (epoll, kqueue and IOCP).
 * `container`: Queue, Vector, Singly linked list, buffers.
-* `crypto`: Work in progress TLS implementation.
 * `math`: Multiple precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocator, reference counting,
 helper functions).
@@ -27,6 +26,7 @@ helper functions).
 
 ### Supported compilers
 
+* dmd 2.073.0
 * dmd 2.072.2
 * dmd 2.071.2
 
