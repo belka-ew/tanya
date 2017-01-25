@@ -19,7 +19,7 @@ Tanya consists of the following packages:
 
 * `async`: Event loop (epoll, kqueue and IOCP).
 * `container`: Queue, Vector, Singly linked list, buffers.
-* `math`: Multiple precision integer and a set of functions.
+* `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocator, reference counting,
 helper functions).
 * `network`: URL-Parsing, sockets.
@@ -29,24 +29,21 @@ helper functions).
 * dmd 2.073.0
 * dmd 2.072.2
 * dmd 2.071.2
+* dmd 2.070.2
 
 ### Current status
 
-The library is currently under development, but some parts of it can already be
-used.
+The library is currently under development, but the API is becoming gradually
+stable.
 
-`network` and `async` exist for quite some time and are better tested than
-other components.
+`container`s are being extended to support ranges. Also following modules are
+coming soon:
+* UTF-8 string.
+* Hash table.
 
-`container`s were newly reworked and the API won't change significantly, but
-will be only extended. The same is true for the `memory` package.
-
-`math` package contains an arbitrary precision integer implementation that has
-a stable API (that mostly consists of operator overloads), but still needs
-testing and work on its performance.
-
-I'm currently mostly working on `crypto` that is not a complete cryptographic
-suite, but contains (will contain) algorithm implementations required by TLS.
+`math` package contains an arbitrary precision integer implementation that
+needs more test cases, better performance and some additional features
+(constructing from a string and an ubyte array, and converting it back).
 
 ### Further characteristics
 
