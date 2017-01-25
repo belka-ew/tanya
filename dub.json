@@ -1,6 +1,6 @@
 {
 	"name": "tanya",
-	"description": "D library with event loop",
+	"description": "General purpose, @nogc library",
 	"license": "MPL-2.0",
 	"copyright": "(c) Eugene Wissner <info@caraus.de>",
 	"authors": [

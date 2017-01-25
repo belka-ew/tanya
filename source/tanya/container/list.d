@@ -10,6 +10,8 @@
  */  
 module tanya.container.list;
 
+import std.algorithm.comparison;
+import std.algorithm.searching;
 import std.traits;
 import tanya.container.entry;
 import tanya.memory;
@@ -29,6 +31,11 @@ private struct Range(E)
 	@property Range save()
 	{
 		return this;
+	}
+
+	@property size_t length() const
+	{
+		return count(opIndex());
 	}
 
 	@property bool empty() const
@@ -156,6 +163,72 @@ struct SList(T)
 		assert(l.front == 8);
 		l.insertFront(9);
 		assert(l.front == 9);
+	}
+
+	/**
+	 * Returns: How many elements are in the list.
+	 */
+	@property size_t length() const
+	{
+		return count(opIndex());
+	}
+
+	///
+	unittest
+	{
+		SList!int l;
+
+		l.insertFront(8);
+		l.insertFront(9);
+		assert(l.length == 2);
+		l.removeFront();
+		assert(l.length == 1);
+		l.removeFront();
+		assert(l.length == 0);
+	}
+
+	/**
+	 * Comparison for equality.
+	 *
+	 * Params:
+	 * 	that = The list to compare with.
+	 *
+	 * Returns: $(D_KEYWORD true) if the lists are equal, $(D_KEYWORD false)
+	 *          otherwise.
+	 */
+	bool opEquals()(auto ref typeof(this) that) @trusted
+	{
+		return equal(opIndex(), that[]);
+	}
+
+	/// Ditto.
+	bool opEquals()(in auto ref typeof(this) that) const @trusted
+	{
+		return equal(opIndex(), that[]);
+	}
+
+	///
+	unittest
+	{
+		SList!int l1, l2;
+
+		l1.insertFront(8);
+		l1.insertFront(9);
+		l2.insertFront(8);
+		l2.insertFront(10);
+		assert(l1 != l2);
+
+		l1.removeFront();
+		assert(l1 != l2);
+
+		l2.removeFront();
+		assert(l1 == l2);
+
+		l1.removeFront();
+		assert(l1 != l2);
+
+		l2.removeFront();
+		assert(l1 == l2);
 	}
 
 	/**

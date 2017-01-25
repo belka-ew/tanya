@@ -100,10 +100,8 @@ struct Queue(T)
 	 *
 	 * Params:
 	 * 	x = New element.
-	 *
-	 * Returns: $(D_KEYWORD this).
 	 */
-	ref typeof(this) enqueue(ref T x)
+	void enqueue(ref T x)
 	{
 		auto temp = allocateEntry();
 
@@ -111,12 +109,10 @@ struct Queue(T)
 		temp.content = x;
 
 		enqueueEntry(temp);
-
-		return this;
 	}
 
 	/// Ditto.
-	ref typeof(this) enqueue(T x)
+	void enqueue(T x)
 	{
 		auto temp = allocateEntry();
 
@@ -124,8 +120,6 @@ struct Queue(T)
 		(*temp).next = null;
 
 		enqueueEntry(temp);
-
-		return this;
 	}
 
 	///
@@ -134,7 +128,8 @@ struct Queue(T)
 		Queue!int q;
 
 		assert(q.empty);
-		q.enqueue(8).enqueue(9);
+		q.enqueue(8);
+		q.enqueue(9);
 		assert(q.dequeue() == 8);
 		assert(q.dequeue() == 9);
 	}
@@ -183,7 +178,8 @@ struct Queue(T)
 	{
 		Queue!int q;
 
-		q.enqueue(8).enqueue(9);
+		q.enqueue(8);
+		q.enqueue(9);
 		assert(q.dequeue() == 8);
 		assert(q.dequeue() == 9);
 	}
@@ -232,7 +228,9 @@ struct Queue(T)
 		Queue!int q;
 
 		size_t j;
-		q.enqueue(5).enqueue(4).enqueue(9);
+		q.enqueue(5);
+		q.enqueue(4);
+		q.enqueue(9);
 		foreach (i, e; q)
 		{
 			assert(i != 2 || e == 9);
@@ -244,7 +242,9 @@ struct Queue(T)
 		assert(q.empty);
 
 		j = 0;
-		q.enqueue(5).enqueue(4).enqueue(9);
+		q.enqueue(5);
+		q.enqueue(4);
+		q.enqueue(9);
 		foreach (e; q)
 		{
 			assert(j != 2 || e == 9);
@@ -270,7 +270,8 @@ unittest
 	q.enqueue(5);
 	assert(!q.empty);
 
-	q.enqueue(4).enqueue(9);
+	q.enqueue(4);
+	q.enqueue(9);
 
 	assert(q.dequeue() == 5);
 

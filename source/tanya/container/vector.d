@@ -1060,42 +1060,42 @@ struct Vector(T)
 	 * Comparison for equality.
 	 *
 	 * Params:
-	 * 	v = The vector to compare with.
+	 * 	that = The vector to compare with.
 	 *
 	 * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
 	 *          otherwise.
 	 */
-	bool opEquals()(auto ref typeof(this) v) @trusted
+	bool opEquals()(auto ref typeof(this) that) @trusted
 	{
-		return equal(vector[0 .. length_], v.vector[0 .. v.length_]);
+		return equal(vector[0 .. length_], that.vector[0 .. that.length_]);
 	}
 
 	/// Ditto.
-	bool opEquals()(in auto ref typeof(this) v) const @trusted
+	bool opEquals()(in auto ref typeof(this) that) const @trusted
 	{
-		return equal(vector[0 .. length_], v.vector[0 .. length_]);
+		return equal(vector[0 .. length_], that.vector[0 .. that.length_]);
 	}
 
 	/// Ditto.
-	bool opEquals(Range!T v)
+	bool opEquals(Range!T that)
 	{
-		return equal(opIndex(), v);
+		return equal(opIndex(), that);
 	}
 
 	/**
 	 * Comparison for equality.
 	 *
 	 * Params:
-	 * 	R = Right hand side type.
-	 * 	v = Right hand side vector range.
+	 * 	R    = Right hand side type.
+	 * 	that = Right hand side vector range.
 	 *
 	 * Returns: $(D_KEYWORD true) if the vector and the range are equal,
 	 *          $(D_KEYWORD false) otherwise.
 	 */
-	bool opEquals(R)(Range!R v) const
+	bool opEquals(R)(Range!R that) const
 		if (is(Unqual!R == T))
 	{
-		return equal(opIndex(), v);
+		return equal(opIndex(), that);
 	}
 
 	///
