@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -64,67 +64,4 @@ interface Allocator
 	 * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
 	 */
 	bool reallocateInPlace(ref void[] p, in size_t size) shared nothrow @nogc;
-}
-
-/**
- * The mixin generates common methods for classes and structs using
- * allocators. It provides a protected member, constructor and a read-only property,
- * that checks if an allocator was already set and sets it to the default
- * one, if not (useful for structs which don't have a default constructor).
- */
-mixin template DefaultAllocator()
-{
-	/// Allocator.
-	protected shared Allocator allocator_;
-
-	/**
-	 * Params:
-	 * 	allocator = The allocator should be used.
-	 */
-	this(shared Allocator allocator)
-	in
-	{
-		assert(allocator !is null);
-	}
-	body
-	{
-		this.allocator_ = allocator;
-	}
-
-	/**
-	 * This property checks if the allocator was set in the constructor
-	 * and sets it to the default one, if not.
-	 *
-	 * Returns: Used allocator.
-	 *
-	 * Postcondition: $(D_INLINECODE allocator_ !is null)
-	 */
-	protected @property shared(Allocator) allocator() nothrow @safe @nogc
-	out (allocator)
-	{
-		assert(allocator !is null);
-	}
-	body
-	{
-		if (allocator_ is null)
-		{
-			allocator_ = defaultAllocator;
-		}
-		return allocator_;
-	}
-
-	/// Ditto.
-	@property shared(Allocator) allocator() const nothrow @trusted @nogc
-	out (allocator)
-	{
-		assert(allocator !is null);
-	}
-	body
-	{
-		if (allocator_ is null)
-		{
-			return defaultAllocator;
-		}
-		return cast(shared Allocator) allocator_;
-	}
 }
