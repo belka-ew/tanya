@@ -190,6 +190,8 @@ struct Queue(T)
 	 *
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
+	 *
+	 * Returns: The value returned from $(D_PARAM dg).
 	 */
 	int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
 	{

@@ -130,6 +130,8 @@ alias EventMask = BitFlags!Event;
  */
 abstract class Loop
 {
+	private bool done;
+
 	/// Pending watchers.
 	protected Queue!Watcher pendings;
 
@@ -167,7 +169,7 @@ abstract class Loop
 	 */
 	void run() @nogc
 	{
-		done_ = false;
+		done = false;
 		do
 		{
 			poll();
@@ -178,7 +180,7 @@ abstract class Loop
 				w.invoke();
 			}
 		}
-		while (!done_);
+		while (!done);
 	}
 
 	/**
@@ -186,7 +188,7 @@ abstract class Loop
 	 */
 	void unloop() @safe pure nothrow @nogc
 	{
-		done_ = true;
+		done = true;
 	}
 
 	/**
@@ -202,6 +204,7 @@ abstract class Loop
 			return;
 		}
 		watcher.active = true;
+
 		reify(watcher, EventMask(Event.none), EventMask(Event.accept));
 	}
 
@@ -280,9 +283,6 @@ abstract class Loop
 	 * Does the actual polling.
 	 */
 	abstract protected void poll() @nogc;
-
-	/// Whether the event loop should be stopped.
-	private bool done_;
 
 	/// Maximal block time.
 	protected Duration blockTime_ = 1.dur!"minutes";

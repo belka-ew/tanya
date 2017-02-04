@@ -1123,6 +1123,8 @@ struct Vector(T)
 	 *
 	 * Params:
 	 * 	dg = $(D_KEYWORD foreach) body.
+	 *
+	 * Returns: The value returned from $(D_PARAM dg).
 	 */
 	int opApply(scope int delegate(ref T) @nogc dg)
 	{
