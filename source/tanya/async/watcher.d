@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -90,7 +90,7 @@ class ConnectionWatcher : Watcher
 	/**
 	 * Returns: Socket.
 	 */
-	@property inout(Socket) socket() inout pure nothrow @nogc
+	@property Socket socket() pure nothrow @nogc
 	{
 		return socket_;
 	}
@@ -222,7 +222,7 @@ class IOWatcher : ConnectionWatcher
 	/**
 	 * Returns: Socket.
 	 */
-	override @property inout(Socket) socket() inout pure nothrow @nogc
+	override @property Socket socket() pure nothrow @nogc
 	{
 		return transport.socket;
 	}

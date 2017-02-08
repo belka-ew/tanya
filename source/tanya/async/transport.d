@@ -3,13 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
 module tanya.async.transport;
 
+import tanya.async.protocol;
 import tanya.network.socket;
 
 /**
@@ -45,6 +46,33 @@ interface WriteTransport : Transport
  */
 interface DuplexTransport : ReadTransport, WriteTransport
 {
+	/**
+	 * Returns: Application protocol.
+	 *
+	 * Postcondition: $(D_INLINECODE protocol !is null)
+	 */
+	@property Protocol protocol() pure nothrow @safe @nogc
+	out (protocol)
+	{
+		assert(protocol !is null);
+	}
+
+	/**
+	 * Switches the protocol.
+	 *
+	 * The protocol is deallocated by the event loop, it should currently be
+	 * allocated with $(D_PSYMBOL MmapPool).
+	 *
+	 * Params:
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE protocol !is null)
+	 */
+	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
+	in
+	{
+		assert(protocol !is null);
+	}
 }
 
 /**
@@ -52,7 +80,7 @@ interface DuplexTransport : ReadTransport, WriteTransport
  */
 interface SocketTransport : Transport
 {
-	@property inout(Socket) socket() inout pure nothrow @safe @nogc;
+	@property Socket socket() pure nothrow @safe @nogc;
 }
 
 /**

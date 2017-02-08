@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -13,6 +13,7 @@ module tanya.async.event.selector;
 version (Posix):
 
 import tanya.async.loop;
+import tanya.async.protocol;
 import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.buffer;
@@ -28,6 +29,8 @@ class SelectorStreamTransport : StreamTransport
 {
 	private ConnectedSocket socket_;
 
+	private Protocol protocol_;
+
 	/// Input buffer.
 	package WriteBuffer!ubyte input;
 
@@ -40,20 +43,62 @@ class SelectorStreamTransport : StreamTransport
 	 * Params:
 	 * 	loop     = Event loop.
 	 * 	socket   = Socket.
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE loop !is null
+	 *                           && socket !is null
+	 *                           && protocol !is null)
 	 */
-	this(SelectorLoop loop, ConnectedSocket socket) @nogc
+	this(SelectorLoop loop, ConnectedSocket socket, Protocol protocol) @nogc
+	in 
+	{
+		assert(loop !is null);
+		assert(socket !is null);
+		assert(protocol !is null);
+	}
+	body
 	{
 		socket_ = socket;
 		this.loop = loop;
+		protocol_ = protocol;
 		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 	}
 
 	/**
 	 * Returns: Transport socket.
 	 */
-	inout(ConnectedSocket) socket() inout pure nothrow @safe @nogc
+	ConnectedSocket socket() pure nothrow @safe @nogc
 	{
 		return socket_;
+	}
+
+	/**
+	 * Returns: Application protocol.
+	 */
+	@property Protocol protocol() pure nothrow @safe @nogc
+	{
+		return protocol_;
+	}
+
+	/**
+	 * Switches the protocol.
+	 *
+	 * The protocol is deallocated by the event loop, it should currently be
+	 * allocated with $(D_PSYMBOL MmapPool).
+	 *
+	 * Params:
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE protocol !is null)
+	 */
+	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
+	in
+	{
+		assert(protocol !is null);
+	}
+	body
+	{
+		protocol_ = protocol;
 	}
 
 	/**
@@ -224,7 +269,8 @@ abstract class SelectorLoop : Loop
 			}
 
 			IOWatcher io;
-			auto transport = MmapPool.instance.make!SelectorStreamTransport(this, client);
+			auto protocol = connection.protocol;
+			auto transport = MmapPool.instance.make!SelectorStreamTransport(this, client, protocol);
 
 			if (connections.length > client.handle)
 			{
@@ -236,13 +282,12 @@ abstract class SelectorLoop : Loop
 			}
 			if (io is null)
 			{
-				io = MmapPool.instance.make!IOWatcher(transport,
-				                                      connection.protocol);
+				io = MmapPool.instance.make!IOWatcher(transport, protocol);
 				connections[client.handle] = io;
 			}
 			else
 			{
-				io(transport, connection.protocol);
+				io(transport, protocol);
 			}
 
 			reify(io, EventMask(Event.none), EventMask(Event.read, Event.write));
