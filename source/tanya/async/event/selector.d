@@ -65,7 +65,7 @@ class SelectorStreamTransport : StreamTransport
 	}
 
 	/**
-	 * Returns: Transport socket.
+	 * Returns: Socket.
 	 */
 	ConnectedSocket socket() pure nothrow @safe @nogc
 	{

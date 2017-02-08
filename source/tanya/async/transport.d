@@ -80,6 +80,9 @@ interface DuplexTransport : ReadTransport, WriteTransport
  */
 interface SocketTransport : Transport
 {
+	/**
+	 * Returns: Socket.
+	 */
 	@property Socket socket() pure nothrow @safe @nogc;
 }
 

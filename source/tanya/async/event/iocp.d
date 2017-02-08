@@ -30,29 +30,69 @@ class IOCPStreamTransport : StreamTransport
 {
 	private OverlappedConnectedSocket socket_;
 
+	private Protocol protocol_;
+
 	private WriteBuffer!ubyte input;
 
 	/**
 	 * Creates new completion port transport.
+	 *
 	 * Params:
-	 * 	socket = Socket.
+	 * 	socket   = Socket.
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE socket !is null && protocol !is null)
 	 */
-	this(OverlappedConnectedSocket socket) @nogc
+	this(OverlappedConnectedSocket socket, Protocol protocol) @nogc
 	in
 	{
 		assert(socket !is null);
+		assert(protocol !is null);
 	}
 	body
 	{
 		socket_ = socket;
+		protocol_ = protocol;
 		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 	}
 
-	@property inout(OverlappedConnectedSocket) socket()
-	inout pure nothrow @safe @nogc
+	/**
+	 * Returns: Socket.
+	 */
+	@property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
 	{
 		return socket_;
 	}
+
+	/**
+	 * Returns: Application protocol.
+	 */
+	@property Protocol protocol() pure nothrow @safe @nogc
+	{
+		return protocol_;
+	}
+
+	/**
+	 * Switches the protocol.
+	 *
+	 * The protocol is deallocated by the event loop, it should currently be
+	 * allocated with $(D_PSYMBOL MmapPool).
+	 *
+	 * Params:
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE protocol !is null)
+	 */
+	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
+	in
+	{
+		assert(protocol !is null);
+	}
+	body
+	{
+		protocol_ = protocol;
+	}
+
 
 	/**
 	 * Write some data to the transport.
@@ -215,8 +255,9 @@ class IOCPLoop : Loop
 				assert(listener !is null);
 
 				auto socket = listener.endAccept(overlapped);
-				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket);
-				auto io = MmapPool.instance.make!IOWatcher(transport, connection.protocol);
+				auto protocol = connection.protocol;
+				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket, protocol);
+				auto io = MmapPool.instance.make!IOWatcher(transport, protocol);
 
 				connection.incoming.enqueue(io);
 
