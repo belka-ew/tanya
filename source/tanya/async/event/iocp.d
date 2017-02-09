@@ -257,7 +257,7 @@ class IOCPLoop : Loop
 				auto socket = listener.endAccept(overlapped);
 				auto protocol = connection.protocol;
 				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket, protocol);
-				auto io = MmapPool.instance.make!IOWatcher(transport, protocol);
+				auto io = MmapPool.instance.make!IOWatcher(transport, socket, protocol);
 
 				connection.incoming.enqueue(io);
 
