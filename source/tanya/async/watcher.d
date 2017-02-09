@@ -48,7 +48,7 @@ abstract class Watcher
 class ConnectionWatcher : Watcher
 {
 	/// Watched socket.
-	private Socket socket_;
+	protected Socket socket_;
 
 	/// Protocol factory.
 	protected Protocol delegate() @nogc protocolFactory;
@@ -65,11 +65,9 @@ class ConnectionWatcher : Watcher
 		socket_ = socket;
 	}
 
-	/// Ditto.
-	protected this() pure nothrow @safe @nogc
-	{
-	}
-
+	/**
+	 * Destroys the watcher.
+	 */
 	~this() @nogc
 	{
 		foreach (w; incoming)
@@ -90,7 +88,7 @@ class ConnectionWatcher : Watcher
 	/**
 	 * Returns: Socket.
 	 */
-	@property Socket socket() pure nothrow @nogc
+	@property Socket socket() pure nothrow @safe @nogc
 	{
 		return socket_;
 	}
@@ -126,12 +124,8 @@ class ConnectionWatcher : Watcher
  */
 class IOWatcher : ConnectionWatcher
 {
-	/// If an exception was thrown the transport should be already invalid.
-	private union
-	{
-		StreamTransport transport_;
-		SocketException exception_;
-	}
+	package StreamTransport transport;
+	package SocketException exception;
 
 	private Protocol protocol_;
 
@@ -143,18 +137,25 @@ class IOWatcher : ConnectionWatcher
 	/**
 	 * Params:
 	 * 	transport = Transport.
+	 * 	socket    = Socket.
 	 * 	protocol  = New instance of the application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE transport !is null
+	 *                           && socket !is null
+	 *                           && protocol !is null)
 	 */
-	this(StreamTransport transport, Protocol protocol) @nogc
+	this(StreamTransport transport, ConnectedSocket socket, Protocol protocol)
+	@nogc
 	in
 	{
 		assert(transport !is null);
+		assert(socket !is null);
 		assert(protocol !is null);
 	}
 	body
 	{
-		super();
-		transport_ = transport;
+		super(socket);
+		this.transport = transport;
 		protocol_ = protocol;
 		output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
 		active = true;
@@ -169,46 +170,31 @@ class IOWatcher : ConnectionWatcher
 	}
 
 	/**
-	 * Assigns a transport.
+	 * Reinitializes the watcher.
 	 *
 	 * Params:
 	 * 	transport = Transport.
-	 * 	protocol  = Application protocol.
+	 * 	socket    = Socket.
+	 * 	protocol  = New instance of the application protocol.
 	 *
-	 * Returns: $(D_KEYWORD this).
+	 * Precondition: $(D_INLINECODE transport !is null
+	 *                           && socket !is null
+	 *                           && protocol !is null)
 	 */
-	IOWatcher opCall(StreamTransport transport, Protocol protocol)
-	pure nothrow @nogc
+	void opCall(StreamTransport transport,
+	            ConnectedSocket socket,
+	            Protocol protocol) pure nothrow @nogc
 	in
 	{
 		assert(transport !is null);
+		assert(socket !is null);
 		assert(protocol !is null);
 	}
 	body
 	{
-		transport_ = transport;
+		this.transport = transport;
 		protocol_ = protocol;
 		active = true;
-		return this;
-	}
-
-	/**
-	 * Returns: Transport used by this watcher.
-	 */
-	@property inout(StreamTransport) transport() inout pure nothrow @nogc
-	{
-		return transport_;
-	}
-
-	/**
-	 * Sets an exception occurred during a read/write operation.
-	 *
-	 * Params:
-	 * 	exception = Thrown exception.
-	 */
-	@property void exception(SocketException exception) pure nothrow @nogc
-	{
-		exception_ = exception;
 	}
 
 	/**
@@ -221,10 +207,17 @@ class IOWatcher : ConnectionWatcher
 
 	/**
 	 * Returns: Socket.
+	 *
+	 * Precondition: $(D_INLINECODE socket !is null)
 	 */
-	override @property Socket socket() pure nothrow @nogc
+	override @property ConnectedSocket socket() pure nothrow @safe @nogc
+	out (socket)
 	{
-		return transport.socket;
+		assert(socket !is null);
+	}
+	body
+	{
+		return cast(ConnectedSocket) socket_;
 	}
 
 	/**
@@ -239,7 +232,7 @@ class IOWatcher : ConnectionWatcher
 		}
 		else
 		{
-			protocol.disconnected(exception_);
+			protocol.disconnected(exception);
 			active = false;
 		}
 	}
