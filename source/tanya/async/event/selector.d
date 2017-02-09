@@ -25,12 +25,8 @@ import tanya.network.socket;
 /**
  * Transport for stream sockets.
  */
-class SelectorStreamTransport : StreamTransport
+class SelectorStreamTransport : IOWatcher, StreamTransport
 {
-	private ConnectedSocket socket_;
-
-	private Protocol protocol_;
-
 	/// Input buffer.
 	package WriteBuffer!ubyte input;
 
@@ -43,41 +39,38 @@ class SelectorStreamTransport : StreamTransport
 	 * Params:
 	 * 	loop     = Event loop.
 	 * 	socket   = Socket.
-	 * 	protocol = Application protocol.
 	 *
-	 * Precondition: $(D_INLINECODE loop !is null
-	 *                           && socket !is null
-	 *                           && protocol !is null)
+	 * Precondition: $(D_INLINECODE loop !is null && socket !is null)
 	 */
-	this(SelectorLoop loop, ConnectedSocket socket, Protocol protocol) @nogc
+	this(SelectorLoop loop, ConnectedSocket socket) @nogc
 	in 
 	{
 		assert(loop !is null);
 		assert(socket !is null);
-		assert(protocol !is null);
 	}
 	body
 	{
-		socket_ = socket;
+		super(socket);
 		this.loop = loop;
-		protocol_ = protocol;
 		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 	}
 
 	/**
 	 * Returns: Socket.
 	 */
-	ConnectedSocket socket() pure nothrow @safe @nogc
+	override @property ConnectedSocket socket() pure nothrow @safe @nogc
 	{
-		return socket_;
+		return cast(ConnectedSocket) socket_;
 	}
 
-	/**
-	 * Returns: Application protocol.
-	 */
-	@property Protocol protocol() pure nothrow @safe @nogc
+	private @property void socket(ConnectedSocket socket) pure nothrow @safe @nogc
+	in
 	{
-		return protocol_;
+		assert(socket !is null);
+	}
+	body
+	{
+		socket_ = socket;
 	}
 
 	/**
@@ -268,30 +261,28 @@ abstract class SelectorLoop : Loop
 				break;
 			}
 
-			IOWatcher io;
-			auto protocol = connection.protocol;
-			auto transport = MmapPool.instance.make!SelectorStreamTransport(this, client, protocol);
+			SelectorStreamTransport transport;
 
 			if (connections.length > client.handle)
 			{
-				io = cast(IOWatcher) connections[client.handle];
+				transport = cast(SelectorStreamTransport) connections[client.handle];
 			}
 			else
 			{
 				connections.length = client.handle + maxEvents / 2;
 			}
-			if (io is null)
+			if (transport is null)
 			{
-				io = MmapPool.instance.make!IOWatcher(transport, client, protocol);
-				connections[client.handle] = io;
+				transport = MmapPool.instance.make!SelectorStreamTransport(this, client);
+				connections[client.handle] = transport;
 			}
 			else
 			{
-				io(transport, client, protocol);
+				transport.socket = client;
 			}
 
-			reify(io, EventMask(Event.none), EventMask(Event.read, Event.write));
-			connection.incoming.enqueue(io);
+			reify(transport, EventMask(Event.none), EventMask(Event.read, Event.write));
+			connection.incoming.enqueue(transport);
 		}
 
 		if (!connection.incoming.empty)
