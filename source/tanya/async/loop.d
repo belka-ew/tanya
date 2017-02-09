@@ -68,7 +68,6 @@ import core.time;
 import std.algorithm.iteration;
 import std.algorithm.mutation;
 import std.typecons;
-import tanya.async.protocol;
 import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.buffer;
@@ -269,12 +268,20 @@ abstract class Loop
 
 	/**
 	 * Kills the watcher and closes the connection.
+	 *
+	 * Params:
+	 * 	watcher   = Watcher.
+	 * 	exception = Occurred exception.
 	 */
 	protected void kill(IOWatcher watcher, SocketException exception) @nogc
+	in
+	{
+		assert(watcher !is null);
+	}
+	body
 	{
 		watcher.socket.shutdown();
 		defaultAllocator.dispose(watcher.socket);
-		MmapPool.instance.dispose(watcher.transport);
 		watcher.exception = exception;
 		pendings.enqueue(watcher);
 	}

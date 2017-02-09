@@ -259,7 +259,7 @@ class IOCPLoop : Loop
 				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket, protocol);
 				auto io = MmapPool.instance.make!IOWatcher(transport, socket, protocol);
 
-				connection.incoming.enqueue(io);
+				connection.incoming.enqueue(transport);
 
 				reify(io, EventMask(Event.none), EventMask(Event.read, Event.write));
 

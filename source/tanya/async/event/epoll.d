@@ -123,30 +123,27 @@ class EpollLoop : SelectorLoop
 
 		for (auto i = 0; i < eventCount; ++i)
 		{
-			auto io = cast(IOWatcher) connections[events[i].data.fd];
+			auto transport = cast(SelectorStreamTransport) connections[events[i].data.fd];
 
-			if (io is null)
+			if (transport is null)
 			{
 				acceptConnections(connections[events[i].data.fd]);
 			}
 			else if (events[i].events & EPOLLERR)
 			{
-				kill(io, null);
+				kill(transport, null);
 				continue;
 			}
 			else if (events[i].events & (EPOLLIN | EPOLLPRI | EPOLLHUP))
 			{
-				auto transport = cast(SelectorStreamTransport) io.transport;
-				assert(transport !is null);
-
 				SocketException exception;
 				try
 				{
 					ptrdiff_t received;
 					do
 					{
-						received = transport.socket.receive(io.output[]);
-						io.output += received;
+						received = transport.socket.receive(transport.output[]);
+						transport.output += received;
 					}
 					while (received);
 				}
@@ -156,19 +153,16 @@ class EpollLoop : SelectorLoop
 				}
 				if (transport.socket.disconnected)
 				{
-					kill(io, exception);
+					kill(transport, exception);
 					continue;
 				}
-				else if (io.output.length)
+				else if (transport.output.length)
 				{
-					pendings.enqueue(io);
+					pendings.enqueue(transport);
 				}
 			}
 			if (events[i].events & EPOLLOUT)
 			{
-				auto transport = cast(SelectorStreamTransport) io.transport;
-				assert(transport !is null);
-
 				transport.writeReady = true;
 				if (transport.input.length)
 				{
