@@ -237,29 +237,26 @@ class KqueueLoop : SelectorLoop
 		{
 			assert(connections.length > events[i].ident);
 
-			IOWatcher io = cast(IOWatcher) connections[events[i].ident];
+			auto transport = cast(SelectorStreamTransport) connections[events[i].ident];
 			// If it is a ConnectionWatcher. Accept connections.
-			if (io is null)
+			if (transport is null)
 			{
 				acceptConnections(connections[events[i].ident]);
 			}
 			else if (events[i].flags & EV_ERROR)
 			{
-				kill(io, null);
+				kill(transport, null);
 			}
 			else if (events[i].filter == EVFILT_READ)
 			{
-				auto transport = cast(SelectorStreamTransport) io.transport;
-				assert(transport !is null);
-
 				SocketException exception;
 				try
 				{
 					ptrdiff_t received;
 					do
 					{
-						received = transport.socket.receive(io.output[]);
-						io.output += received;
+						received = transport.socket.receive(transport.output[]);
+						transport.output += received;
 					}
 					while (received);
 				}
@@ -269,18 +266,15 @@ class KqueueLoop : SelectorLoop
 				}
 				if (transport.socket.disconnected)
 				{
-					kill(io, exception);
+					kill(transport, exception);
 				}
-				else if (io.output.length)
+				else if (transport.output.length)
 				{
-					pendings.enqueue(io);
+					pendings.enqueue(transport);
 				}
 			}
 			else if (events[i].filter == EVFILT_WRITE)
 			{
-				auto transport = cast(SelectorStreamTransport) io.transport;
-				assert(transport !is null);
-
 				transport.writeReady = true;
 				if (transport.input.length)
 				{
