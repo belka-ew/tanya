@@ -21,15 +21,6 @@ import tanya.memory;
 import tanya.memory.mmappool;
 import tanya.network.socket;
 
-version (Windows)
-{
-	import core.sys.windows.basetyps;
-	import core.sys.windows.mswsock;
-	import core.sys.windows.winbase;
-	import core.sys.windows.windef;
-	import core.sys.windows.winsock2;
-}
-
 /**
  * A watcher is an opaque structure that you allocate and register to record
  * your interest in some event. 

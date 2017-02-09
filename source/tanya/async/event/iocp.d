@@ -28,48 +28,33 @@ import core.sys.windows.winsock2;
 
 class IOCPStreamTransport : StreamTransport
 {
-	private OverlappedConnectedSocket socket_;
-
-	private Protocol protocol_;
-
 	private WriteBuffer!ubyte input;
 
 	/**
 	 * Creates new completion port transport.
 	 *
 	 * Params:
-	 * 	socket   = Socket.
-	 * 	protocol = Application protocol.
+	 * 	socket = Socket.
 	 *
-	 * Precondition: $(D_INLINECODE socket !is null && protocol !is null)
+	 * Precondition: $(D_INLINECODE socket)
 	 */
-	this(OverlappedConnectedSocket socket, Protocol protocol) @nogc
+	this(OverlappedConnectedSocket socket) @nogc
 	in
 	{
 		assert(socket !is null);
-		assert(protocol !is null);
 	}
 	body
 	{
-		socket_ = socket;
-		protocol_ = protocol;
+		super(socket);
 		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 	}
 
 	/**
 	 * Returns: Socket.
 	 */
-	@property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
+	override @property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
 	{
-		return socket_;
-	}
-
-	/**
-	 * Returns: Application protocol.
-	 */
-	@property Protocol protocol() pure nothrow @safe @nogc
-	{
-		return protocol_;
+		return cast(OverlappedConnectedSocket) socket_;
 	}
 
 	/**
@@ -185,10 +170,7 @@ class IOCPLoop : Loop
 		if (!(oldEvents & Event.read) && (events & Event.read)
 			|| !(oldEvents & Event.write) && (events & Event.write))
 		{
-			auto io = cast(IOWatcher) watcher;
-			assert(io !is null);
-
-			auto transport = cast(IOCPStreamTransport) io.transport;
+			auto transport = cast(IOCPStreamTransport) watcher;
 			assert(transport !is null);
 
 			if (CreateIoCompletionPort(cast(HANDLE) transport.socket.handle,
@@ -205,7 +187,7 @@ class IOCPLoop : Loop
 				try
 				{
 					overlapped = MmapPool.instance.make!SocketState;
-					transport.socket.beginReceive(io.output[], overlapped);
+					transport.socket.beginReceive(transport.output[], overlapped);
 				}
 				catch (SocketException e)
 				{
@@ -255,29 +237,25 @@ class IOCPLoop : Loop
 				assert(listener !is null);
 
 				auto socket = listener.endAccept(overlapped);
-				auto protocol = connection.protocol;
-				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket, protocol);
-				auto io = MmapPool.instance.make!IOWatcher(transport, socket, protocol);
+				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket);
 
 				connection.incoming.enqueue(transport);
 
-				reify(io, EventMask(Event.none), EventMask(Event.read, Event.write));
+				reify(transport, EventMask(Event.none), EventMask(Event.read, Event.write));
 
 				pendings.enqueue(connection);
 				listener.beginAccept(overlapped);
 				break;
 			case OverlappedSocketEvent.read:
-				auto io = cast(IOWatcher) (cast(void*) key);
-				assert(io !is null);
-				if (!io.active)
+				auto transport = cast(IOCPStreamTransport) (cast(void*) key);
+				assert(transport !is null);
+
+				if (!transport.active)
 				{
-					MmapPool.instance.dispose(io);
+					MmapPool.instance.dispose(transport);
 					MmapPool.instance.dispose(overlapped);
 					return;
 				}
-
-				auto transport = cast(IOCPStreamTransport) io.transport;
-				assert(transport !is null);
 
 				int received;
 				SocketException exception;
@@ -292,27 +270,24 @@ class IOCPLoop : Loop
 				if (transport.socket.disconnected)
 				{
 					// We want to get one last notification to destroy the watcher
-					transport.socket.beginReceive(io.output[], overlapped);
-					kill(io, exception);
+					transport.socket.beginReceive(transport.output[], overlapped);
+					kill(transport, exception);
 				}
 				else if (received > 0)
 				{
-					immutable full = io.output.free == received;
+					immutable full = transport.output.free == received;
 
-					io.output += received;
+					transport.output += received;
 					// Receive was interrupted because the buffer is full. We have to continue
 					if (full)
 					{
-						transport.socket.beginReceive(io.output[], overlapped);
+						transport.socket.beginReceive(transport.output[], overlapped);
 					}
-					pendings.enqueue(io);
+					pendings.enqueue(transport);
 				}
 				break;
 			case OverlappedSocketEvent.write:
-				auto io = cast(IOWatcher) (cast(void*) key);
-				assert(io !is null);
-
-				auto transport = cast(IOCPStreamTransport) io.transport;
+				auto transport = cast(IOCPStreamTransport) (cast(void*) key);
 				assert(transport !is null);
 
 				transport.input += transport.socket.endSend(overlapped);
@@ -322,7 +297,7 @@ class IOCPLoop : Loop
 				}
 				else
 				{
-					transport.socket.beginReceive(io.output[], overlapped);
+					transport.socket.beginReceive(transport.output[], overlapped);
 				}
 				break;
 			default:
