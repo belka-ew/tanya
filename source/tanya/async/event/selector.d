@@ -149,8 +149,12 @@ abstract class SelectorLoop : Loop
 	 * Params:
 	 * 	transport = Transport.
 	 * 	exception = Exception thrown on sending.
+	 *
+	 * Returns: $(D_KEYWORD true) if the operation could be successfully
+	 *          completed or scheduled, $(D_KEYWORD false) otherwise (the
+	 *          transport will be destroyed then).
 	 */
-	protected void feed(StreamTransport transport,
+	protected bool feed(StreamTransport transport,
 	                    SocketException exception = null) @nogc
 	in
 	{
@@ -184,7 +188,9 @@ abstract class SelectorLoop : Loop
 			assert(watcher !is null);
 
 			kill(watcher, exception);
+			return false;
 		}
+		return true;
 	}
 
 	/**

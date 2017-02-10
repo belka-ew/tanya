@@ -241,10 +241,10 @@ final class KqueueLoop : SelectorLoop
 			// If it is a ConnectionWatcher. Accept connections.
 			if (transport is null)
 			{
-				auto connection = cast(ConnectionWatcher) connections[events[i].data.fd];
+				auto connection = cast(ConnectionWatcher) connections[events[i].ident];
 				assert(connection !is null);
 
-				acceptConnections(connections[events[i].ident]);
+				acceptConnections(connection);
 			}
 			else if (events[i].flags & EV_ERROR)
 			{
@@ -303,8 +303,12 @@ final class KqueueLoop : SelectorLoop
 	 * Params:
 	 * 	transport = Transport.
 	 * 	exception = Exception thrown on sending.
+	 *
+	 * Returns: $(D_KEYWORD true) if the operation could be successfully
+	 *          completed or scheduled, $(D_KEYWORD false) otherwise (the
+	 *          transport will be destroyed then).
 	 */
-	protected override void feed(StreamTransport transport,
+	protected override bool feed(StreamTransport transport,
 	                             SocketException exception = null) @nogc
 	{
 		if (!super.feed(transport, exception))
