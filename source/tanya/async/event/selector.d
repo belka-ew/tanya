@@ -25,7 +25,7 @@ import tanya.network.socket;
 /**
  * Transport for stream sockets.
  */
-class SelectorStreamTransport : IOWatcher, StreamTransport
+final class SelectorStreamTransport : IOWatcher, StreamTransport
 {
 	/// Input buffer.
 	package WriteBuffer!ubyte input;

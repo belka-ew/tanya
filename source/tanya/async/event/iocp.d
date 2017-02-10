@@ -26,7 +26,7 @@ import core.sys.windows.winbase;
 import core.sys.windows.windef;
 import core.sys.windows.winsock2;
 
-class IOCPStreamTransport : StreamTransport
+final class IOCPStreamTransport : StreamTransport
 {
 	private WriteBuffer!ubyte input;
 
@@ -106,7 +106,7 @@ class IOCPStreamTransport : StreamTransport
 	}
 }
 
-class IOCPLoop : Loop
+final class IOCPLoop : Loop
 {
 	protected HANDLE completionPort;
 

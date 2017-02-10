@@ -34,7 +34,7 @@ extern (C) nothrow @nogc
 	int epoll_wait (int epfd, epoll_event *events, int maxevents, int timeout);
 }
 
-class EpollLoop : SelectorLoop
+final class EpollLoop : SelectorLoop
 {
 	protected int fd;
 	private Vector!epoll_event events;

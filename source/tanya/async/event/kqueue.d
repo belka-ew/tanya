@@ -113,7 +113,7 @@ extern(C) int kevent(int kq, const kevent_t *changelist, int nchanges,
                      kevent_t *eventlist, int nevents, const timespec *timeout)
                      nothrow @nogc;
 
-class KqueueLoop : SelectorLoop
+final class KqueueLoop : SelectorLoop
 {
 	protected int fd;
 	private Vector!kevent_t events;
