@@ -85,10 +85,3 @@ interface SocketTransport : Transport
 	 */
 	@property Socket socket() pure nothrow @safe @nogc;
 }
-
-/**
- * Represents a connection-oriented socket transport.
- */
-package interface StreamTransport : DuplexTransport, SocketTransport
-{
-}

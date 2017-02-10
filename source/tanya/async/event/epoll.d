@@ -70,14 +70,9 @@ final class EpollLoop : SelectorLoop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
-	protected override bool reify(ConnectionWatcher watcher,
+	protected override bool reify(SocketWatcher watcher,
 	                              EventMask oldEvents,
 	                              EventMask events) @nogc
-	in
-	{
-		assert(watcher !is null);
-	}
-	body
 	{
 		int op = EPOLL_CTL_DEL;
 		epoll_event ev;
@@ -123,15 +118,18 @@ final class EpollLoop : SelectorLoop
 
 		for (auto i = 0; i < eventCount; ++i)
 		{
-			auto transport = cast(SelectorStreamTransport) connections[events[i].data.fd];
+			auto transport = cast(StreamTransport) connections[events[i].data.fd];
 
 			if (transport is null)
 			{
-				acceptConnections(connections[events[i].data.fd]);
+				auto connection = cast(ConnectionWatcher) connections[events[i].data.fd];
+				assert(connection !is null);
+
+				acceptConnections(connection);
 			}
 			else if (events[i].events & EPOLLERR)
 			{
-				kill(transport, null);
+				kill(transport);
 				continue;
 			}
 			else if (events[i].events & (EPOLLIN | EPOLLPRI | EPOLLHUP))

@@ -196,7 +196,7 @@ abstract class Loop
 	 * Params:
 	 * 	watcher = Watcher.
 	 */
-	void start(ConnectionWatcher watcher) @nogc
+	void start(SocketWatcher watcher) @nogc
 	{
 		if (watcher.active)
 		{
@@ -234,9 +234,9 @@ abstract class Loop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
-	abstract protected bool reify(ConnectionWatcher watcher,
-								  EventMask oldEvents,
-								  EventMask events) @nogc;
+	abstract protected bool reify(SocketWatcher watcher,
+	                              EventMask oldEvents,
+	                              EventMask events) @nogc;
 
 	/**
 	 * Returns: The blocking time.
@@ -273,7 +273,7 @@ abstract class Loop
 	 * 	watcher   = Watcher.
 	 * 	exception = Occurred exception.
 	 */
-	protected void kill(IOWatcher watcher, SocketException exception) @nogc
+	protected void kill(IOWatcher watcher, SocketException exception = null) @nogc
 	in
 	{
 		assert(watcher !is null);

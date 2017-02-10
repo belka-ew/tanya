@@ -36,15 +36,48 @@ abstract class Watcher
 	void invoke() @nogc;
 }
 
-class ConnectionWatcher : Watcher
+/**
+ * Socket watcher.
+ */
+abstract class SocketWatcher : Watcher
 {
 	/// Watched socket.
 	protected Socket socket_;
 
-	/// Protocol factory.
-	protected Protocol delegate() @nogc protocolFactory;
+	/**
+	 * Params:
+	 * 	socket = Socket.
+	 *
+	 * Precondition: $(D_INLINECODE socket !is null)
+	 */
+	this(Socket socket) pure nothrow @safe @nogc
+	in
+	{
+		assert(socket !is null);
+	}
+	body
+	{
+		socket_ = socket;
+	}
 
-	package Queue!DuplexTransport incoming;
+	/**
+	 * Returns: Socket.
+	 */
+	@property Socket socket() pure nothrow @safe @nogc
+	{
+		return socket_;
+	}
+}
+
+/**
+ * Connection watcher.
+ */
+class ConnectionWatcher : SocketWatcher
+{
+	/// Incoming connection queue.
+	Queue!DuplexTransport incoming;
+
+	private Protocol delegate() @nogc protocolFactory;
 
 	/**
 	 * Params:
@@ -52,19 +85,8 @@ class ConnectionWatcher : Watcher
 	 */
 	this(Socket socket) @nogc
 	{
+		super(socket);
 		incoming = Queue!DuplexTransport(MmapPool.instance);
-		socket_ = socket;
-	}
-
-	/**
-	 * Destroys the watcher.
-	 */
-	~this() @nogc
-	{
-		foreach (w; incoming)
-		{
-			MmapPool.instance.dispose(w);
-		}
 	}
 
 	/**
@@ -74,14 +96,6 @@ class ConnectionWatcher : Watcher
 	void setProtocol(P : Protocol)() @nogc
 	{
 		this.protocolFactory = () @nogc => cast(Protocol) MmapPool.instance.make!P;
-	}
-
-	/**
-	 * Returns: Socket.
-	 */
-	@property Socket socket() pure nothrow @safe @nogc
-	{
-		return socket_;
 	}
 
 	/**
@@ -102,20 +116,16 @@ class ConnectionWatcher : Watcher
 	}
 }
 
-/**
- * Contains a pending watcher with the invoked events or a transport can be
- * read from.
- */
-class IOWatcher : ConnectionWatcher
+package abstract class IOWatcher : SocketWatcher, DuplexTransport
 {
 	package SocketException exception;
 
-	protected Protocol protocol_;
-
-	/**
-	 * Returns: Underlying output buffer.
-	 */
 	package ReadBuffer!ubyte output;
+
+	package WriteBuffer!ubyte input;
+
+	/// Application protocol.
+	protected Protocol protocol_;
 
 	/**
 	 * Params:
@@ -124,23 +134,11 @@ class IOWatcher : ConnectionWatcher
 	 * Precondition: $(D_INLINECODE socket !is null)
 	 */
 	this(ConnectedSocket socket) @nogc
-	in
-	{
-		assert(socket !is null);
-	}
-	body
 	{
 		super(socket);
 		output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
+		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 		active = true;
-	}
-
-	/**
-	 * Destroys the watcher.
-	 */
-	~this() @nogc
-	{
-		MmapPool.instance.dispose(protocol_);
 	}
 
 	/**
@@ -152,18 +150,24 @@ class IOWatcher : ConnectionWatcher
 	}
 
 	/**
-	 * Returns: Socket.
+	 * Switches the protocol.
 	 *
-	 * Precondition: $(D_INLINECODE socket !is null)
+	 * The protocol is deallocated by the event loop, it should currently be
+	 * allocated with $(D_PSYMBOL MmapPool).
+	 *
+	 * Params:
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE protocol !is null)
 	 */
-	override @property ConnectedSocket socket() pure nothrow @safe @nogc
-	out (socket)
+	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
+	in
 	{
-		assert(socket !is null);
+		assert(protocol !is null);
 	}
 	body
 	{
-		return cast(ConnectedSocket) socket_;
+		protocol_ = protocol;
 	}
 
 	/**
@@ -179,7 +183,7 @@ class IOWatcher : ConnectionWatcher
 		else
 		{
 			protocol.disconnected(exception);
-			MmapPool.instance.dispose(protocol);
+			MmapPool.instance.dispose(protocol_);
 			defaultAllocator.dispose(exception);
 			active = false;
 		}

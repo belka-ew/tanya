@@ -26,58 +26,38 @@ import core.sys.windows.winbase;
 import core.sys.windows.windef;
 import core.sys.windows.winsock2;
 
-final class IOCPStreamTransport : StreamTransport
+/**
+ * Transport for stream sockets.
+ */
+final class StreamTransport : IOWatcher, SocketTransport
 {
-	private WriteBuffer!ubyte input;
-
 	/**
 	 * Creates new completion port transport.
 	 *
 	 * Params:
 	 * 	socket = Socket.
 	 *
-	 * Precondition: $(D_INLINECODE socket)
+	 * Precondition: $(D_INLINECODE socket !is null)
 	 */
 	this(OverlappedConnectedSocket socket) @nogc
-	in
+	{
+		super(socket);
+	}
+
+	/**
+	 * Returns: Socket.
+	 *
+	 * Postcondition: $(D_INLINECODE socket !is null)
+	 */
+	override @property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
+	out (socket)
 	{
 		assert(socket !is null);
 	}
 	body
 	{
-		super(socket);
-		input = WriteBuffer!ubyte(8192, MmapPool.instance);
-	}
-
-	/**
-	 * Returns: Socket.
-	 */
-	override @property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
-	{
 		return cast(OverlappedConnectedSocket) socket_;
 	}
-
-	/**
-	 * Switches the protocol.
-	 *
-	 * The protocol is deallocated by the event loop, it should currently be
-	 * allocated with $(D_PSYMBOL MmapPool).
-	 *
-	 * Params:
-	 * 	protocol = Application protocol.
-	 *
-	 * Precondition: $(D_INLINECODE protocol !is null)
-	 */
-	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
-	in
-	{
-		assert(protocol !is null);
-	}
-	body
-	{
-		protocol_ = protocol;
-	}
-
 
 	/**
 	 * Write some data to the transport.
@@ -137,7 +117,7 @@ final class IOCPLoop : Loop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
-	override protected bool reify(ConnectionWatcher watcher,
+	override protected bool reify(SocketWatcher watcher,
 								  EventMask oldEvents,
 								  EventMask events) @nogc
 	{
@@ -170,7 +150,7 @@ final class IOCPLoop : Loop
 		if (!(oldEvents & Event.read) && (events & Event.read)
 			|| !(oldEvents & Event.write) && (events & Event.write))
 		{
-			auto transport = cast(IOCPStreamTransport) watcher;
+			auto transport = cast(StreamTransport) watcher;
 			assert(transport !is null);
 
 			if (CreateIoCompletionPort(cast(HANDLE) transport.socket.handle,
@@ -237,7 +217,7 @@ final class IOCPLoop : Loop
 				assert(listener !is null);
 
 				auto socket = listener.endAccept(overlapped);
-				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket);
+				auto transport = MmapPool.instance.make!StreamTransport(socket);
 
 				connection.incoming.enqueue(transport);
 
@@ -247,7 +227,7 @@ final class IOCPLoop : Loop
 				listener.beginAccept(overlapped);
 				break;
 			case OverlappedSocketEvent.read:
-				auto transport = cast(IOCPStreamTransport) (cast(void*) key);
+				auto transport = cast(StreamTransport) (cast(void*) key);
 				assert(transport !is null);
 
 				if (!transport.active)
@@ -287,7 +267,7 @@ final class IOCPLoop : Loop
 				}
 				break;
 			case OverlappedSocketEvent.write:
-				auto transport = cast(IOCPStreamTransport) (cast(void*) key);
+				auto transport = cast(StreamTransport) (cast(void*) key);
 				assert(transport !is null);
 
 				transport.input += transport.socket.endSend(overlapped);

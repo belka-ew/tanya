@@ -25,11 +25,8 @@ import tanya.network.socket;
 /**
  * Transport for stream sockets.
  */
-final class SelectorStreamTransport : IOWatcher, StreamTransport
+final class StreamTransport : IOWatcher, SocketTransport
 {
-	/// Input buffer.
-	package WriteBuffer!ubyte input;
-
 	private SelectorLoop loop;
 
 	/// Received notification that the underlying socket is write-ready.
@@ -37,8 +34,8 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 
 	/**
 	 * Params:
-	 * 	loop     = Event loop.
-	 * 	socket   = Socket.
+	 * 	loop   = Event loop.
+	 * 	socket = Socket.
 	 *
 	 * Precondition: $(D_INLINECODE loop !is null && socket !is null)
 	 */
@@ -46,19 +43,24 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 	in 
 	{
 		assert(loop !is null);
-		assert(socket !is null);
 	}
 	body
 	{
 		super(socket);
 		this.loop = loop;
-		input = WriteBuffer!ubyte(8192, MmapPool.instance);
 	}
 
 	/**
 	 * Returns: Socket.
+	 *
+	 * Postcondition: $(D_INLINECODE socket !is null)
 	 */
 	override @property ConnectedSocket socket() pure nothrow @safe @nogc
+	out (socket)
+	{
+		assert(socket !is null);
+	}
+	body
 	{
 		return cast(ConnectedSocket) socket_;
 	}
@@ -71,27 +73,6 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 	body
 	{
 		socket_ = socket;
-	}
-
-	/**
-	 * Switches the protocol.
-	 *
-	 * The protocol is deallocated by the event loop, it should currently be
-	 * allocated with $(D_PSYMBOL MmapPool).
-	 *
-	 * Params:
-	 * 	protocol = Application protocol.
-	 *
-	 * Precondition: $(D_INLINECODE protocol !is null)
-	 */
-	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
-	in
-	{
-		assert(protocol !is null);
-	}
-	body
-	{
-		protocol_ = protocol;
 	}
 
 	/**
@@ -140,12 +121,12 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 abstract class SelectorLoop : Loop
 {
 	/// Pending connections.
-	protected Vector!ConnectionWatcher connections;
+	protected Vector!SocketWatcher connections;
 
 	this() @nogc
 	{
 		super();
-		connections = Vector!ConnectionWatcher(maxEvents, MmapPool.instance);
+		connections = Vector!SocketWatcher(maxEvents, MmapPool.instance);
 	}
 
 	~this() @nogc
@@ -154,11 +135,9 @@ abstract class SelectorLoop : Loop
 		{
 			// We want to free only IOWatchers. ConnectionWatcher are created by the
 			// user and should be freed by himself.
-			auto io = cast(IOWatcher) connection;
-			if (io !is null)
+			if (cast(IOWatcher) connection !is null)
 			{
-				MmapPool.instance.dispose(io);
-				connection = null;
+				MmapPool.instance.dispose(connection);
 			}
 		}
 	}
@@ -170,13 +149,14 @@ abstract class SelectorLoop : Loop
 	 * Params:
 	 * 	transport = Transport.
 	 * 	exception = Exception thrown on sending.
-	 *
-	 * Returns: $(D_KEYWORD true) if the operation could be successfully
-	 *          completed or scheduled, $(D_KEYWORD false) otherwise (the
-	 *          transport will be destroyed then).
 	 */
-	protected bool feed(SelectorStreamTransport transport,
+	protected void feed(StreamTransport transport,
 	                    SocketException exception = null) @nogc
+	in
+	{
+		assert(transport !is null);
+	}
+	body
 	{
 		while (transport.input.length && transport.writeReady)
 		{
@@ -204,9 +184,7 @@ abstract class SelectorLoop : Loop
 			assert(watcher !is null);
 
 			kill(watcher, exception);
-			return false;
 		}
-		return true;
 	}
 
 	/**
@@ -215,7 +193,7 @@ abstract class SelectorLoop : Loop
 	 * Params:
 	 * 	watcher = Watcher.
 	 */
-	override void start(ConnectionWatcher watcher) @nogc
+	override void start(SocketWatcher watcher) @nogc
 	{
 		if (watcher.active)
 		{
@@ -261,11 +239,11 @@ abstract class SelectorLoop : Loop
 				break;
 			}
 
-			SelectorStreamTransport transport;
+			StreamTransport transport;
 
 			if (connections.length > client.handle)
 			{
-				transport = cast(SelectorStreamTransport) connections[client.handle];
+				transport = cast(StreamTransport) connections[client.handle];
 			}
 			else
 			{
@@ -273,7 +251,7 @@ abstract class SelectorLoop : Loop
 			}
 			if (transport is null)
 			{
-				transport = MmapPool.instance.make!SelectorStreamTransport(this, client);
+				transport = MmapPool.instance.make!StreamTransport(this, client);
 				connections[client.handle] = transport;
 			}
 			else
