@@ -25,9 +25,17 @@ import tanya.network.socket;
 /**
  * Transport for stream sockets.
  */
-final class StreamTransport : IOWatcher, SocketTransport
+package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
 {
 	private SelectorLoop loop;
+
+	private SocketException exception;
+
+	package ReadBuffer!ubyte output;
+
+	package WriteBuffer!ubyte input;
+
+	private Protocol protocol_;
 
 	/// Received notification that the underlying socket is write-ready.
 	package bool writeReady;
@@ -48,6 +56,9 @@ final class StreamTransport : IOWatcher, SocketTransport
 	{
 		super(socket);
 		this.loop = loop;
+		output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
+		input = WriteBuffer!ubyte(8192, MmapPool.instance);
+		active = true;
 	}
 
 	/**
@@ -73,6 +84,54 @@ final class StreamTransport : IOWatcher, SocketTransport
 	body
 	{
 		socket_ = socket;
+	}
+
+	/**
+	 * Returns: Application protocol.
+	 */
+	@property Protocol protocol() pure nothrow @safe @nogc
+	{
+		return protocol_;
+	}
+
+	/**
+	 * Switches the protocol.
+	 *
+	 * The protocol is deallocated by the event loop, it should currently be
+	 * allocated with $(D_PSYMBOL MmapPool).
+	 *
+	 * Params:
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE protocol !is null)
+	 */
+	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
+	in
+	{
+		assert(protocol !is null);
+	}
+	body
+	{
+		protocol_ = protocol;
+	}
+
+	/**
+	 * Invokes the watcher callback.
+	 */
+	override void invoke() @nogc
+	{
+		if (output.length)
+		{
+			protocol.received(output[0 .. $]);
+			output.clear();
+		}
+		else
+		{
+			protocol.disconnected(exception);
+			MmapPool.instance.dispose(protocol_);
+			defaultAllocator.dispose(exception);
+			active = false;
+		}
 	}
 
 	/**
@@ -133,13 +192,48 @@ abstract class SelectorLoop : Loop
 	{
 		foreach (ref connection; connections)
 		{
-			// We want to free only IOWatchers. ConnectionWatcher are created by the
+			// We want to free only the transports. ConnectionWatcher are created by the
 			// user and should be freed by himself.
-			if (cast(IOWatcher) connection !is null)
+			if (cast(StreamTransport) connection !is null)
 			{
 				MmapPool.instance.dispose(connection);
 			}
 		}
+	}
+
+	/**
+	 * Should be called if the backend configuration changes.
+	 *
+	 * Params:
+	 * 	watcher   = Watcher.
+	 * 	oldEvents = The events were already set.
+	 * 	events    = The events should be set.
+	 *
+	 * Returns: $(D_KEYWORD true) if the operation was successful.
+	 */
+	override abstract protected bool reify(SocketWatcher watcher,
+	                                       EventMask oldEvents,
+	                                       EventMask events) @nogc;
+
+	/**
+	 * Kills the watcher and closes the connection.
+	 *
+	 * Params:
+	 * 	transport = Transport.
+	 * 	exception = Occurred exception.
+	 */
+	protected void kill(StreamTransport transport,
+	                    SocketException exception = null) @nogc
+	in
+	{
+		assert(transport !is null);
+	}
+	body
+	{
+		transport.socket.shutdown();
+		defaultAllocator.dispose(transport.socket);
+		transport.exception = exception;
+		pendings.enqueue(transport);
 	}
 
 	/**
@@ -184,10 +278,7 @@ abstract class SelectorLoop : Loop
 		}
 		if (exception !is null)
 		{
-			auto watcher = cast(IOWatcher) connections[transport.socket.handle];
-			assert(watcher !is null);
-
-			kill(watcher, exception);
+			kill(transport, exception);
 			return false;
 		}
 		return true;
@@ -199,7 +290,7 @@ abstract class SelectorLoop : Loop
 	 * Params:
 	 * 	watcher = Watcher.
 	 */
-	override void start(SocketWatcher watcher) @nogc
+	override void start(ConnectionWatcher watcher) @nogc
 	{
 		if (watcher.active)
 		{

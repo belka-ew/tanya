@@ -196,7 +196,7 @@ abstract class Loop
 	 * Params:
 	 * 	watcher = Watcher.
 	 */
-	void start(SocketWatcher watcher) @nogc
+	void start(ConnectionWatcher watcher) @nogc
 	{
 		if (watcher.active)
 		{
@@ -264,26 +264,6 @@ abstract class Loop
 	body
 	{
 		blockTime_ = blockTime;
-	}
-
-	/**
-	 * Kills the watcher and closes the connection.
-	 *
-	 * Params:
-	 * 	watcher   = Watcher.
-	 * 	exception = Occurred exception.
-	 */
-	protected void kill(IOWatcher watcher, SocketException exception = null) @nogc
-	in
-	{
-		assert(watcher !is null);
-	}
-	body
-	{
-		watcher.socket.shutdown();
-		defaultAllocator.dispose(watcher.socket);
-		watcher.exception = exception;
-		pendings.enqueue(watcher);
 	}
 
 	/**

@@ -29,8 +29,16 @@ import core.sys.windows.winsock2;
 /**
  * Transport for stream sockets.
  */
-final class StreamTransport : IOWatcher, SocketTransport
+final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
 {
+	private SocketException exception;
+
+	private ReadBuffer!ubyte output;
+
+	private WriteBuffer!ubyte input;
+
+	private Protocol protocol_;
+
 	/**
 	 * Creates new completion port transport.
 	 *
@@ -42,6 +50,9 @@ final class StreamTransport : IOWatcher, SocketTransport
 	this(OverlappedConnectedSocket socket) @nogc
 	{
 		super(socket);
+		output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
+		input = WriteBuffer!ubyte(8192, MmapPool.instance);
+		active = true;
 	}
 
 	/**
@@ -82,6 +93,54 @@ final class StreamTransport : IOWatcher, SocketTransport
 				MmapPool.instance.dispose(overlapped);
 				MmapPool.instance.dispose(e);
 			}
+		}
+	}
+
+	/**
+	 * Returns: Application protocol.
+	 */
+	@property Protocol protocol() pure nothrow @safe @nogc
+	{
+		return protocol_;
+	}
+
+	/**
+	 * Switches the protocol.
+	 *
+	 * The protocol is deallocated by the event loop, it should currently be
+	 * allocated with $(D_PSYMBOL MmapPool).
+	 *
+	 * Params:
+	 * 	protocol = Application protocol.
+	 *
+	 * Precondition: $(D_INLINECODE protocol !is null)
+	 */
+	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
+	in
+	{
+		assert(protocol !is null);
+	}
+	body
+	{
+		protocol_ = protocol;
+	}
+
+	/**
+	 * Invokes the watcher callback.
+	 */
+	override void invoke() @nogc
+	{
+		if (output.length)
+		{
+			protocol.received(output[0 .. $]);
+			output.clear();
+		}
+		else
+		{
+			protocol.disconnected(exception);
+			MmapPool.instance.dispose(protocol_);
+			defaultAllocator.dispose(exception);
+			active = false;
 		}
 	}
 }
@@ -251,7 +310,10 @@ final class IOCPLoop : Loop
 				{
 					// We want to get one last notification to destroy the watcher
 					transport.socket.beginReceive(transport.output[], overlapped);
-					kill(transport, exception);
+					transport.socket.shutdown();
+					defaultAllocator.dispose(transport.socket);
+					transport.exception = exception;
+					pendings.enqueue(transport);
 				}
 				else if (received > 0)
 				{
