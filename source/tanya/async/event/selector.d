@@ -37,6 +37,8 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
 
 	private Protocol protocol_;
 
+	private bool closing;
+
 	/// Received notification that the underlying socket is write-ready.
 	package bool writeReady;
 
@@ -116,6 +118,25 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
 	}
 
 	/**
+	 * Returns $(D_PARAM true) if the transport is closing or closed.
+	 */
+	bool isClosing() const pure nothrow @safe @nogc
+	{
+		return closing;
+	}
+
+	/**
+	 * Close the transport.
+	 *
+	 * Buffered data will be flushed.  No more data will be received.
+	 */
+	void close() @nogc
+	{
+		closing = true;
+		loop.reify(this, EventMask(Event.read, Event.write), EventMask(Event.write));
+	}
+
+	/**
 	 * Invokes the watcher callback.
 	 */
 	override void invoke() @nogc
@@ -124,6 +145,10 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
 		{
 			protocol.received(output[0 .. $]);
 			output.clear();
+			if (isClosing() && input.length == 0)
+			{
+				loop.kill(this);
+			}
 		}
 		else
 		{
@@ -280,6 +305,10 @@ abstract class SelectorLoop : Loop
 		{
 			kill(transport, exception);
 			return false;
+		}
+		if (transport.input.length == 0 && transport.isClosing())
+		{
+			kill(transport);
 		}
 		return true;
 	}

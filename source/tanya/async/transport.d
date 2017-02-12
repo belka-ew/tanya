@@ -73,6 +73,19 @@ interface DuplexTransport : ReadTransport, WriteTransport
 	{
 		assert(protocol !is null);
 	}
+
+
+	/**
+	 * Returns $(D_PARAM true) if the transport is closing or closed.
+	 */
+	bool isClosing() const pure nothrow @safe @nogc;
+
+	/**
+	 * Close the transport.
+	 *
+	 * Buffered data will be flushed.  No more data will be received.
+	 */
+	void close() @nogc;
 }
 
 /**
