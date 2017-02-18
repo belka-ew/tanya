@@ -14,6 +14,7 @@ Tanya extends Phobos functionality and provides alternative implementations for
 data structures and utilities that depend on the Garbage Collector in Phobos.
 
 * [Bug tracker](https://issues.caraus.io/projects/tanya)
+* [Documentation](https://docs.caraus.io/tanya)
 
 ## Overview
 
@@ -50,9 +51,6 @@ needs more test cases, better performance and some additional features
 ### Further characteristics
 
 * Tanya is a native D library.
-
-* Documentation and usage examples can be found in the source code.
-Online documentation will be published soon.
 
 * Tanya is cross-platform. The development happens on a 64-bit Linux, but it
 is being tested on Windows and FreeBSD as well.
