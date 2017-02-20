@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * One-dimensional array.
+ *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -372,6 +374,13 @@ struct Vector(T)
 		return capacity_;
 	}
 
+	///
+	@safe @nogc unittest
+	{
+		auto v = Vector!int(4);
+		assert(v.capacity == 4);
+	}
+
 	/**
 	 * Returns: Vector length.
 	 */
@@ -442,6 +451,10 @@ struct Vector(T)
 	/**
 	 * Reserves space for $(D_PARAM size) elements.
 	 *
+	 * If $(D_PARAM size) is less than or equal to the $(D_PSYMBOL capacity), the
+	 * function call does not cause a reallocation and the vector capacity is not
+	 * affected.
+	 *
 	 * Params:
 	 * 	size = Desired size.
 	 */
@@ -483,7 +496,7 @@ struct Vector(T)
 	}
 
 	///
-	unittest
+	@nogc @safe unittest
 	{
 		Vector!int v;
 		assert(v.capacity == 0);
@@ -518,7 +531,7 @@ struct Vector(T)
 	}
 
 	///
-	unittest
+	@nogc @safe unittest
 	{
 		Vector!int v;
 		assert(v.capacity == 0);
