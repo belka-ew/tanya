@@ -177,7 +177,7 @@ final class KqueueLoop : SelectorLoop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
-	override protected bool reify(ConnectionWatcher watcher,
+	override protected bool reify(SocketWatcher watcher,
 	                              EventMask oldEvents,
 	                              EventMask events) @nogc
 	{
@@ -237,15 +237,18 @@ final class KqueueLoop : SelectorLoop
 		{
 			assert(connections.length > events[i].ident);
 
-			auto transport = cast(SelectorStreamTransport) connections[events[i].ident];
+			auto transport = cast(StreamTransport) connections[events[i].ident];
 			// If it is a ConnectionWatcher. Accept connections.
 			if (transport is null)
 			{
-				acceptConnections(connections[events[i].ident]);
+				auto connection = cast(ConnectionWatcher) connections[events[i].ident];
+				assert(connection !is null);
+
+				acceptConnections(connection);
 			}
 			else if (events[i].flags & EV_ERROR)
 			{
-				kill(transport, null);
+				kill(transport);
 			}
 			else if (events[i].filter == EVFILT_READ)
 			{
@@ -303,9 +306,9 @@ final class KqueueLoop : SelectorLoop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation could be successfully
 	 *          completed or scheduled, $(D_KEYWORD false) otherwise (the
-	 *          transport is be destroyed then).
+	 *          transport will be destroyed then).
 	 */
-	protected override bool feed(SelectorStreamTransport transport,
+	protected override bool feed(StreamTransport transport,
 	                             SocketException exception = null) @nogc
 	{
 		if (!super.feed(transport, exception))

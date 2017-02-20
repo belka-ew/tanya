@@ -26,9 +26,20 @@ import core.sys.windows.winbase;
 import core.sys.windows.windef;
 import core.sys.windows.winsock2;
 
-final class IOCPStreamTransport : StreamTransport
+/**
+ * Transport for stream sockets.
+ */
+final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
 {
+	private SocketException exception;
+
+	private ReadBuffer!ubyte output;
+
 	private WriteBuffer!ubyte input;
+
+	private Protocol protocol_;
+
+	private bool closing;
 
 	/**
 	 * Creates new completion port transport.
@@ -36,25 +47,66 @@ final class IOCPStreamTransport : StreamTransport
 	 * Params:
 	 * 	socket = Socket.
 	 *
-	 * Precondition: $(D_INLINECODE socket)
+	 * Precondition: $(D_INLINECODE socket !is null)
 	 */
 	this(OverlappedConnectedSocket socket) @nogc
-	in
+	{
+		super(socket);
+		output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
+		input = WriteBuffer!ubyte(8192, MmapPool.instance);
+		active = true;
+	}
+
+	/**
+	 * Returns: Socket.
+	 *
+	 * Postcondition: $(D_INLINECODE socket !is null)
+	 */
+	override @property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
+	out (socket)
 	{
 		assert(socket !is null);
 	}
 	body
 	{
-		super(socket);
-		input = WriteBuffer!ubyte(8192, MmapPool.instance);
+		return cast(OverlappedConnectedSocket) socket_;
 	}
 
 	/**
-	 * Returns: Socket.
+	 * Returns $(D_PARAM true) if the transport is closing or closed.
 	 */
-	override @property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
+	bool isClosing() const pure nothrow @safe @nogc
 	{
-		return cast(OverlappedConnectedSocket) socket_;
+		return closing;
+	}
+
+	/**
+	 * Close the transport.
+	 *
+	 * Buffered data will be flushed.  No more data will be received.
+	 */
+	void close() pure nothrow @safe @nogc
+	{
+		closing = true;
+	}
+
+	/**
+	 * Write some data to the transport.
+	 *
+	 * Params:
+	 * 	data = Data to send.
+	 */
+	void write(ubyte[] data) @nogc
+	{
+		input ~= data;
+	}
+
+	/**
+	 * Returns: Application protocol.
+	 */
+	@property Protocol protocol() pure nothrow @safe @nogc
+	{
+		return protocol_;
 	}
 
 	/**
@@ -78,30 +130,37 @@ final class IOCPStreamTransport : StreamTransport
 		protocol_ = protocol;
 	}
 
-
 	/**
-	 * Write some data to the transport.
-	 *
-	 * Params:
-	 * 	data = Data to send.
+	 * Invokes the watcher callback.
 	 */
-	void write(ubyte[] data) @nogc
+	override void invoke() @nogc
 	{
-		immutable empty = input.length == 0;
-		input ~= data;
-		if (empty)
+		if (output.length)
 		{
-			SocketState overlapped;
-			try
+			immutable empty = input.length == 0;
+			protocol.received(output[0 .. $]);
+			output.clear();
+			if (empty)
 			{
-				overlapped = MmapPool.instance.make!SocketState;
-				socket.beginSend(input[], overlapped);
+				SocketState overlapped;
+				try
+				{
+					overlapped = MmapPool.instance.make!SocketState;
+					socket.beginSend(input[], overlapped);
+				}
+				catch (SocketException e)
+				{
+					MmapPool.instance.dispose(overlapped);
+					MmapPool.instance.dispose(e);
+				}
 			}
-			catch (SocketException e)
-			{
-				MmapPool.instance.dispose(overlapped);
-				MmapPool.instance.dispose(e);
-			}
+		}
+		else
+		{
+			protocol.disconnected(exception);
+			MmapPool.instance.dispose(protocol_);
+			defaultAllocator.dispose(exception);
+			active = false;
 		}
 	}
 }
@@ -137,7 +196,7 @@ final class IOCPLoop : Loop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
-	override protected bool reify(ConnectionWatcher watcher,
+	override protected bool reify(SocketWatcher watcher,
 								  EventMask oldEvents,
 								  EventMask events) @nogc
 	{
@@ -170,7 +229,7 @@ final class IOCPLoop : Loop
 		if (!(oldEvents & Event.read) && (events & Event.read)
 			|| !(oldEvents & Event.write) && (events & Event.write))
 		{
-			auto transport = cast(IOCPStreamTransport) watcher;
+			auto transport = cast(StreamTransport) watcher;
 			assert(transport !is null);
 
 			if (CreateIoCompletionPort(cast(HANDLE) transport.socket.handle,
@@ -198,6 +257,20 @@ final class IOCPLoop : Loop
 			}
 		}
 		return true;
+	}
+
+	private void kill(StreamTransport transport,
+	                  SocketException exception = null) @nogc
+	in
+	{
+		assert(transport !is null);
+	}
+	body
+	{
+		transport.socket.shutdown();
+		defaultAllocator.dispose(transport.socket);
+		transport.exception = exception;
+		pendings.enqueue(transport);
 	}
 
 	/**
@@ -237,7 +310,7 @@ final class IOCPLoop : Loop
 				assert(listener !is null);
 
 				auto socket = listener.endAccept(overlapped);
-				auto transport = MmapPool.instance.make!IOCPStreamTransport(socket);
+				auto transport = MmapPool.instance.make!StreamTransport(socket);
 
 				connection.incoming.enqueue(transport);
 
@@ -247,7 +320,7 @@ final class IOCPLoop : Loop
 				listener.beginAccept(overlapped);
 				break;
 			case OverlappedSocketEvent.read:
-				auto transport = cast(IOCPStreamTransport) (cast(void*) key);
+				auto transport = cast(StreamTransport) (cast(void*) key);
 				assert(transport !is null);
 
 				if (!transport.active)
@@ -269,7 +342,7 @@ final class IOCPLoop : Loop
 				}
 				if (transport.socket.disconnected)
 				{
-					// We want to get one last notification to destroy the watcher
+					// We want to get one last notification to destroy the watcher.
 					transport.socket.beginReceive(transport.output[], overlapped);
 					kill(transport, exception);
 				}
@@ -278,7 +351,7 @@ final class IOCPLoop : Loop
 					immutable full = transport.output.free == received;
 
 					transport.output += received;
-					// Receive was interrupted because the buffer is full. We have to continue
+					// Receive was interrupted because the buffer is full. We have to continue.
 					if (full)
 					{
 						transport.socket.beginReceive(transport.output[], overlapped);
@@ -287,17 +360,21 @@ final class IOCPLoop : Loop
 				}
 				break;
 			case OverlappedSocketEvent.write:
-				auto transport = cast(IOCPStreamTransport) (cast(void*) key);
+				auto transport = cast(StreamTransport) (cast(void*) key);
 				assert(transport !is null);
 
 				transport.input += transport.socket.endSend(overlapped);
-				if (transport.input.length)
+				if (transport.input.length > 0)
 				{
 					transport.socket.beginSend(transport.input[], overlapped);
 				}
 				else
 				{
 					transport.socket.beginReceive(transport.output[], overlapped);
+					if (transport.isClosing())
+					{
+						kill(transport);
+					}
 				}
 				break;
 			default:

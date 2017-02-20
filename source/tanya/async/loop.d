@@ -234,9 +234,9 @@ abstract class Loop
 	 *
 	 * Returns: $(D_KEYWORD true) if the operation was successful.
 	 */
-	abstract protected bool reify(ConnectionWatcher watcher,
-								  EventMask oldEvents,
-								  EventMask events) @nogc;
+	abstract protected bool reify(SocketWatcher watcher,
+	                              EventMask oldEvents,
+	                              EventMask events) @nogc;
 
 	/**
 	 * Returns: The blocking time.
@@ -264,26 +264,6 @@ abstract class Loop
 	body
 	{
 		blockTime_ = blockTime;
-	}
-
-	/**
-	 * Kills the watcher and closes the connection.
-	 *
-	 * Params:
-	 * 	watcher   = Watcher.
-	 * 	exception = Occurred exception.
-	 */
-	protected void kill(IOWatcher watcher, SocketException exception) @nogc
-	in
-	{
-		assert(watcher !is null);
-	}
-	body
-	{
-		watcher.socket.shutdown();
-		defaultAllocator.dispose(watcher.socket);
-		watcher.exception = exception;
-		pendings.enqueue(watcher);
 	}
 
 	/**

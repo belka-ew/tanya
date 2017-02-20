@@ -25,20 +25,27 @@ import tanya.network.socket;
 /**
  * Transport for stream sockets.
  */
-final class SelectorStreamTransport : IOWatcher, StreamTransport
+package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
 {
-	/// Input buffer.
+	private SelectorLoop loop;
+
+	private SocketException exception;
+
+	package ReadBuffer!ubyte output;
+
 	package WriteBuffer!ubyte input;
 
-	private SelectorLoop loop;
+	private Protocol protocol_;
+
+	private bool closing;
 
 	/// Received notification that the underlying socket is write-ready.
 	package bool writeReady;
 
 	/**
 	 * Params:
-	 * 	loop     = Event loop.
-	 * 	socket   = Socket.
+	 * 	loop   = Event loop.
+	 * 	socket = Socket.
 	 *
 	 * Precondition: $(D_INLINECODE loop !is null && socket !is null)
 	 */
@@ -46,19 +53,27 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 	in 
 	{
 		assert(loop !is null);
-		assert(socket !is null);
 	}
 	body
 	{
 		super(socket);
 		this.loop = loop;
+		output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
 		input = WriteBuffer!ubyte(8192, MmapPool.instance);
+		active = true;
 	}
 
 	/**
 	 * Returns: Socket.
+	 *
+	 * Postcondition: $(D_INLINECODE socket !is null)
 	 */
 	override @property ConnectedSocket socket() pure nothrow @safe @nogc
+	out (socket)
+	{
+		assert(socket !is null);
+	}
+	body
 	{
 		return cast(ConnectedSocket) socket_;
 	}
@@ -71,6 +86,14 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 	body
 	{
 		socket_ = socket;
+	}
+
+	/**
+	 * Returns: Application protocol.
+	 */
+	@property Protocol protocol() pure nothrow @safe @nogc
+	{
+		return protocol_;
 	}
 
 	/**
@@ -92,6 +115,48 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 	body
 	{
 		protocol_ = protocol;
+	}
+
+	/**
+	 * Returns $(D_PARAM true) if the transport is closing or closed.
+	 */
+	bool isClosing() const pure nothrow @safe @nogc
+	{
+		return closing;
+	}
+
+	/**
+	 * Close the transport.
+	 *
+	 * Buffered data will be flushed.  No more data will be received.
+	 */
+	void close() @nogc
+	{
+		closing = true;
+		loop.reify(this, EventMask(Event.read, Event.write), EventMask(Event.write));
+	}
+
+	/**
+	 * Invokes the watcher callback.
+	 */
+	override void invoke() @nogc
+	{
+		if (output.length)
+		{
+			protocol.received(output[0 .. $]);
+			output.clear();
+			if (isClosing() && input.length == 0)
+			{
+				loop.kill(this);
+			}
+		}
+		else
+		{
+			protocol.disconnected(exception);
+			MmapPool.instance.dispose(protocol_);
+			defaultAllocator.dispose(exception);
+			active = false;
+		}
 	}
 
 	/**
@@ -140,27 +205,60 @@ final class SelectorStreamTransport : IOWatcher, StreamTransport
 abstract class SelectorLoop : Loop
 {
 	/// Pending connections.
-	protected Vector!ConnectionWatcher connections;
+	protected Vector!SocketWatcher connections;
 
 	this() @nogc
 	{
 		super();
-		connections = Vector!ConnectionWatcher(maxEvents, MmapPool.instance);
+		connections = Vector!SocketWatcher(maxEvents, MmapPool.instance);
 	}
 
 	~this() @nogc
 	{
 		foreach (ref connection; connections)
 		{
-			// We want to free only IOWatchers. ConnectionWatcher are created by the
+			// We want to free only the transports. ConnectionWatcher are created by the
 			// user and should be freed by himself.
-			auto io = cast(IOWatcher) connection;
-			if (io !is null)
+			if (cast(StreamTransport) connection !is null)
 			{
-				MmapPool.instance.dispose(io);
-				connection = null;
+				MmapPool.instance.dispose(connection);
 			}
 		}
+	}
+
+	/**
+	 * Should be called if the backend configuration changes.
+	 *
+	 * Params:
+	 * 	watcher   = Watcher.
+	 * 	oldEvents = The events were already set.
+	 * 	events    = The events should be set.
+	 *
+	 * Returns: $(D_KEYWORD true) if the operation was successful.
+	 */
+	override abstract protected bool reify(SocketWatcher watcher,
+	                                       EventMask oldEvents,
+	                                       EventMask events) @nogc;
+
+	/**
+	 * Kills the watcher and closes the connection.
+	 *
+	 * Params:
+	 * 	transport = Transport.
+	 * 	exception = Occurred exception.
+	 */
+	protected void kill(StreamTransport transport,
+	                    SocketException exception = null) @nogc
+	in
+	{
+		assert(transport !is null);
+	}
+	body
+	{
+		transport.socket.shutdown();
+		defaultAllocator.dispose(transport.socket);
+		transport.exception = exception;
+		pendings.enqueue(transport);
 	}
 
 	/**
@@ -175,8 +273,13 @@ abstract class SelectorLoop : Loop
 	 *          completed or scheduled, $(D_KEYWORD false) otherwise (the
 	 *          transport will be destroyed then).
 	 */
-	protected bool feed(SelectorStreamTransport transport,
+	protected bool feed(StreamTransport transport,
 	                    SocketException exception = null) @nogc
+	in
+	{
+		assert(transport !is null);
+	}
+	body
 	{
 		while (transport.input.length && transport.writeReady)
 		{
@@ -200,11 +303,12 @@ abstract class SelectorLoop : Loop
 		}
 		if (exception !is null)
 		{
-			auto watcher = cast(IOWatcher) connections[transport.socket.handle];
-			assert(watcher !is null);
-
-			kill(watcher, exception);
+			kill(transport, exception);
 			return false;
+		}
+		if (transport.input.length == 0 && transport.isClosing())
+		{
+			kill(transport);
 		}
 		return true;
 	}
@@ -261,11 +365,11 @@ abstract class SelectorLoop : Loop
 				break;
 			}
 
-			SelectorStreamTransport transport;
+			StreamTransport transport;
 
 			if (connections.length > client.handle)
 			{
-				transport = cast(SelectorStreamTransport) connections[client.handle];
+				transport = cast(StreamTransport) connections[client.handle];
 			}
 			else
 			{
@@ -273,7 +377,7 @@ abstract class SelectorLoop : Loop
 			}
 			if (transport is null)
 			{
-				transport = MmapPool.instance.make!SelectorStreamTransport(this, client);
+				transport = MmapPool.instance.make!StreamTransport(this, client);
 				connections[client.handle] = transport;
 			}
 			else
