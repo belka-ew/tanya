@@ -5,7 +5,7 @@
 /**
  * UTF-8 string.
  *
- * Copyright: Eugene Wissner 2016-2017.
+ * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -51,6 +51,54 @@ struct String
     nothrow @trusted @nogc
     {
         this(allocator);
+
+        bool overflow;
+        auto size = mulu(str.length, 4, overflow);
+        assert(!overflow);
+
+        reserve(size);
+
+        auto s = data;
+        auto sourceLength = str.length;
+        for (auto c = str.ptr; sourceLength != 0; ++c, --sourceLength)
+        {
+            if (*c < 0x80)
+            {
+                *s++ = *c & 0x7f;
+                length_ += 1;
+            }
+            else if (*c < 0x800)
+            {
+                *s++ = 0xc0 | (*c >> 6) & 0xff;
+                *s++ = 0x80 | (*c & 0x3f);
+                length_ += 2;
+            }
+            else if (*c < 0xd800 || *c - 0xe000 < 0x2000)
+            {
+                *s++ = 0xe0 | (*c >> 12) & 0xff;
+                *s++ = 0x80 | ((*c >> 6) & 0x3f);
+                *s++ = 0x80 | (*c & 0x3f);
+                length_ += 3;
+            }
+            else if ((*c - 0xd800) < 2048 && sourceLength > 0 && *(c + 1) - 0xdc00 < 0x400)
+            { // Surrogate pair
+                dchar d = (*c - 0xd800) | ((*c++ - 0xdc00) >> 10);
+
+                *s++ = 0xf0 | (d >> 18);
+                *s++ = 0x80 | ((d >> 12) & 0x3f);
+                *s++ = 0x80 | ((d >> 6) & 0x3f);
+                *s++ = 0x80 | (d & 0x3f);
+                --sourceLength;
+                length_ += 4;
+            }
+        }
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto s = String("\u10437"w);
+        assert("\u10437" == s.get());
     }
 
     /// Ditto.
@@ -101,7 +149,7 @@ struct String
     @nogc @safe unittest
     {
         auto s = String("Отказаться от вина - в этом страшная вина."d);
-        assert("Отказаться от вина - в этом страшная вина." == s.get);
+        assert("Отказаться от вина - в этом страшная вина." == s.get());
     }
 
     /// Ditto.
