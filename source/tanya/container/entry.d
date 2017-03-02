@@ -9,14 +9,14 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- */  
+ */
 module tanya.container.entry;
 
 package struct SEntry(T)
 {
-	/// Item content.
-	T content;
+    /// Item content.
+    T content;
 
-	/// Next item.
-	SEntry* next;
+    /// Next item.
+    SEntry* next;
 }

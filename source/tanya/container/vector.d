@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * One-dimensional array.
+ * Single-dimensioned array.
  *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
@@ -166,10 +166,10 @@ struct Vector(T)
      * range or a static array $(D_PARAM init).
      *
      * Params:
-     * 	R         = Type of the initial range or size of the static array.
-     * 	init      = Values to initialize the array with.
-     * 	            to generate a list.
-     * 	allocator = Allocator.
+     *  R         = Type of the initial range or size of the static array.
+     *  init      = Values to initialize the array with.
+     *              to generate a list.
+     *  allocator = Allocator.
      */
     this(size_t R)(T[R] init, shared Allocator allocator = defaultAllocator)
     {
@@ -200,9 +200,9 @@ struct Vector(T)
      * If $(D_PARAM init) is passed by reference, it will be copied.
      *
      * Params:
-     * 	R         = Vector type.
-     * 	init      = Source vector.
-     * 	allocator = Allocator.
+     *  R         = Vector type.
+     *  init      = Source vector.
+     *  allocator = Allocator.
      */
     this(R)(ref R init, shared Allocator allocator = defaultAllocator)
         if (is(Unqual!R == Vector))
@@ -268,8 +268,8 @@ struct Vector(T)
      * Creates a new $(D_PSYMBOL Vector).
      *
      * Params:
-     * 	len       = Initial length of the vector.
-     * 	allocator = Allocator.
+     *  len       = Initial length of the vector.
+     *  allocator = Allocator.
      */
     this(in size_t len, shared Allocator allocator = defaultAllocator)
     {
@@ -281,9 +281,9 @@ struct Vector(T)
      * Creates a new $(D_PSYMBOL Vector).
      *
      * Params:
-     * 	len       = Initial length of the vector.
-     * 	init      = Initial value to fill the vector with.
-     * 	allocator = Allocator.
+     *  len       = Initial length of the vector.
+     *  init      = Initial value to fill the vector with.
+     *  allocator = Allocator.
      */
     this(in size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
     {
@@ -399,7 +399,7 @@ struct Vector(T)
      * Expands/shrinks the vector.
      *
      * Params:
-     * 	len = New length.
+     *  len = New length.
      */
     @property void length(in size_t len) @trusted
     {
@@ -456,7 +456,7 @@ struct Vector(T)
      * affected.
      *
      * Params:
-     * 	size = Desired size.
+     *  size = Desired size.
      */
     void reserve(in size_t size) @trusted
     {
@@ -514,7 +514,7 @@ struct Vector(T)
      * $(D_PARAM length).
      *
      * Params:
-     * 	size = Desired size.
+     *  size = Desired size.
      */
     void shrink(in size_t size) @trusted
     {
@@ -585,7 +585,7 @@ struct Vector(T)
      * length, all elements are removed.
      *
      * Params:
-     * 	howMany = How many elements should be removed.
+     *  howMany = How many elements should be removed.
      *
      * Returns: The number of elements removed
      */
@@ -618,7 +618,7 @@ struct Vector(T)
      * Remove all elements beloning to $(D_PARAM r).
      *
      * Params:
-     * 	r = Range originally obtained from this vector.
+     *  r = Range originally obtained from this vector.
      *
      * Returns: Elements in $(D_PARAM r) after removing.
      *
@@ -674,8 +674,8 @@ struct Vector(T)
      * Inserts the $(D_PARAM el) into the vector.
      *
      * Params:
-     * 	R  = Type of the inserted value(s) (single value, range or static array).
-     * 	el = Value(s) should be inserted.
+     *  R  = Type of the inserted value(s) (single value, range or static array).
+     *  el = Value(s) should be inserted.
      *
      * Returns: The number of elements inserted.
      */
@@ -767,9 +767,9 @@ struct Vector(T)
      * Inserts $(D_PARAM el) before or after $(D_PARAM r).
      *
      * Params:
-     * 	R  = Type of the inserted value(s) (single value, range or static array).
-     * 	r = Range originally obtained from this vector.
-     * 	el = Value(s) should be inserted.
+     *  R  = Type of the inserted value(s) (single value, range or static array).
+     *  r  = Range originally obtained from this vector.
+     *  el = Value(s) should be inserted.
      *
      * Returns: The number of elements inserted.
      */
@@ -946,8 +946,8 @@ struct Vector(T)
      * Assigns a value to the element with the index $(D_PARAM pos).
      *
      * Params:
-     * 	value = Value.
-     * 	pos   = Position.
+     *  value = Value.
+     *  pos   = Position.
      *
      * Returns: Assigned value.
      *
@@ -987,8 +987,8 @@ struct Vector(T)
      * Assigns a range or a static array.
      *
      * Params:
-     * 	R     = Range type or static array length.
-     * 	value = Value.
+     *  R     = Range type or static array length.
+     *  value = Value.
      *
      * Returns: Assigned value.
      *
@@ -1025,7 +1025,7 @@ struct Vector(T)
 
     /**
      * Params:
-     * 	pos = Index.
+     *  pos = Index.
      *
      * Returns: The value at a specified index.
      *
@@ -1073,7 +1073,7 @@ struct Vector(T)
      * Comparison for equality.
      *
      * Params:
-     * 	that = The vector to compare with.
+     *  that = The vector to compare with.
      *
      * Returns: $(D_KEYWORD true) if the vectors are equal, $(D_KEYWORD false)
      *          otherwise.
@@ -1099,8 +1099,8 @@ struct Vector(T)
      * Comparison for equality.
      *
      * Params:
-     * 	R    = Right hand side type.
-     * 	that = Right hand side vector range.
+     *  R    = Right hand side type.
+     *  that = Right hand side vector range.
      *
      * Returns: $(D_KEYWORD true) if the vector and the range are equal,
      *          $(D_KEYWORD false) otherwise.
@@ -1135,7 +1135,7 @@ struct Vector(T)
      * $(D_KEYWORD foreach) iteration.
      *
      * Params:
-     * 	dg = $(D_KEYWORD foreach) body.
+     *  dg = $(D_KEYWORD foreach) body.
      *
      * Returns: The value returned from $(D_PARAM dg).
      */
@@ -1301,8 +1301,8 @@ struct Vector(T)
 
     /**
      * Params:
-     * 	i = Slice start.
-     * 	j = Slice end.
+     *  i = Slice start.
+     *  j = Slice end.
      *
      * Returns: A range that iterates over elements of the container from
      *          index $(D_PARAM i) up to (excluding) index $(D_PARAM j).
@@ -1380,11 +1380,11 @@ struct Vector(T)
      * Slicing assignment.
      *
      * Params:
-     *	R     = Type of the assigned slice or length of the static array should be
-     *	        assigned.
-     * 	value = New value (single value, input range or static array).
-     * 	i     = Slice start.
-     * 	j     = Slice end.
+     *  R     = Type of the assigned slice or length of the static array should be
+     *          assigned.
+     *  value = New value (single value, input range or static array).
+     *  i     = Slice start.
+     *  j     = Slice end.
      *
      * Returns: Slice with the assigned part of the vector.
      *

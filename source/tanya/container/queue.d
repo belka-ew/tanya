@@ -3,11 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * FIFO queue.
+ *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- */  
+ */
 module tanya.container.queue;
 
 import core.exception;
@@ -20,267 +22,267 @@ import tanya.memory;
  * FIFO queue.
  *
  * Params:
- * 	T = Content type.
+ *  T = Content type.
  */
 struct Queue(T)
 {
-	/**
-	 * Removes all elements from the queue.
-	 */
-	~this()
-	{
-		while (!empty)
-		{
-			dequeue();
-		}
-	}
+    /**
+     * Removes all elements from the queue.
+     */
+    ~this()
+    {
+        while (!empty)
+        {
+            dequeue();
+        }
+    }
 
-	/**
-	 * Returns how many elements are in the queue. It iterates through the queue
-	 * to count the elements.
-	 *
-	 * Returns: How many elements are in the queue.
-	 */
-	size_t length() const
-	{
-		size_t len;
-		for (const(SEntry!T)* i = first; i !is null; i = i.next)
-		{
-			++len;
-		}
-		return len;
-	}
+    /**
+     * Returns how many elements are in the queue. It iterates through the queue
+     * to count the elements.
+     *
+     * Returns: How many elements are in the queue.
+     */
+    size_t length() const
+    {
+        size_t len;
+        for (const(SEntry!T)* i = first; i !is null; i = i.next)
+        {
+            ++len;
+        }
+        return len;
+    }
 
-	///
-	unittest
-	{
-		Queue!int q;
+    ///
+    unittest
+    {
+        Queue!int q;
 
-		assert(q.length == 0);
-		q.enqueue(5);
-		assert(q.length == 1);
-		q.enqueue(4);
-		assert(q.length == 2);
-		q.enqueue(9);
-		assert(q.length == 3);
+        assert(q.length == 0);
+        q.enqueue(5);
+        assert(q.length == 1);
+        q.enqueue(4);
+        assert(q.length == 2);
+        q.enqueue(9);
+        assert(q.length == 3);
 
-		q.dequeue();
-		assert(q.length == 2);
-		q.dequeue();
-		assert(q.length == 1);
-		q.dequeue();
-		assert(q.length == 0);
-	}
+        q.dequeue();
+        assert(q.length == 2);
+        q.dequeue();
+        assert(q.length == 1);
+        q.dequeue();
+        assert(q.length == 0);
+    }
 
-	private void enqueueEntry(ref SEntry!T* entry)
-	{
-		if (empty)
-		{
-			first = rear = entry;
-		}
-		else
-		{
-			rear.next = entry;
-			rear = rear.next;
-		}
-	}
+    private void enqueueEntry(ref SEntry!T* entry)
+    {
+        if (empty)
+        {
+            first = rear = entry;
+        }
+        else
+        {
+            rear.next = entry;
+            rear = rear.next;
+        }
+    }
 
-	private SEntry!T* allocateEntry()
-	{
-		auto temp = cast(SEntry!T*) allocator.allocate(SEntry!T.sizeof);
-		if (temp is null)
-		{
-			onOutOfMemoryError();
-		}
-		return temp;
-	}
+    private SEntry!T* allocateEntry()
+    {
+        auto temp = cast(SEntry!T*) allocator.allocate(SEntry!T.sizeof);
+        if (temp is null)
+        {
+            onOutOfMemoryError();
+        }
+        return temp;
+    }
 
-	/**
-	 * Inserts a new element.
-	 *
-	 * Params:
-	 * 	x = New element.
-	 */
-	void enqueue(ref T x)
-	{
-		auto temp = allocateEntry();
+    /**
+     * Inserts a new element.
+     *
+     * Params:
+     *  x = New element.
+     */
+    void enqueue(ref T x)
+    {
+        auto temp = allocateEntry();
 
-		*temp = SEntry!T.init;
-		temp.content = x;
+        *temp = SEntry!T.init;
+        temp.content = x;
 
-		enqueueEntry(temp);
-	}
+        enqueueEntry(temp);
+    }
 
-	/// Ditto.
-	void enqueue(T x)
-	{
-		auto temp = allocateEntry();
+    /// Ditto.
+    void enqueue(T x)
+    {
+        auto temp = allocateEntry();
 
-		moveEmplace(x, (*temp).content);
-		(*temp).next = null;
+        moveEmplace(x, (*temp).content);
+        (*temp).next = null;
 
-		enqueueEntry(temp);
-	}
+        enqueueEntry(temp);
+    }
 
-	///
-	unittest
-	{
-		Queue!int q;
+    ///
+    unittest
+    {
+        Queue!int q;
 
-		assert(q.empty);
-		q.enqueue(8);
-		q.enqueue(9);
-		assert(q.dequeue() == 8);
-		assert(q.dequeue() == 9);
-	}
+        assert(q.empty);
+        q.enqueue(8);
+        q.enqueue(9);
+        assert(q.dequeue() == 8);
+        assert(q.dequeue() == 9);
+    }
 
-	/**
-	 * Returns: $(D_KEYWORD true) if the queue is empty.
-	 */
-	@property bool empty() const
-	{
-		return first is null;
-	}
+    /**
+     * Returns: $(D_KEYWORD true) if the queue is empty.
+     */
+    @property bool empty() const
+    {
+        return first is null;
+    }
 
-	///
-	unittest
-	{
-		Queue!int q;
-		int value = 7;
+    ///
+    unittest
+    {
+        Queue!int q;
+        int value = 7;
 
-		assert(q.empty);
-		q.enqueue(value);
-		assert(!q.empty);
-	}
+        assert(q.empty);
+        q.enqueue(value);
+        assert(!q.empty);
+    }
 
-	/**
-	 * Move the position to the next element.
-	 *
-	 * Returns: Dequeued element.
-	 */
-	T dequeue()
-	in
-	{
-		assert(!empty);
-	}
-	body
-	{
-		auto n = first.next;
-		T ret = move(first.content);
+    /**
+     * Move the position to the next element.
+     *
+     * Returns: Dequeued element.
+     */
+    T dequeue()
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        auto n = first.next;
+        T ret = move(first.content);
 
-		allocator.dispose(first);
-		first = n;
-		return ret;
-	}
+        allocator.dispose(first);
+        first = n;
+        return ret;
+    }
 
-	///
-	unittest
-	{
-		Queue!int q;
+    ///
+    unittest
+    {
+        Queue!int q;
 
-		q.enqueue(8);
-		q.enqueue(9);
-		assert(q.dequeue() == 8);
-		assert(q.dequeue() == 9);
-	}
+        q.enqueue(8);
+        q.enqueue(9);
+        assert(q.dequeue() == 8);
+        assert(q.dequeue() == 9);
+    }
 
-	/**
-	 * $(D_KEYWORD foreach) iteration. The elements will be automatically
-	 * dequeued.
-	 *
-	 * Params:
-	 * 	dg = $(D_KEYWORD foreach) body.
-	 *
-	 * Returns: The value returned from $(D_PARAM dg).
-	 */
-	int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
-	{
-		int result;
+    /**
+     * $(D_KEYWORD foreach) iteration. The elements will be automatically
+     * dequeued.
+     *
+     * Params:
+     *  dg = $(D_KEYWORD foreach) body.
+     *
+     * Returns: The value returned from $(D_PARAM dg).
+     */
+    int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
+    {
+        int result;
 
-		for (size_t i = 0; !empty; ++i)
-		{
-			auto e = dequeue();
-			if ((result = dg(i, e)) != 0)
-			{
-				return result;
-			}
-		}
-		return result;
-	}
+        for (size_t i = 0; !empty; ++i)
+        {
+            auto e = dequeue();
+            if ((result = dg(i, e)) != 0)
+            {
+                return result;
+            }
+        }
+        return result;
+    }
 
-	/// Ditto.
-	int opApply(scope int delegate(ref T) @nogc dg)
-	{
-		int result;
+    /// Ditto.
+    int opApply(scope int delegate(ref T) @nogc dg)
+    {
+        int result;
 
-		while (!empty)
-		{
-			auto e = dequeue();
-			if ((result = dg(e)) != 0)
-			{
-				return result;
-			}
-		}
-		return result;
-	}
+        while (!empty)
+        {
+            auto e = dequeue();
+            if ((result = dg(e)) != 0)
+            {
+                return result;
+            }
+        }
+        return result;
+    }
 
-	///
-	unittest
-	{
-		Queue!int q;
+    ///
+    unittest
+    {
+        Queue!int q;
 
-		size_t j;
-		q.enqueue(5);
-		q.enqueue(4);
-		q.enqueue(9);
-		foreach (i, e; q)
-		{
-			assert(i != 2 || e == 9);
-			assert(i != 1 || e == 4);
-			assert(i != 0 || e == 5);
-			++j;
-		}
-		assert(j == 3);
-		assert(q.empty);
+        size_t j;
+        q.enqueue(5);
+        q.enqueue(4);
+        q.enqueue(9);
+        foreach (i, e; q)
+        {
+            assert(i != 2 || e == 9);
+            assert(i != 1 || e == 4);
+            assert(i != 0 || e == 5);
+            ++j;
+        }
+        assert(j == 3);
+        assert(q.empty);
 
-		j = 0;
-		q.enqueue(5);
-		q.enqueue(4);
-		q.enqueue(9);
-		foreach (e; q)
-		{
-			assert(j != 2 || e == 9);
-			assert(j != 1 || e == 4);
-			assert(j != 0 || e == 5);
-			++j;
-		}
-		assert(j == 3);
-		assert(q.empty);
-	}
+        j = 0;
+        q.enqueue(5);
+        q.enqueue(4);
+        q.enqueue(9);
+        foreach (e; q)
+        {
+            assert(j != 2 || e == 9);
+            assert(j != 1 || e == 4);
+            assert(j != 0 || e == 5);
+            ++j;
+        }
+        assert(j == 3);
+        assert(q.empty);
+    }
 
-	private SEntry!T* first;
-	private SEntry!T* rear;
+    private SEntry!T* first;
+    private SEntry!T* rear;
 
-	mixin DefaultAllocator;
+    mixin DefaultAllocator;
 }
 
 ///
 unittest
 {
-	Queue!int q;
+    Queue!int q;
 
-	q.enqueue(5);
-	assert(!q.empty);
+    q.enqueue(5);
+    assert(!q.empty);
 
-	q.enqueue(4);
-	q.enqueue(9);
+    q.enqueue(4);
+    q.enqueue(9);
 
-	assert(q.dequeue() == 5);
+    assert(q.dequeue() == 5);
 
-	foreach (i, ref e; q)
-	{
-		assert(i != 0 || e == 4);
-		assert(i != 1 || e == 9);
-	}
-	assert(q.empty);
+    foreach (i, ref e; q)
+    {
+        assert(i != 0 || e == 4);
+        assert(i != 1 || e == 9);
+    }
+    assert(q.empty);
 }
