@@ -92,11 +92,128 @@ struct SList(T)
     private Entry* head;
 
     /**
+     * Creates a new $(D_PSYMBOL SList) with the elements from a static array.
+     *
+     * Params:
+     *  R         = Static array size.
+     *  init      = Values to initialize the list with.
+     *  allocator = Allocator.
+     */
+    this(size_t R)(T[R] init, shared Allocator allocator = defaultAllocator)
+    {
+        this(allocator);
+        insertFront(init[]);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l = SList!int([5, 8, 15]);
+        assert(l.front == 5);
+    }
+
+    /**
+     * Creates a new $(D_PSYMBOL SList) with the elements from an input range.
+     *
+     * Params:
+     *  R         = Type of the initial range.
+     *  init      = Values to initialize the list with.
+     *  allocator = Allocator.
+     */
+    this(R)(R init, shared Allocator allocator = defaultAllocator)
+        if (!isInfinite!R
+         && isInputRange!R
+         && isImplicitlyConvertible!(ElementType!R, T))
+    {
+        this(allocator);
+        insertFront(init);
+    }
+
+    /**
+     * Creates a new $(D_PSYMBOL SList).
+     *
+     * Params:
+     *  len       = Initial length of the list.
+     *  init      = Initial value to fill the list with.
+     *  allocator = Allocator.
+     */
+    this(in size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
+    {
+        this(allocator);
+
+        Entry* next;
+        foreach (i; 0 .. len)
+        {
+            if (next is null)
+            {
+                next = allocator.make!Entry(init);
+                head = next;
+            }
+            else
+            {
+                next.next = allocator.make!Entry(init);
+                next = next.next;
+            }
+        }
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l = SList!int(2, 3);
+        assert(l.length == 2);
+        assert(l.front == 3);
+    }
+
+    /// Ditto.
+    this(in size_t len, shared Allocator allocator = defaultAllocator)
+    {
+        this(len, T.init, allocator);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l = SList!int(2);
+        assert(l.length == 2);
+        assert(l.front == 0);
+    }
+
+    /// Ditto.
+    this(shared Allocator allocator)
+    in
+    {
+        assert(allocator !is null);
+    }
+    body
+    {
+        this.allocator_ = allocator;
+    }
+
+    /**
      * Removes all elements from the list.
      */
     ~this()
     {
         clear();
+    }
+
+    /**
+     * Copies the list.
+     */
+    this(this)
+    {
+        auto buf = opIndex();
+        head = null;
+        insertFront(buf);
+    }
+
+    ///
+    unittest
+    {
+        auto l1 = SList!int([5, 1, 234]);
+        auto l2 = l1;
+        assert(l1 == l2);
     }
 
     /**
@@ -113,10 +230,9 @@ struct SList(T)
     ///
     unittest
     {
-        SList!int l;
+        SList!int l = SList!int([8, 5]);
 
-        l.insertFront(8);
-        l.insertFront(5);
+        assert(!l.empty);
         l.clear();
         assert(l.empty);
     }
@@ -164,15 +280,32 @@ struct SList(T)
     }
 
     /// Ditto.
-    size_t insertFront(R)(R el)
+    size_t insertFront(R)(R el) @trusted
         if (!isInfinite!R
          && isInputRange!R
          && isImplicitlyConvertible!(ElementType!R, T))
     {
         size_t retLength;
-        foreach (e; el)
+        Entry* next, newHead;
+
+        foreach (ref e; el)
         {
-            retLength += insertFront(e);
+            if (next is null)
+            {
+                next = allocator.make!Entry(e);
+                newHead = next;
+            }
+            else
+            {
+                next.next = allocator.make!Entry(e);
+                next = next.next;
+            }
+            ++retLength;
+        }
+        if (newHead !is null)
+        {
+            next.next = head;
+            head = newHead;
         }
         return retLength;
     }
@@ -198,11 +331,11 @@ struct SList(T)
 
         SList!int l2;
         assert(l2.insertFront([25, 30, 15]) == 3);
-        assert(l2.front == 15);
+        assert(l2.front == 25);
 
         l2.insertFront(l1[]);
         assert(l2.length == 5);
-        assert(l2.front == 8);
+        assert(l2.front == 9);
     }
 
     /**

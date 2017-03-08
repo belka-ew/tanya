@@ -162,13 +162,11 @@ struct Vector(T)
     }
 
     /**
-     * Creates a new $(D_PSYMBOL Vector) with the elements from another input
-     * range or a static array $(D_PARAM init).
+     * Creates a new $(D_PSYMBOL Vector) with the elements from a static array.
      *
      * Params:
-     *  R         = Type of the initial range or size of the static array.
-     *  init      = Values to initialize the array with.
-     *              to generate a list.
+     *  R         = Static array size.
+     *  init      = Values to initialize the vector with.
      *  allocator = Allocator.
      */
     this(size_t R)(T[R] init, shared Allocator allocator = defaultAllocator)
@@ -177,7 +175,14 @@ struct Vector(T)
         insertBack!(T[])(init[]);
     }
 
-    /// Ditto.
+    /**
+     * Creates a new $(D_PSYMBOL Vector) with the elements from an input range.
+     *
+     * Params:
+     *  R         = Type of the initial range.
+     *  init      = Values to initialize the vector with.
+     *  allocator = Allocator.
+     */
     this(R)(R init, shared Allocator allocator = defaultAllocator)
         if (!isInfinite!R
          && isInputRange!R
@@ -269,19 +274,6 @@ struct Vector(T)
      *
      * Params:
      *  len       = Initial length of the vector.
-     *  allocator = Allocator.
-     */
-    this(in size_t len, shared Allocator allocator = defaultAllocator)
-    {
-        this(allocator);
-        length = len;
-    }
-
-    /**
-     * Creates a new $(D_PSYMBOL Vector).
-     *
-     * Params:
-     *  len       = Initial length of the vector.
      *  init      = Initial value to fill the vector with.
      *  allocator = Allocator.
      */
@@ -291,6 +283,13 @@ struct Vector(T)
         reserve(len);
         uninitializedFill(vector[0 .. len], init);
         length_ = len;
+    }
+
+    /// Ditto.
+    this(in size_t len, shared Allocator allocator = defaultAllocator)
+    {
+        this(allocator);
+        length = len;
     }
 
     /// Ditto.
