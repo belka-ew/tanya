@@ -191,6 +191,63 @@ struct SList(T)
     }
 
     /**
+     * Initializes this list from another one.
+     *
+     * If $(D_PARAM init) is passed by value, it won't be copied, but moved.
+     * If the allocator of ($D_PARAM init) matches $(D_PARAM allocator),
+     * $(D_KEYWORD this) will just take the ownership over $(D_PARAM init)'s
+     * storage, otherwise, the storage will be allocated with
+     * $(D_PARAM allocator) and all elements will be moved;
+     * $(D_PARAM init) will be destroyed at the end.
+     *
+     * If $(D_PARAM init) is passed by reference, it will be copied.
+     *
+     * Params:
+     *  init      = Source list.
+     *  allocator = Allocator.
+     */
+    this(ref SList init, shared Allocator allocator = defaultAllocator)
+    {
+        this(init[], allocator);
+    }
+
+    /// Ditto.
+    this(SList init, shared Allocator allocator = defaultAllocator) @trusted
+    {
+        this(allocator);
+        if (allocator is init.allocator)
+        {
+            head = init.head;
+            init.head = null;
+        }
+        else
+        {
+            Entry* next;
+            for (auto current = init.head; current !is null; current = current.next)
+            {
+                if (head is null)
+                {
+                    head = allocator.make!Entry(move(current.content));
+                    next = head;
+                }
+                else
+                {
+                    next.next = allocator.make!Entry(move(current.content));
+                    next = next.next;
+                }
+            }
+        }
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([5, 1, 234]);
+        auto l2 = SList!int(l1);
+        assert(l1 == l2);
+    }
+
+    /**
      * Removes all elements from the list.
      */
     ~this()
