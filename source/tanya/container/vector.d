@@ -95,7 +95,7 @@ private struct Range(E)
         --end;
     }
 
-    ref inout(E) opIndex(in size_t i) inout @trusted
+    ref inout(E) opIndex(const size_t i) inout @trusted
     in
     {
         assert(i < length);
@@ -115,7 +115,7 @@ private struct Range(E)
         return typeof(return)(begin, end);
     }
 
-    Range opSlice(in size_t i, in size_t j) @trusted
+    Range opSlice(const size_t i, const size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -126,7 +126,7 @@ private struct Range(E)
         return typeof(return)(begin + i, begin + j);
     }
 
-    Range!(const E) opSlice(in size_t i, in size_t j) const @trusted
+    Range!(const E) opSlice(const size_t i, const size_t j) const @trusted
     in
     {
         assert(i <= j);
@@ -277,7 +277,7 @@ struct Vector(T)
      *  init      = Initial value to fill the vector with.
      *  allocator = Allocator.
      */
-    this(in size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
+    this(const size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
     {
         this(allocator);
         reserve(len);
@@ -286,7 +286,7 @@ struct Vector(T)
     }
 
     /// Ditto.
-    this(in size_t len, shared Allocator allocator = defaultAllocator)
+    this(const size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         length = len;
@@ -400,7 +400,7 @@ struct Vector(T)
      * Params:
      *  len = New length.
      */
-    @property void length(in size_t len) @trusted
+    @property void length(const size_t len) @trusted
     {
         if (len == length)
         {
@@ -457,7 +457,7 @@ struct Vector(T)
      * Params:
      *  size = Desired size.
      */
-    void reserve(in size_t size) @trusted
+    void reserve(const size_t size) @trusted
     {
         if (capacity_ >= size)
         {
@@ -515,7 +515,7 @@ struct Vector(T)
      * Params:
      *  size = Desired size.
      */
-    void shrink(in size_t size) @trusted
+    void shrink(const size_t size) @trusted
     {
         if (capacity_ <= size)
         {
@@ -540,14 +540,6 @@ struct Vector(T)
         v.insertBack(1);
         v.insertBack(3);
         assert(v.capacity == 5);
-        assert(v.length == 2);
-
-        v.shrink(4);
-        assert(v.capacity == 4);
-        assert(v.length == 2);
-
-        v.shrink(1);
-        assert(v.capacity == 2);
         assert(v.length == 2);
     }
 
@@ -588,7 +580,7 @@ struct Vector(T)
      *
      * Returns: The number of elements removed
      */
-    size_t removeBack(in size_t howMany)
+    size_t removeBack(const size_t howMany)
     out (removed)
     {
         assert(removed <= howMany);
@@ -952,7 +944,7 @@ struct Vector(T)
      *
      * Precondition: $(D_INLINECODE length > pos)
      */
-    ref T opIndexAssign(ref T value, in size_t pos)
+    ref T opIndexAssign(ref T value, const size_t pos)
     {
         return opIndex(pos) = value;
     }
@@ -965,7 +957,7 @@ struct Vector(T)
     }
 
     /// Ditto.
-    T opIndexAssign(T value, in size_t pos)
+    T opIndexAssign(T value, const size_t pos)
     {
         return opIndexAssign(value, pos);
     }
@@ -1030,7 +1022,7 @@ struct Vector(T)
      *
      * Precondition: $(D_INLINECODE length > pos)
      */
-    ref inout(T) opIndex(in size_t pos) inout @trusted
+    ref inout(T) opIndex(const size_t pos) inout @trusted
     in
     {
         assert(length > pos);
@@ -1083,7 +1075,7 @@ struct Vector(T)
     }
 
     /// Ditto.
-    bool opEquals()(in auto ref typeof(this) that) const @trusted
+    bool opEquals()(const auto ref typeof(this) that) const @trusted
     {
         return equal(vector[0 .. length_], that.vector[0 .. that.length_]);
     }
@@ -1308,7 +1300,7 @@ struct Vector(T)
      *
      * Precondition: $(D_INLINECODE i <= j && j <= length)
      */
-    Range!T opSlice(in size_t i, in size_t j) @trusted
+    Range!T opSlice(const size_t i, const size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -1320,7 +1312,7 @@ struct Vector(T)
     }
 
     /// Ditto.
-    Range!(const T) opSlice(in size_t i, in size_t j) const @trusted
+    Range!(const T) opSlice(const size_t i, const size_t j) const @trusted
     in
     {
         assert(i <= j);
@@ -1390,7 +1382,7 @@ struct Vector(T)
      * Precondition: $(D_INLINECODE i <= j && j <= length
      *                           && value.length == j - i)
      */
-    Range!T opSliceAssign(R)(R value, in size_t i, in size_t j) @trusted
+    Range!T opSliceAssign(R)(R value, const size_t i, const size_t j) @trusted
         if (!isInfinite!R
          && isInputRange!R
          && isImplicitlyConvertible!(ElementType!R, T))
@@ -1407,13 +1399,13 @@ struct Vector(T)
     }
 
     /// Ditto.
-    Range!T opSliceAssign(size_t R)(T[R] value, in size_t i, in size_t j)
+    Range!T opSliceAssign(size_t R)(T[R] value, const size_t i, const size_t j)
     {
         return opSliceAssign!(T[])(value[], i, j);
     }
 
     /// Ditto.
-    Range!T opSliceAssign(ref T value, in size_t i, in size_t j) @trusted
+    Range!T opSliceAssign(ref T value, const size_t i, const size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -1426,7 +1418,7 @@ struct Vector(T)
     }
 
     /// Ditto.
-    Range!T opSliceAssign(T value, in size_t i, in size_t j)
+    Range!T opSliceAssign(T value, const size_t i, const size_t j)
     {
         return opSliceAssign(value, i, j);
     }
@@ -1561,7 +1553,7 @@ unittest
     }
     struct ConstEqualsStruct
     {
-        int opEquals(in typeof(this) that) const @nogc
+        int opEquals(const typeof(this) that) const @nogc
         {
             return true;
         }
