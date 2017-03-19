@@ -11,7 +11,7 @@
 module tanya.memory;
 
 import core.exception;
-public import std.experimental.allocator : make, makeArray;
+public import std.experimental.allocator : make;
 import std.traits;
 public import tanya.memory.allocator;
 
