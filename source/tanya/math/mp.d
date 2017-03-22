@@ -315,10 +315,14 @@ struct Integer
     {
         if (summand.length > this.length)
         {
+            const delta = summand.size - this.size;
             auto tmp = this.rep[0 .. this.size];
+
             this.rep =  allocator.resize!ubyte(null, summand.size).ptr;
-            tmp.copy(this.rep[summand.size - this.size .. summand.size]);
-            allocator.resize(tmp[0 .. this.size], 0);
+            tmp.copy(this.rep[delta .. summand.size]);
+            this.rep[0 .. delta].initializeAll();
+
+            allocator.deallocate(tmp[0 .. this.size]);
             this.size = summand.size;
         }
 
@@ -533,7 +537,7 @@ struct Integer
         return this;
     }
 
-    private @nogc unittest
+    private unittest
     {
         {
             auto h1 = Integer(1019);
@@ -547,14 +551,14 @@ struct Integer
             auto h2 = Integer(2_147_483_647);
             ubyte[4] expected = [0x80, 0x00, 0x11, 0x03];
             h1 += h2;
-            assert(h1.rep[0 .. h1.length] == expected);
+            assert(h1.rep[0 .. h1.size] == expected);
         }
         {
             auto h1 = Integer(2147488003L);
             auto h2 = Integer(2_147_483_647);
             ubyte[5] expected = [0x01, 0x00, 0x00, 0x11, 0x02];
             h1 += h2;
-            assert(h1.rep[0 .. h1.length] == expected);
+            assert(h1.rep[0 .. h1.size] == expected);
         }
     }
 
