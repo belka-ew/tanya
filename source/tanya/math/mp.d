@@ -537,7 +537,7 @@ struct Integer
         return this;
     }
 
-    private unittest
+    private @nogc unittest
     {
         {
             auto h1 = Integer(1019);
@@ -761,6 +761,7 @@ struct Integer
         static if (op == "/")
         {
             auto quotient = allocator.resize!ubyte(null, bitSize / 8 + 1);
+            quotient.initializeAll();
         }
 
         // bitPosition keeps track of which bit, of the quotient,
