@@ -20,16 +20,22 @@ import std.traits;
 import tanya.container.entry;
 import tanya.memory;
 
-private struct Range(E)
-    if (__traits(isSame, TemplateOf!E, SEntry))
+private struct Range(Entry)
+    if (__traits(isSame, TemplateOf!Entry, SEntry))
 {
     private alias T = typeof(E.content);
+    private alias E = CopyConstness!(Entry, Entry*);
 
     private E* head;
 
-    private this(E* head)
+    invariant
     {
-        this.head = head;
+        assert(head !is null);
+    }
+
+    private this(ref E head) @trusted
+    {
+        this.head = &head;
     }
 
     @property Range save()
@@ -44,7 +50,7 @@ private struct Range(E)
 
     @property bool empty() const
     {
-        return head is null;
+        return *head is null;
     }
 
     @property ref inout(T) front() inout
@@ -54,27 +60,27 @@ private struct Range(E)
     }
     body
     {
-        return head.content;
+        return (*head).content;
     }
 
-    void popFront()
+    void popFront() @trusted
     in
     {
         assert(!empty);
     }
     body
     {
-        head = head.next;
+        head = &(*head).next;
     }
 
     Range opIndex()
     {
-        return typeof(return)(head);
+        return typeof(return)(*head);
     }
 
-    Range!(const E) opIndex() const
+    Range!(const Entry) opIndex() const
     {
-        return typeof(return)(head);
+        return typeof(return)(*head);
     }
 }
 
@@ -137,7 +143,7 @@ struct SList(T)
      *  init      = Initial value to fill the list with.
      *  allocator = Allocator.
      */
-    this(in size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
+    this(const size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
     {
         this(allocator);
 
@@ -166,7 +172,7 @@ struct SList(T)
     }
 
     /// Ditto.
-    this(in size_t len, shared Allocator allocator = defaultAllocator)
+    this(const size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(len, T.init, allocator);
     }
@@ -260,13 +266,13 @@ struct SList(T)
      */
     this(this)
     {
-        auto buf = opIndex();
-        head = null;
-        insertFront(buf);
+        auto list = typeof(this)(this[], this.allocator);
+        this.head = list.head;
+        list.head = null;
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto l1 = SList!int([5, 1, 234]);
         auto l2 = l1;
@@ -285,7 +291,7 @@ struct SList(T)
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         SList!int l = SList!int([8, 5]);
 
@@ -307,33 +313,38 @@ struct SList(T)
         return head.content;
     }
 
-    /**
-     * Inserts a new element at the beginning.
-     *
-     * Params:
-     *  R = Type of the inserted value(s).
-     *  x = New element.
-     *
-     * Returns: The number of elements inserted.
-     */
-    size_t insertFront(R)(ref R x) @trusted
-        if (isImplicitlyConvertible!(R, T))
-    {
-        head = allocator.make!Entry(x, head);
-        return 1;
-    }
-
-    /// Ditto.
-    size_t insertFront(R)(R x) @trusted
+    private size_t moveEntry(R)(ref Entry* head, ref R el) @trusted
         if (isImplicitlyConvertible!(R, T))
     {
         auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
 
-        x.moveEmplace(temp.content);
+        el.moveEmplace(temp.content);
         temp.next = head;
 
         head = temp;
         return 1;
+    }
+
+    /**
+     * Inserts a new element at the beginning.
+     *
+     * Params:
+     *  R  = Type of the inserted value(s).
+     *  el = New element(s).
+     *
+     * Returns: The number of elements inserted.
+     */
+    size_t insertFront(ref T el) @trusted
+    {
+        head = allocator.make!Entry(el, head);
+        return 1;
+    }
+
+    /// Ditto.
+    size_t insertFront(R)(R el)
+        if (isImplicitlyConvertible!(R, T))
+    {
+        return moveEntry(head, el);
     }
 
     /// Ditto.
@@ -377,7 +388,7 @@ struct SList(T)
     alias insert = insertFront;
 
     ///
-    @nogc @safe unittest
+    @safe @nogc unittest
     {
         SList!int l1;
 
@@ -395,16 +406,116 @@ struct SList(T)
         assert(l2.front == 9);
     }
 
+    private bool checkRangeBelonging(ref Range!Entry r) const
+    {
+        const(Entry*)* pos;
+        for (pos = &head; pos != r.head && *pos !is null; pos = &(*pos).next)
+        {
+        }
+        return pos == r.head;
+    }
+
+    /**
+     * Inserts new elements before $(D_PARAM r).
+     *
+     * Params:
+     *  R  = Type of the inserted value(s).
+     *  el = New element(s).
+     *
+     * Returns: The number of elements inserted.
+     *
+     * Precondition: $(D_PARAM r) is extracted from this list.
+     */
+    size_t insertBefore(Range!Entry r, ref T el) @trusted
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        *r.head = allocator.make!Entry(el, *r.head);
+        return 1;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([234, 5, 1]);
+        auto l2 = SList!int([5, 1]);
+        int var = 234;
+        l2.insertBefore(l2[], var);
+        assert(l1 == l2);
+    }
+
+    /// Ditto.
+    size_t insertBefore(R)(Range!Entry r, R el)
+        if (isImplicitlyConvertible!(R, T))
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        return moveEntry(*r.head, el);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([234, 5, 1]);
+        auto l2 = SList!int([5, 1]);
+        l2.insertBefore(l2[], 234);
+        assert(l1 == l2);
+    }
+
+    /// Ditto.
+    size_t insertBefore(R)(Range!Entry r, R el)
+        if (!isInfinite!R
+         && isInputRange!R
+         && isImplicitlyConvertible!(ElementType!R, T))
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        size_t inserted;
+        foreach (e; el)
+        {
+            inserted += insertBefore(r, e);
+            r.popFront();
+        }
+        return inserted;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([5, 234, 30, 1]);
+        auto l2 = SList!int([5, 1]);
+        auto l3 = SList!int([234, 30]);
+        auto r = l2[];
+        r.popFront();
+        l2.insertBefore(r, l3[]);
+        assert(l1 == l2);
+    }
+
+    /// Ditto.
+    size_t insertBefore(size_t R)(Range!Entry r, T[R] el)
+    {
+        return insertFront!(T[])(el[]);
+    }
+
     /**
      * Returns: How many elements are in the list.
      */
     @property size_t length() const
     {
-        return count(opIndex());
+        return count(this[]);
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         SList!int l;
 
@@ -426,19 +537,13 @@ struct SList(T)
      * Returns: $(D_KEYWORD true) if the lists are equal, $(D_KEYWORD false)
      *          otherwise.
      */
-    bool opEquals()(auto ref typeof(this) that) @trusted
+    bool opEquals()(auto ref typeof(this) that) inout
     {
-        return equal(opIndex(), that[]);
-    }
-
-    /// Ditto.
-    bool opEquals()(in auto ref typeof(this) that) const @trusted
-    {
-        return equal(opIndex(), that[]);
+        return equal(this[], that[]);
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         SList!int l1, l2;
 
@@ -483,14 +588,14 @@ struct SList(T)
     }
     body
     {
-        auto n = head.next;
+        auto n = this.head.next;
 
-        allocator.dispose(head);
-        head = n;
+        this.allocator.dispose(this.head);
+        this.head = n;
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         SList!int l;
 
@@ -515,7 +620,7 @@ struct SList(T)
      *
      * Returns: The number of elements removed.
      */
-    size_t removeFront(in size_t howMany)
+    size_t removeFront(const size_t howMany)
     out (removed)
     {
         assert(removed <= howMany);
@@ -530,21 +635,52 @@ struct SList(T)
         return i;
     }
 
-    /// Ditto.
-    alias remove = removeFront;
-
     ///
-    unittest
+    @safe @nogc unittest
     {
-        SList!int l;
+        SList!int l = SList!int([8, 5, 4]);
 
-        l.insertFront(8);
-        l.insertFront(5);
-        l.insertFront(4);
         assert(l.removeFront(0) == 0);
         assert(l.removeFront(2) == 2);
         assert(l.removeFront(3) == 1);
         assert(l.removeFront(3) == 0);
+    }
+
+    /**
+     * Removes $(D_PARAM r) from the list.
+     *
+     * Params:
+     *  r = The range to remove.
+     *
+     * Returns: An empty range.
+     *
+     * Precondition: $(D_PARAM r) is extracted from this list.
+     */
+    Range!Entry remove(Range!Entry r)
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        typeof(this) outOfScopeList;
+        outOfScopeList.head = *r.head;
+        *r.head = null;
+    
+        return r;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([5, 234, 30, 1]);
+        auto l2 = SList!int([5]);
+        auto r = l1[];
+
+        r.popFront();
+
+        assert(l1.remove(r).empty);
+        assert(l1 == l2);
     }
 
     /**
@@ -590,7 +726,7 @@ struct SList(T)
     }
 
     ///
-    unittest
+    @nogc unittest
     {
         SList!int l;
 
@@ -619,7 +755,7 @@ struct SList(T)
 }
 
 ///
-unittest
+@nogc unittest
 {
     SList!int l;
     size_t i;
@@ -637,7 +773,7 @@ unittest
     assert(i == 3);
 }
 
-unittest
+@safe @nogc private unittest
 {
     interface Stuff
     {
