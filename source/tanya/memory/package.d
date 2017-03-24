@@ -87,8 +87,8 @@ shared Allocator allocator;
 
 shared static this() nothrow @trusted @nogc
 {
-    import tanya.memory.mmappool;
-    allocator = MmapPool.instance;
+    import tanya.memory.mallocator;
+    allocator = Mallocator.instance;
 }
 
 @property ref shared(Allocator) defaultAllocator() nothrow @safe @nogc
@@ -162,11 +162,22 @@ package(tanya) T[] resize(T)(shared Allocator allocator,
                              auto ref T[] array,
                              const size_t length) @trusted
 {
-    void[] buf = array;
+    if (length == 0)
+    {
+        if (allocator.deallocate(array))
+        {
+            return null;
+        }
+        else
+        {
+            onOutOfMemoryErrorNoGC();
+        }
+    }
 
+    void[] buf = array;
     if (!allocator.reallocate(buf, length * T.sizeof))
     {
-        onOutOfMemoryError;
+        onOutOfMemoryErrorNoGC();
     }
     // Casting from void[] is unsafe, but we know we cast to the original type.
     array = cast(T[]) buf;
