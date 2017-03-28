@@ -209,7 +209,7 @@ struct Vector(T)
      *  init      = Source vector.
      *  allocator = Allocator.
      */
-    this(R)(ref R init, shared Allocator allocator = defaultAllocator)
+    this(R)(const ref R init, shared Allocator allocator = defaultAllocator)
         if (is(Unqual!R == Vector))
     {
         this(allocator);
@@ -221,25 +221,7 @@ struct Vector(T)
         if (is(R == Vector))
     {
         this(allocator);
-        if (allocator is init.allocator)
-        {
-            // Just steal all references and the allocator.
-            vector = init.vector;
-            length_ = init.length_;
-            capacity_ = init.capacity_;
-
-            // Reset the source vector, so it can't destroy the moved storage.
-            init.length_ = init.capacity_ = 0;
-            init.vector = null;
-        }
-        else
-        {
-            // Move each element.
-            reserve(init.length);
-            moveEmplaceAll(init.vector[0 .. init.length_], vector[0 .. init.length_]);
-            length_ = init.length;
-            // Destructor of init should destroy it here.
-        }
+        moveAssign(init);
     }
 
     ///
@@ -1471,6 +1453,109 @@ struct Vector(T)
         data = v[1 .. 2].get();
         assert(data[0] == 2);
         assert(data.length == 1);
+    }
+
+    private void moveAssign(ref Vector v) @trusted
+    {
+        if (allocator is v.allocator)
+        {
+            // Just steal all references and the allocator.
+            vector = v.vector;
+            length_ = v.length_;
+            capacity_ = v.capacity_;
+
+            // Reset the source vector, so it can't destroy the moved storage.
+            v.length_ = v.capacity_ = 0;
+            v.vector = null;
+        }
+        else
+        {
+            // Move each element.
+            reserve(v.length);
+            moveEmplaceAll(v.vector[0 .. v.length_], vector[0 .. v.length_]);
+            length_ = v.length;
+            // Destructor of v should destroy it here.
+        }
+    }
+
+    /**
+     * Assigns content to the vector.
+     *
+     * Params:
+     *  R    = Content type.
+     *  init = The value should be assigned.
+     */
+    ref typeof(this) opAssign(R)(const ref R init)
+        if (is(Unqual!R == Vector))
+    {
+        insertBack(init[]);
+        return this;
+    }
+
+    /// Ditto.
+    ref typeof(this) opAssign(R)(R init)
+        if (is(R == Vector))
+    {
+        moveAssign(init);
+        return this;
+    }
+
+    /// Ditto.
+    ref typeof(this) opAssign(R)(R init)
+        if (!isInfinite!R
+         && isInputRange!R
+         && isImplicitlyConvertible!(ElementType!R, T))
+    {
+        insertBack(init);
+        return this;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto v1 = const Vector!int([5, 15, 8]);
+        Vector!int v2;
+        v2 = v1;
+        assert(v1 == v2);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto v1 = const Vector!int([5, 15, 8]);
+        Vector!int v2;
+        v2 = v1[0 .. 2];
+        assert(equal(v1[0 .. 2], v2[]));
+    }
+
+    // Move assignment.
+    private @safe @nogc unittest
+    {
+        Vector!int v1;
+        v1 = Vector!int([5, 15, 8]);
+    }
+
+    /**
+     * Assigns a static array.
+     *
+     * Params:
+     *  R    = Static array size.
+     *  init = Values to initialize the vector with.
+     */
+    ref typeof(this) opAssign(size_t R)(T[R] init)
+    {
+        insertBack!(T[])(init[]);
+        return this;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto v1 = Vector!int([5, 15, 8]);
+        Vector!int v2;
+
+        v2 = [5, 15, 8];
+        assert(v1 == v2);
     }
 
     mixin DefaultAllocator;
