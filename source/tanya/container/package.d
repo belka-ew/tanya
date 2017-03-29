@@ -12,7 +12,6 @@
  */
 module tanya.container;
 
-public import tanya.container.bitvector;
 public import tanya.container.buffer;
 public import tanya.container.list;
 public import tanya.container.vector;
