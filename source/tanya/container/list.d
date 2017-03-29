@@ -334,13 +334,6 @@ struct SList(T)
      *
      * Returns: The number of elements inserted.
      */
-    size_t insertFront(ref T el) @trusted
-    {
-        head = allocator.make!Entry(el, head);
-        return 1;
-    }
-
-    /// Ditto.
     size_t insertFront(R)(R el)
         if (isImplicitlyConvertible!(R, T))
     {
@@ -384,6 +377,13 @@ struct SList(T)
     }
 
     /// Ditto.
+    size_t insertFront(ref T el) @trusted
+    {
+        head = allocator.make!Entry(el, head);
+        return 1;
+    }
+
+    /// Ditto.
     alias insert = insertFront;
 
     ///
@@ -422,34 +422,13 @@ struct SList(T)
      *
      * Params:
      *  R  = Type of the inserted value(s).
+     *  r  = Range extracted from this list.
      *  el = New element(s).
      *
      * Returns: The number of elements inserted.
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    size_t insertBefore(Range!Entry r, ref T el) @trusted
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    body
-    {
-        *r.head = allocator.make!Entry(el, *r.head);
-        return 1;
-    }
-
-    ///
-    @safe @nogc unittest
-    {
-        auto l1 = SList!int([234, 5, 1]);
-        auto l2 = SList!int([5, 1]);
-        int var = 234;
-        l2.insertBefore(l2[], var);
-        assert(l1 == l2);
-    }
-
-    /// Ditto.
     size_t insertBefore(R)(Range!Entry r, R el)
         if (isImplicitlyConvertible!(R, T))
     in
@@ -503,6 +482,39 @@ struct SList(T)
     }
 
     /// Ditto.
+    size_t insertBefore(Range!Entry r, ref T el) @trusted
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        *r.head = allocator.make!Entry(el, *r.head);
+        return 1;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([234, 5, 1]);
+        auto l2 = SList!int([5, 1]);
+        int var = 234;
+        l2.insertBefore(l2[], var);
+        assert(l1 == l2);
+    }
+
+    /**
+     * Inserts elements from a static array before $(D_PARAM r).
+     *
+     * Params:
+     *  R  = Static array size.
+     *  r  = Range extracted from this list.
+     *  el = New elements.
+     *
+     * Returns: The number of elements inserted.
+     *
+     * Precondition: $(D_PARAM r) is extracted from this list.
+     */
     size_t insertBefore(size_t R)(Range!Entry r, T[R] el)
     {
         return insertFront!(T[])(el[]);
