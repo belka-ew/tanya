@@ -221,11 +221,29 @@ struct Vector(T)
         if (is(R == Vector))
     {
         this(allocator);
-        moveAssign(init);
+        if (allocator is init.allocator)
+        {
+            // Just steal all references and the allocator.
+            vector = init.vector;
+            length_ = init.length_;
+            capacity_ = init.capacity_;
+
+            // Reset the source vector, so it can't destroy the moved storage.
+            init.length_ = init.capacity_ = 0;
+            init.vector = null;
+        }
+        else
+        {
+            // Move each element.
+            reserve(init.length);
+            moveEmplaceAll(init.vector[0 .. init.length_], vector[0 .. init.length_]);
+            length_ = init.length;
+            // Destructor of init should destroy it here.
+        }
     }
 
     ///
-    unittest
+    @trusted @nogc unittest
     {
         auto v1 = Vector!int([1, 2, 3]);
         auto v2 = Vector!int(v1);
@@ -238,7 +256,7 @@ struct Vector(T)
         assert(v3.capacity == 3);
     }
 
-    unittest // const constructor tests
+    private @trusted @nogc unittest // const constructor tests
     {
         auto v1 = const Vector!int([1, 2, 3]);
         auto v2 = Vector!int(v1);
@@ -1455,58 +1473,54 @@ struct Vector(T)
         assert(data.length == 1);
     }
 
-    private void moveAssign(ref Vector v) @trusted
-    {
-        if (allocator is v.allocator)
-        {
-            // Just steal all references and the allocator.
-            vector = v.vector;
-            length_ = v.length_;
-            capacity_ = v.capacity_;
-
-            // Reset the source vector, so it can't destroy the moved storage.
-            v.length_ = v.capacity_ = 0;
-            v.vector = null;
-        }
-        else
-        {
-            // Move each element.
-            reserve(v.length);
-            moveEmplaceAll(v.vector[0 .. v.length_], vector[0 .. v.length_]);
-            length_ = v.length;
-            // Destructor of v should destroy it here.
-        }
-    }
-
     /**
-     * Assigns content to the vector.
+     * Assigns another vector.
+     *
+     * If $(D_PARAM that) is passed by value, it won't be copied, but moved.
+     * This vector will take the ownership over $(D_PARAM that)'s storage and
+     * the allocator.
+     *
+     * If $(D_PARAM that) is passed by reference, it will be copied.
      *
      * Params:
      *  R    = Content type.
-     *  init = The value should be assigned.
+     *  that = The value should be assigned.
+     *
+     * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(R)(const ref R init)
+    ref typeof(this) opAssign(R)(const ref R that)
         if (is(Unqual!R == Vector))
     {
-        insertBack(init[]);
-        return this;
+        return this = that[];
     }
 
     /// Ditto.
-    ref typeof(this) opAssign(R)(R init)
+    ref typeof(this) opAssign(R)(R that) @trusted
         if (is(R == Vector))
     {
-        moveAssign(init);
+        swap(this.vector, that.vector);
+        swap(this.length_, that.length_);
+        swap(this.capacity_, that.capacity_);
+        swap(this.allocator_, that.allocator_);
         return this;
     }
 
-    /// Ditto.
-    ref typeof(this) opAssign(R)(R init)
+    /**
+     * Assigns a range to the vector.
+     *
+     * Params:
+     *  R    = Content type.
+     *  that = The value should be assigned.
+     *
+     * Returns: $(D_KEYWORD this).
+     */
+    ref typeof(this) opAssign(R)(R that)
         if (!isInfinite!R
          && isInputRange!R
          && isImplicitlyConvertible!(ElementType!R, T))
     {
-        insertBack(init);
+        this.length = 0;
+        insertBack(that);
         return this;
     }
 
@@ -1540,12 +1554,13 @@ struct Vector(T)
      *
      * Params:
      *  R    = Static array size.
-     *  init = Values to initialize the vector with.
+     *  that = Values to initialize the vector with.
+     *
+     * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(size_t R)(T[R] init)
+    ref typeof(this) opAssign(size_t R)(T[R] that)
     {
-        insertBack!(T[])(init[]);
-        return this;
+        return opAssign!(T[])(that[]);
     }
 
     ///

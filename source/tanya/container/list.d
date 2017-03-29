@@ -356,18 +356,17 @@ struct SList(T)
         size_t retLength;
         Entry* next, newHead;
 
+        if (!el.empty)
+        {
+            next = allocator.make!Entry(el.front);
+            newHead = next;
+            el.popFront();
+            retLength = 1;
+        }
         foreach (ref e; el)
         {
-            if (next is null)
-            {
-                next = allocator.make!Entry(e);
-                newHead = next;
-            }
-            else
-            {
-                next.next = allocator.make!Entry(e);
-                next = next.next;
-            }
+            next.next = allocator.make!Entry(e);
+            next = next.next;
             ++retLength;
         }
         if (newHead !is null)
@@ -406,13 +405,16 @@ struct SList(T)
         assert(l2.front == 9);
     }
 
-    private bool checkRangeBelonging(ref Range!Entry r) const
+    version (assert)
     {
-        const(Entry*)* pos;
-        for (pos = &head; pos != r.head && *pos !is null; pos = &(*pos).next)
+        private bool checkRangeBelonging(ref Range!Entry r) const
         {
+            const(Entry*)* pos;
+            for (pos = &head; pos != r.head && *pos !is null; pos = &(*pos).next)
+            {
+            }
+            return pos == r.head;
         }
-        return pos == r.head;
     }
 
     /**
@@ -741,15 +743,115 @@ struct SList(T)
         }
     }
 
+    /**
+     * Returns: Range that iterates over all elements of the container, in
+     *          forward order.
+     */
     Range!Entry opIndex()
     {
         return typeof(return)(head);
     }
 
+    /// Ditto.
     Range!(const Entry) opIndex() const
     {
         return typeof(return)(head);
     }
+
+    /**
+     * Assigns another list.
+     *
+     * If $(D_PARAM that) is passed by value, it won't be copied, but moved.
+     * This list will take the ownership over $(D_PARAM that)'s storage and
+     * the allocator.
+     *
+     * If $(D_PARAM that) is passed by reference, it will be copied.
+     *
+     * Params:
+     *  R    = Content type.
+     *  that = The value should be assigned.
+     *
+     * Returns: $(D_KEYWORD this).
+     */
+    ref typeof(this) opAssign(R)(const ref R that)
+        if (is(Unqual!R == SList))
+    {
+        return this = that[];
+    }
+
+    /// Ditto.
+    ref typeof(this) opAssign(R)(const ref R that)
+        if (is(Unqual!R == SList))
+    {
+        swap(this.head, that.head);
+        swap(this.allocator_, that.allocator_);
+    }
+
+    /**
+     * Assigns an input range.
+     *
+     * Params:
+     *  R         = Type of the initial range.
+     *  that      = Values to initialize the list with.
+     *
+     * Returns: $(D_KEYWORD this).
+     */
+    ref typeof(this) opAssign(R)(R that) @trusted
+        if (!isInfinite!R
+         && isInputRange!R
+         && isImplicitlyConvertible!(ElementType!R, T))
+    {
+        Entry** next = &head;
+
+        foreach (ref e; that)
+        {
+            if (*next is null)
+            {
+                *next = allocator.make!Entry(e);
+            }
+            else
+            {
+                (*next).content = e;
+            }
+            next = &(*next).next;
+        }
+        remove(Range!Entry(*next));
+
+        return this;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([5, 4, 9]);
+        auto l2 = SList!int([9, 4]);
+        l1 = l2[];
+        assert(l1 == l2);
+    }
+
+    /**
+     * Assigns a static array.
+     *
+     * Params:
+     *  R    = Static array size.
+     *  that = Values to initialize the vector with.
+     *
+     * Returns: $(D_KEYWORD this).
+     */
+    ref typeof(this) opAssign(size_t R)(T[R] that)
+    {
+        return opAssign!(T[])(that[]);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([5, 4, 9]);
+        auto l2 = SList!int([9, 4]);
+        l1 = [9, 4];
+        assert(l1 == l2);
+    }
+
 
     mixin DefaultAllocator;
 }
