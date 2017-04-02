@@ -13,6 +13,7 @@
 module tanya.network.inet;
 
 import std.algorithm.comparison;
+import std.range.primitives;
 import std.traits;
 
 version (assert)
@@ -23,7 +24,6 @@ version (assert)
 version (unittest)
 {
     import std.math;
-    import std.range.primitives;
 
     version (Windows)
     {
@@ -74,11 +74,10 @@ struct NetworkOrder
      *                           && value <= 2 ^ (length * 8) - 1).
      */
     this(T)(const T value, const size_t length)
-        if (isIntegral!T)
+        if (isIntegral!T && isUnsigned!T)
     in
     {
         assert(length <= uint.sizeof);
-        assert(value >= 0);
         assert(value <= pow(2, length * 8) - 1);
     }
     body
@@ -89,7 +88,7 @@ struct NetworkOrder
 
     /// Ditto.
     this(T)(const T value)
-        if (isIntegral!T)
+        if (isIntegral!T && isUnsigned!T)
     {
         this(value, min(T.sizeof, uint.sizeof));
     }
@@ -288,5 +287,73 @@ version (PlattformUnittest)
         networkOrder.popFront();
         assert(networkOrder.length == 0);
         assert(networkOrder.empty);
+    }
+}
+
+/**
+ * Converts the $(D_KEYWORD ubyte) input range $(D_PARAM r) to
+ * $(D_KEYWORD uint).
+ *
+ * The byte order of $(D_PARAM r) assumed to be big-endian. The length
+ * cannot be larger than $(D_INLINECODE uint.sizeof). Otherwise an assertion
+ * failure will be caused.
+ *
+ * Params:
+ *  R     = Range type.
+ *  range = Input range.
+ *
+ * Returns: $(D_KEYWORD uint) representation of $(D_PARAM range) with host byte
+ *          order.
+ */
+uint toHostOrder(R)(R range)
+    if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte) && !isInfinite!R)
+{
+    uint ret;
+    ushort pos = 32;
+
+    for (; !range.empty && range.front == 0; pos -= 8, range.popFront())
+    {
+    }
+    for (; !range.empty; range.popFront())
+    {
+        assert(pos != 0);
+        pos -= 8;
+        ret |= range.front << pos;
+    }
+
+    return ret >> pos;
+}
+
+///
+unittest
+{
+    const value = 0xae34e2u;
+    auto networkOrder = NetworkOrder(value);
+    assert(networkOrder.toHostOrder() == value);
+}
+
+// Tests against the system's htonl, htons.
+version (PlattformUnittest)
+{
+    private unittest
+    {
+        for (uint counter; counter <= 8 * uint.sizeof; ++counter)
+        {
+            const value = pow(2, counter) - 1;
+            const inNetworkOrder = htonl(value);
+            const p = cast(ubyte*) &inNetworkOrder;
+            auto networkOrder = NetworkOrder(value);
+
+            assert(p[0 .. uint.sizeof].toHostOrder() == value);
+        }
+        for (ushort counter; counter <= 8 * ushort.sizeof; ++counter)
+        {
+            const value = cast(ushort) (pow(2, counter) - 1);
+            const inNetworkOrder = htons(value);
+            const p = cast(ubyte*) &inNetworkOrder;
+            auto networkOrder = NetworkOrder(value);
+
+            assert(p[0 .. ushort.sizeof].toHostOrder() == value);
+        }
     }
 }
