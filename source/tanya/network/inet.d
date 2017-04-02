@@ -12,7 +12,6 @@
  */
 module tanya.network.inet;
 
-import std.algorithm.comparison;
 import std.range.primitives;
 import std.traits;
 
@@ -41,56 +40,63 @@ version (unittest)
  * Represents an unsigned integer as an $(D_KEYWORD ubyte) range.
  *
  * The range is bidirectional. The byte order is always big-endian.
+ *
+ * It can accept any unsigned integral type but the value should fit
+ * in $(D_PARAM L) bytes.
+ *
+ * Params:
+ *  L = Desired range length.
  */
-struct NetworkOrder
+struct NetworkOrder(uint L)
+    if (L > ubyte.sizeof && L <= ulong.sizeof)
 {
-    private uint value;
-    private size_t size;
+    static if (L > uint.sizeof)
+    {
+        private alias StorageType = ulong;
+    }
+    else static if (L > ushort.sizeof)
+    {
+        private alias StorageType = uint;
+    }
+    else static if (L > ubyte.sizeof)
+    {
+        private alias StorageType = ushort;
+    }
+    else
+    {
+        private alias StorageType = ubyte;
+    }
+
+    private StorageType value;
+    private size_t size = L;
 
     const pure nothrow @safe @nogc invariant
     {
-        assert(this.size <= uint.sizeof);
+        assert(this.size <= L);
     }
 
     /**
      * Constructs a new range.
      *
-     * $(D_PARAM T) can be any unsigned type but $(D_PARAM value) shouldn't be
-     * larger than the maximum can be stored in $(D_PARAM length) bytes.
-     * Otherwise an assertion failure will be caused.
-     *
-     * If $(D_PARAM length) isn't specified, it is inferred from the
-     * $(D_INLINECODE T.sizeof).
-     *
-     * If $(D_PARAM T) is $(D_KEYWORD ulong), $(D_PARAM value) should be less
-     * than or equal to $(D_INLINECODE uint.max).
+     * $(D_PARAM T) can be any unsigned type but $(D_PARAM value) cannot be
+     * larger than the maximum can be stored in $(D_PARAM L) bytes. Otherwise
+     * an assertion failure will be caused.
      *
      * Params:
      *  T      = Value type.
-     *  value  = The value should be iterated over.
-     *  length = $(D_PARAM value) size in bytes.
+     *  value  = The value should be represented by this range.
      *
-     * Precondition: $(D_INLINECODE length < uint.sizeof
-     *                           && value <= 2 ^ (length * 8) - 1).
+     * Precondition: $(D_INLINECODE value <= 2 ^^ (length * 8) - 1).
      */
-    this(T)(const T value, const size_t length)
-        if (isIntegral!T && isUnsigned!T)
+    this(T)(const T value)
+        if (isUnsigned!T)
     in
     {
-        assert(length <= uint.sizeof);
-        assert(value <= pow(2, length * 8) - 1);
+        assert(value <= pow(2, L * 8) - 1);
     }
     body
     {
-        this.value = value & uint.max;
-        this.size = length;
-    }
-
-    /// Ditto.
-    this(T)(const T value)
-        if (isIntegral!T && isUnsigned!T)
-    {
-        this(value, min(T.sizeof, uint.sizeof));
+        this.value = value & StorageType.max;
     }
 
     /**
@@ -98,7 +104,7 @@ struct NetworkOrder
      *
      * Precondition: $(D_INLINECODE length > 0).
      */
-    @property ubyte back() const pure nothrow @safe @nogc
+    @property ubyte back() const
     in
     {
         assert(this.length > 0);
@@ -113,7 +119,7 @@ struct NetworkOrder
      *
      * Precondition: $(D_INLINECODE length > 0).
      */
-    @property ubyte front() const pure nothrow @safe @nogc
+    @property ubyte front() const
     in
     {
         assert(this.length > 0);
@@ -128,7 +134,7 @@ struct NetworkOrder
      *
      * Precondition: $(D_INLINECODE length > 0).
      */
-    void popBack() pure nothrow @safe @nogc
+    void popBack()
     in
     {
         assert(this.length > 0);
@@ -144,21 +150,21 @@ struct NetworkOrder
      *
      * Precondition: $(D_INLINECODE length > 0).
      */
-    void popFront() pure nothrow @safe @nogc
+    void popFront()
     in
     {
         assert(this.length > 0);
     }
     body
     {
-        this.value &= uint.max >> ((4 - this.length) * 8);
+        this.value &= StorageType.max >> ((StorageType.sizeof - this.length) * 8);
         --this.size;
     }
 
     /**
      * Returns: Copy of this range.
      */
-    typeof(this) save() const pure nothrow @safe @nogc
+    typeof(this) save() const
     {
         return this;
     }
@@ -166,7 +172,7 @@ struct NetworkOrder
     /**
      * Returns: Whether the range is empty.
      */
-    @property bool empty() const pure nothrow @safe @nogc
+    @property bool empty() const
     {
         return this.length == 0;
     }
@@ -174,7 +180,7 @@ struct NetworkOrder
     /**
      * Returns: Byte length.
      */
-    @property size_t length() const pure nothrow @safe @nogc
+    @property size_t length() const
     {
         return this.size;
     }
@@ -183,7 +189,7 @@ struct NetworkOrder
 ///
 pure nothrow @safe @nogc unittest
 {
-    auto networkOrder = NetworkOrder(0xae34e2u, 3);
+    auto networkOrder = NetworkOrder!3(0xae34e2u);
     assert(!networkOrder.empty);
     assert(networkOrder.front == 0xae);
 
@@ -204,7 +210,10 @@ pure nothrow @safe @nogc unittest
 // Static.
 private unittest
 {
-    static assert(isBidirectionalRange!NetworkOrder);
+    static assert(isBidirectionalRange!(NetworkOrder!4));
+    static assert(isBidirectionalRange!(NetworkOrder!8));
+    static assert(!is(NetworkOrder!9));
+    static assert(!is(NetworkOrder!1));
 }
 
 // Tests against the system's htonl, htons.
@@ -217,7 +226,7 @@ version (PlattformUnittest)
             const value = pow(2, counter) - 1;
             const inNetworkOrder = htonl(value);
             const p = cast(ubyte*) &inNetworkOrder;
-            auto networkOrder = NetworkOrder(value);
+            auto networkOrder = NetworkOrder!4(value);
 
             assert(networkOrder.length == 4);
             assert(!networkOrder.empty);
@@ -250,7 +259,7 @@ version (PlattformUnittest)
             const inNetworkOrder = htons(value);
             const p = cast(ubyte*) &inNetworkOrder;
 
-            auto networkOrder = NetworkOrder(value);
+            auto networkOrder = NetworkOrder!2(value);
 
             assert(networkOrder.length == 2);
             assert(!networkOrder.empty);
@@ -266,7 +275,7 @@ version (PlattformUnittest)
             assert(networkOrder.length == 0);
             assert(networkOrder.empty);
 
-            networkOrder = NetworkOrder(value);
+            networkOrder = NetworkOrder!2(value);
 
             networkOrder.popFront();
             assert(networkOrder.length == 1);
@@ -277,39 +286,33 @@ version (PlattformUnittest)
             assert(networkOrder.length == 0);
             assert(networkOrder.empty);
         }
-
-        auto networkOrder = NetworkOrder(255u, 1);
-        assert(networkOrder.length == 1);
-        assert(!networkOrder.empty);
-        assert(networkOrder.front == 0xff);
-        assert(networkOrder.back == 0xff);
-
-        networkOrder.popFront();
-        assert(networkOrder.length == 0);
-        assert(networkOrder.empty);
     }
 }
 
 /**
- * Converts the $(D_KEYWORD ubyte) input range $(D_PARAM r) to
- * $(D_KEYWORD uint).
+ * Converts the $(D_KEYWORD ubyte) input range $(D_PARAM range) to
+ * $(D_PARAM T).
  *
- * The byte order of $(D_PARAM r) assumed to be big-endian. The length
- * cannot be larger than $(D_INLINECODE uint.sizeof). Otherwise an assertion
+ * The byte order of $(D_PARAM r) is assumed to be big-endian. The length
+ * cannot be larger than $(D_INLINECODE T.sizeof). Otherwise an assertion
  * failure will be caused.
  *
  * Params:
  *  R     = Range type.
+ *  T     = Desired return type.
  *  range = Input range.
  *
- * Returns: $(D_KEYWORD uint) representation of $(D_PARAM range) with host byte
+ * Returns: Integral representation of $(D_PARAM range) with the host byte
  *          order.
  */
-uint toHostOrder(R)(R range)
-    if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte) && !isInfinite!R)
+T toHostOrder(R, T = size_t)(R range)
+    if (isInputRange!R
+     && !isInfinite!R
+     && is(Unqual!(ElementType!R) == ubyte)
+     && isUnsigned!T)
 {
-    uint ret;
-    ushort pos = 32;
+    T ret;
+    ushort pos = T.sizeof * 8;
 
     for (; !range.empty && range.front == 0; pos -= 8, range.popFront())
     {
@@ -318,17 +321,17 @@ uint toHostOrder(R)(R range)
     {
         assert(pos != 0);
         pos -= 8;
-        ret |= range.front << pos;
+        ret |= (cast(T) range.front) << pos;
     }
 
     return ret >> pos;
 }
 
 ///
-unittest
+pure nothrow @safe @nogc unittest
 {
     const value = 0xae34e2u;
-    auto networkOrder = NetworkOrder(value);
+    auto networkOrder = NetworkOrder!4(value);
     assert(networkOrder.toHostOrder() == value);
 }
 
@@ -342,7 +345,7 @@ version (PlattformUnittest)
             const value = pow(2, counter) - 1;
             const inNetworkOrder = htonl(value);
             const p = cast(ubyte*) &inNetworkOrder;
-            auto networkOrder = NetworkOrder(value);
+            auto networkOrder = NetworkOrder!4(value);
 
             assert(p[0 .. uint.sizeof].toHostOrder() == value);
         }
@@ -351,7 +354,7 @@ version (PlattformUnittest)
             const value = cast(ushort) (pow(2, counter) - 1);
             const inNetworkOrder = htons(value);
             const p = cast(ubyte*) &inNetworkOrder;
-            auto networkOrder = NetworkOrder(value);
+            auto networkOrder = NetworkOrder!2(value);
 
             assert(p[0 .. ushort.sizeof].toHostOrder() == value);
         }
