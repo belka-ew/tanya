@@ -298,14 +298,14 @@ version (PlattformUnittest)
  * failure will be caused.
  *
  * Params:
- *  R     = Range type.
  *  T     = Desired return type.
+ *  R     = Range type.
  *  range = Input range.
  *
  * Returns: Integral representation of $(D_PARAM range) with the host byte
  *          order.
  */
-T toHostOrder(R, T = size_t)(R range)
+T toHostOrder(T = size_t, R)(R range)
     if (isInputRange!R
      && !isInfinite!R
      && is(Unqual!(ElementType!R) == ubyte)
