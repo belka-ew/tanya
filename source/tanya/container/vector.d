@@ -22,21 +22,41 @@ import std.meta;
 import std.traits;
 import tanya.memory;
 
-// Defines the container's primary range.
-private struct Range(E)
+/**
+ * Random-access range for the $(D_PSYMBOL Vector).
+ *
+ * Params:
+ *  E = Element type.
+ */
+struct Range(E)
 {
     private E* begin, end;
+    private alias ContainerType = CopyConstness!(E, Vector!(Unqual!E));
+    private ContainerType* vector;
 
     invariant
     {
-        assert(begin <= end);
+        assert(this.begin <= this.end);
+        assert(this.vector !is null);
+        assert(this.begin >= this.vector.data);
+        assert(this.end <= this.vector.data + this.vector.length);
     }
 
-    private this(E* begin, E* end)
+    private this(ref ContainerType vector, E* begin, E* end) @trusted
+    in
     {
+        assert(begin <= end);
+        assert(begin >= vector.data);
+        assert(end <= vector.data + vector.length);
+    }
+    body
+    {
+        this.vector = &vector;
         this.begin = begin;
         this.end = end;
     }
+
+    @disable this();
 
     @property Range save()
     {
@@ -45,12 +65,12 @@ private struct Range(E)
 
     @property bool empty() const
     {
-        return begin == end;
+        return this.begin == this.end;
     }
 
     @property size_t length() const
     {
-        return end - begin;
+        return this.end - this.begin;
     }
 
     alias opDollar = length;
@@ -62,7 +82,7 @@ private struct Range(E)
     }
     body
     {
-        return *begin;
+        return *this.begin;
     }
 
     @property ref inout(E) back() inout @trusted
@@ -72,7 +92,7 @@ private struct Range(E)
     }
     body
     {
-        return *(end - 1);
+        return *(this.end - 1);
     }
 
     void popFront() @trusted
@@ -82,7 +102,7 @@ private struct Range(E)
     }
     body
     {
-        ++begin;
+        ++this.begin;
     }
 
     void popBack() @trusted
@@ -92,7 +112,7 @@ private struct Range(E)
     }
     body
     {
-        --end;
+        --this.end;
     }
 
     ref inout(E) opIndex(const size_t i) inout @trusted
@@ -102,17 +122,17 @@ private struct Range(E)
     }
     body
     {
-        return *(begin + i);
+        return *(this.begin + i);
     }
 
     Range opIndex()
     {
-        return typeof(return)(begin, end);
+        return typeof(return)(*this.vector, this.begin, this.end);
     }
 
     Range!(const E) opIndex() const
     {
-        return typeof(return)(begin, end);
+        return typeof(return)(*this.vector, this.begin, this.end);
     }
 
     Range opSlice(const size_t i, const size_t j) @trusted
@@ -123,7 +143,7 @@ private struct Range(E)
     }
     body
     {
-        return typeof(return)(begin + i, begin + j);
+        return typeof(return)(*this.vector, this.begin + i, this.begin + j);
     }
 
     Range!(const E) opSlice(const size_t i, const size_t j) const @trusted
@@ -134,12 +154,12 @@ private struct Range(E)
     }
     body
     {
-        return typeof(return)(begin + i, begin + j);
+        return typeof(return)(*this.vector, this.begin + i, this.begin + j);
     }
 
     inout(E[]) get() inout @trusted
     {
-        return begin[0 .. length];
+        return this.begin[0 .. length];
     }
 }
 
@@ -152,13 +172,13 @@ private struct Range(E)
 struct Vector(T)
 {
     private size_t length_;
-    private T* vector;
+    private T* data;
     private size_t capacity_;
 
     invariant
     {
-        assert(length_ <= capacity_);
-        assert(capacity_ == 0 || vector !is null);
+        assert(this.length_ <= this.capacity_);
+        assert(this.capacity_ == 0 || this.data !is null);
     }
 
     /**
@@ -224,20 +244,20 @@ struct Vector(T)
         if (allocator is init.allocator)
         {
             // Just steal all references and the allocator.
-            vector = init.vector;
-            length_ = init.length_;
-            capacity_ = init.capacity_;
+            this.data = init.data;
+            this.length_ = init.length_;
+            this.capacity_ = init.capacity_;
 
             // Reset the source vector, so it can't destroy the moved storage.
             init.length_ = init.capacity_ = 0;
-            init.vector = null;
+            init.data = null;
         }
         else
         {
             // Move each element.
-            reserve(init.length);
-            moveEmplaceAll(init.vector[0 .. init.length_], vector[0 .. init.length_]);
-            length_ = init.length;
+            reserve(init.length_);
+            moveEmplaceAll(init.data[0 .. init.length_], this.data[0 .. init.length_]);
+            this.length_ = init.length_;
             // Destructor of init should destroy it here.
         }
     }
@@ -247,7 +267,6 @@ struct Vector(T)
     {
         auto v1 = Vector!int([1, 2, 3]);
         auto v2 = Vector!int(v1);
-        assert(v1.vector !is v2.vector);
         assert(v1 == v2);
 
         auto v3 = Vector!int(Vector!int([1, 2, 3]));
@@ -260,7 +279,7 @@ struct Vector(T)
     {
         auto v1 = const Vector!int([1, 2, 3]);
         auto v2 = Vector!int(v1);
-        assert(v1.vector !is v2.vector);
+        assert(v1.data !is v2.data);
         assert(v1 == v2);
 
         auto v3 = const Vector!int(Vector!int([1, 2, 3]));
@@ -281,7 +300,7 @@ struct Vector(T)
     {
         this(allocator);
         reserve(len);
-        uninitializedFill(vector[0 .. len], init);
+        uninitializedFill(this.data[0 .. len], init);
         length_ = len;
     }
 
@@ -334,7 +353,7 @@ struct Vector(T)
     ~this() @trusted
     {
         clear();
-        allocator.deallocate(vector[0 .. capacity_]);
+        allocator.deallocate(this.data[0 .. capacity]);
     }
 
     /**
@@ -342,9 +361,9 @@ struct Vector(T)
      */
     this(this)
     {
-        auto buf = opIndex();
-        length_ = capacity_ = 0;
-        vector = null;
+        auto buf = this.data[0 .. this.length_];
+        this.length_ = capacity_ = 0;
+        this.data = null;
         insertBack(buf);
     }
 
@@ -409,14 +428,14 @@ struct Vector(T)
         else if (len > length)
         {
             reserve(len);
-            initializeAll(vector[length_ .. len]);
+            initializeAll(this.data[length_ .. len]);
         }
         else
         {
             static if (hasElaborateDestructor!T)
             {
-                const T* end = vector + length_ - 1;
-                for (T* e = vector + len; e != end; ++e)
+                const T* end = this.data + length_ - 1;
+                for (T* e = this.data + len; e != end; ++e)
                 {
                     destroy(*e);
                 }
@@ -467,7 +486,7 @@ struct Vector(T)
         immutable byteSize = mulu(size, T.sizeof, overflow);
         assert(!overflow);
 
-        void[] buf = vector[0 .. capacity_];
+        void[] buf = this.data[0 .. this.capacity_];
         if (!allocator.reallocateInPlace(buf, byteSize))
         {
             buf = allocator.allocate(byteSize);
@@ -479,8 +498,8 @@ struct Vector(T)
             {
                 allocator.deallocate(buf);
             }
-            const T* end = vector + length_;
-            for (T* src = vector, dest = cast(T*) buf; src != end; ++src, ++dest)
+            const T* end = this.data + this.length_;
+            for (T* src = this.data, dest = cast(T*) buf; src != end; ++src, ++dest)
             {
                 moveEmplace(*src, *dest);
                 static if (hasElaborateDestructor!T)
@@ -488,10 +507,10 @@ struct Vector(T)
                     destroy(*src);
                 }
             }
-            allocator.deallocate(vector[0 .. capacity_]);
-            vector = cast(T*) buf;
+            allocator.deallocate(this.data[0 .. this.capacity_]);
+            this.data = cast(T*) buf;
         }
-        capacity_ = size;
+        this.capacity_ = size;
     }
 
     ///
@@ -517,15 +536,15 @@ struct Vector(T)
      */
     void shrink(const size_t size) @trusted
     {
-        if (capacity_ <= size)
+        if (capacity <= size)
         {
             return;
         }
         immutable n = max(length, size);
-        void[] buf = vector[0 .. capacity_];
+        void[] buf = this.data[0 .. this.capacity_];
         if (allocator.reallocateInPlace(buf, n * T.sizeof))
         {
-            capacity_ = n;
+            this.capacity_ = n;
         }
     }
 
@@ -556,7 +575,7 @@ struct Vector(T)
      *
      * Returns: The number of elements removed
      *
-     * Precondition: $(D_INLINECODE !empty)
+     * Precondition: $(D_INLINECODE !empty).
      */
     void removeBack()
     in
@@ -611,22 +630,24 @@ struct Vector(T)
      * Params:
      *  r = Range originally obtained from this vector.
      *
-     * Returns: Elements in $(D_PARAM r) after removing.
+     * Returns: A range spanning the remaining elements in the array that
+     *          initially were right after $(D_PARAM r).
      *
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     Range!T remove(Range!T r) @trusted
     in
     {
-        assert(r.begin >= vector);
-        assert(r.end <= vector + length_);
+        assert(r.vector is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
     }
     body
     {
-        auto end = vector + length_;
-        moveAll(Range!T(r.end, end), Range!T(r.begin, end));
+        auto end = this.data + this.length;
+        moveAll(Range!T(this, r.end, end), Range!T(this, r.begin, end));
         length = length - r.length;
-        return r;
+        return Range!T(this, r.begin, this.data + length);
     }
 
     ///
@@ -634,31 +655,28 @@ struct Vector(T)
     {
         auto v = Vector!int([5, 18, 17, 2, 4, 6, 1]);
 
-        assert(v.remove(v[1 .. 3]).length == 2);
+        assert(v.remove(v[1 .. 3]).length == 4);
         assert(v[0] == 5 && v[1] == 2 && v[2] == 4 && v[3] == 6 && v[4] == 1);
         assert(v.length == 5);
 
-        assert(v.remove(v[4 .. 4]).length == 0);
+        assert(v.remove(v[4 .. 4]).length == 1);
         assert(v[0] == 5 && v[1] == 2 && v[2] == 4 && v[3] == 6 && v[4] == 1);
         assert(v.length == 5);
 
-        assert(v.remove(v[4 .. 5]).length == 1);
+        assert(v.remove(v[4 .. 5]).length == 0);
         assert(v[0] == 5 && v[1] == 2 && v[2] == 4 && v[3] == 6);
         assert(v.length == 4);
 
-        assert(v.remove(v[]).length == 4);
-        assert(v.empty);
-
         assert(v.remove(v[]).length == 0);
-        assert(v.empty);
+
     }
 
     private void moveBack(R)(ref R el) @trusted
         if (isImplicitlyConvertible!(R, T))
     {
-        reserve(length + 1);
-        moveEmplace(el, *(vector + length_));
-        ++length_;
+        reserve(this.length + 1);
+        moveEmplace(el, *(this.data + this.length_));
+        ++this.length_;
     }
 
     /**
@@ -675,9 +693,9 @@ struct Vector(T)
     {
         static if (__traits(isRef, el))
         {
-            reserve(length + 1);
-            emplace(vector + length_, el);
-            ++length_;
+            reserve(this.length_ + 1);
+            emplace(this.data + this.length_, el);
+            ++this.length_;
         }
         else
         {
@@ -763,6 +781,8 @@ struct Vector(T)
      *  el = Value(s) should be inserted.
      *
      * Returns: The number of elements inserted.
+     *
+     * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     size_t insertAfter(R)(Range!T r, R el)
         if (!isInfinite!R
@@ -770,20 +790,28 @@ struct Vector(T)
          && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
-        assert(r.begin >= vector);
-        assert(r.end <= vector + length_);
+        assert(r.vector is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
     }
     body
     {
         immutable oldLen = length;
-        immutable offset = r.end - vector;
+        immutable offset = r.end - this.data;
         immutable inserted = insertBack(el);
-        bringToFront(vector[offset .. oldLen], vector[oldLen .. length]);
+        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
         return inserted;
     }
 
     /// Ditto.
     size_t insertAfter(size_t R)(Range!T r, T[R] el)
+    in
+    {
+        assert(r.vector is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    body
     {
         return insertAfter!(T[])(r, el[]);
     }
@@ -793,13 +821,14 @@ struct Vector(T)
         if (isImplicitlyConvertible!(R, T))
     in
     {
-        assert(r.begin >= vector);
-        assert(r.end <= vector + length_);
+        assert(r.vector is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
     }
     body
     {
         immutable oldLen = length;
-        immutable offset = r.end - vector;
+        immutable offset = r.end - this.data;
 
         static if (__traits(isRef, el))
         {
@@ -809,7 +838,7 @@ struct Vector(T)
         {
             moveBack(el);
         }
-        bringToFront(vector[offset .. oldLen], vector[oldLen .. length_]);
+        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
 
         return 1;
     }
@@ -821,16 +850,24 @@ struct Vector(T)
          && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
-        assert(r.begin >= vector);
-        assert(r.end <= vector + length_);
+        assert(r.vector is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
     }
     body
     {
-        return insertAfter(Range!T(vector, r.begin), el);
+        return insertAfter(Range!T(this, this.data, r.begin), el);
     }
 
     /// Ditto.
     size_t insertBefore(size_t R)(Range!T r, T[R] el)
+    in
+    {
+        assert(r.vector is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    body
     {
         return insertBefore!(T[])(r, el[]);
     }
@@ -840,13 +877,14 @@ struct Vector(T)
         if (isImplicitlyConvertible!(R, T))
     in
     {
-        assert(r.begin >= vector);
-        assert(r.end <= vector + length_);
+        assert(r.vector is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
     }
     body
     {
         immutable oldLen = length;
-        immutable offset = r.begin - vector;
+        immutable offset = r.begin - this.data;
 
         static if (__traits(isRef, el))
         {
@@ -856,7 +894,7 @@ struct Vector(T)
         {
             moveBack(el);
         }
-        bringToFront(vector[offset .. oldLen], vector[oldLen .. length_]);
+        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
 
         return 1;
     }
@@ -942,7 +980,7 @@ struct Vector(T)
      *
      * Returns: Assigned value.
      *
-     * Precondition: $(D_INLINECODE length > pos)
+     * Precondition: $(D_INLINECODE length > pos).
      */
     ref T opIndexAssign(ref T value, const size_t pos)
     {
@@ -983,7 +1021,7 @@ struct Vector(T)
      *
      * Returns: Assigned value.
      *
-     * Precondition: $(D_INLINECODE length == value.length)
+     * Precondition: $(D_INLINECODE length == value.length).
      */
     Range!T opIndexAssign(R)(R value)
         if (!isInfinite!R && isInputRange!R
@@ -1020,7 +1058,7 @@ struct Vector(T)
      *
      * Returns: The value at a specified index.
      *
-     * Precondition: $(D_INLINECODE length > pos)
+     * Precondition: $(D_INLINECODE length > pos).
      */
     ref inout(T) opIndex(const size_t pos) inout @trusted
     in
@@ -1029,7 +1067,7 @@ struct Vector(T)
     }
     body
     {
-        return *(vector + pos);
+        return *(this.data + pos);
     }
 
     /**
@@ -1038,13 +1076,13 @@ struct Vector(T)
      */
     Range!T opIndex() @trusted
     {
-        return typeof(return)(vector, vector + length_);
+        return typeof(return)(this, this.data, this.data + length);
     }
 
     /// Ditto.
     Range!(const T) opIndex() const @trusted
     {
-        return typeof(return)(vector, vector + length_);
+        return typeof(return)(this, this.data, this.data + length);
     }
 
     ///
@@ -1071,13 +1109,13 @@ struct Vector(T)
      */
     bool opEquals()(auto ref typeof(this) that) @trusted
     {
-        return equal(vector[0 .. length_], that.vector[0 .. that.length_]);
+        return equal(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
     /// Ditto.
     bool opEquals()(const auto ref typeof(this) that) const @trusted
     {
-        return equal(vector[0 .. length_], that.vector[0 .. that.length_]);
+        return equal(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
     /// Ditto.
@@ -1132,8 +1170,8 @@ struct Vector(T)
      */
     int opApply(scope int delegate(ref T) @nogc dg)
     {
-        T* end = vector + length_ - 1;
-        for (T* begin = vector; begin != end; ++begin)
+        T* end = this.data + length - 1;
+        for (T* begin = this.data; begin != end; ++begin)
         {
             int result = dg(*begin);
             if (result != 0)
@@ -1150,7 +1188,7 @@ struct Vector(T)
         for (size_t i = 0; i < length; ++i)
         {
             assert(i < length);
-            int result = dg(i, *(vector + i));
+            int result = dg(i, *(this.data + i));
 
             if (result != 0)
             {
@@ -1163,7 +1201,7 @@ struct Vector(T)
     /// Ditto.
     int opApplyReverse(scope int delegate(ref T) dg)
     {
-        for (T* end = vector + length - 1; vector != end; --end)
+        for (T* end = this.data + length - 1; this.data != end; --end)
         {
             int result = dg(*end);
             if (result != 0)
@@ -1184,7 +1222,7 @@ struct Vector(T)
             {
                 --i;
                 assert(i < length);
-                int result = dg(i, *(vector + i));
+                int result = dg(i, *(this.data + i));
 
                 if (result != 0)
                 {
@@ -1239,7 +1277,7 @@ struct Vector(T)
     /**
      * Returns: The first element.
      *
-     * Precondition: $(D_INLINECODE !empty)
+     * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) front() inout
     in
@@ -1248,7 +1286,7 @@ struct Vector(T)
     }
     body
     {
-        return *vector;
+        return *this.data;
     }
 
     ///
@@ -1266,7 +1304,7 @@ struct Vector(T)
     /**
      * Returns: The last element.
      *
-     * Precondition: $(D_INLINECODE !empty)
+     * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) back() inout @trusted
     in
@@ -1275,7 +1313,7 @@ struct Vector(T)
     }
     body
     {
-        return *(vector + length_ - 1);
+        return *(this.data + length - 1);
     }
 
     ///
@@ -1298,7 +1336,7 @@ struct Vector(T)
      * Returns: A range that iterates over elements of the container from
      *          index $(D_PARAM i) up to (excluding) index $(D_PARAM j).
      *
-     * Precondition: $(D_INLINECODE i <= j && j <= length)
+     * Precondition: $(D_INLINECODE i <= j && j <= length).
      */
     Range!T opSlice(const size_t i, const size_t j) @trusted
     in
@@ -1308,7 +1346,7 @@ struct Vector(T)
     }
     body
     {
-        return typeof(return)(vector + i, vector + j);
+        return typeof(return)(this, this.data + i, this.data + j);
     }
 
     /// Ditto.
@@ -1320,7 +1358,7 @@ struct Vector(T)
     }
     body
     {
-        return typeof(return)(vector + i, vector + j);
+        return typeof(return)(this, this.data + i, this.data + j);
     }
 
     ///
@@ -1394,7 +1432,7 @@ struct Vector(T)
     }
     body
     {
-        copy(value, vector[i .. j]);
+        copy(value, this.data[i .. j]);
         return opSlice(i, j);
     }
 
@@ -1413,7 +1451,7 @@ struct Vector(T)
     }
     body
     {
-        fill(vector[i .. j], value);
+        fill(this.data[i .. j], value);
         return opSlice(i, j);
     }
 
@@ -1454,7 +1492,7 @@ struct Vector(T)
      */
     inout(T[]) get() inout @trusted
     {
-        return vector[0 .. length];
+        return this.data[0 .. length];
     }
 
     ///
@@ -1498,7 +1536,7 @@ struct Vector(T)
     ref typeof(this) opAssign(R)(R that) @trusted
         if (is(R == Vector))
     {
-        swap(this.vector, that.vector);
+        swap(this.data, that.data);
         swap(this.length_, that.length_);
         swap(this.capacity_, that.capacity_);
         swap(this.allocator_, that.allocator_);
@@ -1519,7 +1557,7 @@ struct Vector(T)
          && isInputRange!R
          && isImplicitlyConvertible!(ElementType!R, T))
     {
-        this.length = 0;
+        length = 0;
         insertBack(that);
         return this;
     }
@@ -1596,7 +1634,7 @@ unittest
     const v1 = Vector!int();
     const Vector!int v2;
     const v3 = Vector!int([1, 5, 8]);
-    static assert(is(PointerTarget!(typeof(v3.vector)) == const(int)));
+    static assert(is(PointerTarget!(typeof(v3.data)) == const(int)));
 }
 
 @nogc unittest
