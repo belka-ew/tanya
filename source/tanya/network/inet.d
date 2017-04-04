@@ -12,18 +12,12 @@
  */
 module tanya.network.inet;
 
+import std.math;
 import std.range.primitives;
 import std.traits;
 
-version (assert)
-{
-    import std.math;
-}
-
 version (unittest)
 {
-    import std.math;
-
     version (Windows)
     {
         import core.sys.windows.winsock2;
