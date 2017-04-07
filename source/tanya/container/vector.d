@@ -688,19 +688,20 @@ struct Vector(T)
      *
      * Returns: The number of elements inserted.
      */
-    size_t insertBack(R)(auto ref R el) @trusted
+    size_t insertBack(R)(R el)
         if (isImplicitlyConvertible!(R, T))
     {
-        static if (__traits(isRef, el))
-        {
-            reserve(this.length_ + 1);
-            emplace(this.data + this.length_, el);
-            ++this.length_;
-        }
-        else
-        {
-            moveBack(el);
-        }
+        moveBack(el);
+        return 1;
+    }
+
+    /// Ditto.
+    size_t insertBack(R)(ref R el) @trusted
+        if (isImplicitlyConvertible!(R, T))
+    {
+        reserve(this.length_ + 1);
+        emplace(this.data + this.length_, el);
+        ++this.length_;
         return 1;
     }
 

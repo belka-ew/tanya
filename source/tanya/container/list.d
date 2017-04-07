@@ -20,25 +20,31 @@ import std.traits;
 import tanya.container.entry;
 import tanya.memory;
 
-private struct Range(Entry)
-    if (__traits(isSame, TemplateOf!Entry, SEntry))
+/**
+ * Forward range for the $(D_PSYMBOL SList).
+ *
+ * Params:
+ *  E = Element type.
+ */
+struct SRange(E)
 {
-    private alias T = typeof(E.content);
-    private alias E = CopyConstness!(Entry, Entry*);
+    private alias EntryPointer = CopyConstness!(E, SEntry!(Unqual!E)*);
 
-    private E* head;
+    private EntryPointer* head;
 
     invariant
     {
         assert(head !is null);
     }
 
-    private this(ref E head) @trusted
+    private this(ref EntryPointer head) @trusted
     {
         this.head = &head;
     }
 
-    @property Range save()
+    @disable this();
+
+    @property SRange save()
     {
         return this;
     }
@@ -53,7 +59,7 @@ private struct Range(Entry)
         return *head is null;
     }
 
-    @property ref inout(T) front() inout
+    @property ref inout(E) front() inout
     in
     {
         assert(!empty);
@@ -73,12 +79,12 @@ private struct Range(Entry)
         head = &(*head).next;
     }
 
-    Range opIndex()
+    SRange opIndex()
     {
         return typeof(return)(*head);
     }
 
-    Range!(const Entry) opIndex() const
+    SRange!(const E) opIndex() const
     {
         return typeof(return)(*head);
     }
@@ -341,6 +347,14 @@ struct SList(T)
     }
 
     /// Ditto.
+    size_t insertFront(R)(ref R el) @trusted
+        if (isImplicitlyConvertible!(R, T))
+    {
+        head = allocator.make!Entry(el, head);
+        return 1;
+    }
+
+    /// Ditto.
     size_t insertFront(R)(R el) @trusted
         if (!isInfinite!R
          && isInputRange!R
@@ -377,13 +391,6 @@ struct SList(T)
     }
 
     /// Ditto.
-    size_t insertFront(ref T el) @trusted
-    {
-        head = allocator.make!Entry(el, head);
-        return 1;
-    }
-
-    /// Ditto.
     alias insert = insertFront;
 
     ///
@@ -407,7 +414,7 @@ struct SList(T)
 
     version (assert)
     {
-        private bool checkRangeBelonging(ref Range!Entry r) const
+        private bool checkRangeBelonging(ref SRange!T r) const
         {
             const(Entry*)* pos;
             for (pos = &head; pos != r.head && *pos !is null; pos = &(*pos).next)
@@ -429,7 +436,7 @@ struct SList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    size_t insertBefore(R)(Range!Entry r, R el)
+    size_t insertBefore(R)(SRange!T r, R el)
         if (isImplicitlyConvertible!(R, T))
     in
     {
@@ -450,7 +457,7 @@ struct SList(T)
     }
 
     /// Ditto.
-    size_t insertBefore(R)(Range!Entry r, R el)
+    size_t insertBefore(R)(SRange!T r, R el)
         if (!isInfinite!R
          && isInputRange!R
          && isImplicitlyConvertible!(ElementType!R, T))
@@ -482,7 +489,7 @@ struct SList(T)
     }
 
     /// Ditto.
-    size_t insertBefore(Range!Entry r, ref T el) @trusted
+    size_t insertBefore(SRange!T r, ref T el) @trusted
     in
     {
         assert(checkRangeBelonging(r));
@@ -515,7 +522,7 @@ struct SList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    size_t insertBefore(size_t R)(Range!Entry r, T[R] el)
+    size_t insertBefore(size_t R)(SRange!T r, T[R] el)
     {
         return insertFront!(T[])(el[]);
     }
@@ -670,7 +677,7 @@ struct SList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    Range!Entry remove(Range!Entry r)
+    SRange!T remove(SRange!T r)
     in
     {
         assert(checkRangeBelonging(r));
@@ -759,13 +766,13 @@ struct SList(T)
      * Returns: Range that iterates over all elements of the container, in
      *          forward order.
      */
-    Range!Entry opIndex()
+    SRange!T opIndex()
     {
         return typeof(return)(head);
     }
 
     /// Ditto.
-    Range!(const Entry) opIndex() const
+    SRange!(const T) opIndex() const
     {
         return typeof(return)(head);
     }
@@ -827,7 +834,7 @@ struct SList(T)
             }
             next = &(*next).next;
         }
-        remove(Range!Entry(*next));
+        remove(SRange!T(*next));
 
         return this;
     }
