@@ -705,64 +705,6 @@ struct SList(T)
     }
 
     /**
-     * $(D_KEYWORD foreach) iteration.
-     *
-     * Params:
-     *  dg = $(D_KEYWORD foreach) body.
-     *
-     * Returns: The value returned from $(D_PARAM dg).
-     */
-    int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
-    {
-        int result;
-        size_t i;
-
-        for (auto pos = head; pos; pos = pos.next, ++i)
-        {
-            result = dg(i, pos.content);
-
-            if (result != 0)
-            {
-                return result;
-            }
-        }
-        return result;
-    }
-
-    /// Ditto.
-    int opApply(scope int delegate(ref T) @nogc dg)
-    {
-        int result;
-
-        for (auto pos = head; pos; pos = pos.next)
-        {
-            result = dg(pos.content);
-
-            if (result != 0)
-            {
-                return result;
-            }
-        }
-        return result;
-    }
-
-    ///
-    @nogc unittest
-    {
-        SList!int l;
-
-        l.insertFront(5);
-        l.insertFront(4);
-        l.insertFront(9);
-        foreach (i, e; l)
-        {
-            assert(i != 0 || e == 9);
-            assert(i != 1 || e == 4);
-            assert(i != 2 || e == 5);
-        }
-    }
-
-    /**
      * Returns: Range that iterates over all elements of the container, in
      *          forward order.
      */
@@ -900,4 +842,22 @@ struct SList(T)
     {
     }
     static assert(is(SList!Stuff));
+}
+
+// foreach called using opIndex().
+private @nogc @safe unittest
+{
+    SList!int l;
+    size_t i;
+
+    l.insertFront(5);
+    l.insertFront(4);
+    l.insertFront(9);
+    foreach (e; l)
+    {
+        assert(i != 0 || e == 9);
+        assert(i != 1 || e == 4);
+        assert(i != 2 || e == 5);
+        ++i;
+    }
 }

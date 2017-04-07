@@ -1162,120 +1162,6 @@ struct Vector(T)
     }
 
     /**
-     * $(D_KEYWORD foreach) iteration.
-     *
-     * Params:
-     *  dg = $(D_KEYWORD foreach) body.
-     *
-     * Returns: The value returned from $(D_PARAM dg).
-     */
-    int opApply(scope int delegate(ref T) @nogc dg)
-    {
-        T* end = this.data + length - 1;
-        for (T* begin = this.data; begin != end; ++begin)
-        {
-            int result = dg(*begin);
-            if (result != 0)
-            {
-                return result;
-            }
-        }
-        return 0;
-    }
-
-    /// Ditto.
-    int opApply(scope int delegate(ref size_t i, ref T) @nogc dg)
-    {
-        for (size_t i = 0; i < length; ++i)
-        {
-            assert(i < length);
-            int result = dg(i, *(this.data + i));
-
-            if (result != 0)
-            {
-                return result;
-            }
-        }
-        return 0;
-    }
-
-    /// Ditto.
-    int opApplyReverse(scope int delegate(ref T) dg)
-    {
-        for (T* end = this.data + length - 1; this.data != end; --end)
-        {
-            int result = dg(*end);
-            if (result != 0)
-            {
-                return result;
-            }
-        }
-        return 0;
-    }
-
-    /// Ditto.
-    int opApplyReverse(scope int delegate(ref size_t i, ref T) dg)
-    {
-        if (length > 0)
-        {
-            size_t i = length;
-            do
-            {
-                --i;
-                assert(i < length);
-                int result = dg(i, *(this.data + i));
-
-                if (result != 0)
-                {
-                    return result;
-                }
-            }
-            while (i > 0);
-        }
-        return 0;
-    }
-
-    ///
-    unittest
-    {
-        auto v = Vector!int([5, 15, 8]);
-
-        size_t i;
-        foreach (j, ref e; v)
-        {
-            i = j;
-        }
-        assert(i == 2);
-
-        foreach (j, e; v)
-        {
-            assert(j != 0 || e == 5);
-            assert(j != 1 || e == 15);
-            assert(j != 2 || e == 8);
-        }
-    }
-
-    ///
-    unittest
-    {
-        auto v = Vector!int([5, 15, 8]);
-        size_t i;
-
-        foreach_reverse (j, ref e; v)
-        {
-            i = j;
-        }
-        assert(i == 0);
-
-        foreach_reverse (j, e; v)
-        {
-            assert(j != 2 || e == 8);
-            assert(j != 1 || e == 15);
-            assert(j != 0 || e == 5);
-        }
-    }
-
-    /**
      * Returns: The first element.
      *
      * Precondition: $(D_INLINECODE !empty).
@@ -1730,11 +1616,40 @@ unittest
     auto v = Vector!SWithDtor(); // Destructor can destroy empty vectors.
 }
 
-unittest
+private unittest
 {
     class A
     {
     }
     A a1, a2;
     auto v1 = Vector!A([a1, a2]);
+}
+
+private @safe @nogc unittest
+{
+    auto v = Vector!int([5, 15, 8]);
+    {
+        size_t i;
+
+        foreach (e; v)
+        {
+            assert(i != 0 || e == 5);
+            assert(i != 1 || e == 15);
+            assert(i != 2 || e == 8);
+            ++i;
+        }
+        assert(i == 3);
+    }
+    {
+        size_t i = 3;
+
+        foreach_reverse (e; v)
+        {
+            --i;
+            assert(i != 2 || e == 8);
+            assert(i != 1 || e == 15);
+            assert(i != 0 || e == 5);
+        }
+        assert(i == 0);
+    }
 }
