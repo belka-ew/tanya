@@ -29,7 +29,7 @@ helper functions).
 
 ### Supported compilers
 
-* dmd 2.073.0
+* dmd 2.073.2
 * dmd 2.072.2
 * dmd 2.071.2
 * dmd 2.070.2
