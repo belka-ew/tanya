@@ -9,14 +9,179 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- */  
+ */
 module tanya.container.string;
 
 import core.checkedint;
 import core.exception;
-import core.stdc.string;
 import std.algorithm.comparison;
+import std.algorithm.mutation;
+import std.traits;
 import tanya.memory;
+
+/**
+ * Thrown on encoding errors.
+ */
+class UTFException : Exception
+{
+    /**
+     * Params:
+     *  msg  = The message for the exception.
+     *  file = The file where the exception occurred.
+     *  line = The line number where the exception occurred.
+     *  next = The previous exception in the chain of exceptions, if any.
+     */
+    this(string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+}
+
+/**
+ * Byte range.
+ *
+ * Params:
+ *  E = Element type ($(D_KEYWORD char) or $(D_INLINECODE const(char))).
+ */
+struct ByteRange(E)
+    if (is(Unqual!E == char))
+{
+    private E* begin, end;
+    private alias ContainerType = CopyConstness!(E, String);
+    private ContainerType* container;
+
+    invariant
+    {
+        assert(this.begin <= this.end);
+        assert(this.container !is null);
+        assert(this.begin >= this.container.data);
+        assert(this.end <= this.container.data + this.container.length);
+    }
+
+    private this(ref ContainerType container, E* begin, E* end) @trusted
+    in
+    {
+        assert(begin <= end);
+        assert(begin >= container.data);
+        assert(end <= container.data + container.length);
+    }
+    body
+    {
+        this.container = &container;
+        this.begin = begin;
+        this.end = end;
+    }
+
+    @disable this();
+
+    @property ByteRange save()
+    {
+        return this;
+    }
+
+    @property bool empty() const
+    {
+        return this.begin == this.end;
+    }
+
+    @property size_t length() const
+    {
+        return this.end - this.begin;
+    }
+
+    alias opDollar = length;
+
+    @property ref inout(E) front() inout
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        return *this.begin;
+    }
+
+    @property ref inout(E) back() inout @trusted
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        return *(this.end - 1);
+    }
+
+    void popFront() @trusted
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        ++this.begin;
+    }
+
+    void popBack() @trusted
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        --this.end;
+    }
+
+    ref inout(E) opIndex(const size_t i) inout @trusted
+    in
+    {
+        assert(i < length);
+    }
+    body
+    {
+        return *(this.begin + i);
+    }
+
+    ByteRange opIndex()
+    {
+        return typeof(return)(*this.container, this.begin, this.end);
+    }
+
+    ByteRange!(const E) opIndex() const
+    {
+        return typeof(return)(*this.container, this.begin, this.end);
+    }
+
+    ByteRange opSlice(const size_t i, const size_t j) @trusted
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    body
+    {
+        return typeof(return)(*this.container, this.begin + i, this.begin + j);
+    }
+
+    ByteRange!(const E) opSlice(const size_t i, const size_t j) const @trusted
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    body
+    {
+        return typeof(return)(*this.container, this.begin + i, this.begin + j);
+    }
+
+    inout(E[]) get() inout @trusted
+    {
+        return this.begin[0 .. length];
+    }
+
+}
 
 /**
  * UTF-8 string.
@@ -29,89 +194,95 @@ struct String
 
     invariant
     {
-        assert(length_ <= capacity_);
+        assert(this.length_ <= this.capacity_);
     }
 
     /**
      * Params:
      *  str       = Initial string.
      *  allocator = Allocator.
+     *
+     * Throws: $(D_PSYMBOL UTFException).
+     *
+     * Precondition: $(D_INLINECODE allocator is null).
      */
-    this(const(char)[] str, shared Allocator allocator = defaultAllocator)
-    nothrow @trusted @nogc
+    this(const char[] str, shared Allocator allocator = defaultAllocator)
+    @trusted @nogc
     {
         this(allocator);
         reserve(str.length);
-        length_ = str.length;
-        memcpy(data, str.ptr, length_);
+        this.length_ = str.length;
+        str.copy(this.data[0 .. this.length_]);
     }
 
     /// Ditto.
-    this(const(wchar)[] str, shared Allocator allocator = defaultAllocator)
-    nothrow @trusted @nogc
+    this(const wchar[] str, shared Allocator allocator = defaultAllocator)
+    @trusted @nogc
     {
         this(allocator);
+        reserve(str.length * 2);
 
-        bool overflow;
-        auto size = mulu(str.length, 4, overflow);
-        assert(!overflow);
-
-        reserve(size);
-
-        auto s = data;
+        size_t s;
         auto sourceLength = str.length;
         for (auto c = str.ptr; sourceLength != 0; ++c, --sourceLength)
         {
+            if (length - s < 5) // More space required.
+            {
+                bool overflow;
+                auto size = addu(length, str.length, overflow);
+                assert(!overflow);
+                reserve(size);
+            }
             if (*c < 0x80)
             {
-                *s++ = *c & 0x7f;
-                length_ += 1;
+                this.data[s++] = *c & 0x7f;
+                this.length_ += 1;
             }
             else if (*c < 0x800)
             {
-                *s++ = 0xc0 | (*c >> 6) & 0xff;
-                *s++ = 0x80 | (*c & 0x3f);
-                length_ += 2;
+                this.data[s++] = 0xc0 | (*c >> 6) & 0xff;
+                this.data[s++] = 0x80 | (*c & 0x3f);
+                this.length_ += 2;
             }
             else if (*c < 0xd800 || *c - 0xe000 < 0x2000)
             {
-                *s++ = 0xe0 | (*c >> 12) & 0xff;
-                *s++ = 0x80 | ((*c >> 6) & 0x3f);
-                *s++ = 0x80 | (*c & 0x3f);
-                length_ += 3;
+                this.data[s++] = 0xe0 | (*c >> 12) & 0xff;
+                this.data[s++] = 0x80 | ((*c >> 6) & 0x3f);
+                this.data[s++] = 0x80 | (*c & 0x3f);
+                this.length_ += 3;
             }
             else if ((*c - 0xd800) < 2048 && sourceLength > 0 && *(c + 1) - 0xdc00 < 0x400)
             { // Surrogate pair
                 dchar d = (*c - 0xd800) | ((*c++ - 0xdc00) >> 10);
 
-                *s++ = 0xf0 | (d >> 18);
-                *s++ = 0x80 | ((d >> 12) & 0x3f);
-                *s++ = 0x80 | ((d >> 6) & 0x3f);
-                *s++ = 0x80 | (d & 0x3f);
+                this.data[s++] = 0xf0 | (d >> 18);
+                this.data[s++] = 0x80 | ((d >> 12) & 0x3f);
+                this.data[s++] = 0x80 | ((d >> 6) & 0x3f);
+                this.data[s++] = 0x80 | (d & 0x3f);
                 --sourceLength;
-                length_ += 4;
+                this.length_ += 4;
+            }
+            else
+            {
+                throw defaultAllocator.make!UTFException("Wrong UTF-16 sequeunce");
             }
         }
     }
 
     ///
-    @safe @nogc unittest
+    unittest
     {
         auto s = String("\u10437"w);
         assert("\u10437" == s.get());
     }
 
     /// Ditto.
-    this(const(dchar)[] str, shared Allocator allocator = defaultAllocator)
-    nothrow @trusted @nogc
+    this(const dchar[] str, shared Allocator allocator = defaultAllocator)
+    @trusted @nogc
     {
         this(allocator);
 
-        bool overflow;
-        auto size = mulu(str.length, 4, overflow);
-        assert(!overflow);
-
-        reserve(size);
+        reserve(str.length * 4);
 
         auto s = data;
         foreach (c; str)
@@ -119,20 +290,20 @@ struct String
             if (c < 0x80)
             {
                 *s++ = c & 0x7f;
-                length_ += 1;
+                this.length_ += 1;
             }
             else if (c < 0x800)
             {
                 *s++ = 0xc0 | (c >> 6) & 0xff;
                 *s++ = 0x80 | (c & 0x3f);
-                length_ += 2;
+                this.length_ += 2;
             }
             else if (c < 0xd800 || c - 0xe000 < 0x2000)
             {
                 *s++ = 0xe0 | (c >> 12) & 0xff;
                 *s++ = 0x80 | ((c >> 6) & 0x3f);
                 *s++ = 0x80 | (c & 0x3f);
-                length_ += 3;
+                this.length_ += 3;
             }
             else if (c - 0x10000 < 0x100000)
             {
@@ -140,13 +311,17 @@ struct String
                 *s++ = 0x80 | ((c >> 12) & 0x3f);
                 *s++ = 0x80 | ((c >> 6) & 0x3f);
                 *s++ = 0x80 | (c & 0x3f);
-                length_ += 4;
+                this.length_ += 4;
+            }
+            else
+            {
+                throw defaultAllocator.make!UTFException("Wrong UTF-32 sequeunce");
             }
         }
     }
 
     ///
-    @nogc @safe unittest
+    unittest
     {
         auto s = String("Отказаться от вина - в этом страшная вина."d);
         assert("Отказаться от вина - в этом страшная вина." == s.get());
@@ -160,7 +335,7 @@ struct String
     }
     body
     {
-        allocator_ = allocator;
+        this.allocator_ = allocator;
     }
 
     /**
@@ -168,7 +343,7 @@ struct String
      */
     ~this() nothrow @trusted @nogc
     {
-        allocator.deallocate(data[0 .. capacity_]);
+        allocator.deallocate(this.data[0 .. this.capacity_]);
     }
 
     /**
@@ -181,20 +356,15 @@ struct String
      * Params:
      *  size = Desired size in bytes.
      */
-    void reserve(in size_t size) nothrow @trusted @nogc
+    void reserve(const size_t size) nothrow @trusted @nogc
     {
-        if (capacity_ >= size)
+        if (this.capacity_ >= size)
         {
             return;
         }
 
-        void[] buf = data[0 .. capacity_];
-        if (!allocator.reallocate(buf, size))
-        {
-            onOutOfMemoryErrorNoGC();
-        }
-        data = cast(char*) buf;
-        capacity_ = size;
+        this.data = allocator.resize(this.data[0 .. this.capacity_], size).ptr;
+        this.capacity_ = size;
     }
 
     ///
@@ -222,19 +392,19 @@ struct String
      * Params:
      *  size = Desired size.
      */
-    void shrink(in size_t size) nothrow @trusted @nogc
+    void shrink(const size_t size) nothrow @trusted @nogc
     {
-        if (capacity_ <= size)
+        if (this.capacity_ <= size)
         {
             return;
         }
 
-        immutable n = max(length_, size);
-        void[] buf = data[0 .. capacity_];
-        if (allocator.reallocate(buf, size))
+        const n = max(this.length_, size);
+        void[] buf = this.data[0 .. this.capacity_];
+        if (allocator.reallocate(buf, n))
         {
-            capacity_ = n;
-            data = cast(char*) buf;
+            this.capacity_ = n;
+            this.data = cast(char*) buf;
         }
     }
 
@@ -257,26 +427,138 @@ struct String
      */
     @property size_t capacity() const pure nothrow @safe @nogc
     {
-        return capacity_;
+        return this.capacity_;
     }
 
     ///
-    @nogc @safe unittest
+    unittest
     {
         auto s = String("In allem Schreiben ist Schamlosigkeit.");
         assert(s.capacity == 38);
     }
 
-	/**
-	 * Returns an array used internally by the string.
-	 * The length of the returned array may be smaller than the size of the
+    /**
+     * Returns an array used internally by the string.
+     * The length of the returned array may be smaller than the size of the
      * reserved memory for the string.
-	 *
-	 * Returns: The array representing the string.
-	 */
+     *
+     * Returns: The array representing the string.
+     */
     inout(char[]) get() inout pure nothrow @trusted @nogc
     {
-        return data[0 .. length_];
+        return this.data[0 .. this.length_];
+    }
+
+    /**
+     * Returns: Byte length.
+     */
+    @property size_t length() const pure nothrow @safe @nogc
+    {
+        return this.length_;
+    }
+
+    ///
+    alias opDollar = length;
+
+    ///
+    unittest
+    {
+        auto s = String("Piscis primuin a capite foetat.");
+        assert(s.length == 31);
+        assert(s[$ - 1] == '.');
+    }
+
+    /**
+     * Params:
+     *  pos = Position.
+     *
+     * Returns: Byte at $(D_PARAM pos).
+     *
+     * Precondition: $(D_INLINECODE length > pos).
+     */
+    ref inout(char) opIndex(const size_t pos) inout pure nothrow @trusted @nogc
+    in
+    {
+        assert(length > pos);
+    }
+    body
+    {
+        return *(this.data + pos);
+    }
+
+    ///
+    unittest
+    {
+        auto s = String("Alea iacta est.");
+        assert(s[0] == 'A');
+        assert(s[4] == ' ');
+    }
+
+    /**
+     * Returns: Random access range that iterates over the string by bytes, in
+     *          forward order.
+     */
+    ByteRange!char opIndex() pure nothrow @trusted @nogc
+    {
+        return typeof(return)(this, this.data, this.data + length);
+    }
+
+    /// Ditto.
+    ByteRange!(const char) opIndex() const pure nothrow @trusted @nogc
+    {
+        return typeof(return)(this, this.data, this.data + length);
+    }
+
+    /**
+     * Returns: $(D_KEYWORD true) if the vector is empty.
+     */
+    @property bool empty() const pure nothrow @safe @nogc
+    {
+        return length == 0;
+    }
+
+    /**
+     * Returns: The first byte.
+     *
+     * Precondition: $(D_INLINECODE !empty).
+     */
+    @property ref inout(char) front() inout pure nothrow @safe @nogc
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        return *this.data;
+    }
+
+    ///
+    @safe unittest
+    {
+        auto s = String("Vladimir Soloviev");
+        assert(s.front == 'V');
+    }
+
+    /**
+     * Returns: The last byte.
+     *
+     * Precondition: $(D_INLINECODE !empty).
+     */
+    @property ref inout(char) back() inout pure nothrow @trusted @nogc
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        return *(this.data + length - 1);
+    }
+
+    ///
+    unittest
+    {
+        auto s = String("Caesar");
+        assert(s.back == 'r');
     }
 
     mixin DefaultAllocator;
