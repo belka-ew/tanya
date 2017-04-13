@@ -29,20 +29,25 @@ helper functions).
 
 ### Supported compilers
 
-* dmd 2.073.2
-* dmd 2.072.2
-* dmd 2.071.2
-* dmd 2.070.2
+| dmd     |
+|:-------:|
+| 2.074.0 |
+| 2.073.2 |
+| 2.072.2 |
+| 2.071.2 |
 
 ### Current status
 
 The library is currently under development, but the API is becoming gradually
 stable.
 
-`container`s are being extended to support ranges. Also following modules are
-coming soon:
-* UTF-8 string.
-* Hash table.
+Following modules are coming soon:
+
+| Feature      | Build status                                                                                                            |
+|--------------|:-----------------------------------------------------------------------------------------------------------------------:|
+| UTF-8 string | [![utf8string](https://travis-ci.org/caraus-ecms/tanya.svg?branch=utf8string)](https://travis-ci.org/caraus-ecms/tanya) |
+| BitVector    | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya)   |
+| Hash table   | N/A                                                                                                                     |
 
 `math` package contains an arbitrary precision integer implementation that
 needs more test cases, better performance and some additional features
