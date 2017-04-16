@@ -11,6 +11,7 @@
 module tanya.memory;
 
 import core.exception;
+import std.algorithm.iteration;
 public import std.experimental.allocator : make;
 import std.traits;
 public import tanya.memory.allocator;
@@ -87,8 +88,8 @@ shared Allocator allocator;
 
 shared static this() nothrow @trusted @nogc
 {
-    import tanya.memory.mallocator;
-    allocator = Mallocator.instance;
+    import tanya.memory.mmappool;
+    allocator = MmapPool.instance;
 }
 
 @property ref shared(Allocator) defaultAllocator() nothrow @safe @nogc
@@ -202,41 +203,33 @@ private unittest
     assert(p is null);
 }
 
-/**
- * Destroys and deallocates $(D_PARAM p) of type $(D_PARAM T).
- * It is assumed the respective entities had been allocated with the same
- * allocator.
- *
- * Params:
- *  T         = Type of $(D_PARAM p).
- *  allocator = Allocator the $(D_PARAM p) was allocated with.
- *  p         = Object or array to be destroyed.
+/*
+ * Destroys the object.
+ * Returns the memory should be freed.
  */
-void dispose(T)(shared Allocator allocator, auto ref T* p)
+package(tanya) void[] finalize(T)(ref T* p)
 {
     static if (hasElaborateDestructor!T)
     {
         destroy(*p);
     }
-    () @trusted { allocator.deallocate((cast(void*) p)[0 .. T.sizeof]); }();
-    p = null;
+    return (cast(void*) p)[0 .. T.sizeof];
 }
 
-/// Ditto.
-void dispose(T)(shared Allocator allocator, auto ref T p)
+package(tanya) void[] finalize(T)(ref T p)
     if (is(T == class) || is(T == interface))
 {
     if (p is null)
     {
-        return;
+        return null;
     }
     static if (is(T == interface))
     {
         version(Windows)
         {
             import core.sys.windows.unknwn : IUnknown;
-            static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
-                                         ~ __PRETTY_FUNCTION__);
+            static assert(!is(T : IUnknown), "COM interfaces can't be destroyed in "
+                                           ~ __PRETTY_FUNCTION__);
         }
         auto ob = cast(Object) p;
     }
@@ -244,19 +237,13 @@ void dispose(T)(shared Allocator allocator, auto ref T p)
     {
         alias ob = p;
     }
-    auto ptr = cast(void *) ob;
-
+    auto ptr = cast(void*) ob;
     auto support = ptr[0 .. typeid(ob).initializer.length];
-    scope (success)
-    {
-        () @trusted { allocator.deallocate(support); }();
-        p = null;
-    }
 
     auto ppv = cast(void**) ptr;
     if (!*ppv)
     {
-        return;
+        return null;
     }
     auto pc = cast(ClassInfo*) *ppv;
     scope (exit)
@@ -280,21 +267,35 @@ void dispose(T)(shared Allocator allocator, auto ref T p)
     {
         _d_monitordelete(cast(Object) ptr, true);
     }
+    return support;
 }
 
-/// Ditto.
-void dispose(T)(shared Allocator allocator, auto ref T[] p)
+package(tanya) void[] finalize(T)(ref T[] p)
 {
     static if (hasElaborateDestructor!(typeof(p[0])))
     {
-        import std.algorithm.iteration;
-        p.each!(e => destroy(e));
+        p.each!((ref e) => destroy(e));
     }
-    () @trusted { allocator.deallocate(p); }();
+    return p;
+}
+
+/**
+ * Destroys and deallocates $(D_PARAM p) of type $(D_PARAM T).
+ * It is assumed the respective entities had been allocated with the same
+ * allocator.
+ *
+ * Params:
+ *  T         = Type of $(D_PARAM p).
+ *  allocator = Allocator the $(D_PARAM p) was allocated with.
+ *  p         = Object or array to be destroyed.
+ */
+void dispose(T)(shared Allocator allocator, auto ref T p)
+{
+    () @trusted { allocator.deallocate(finalize(p)); }();
     p = null;
 }
 
-unittest
+private unittest
 {
     struct S
     {

@@ -14,8 +14,62 @@ import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.conv;
+import std.range;
 import std.traits;
 import tanya.memory;
+
+package(tanya) final class RefCountedStore(T)
+{
+    T payload;
+    size_t counter = 1;
+
+    size_t opUnary(string op)()
+        if (op == "--" || op == "++")
+    in
+    {
+        assert(counter > 0);
+    }
+    body
+    {
+        mixin("return " ~ op ~ "counter;");
+    }
+
+    int opCmp(size_t counter)
+    {
+        if (this.counter > counter)
+        {
+            return 1;
+        }
+        else if (this.counter < counter)
+        {
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    int opEquals(size_t counter)
+    {
+        return this.counter == counter;
+    }
+}
+
+private void separateDeleter(T)(RefCountedStore!T storage,
+                                shared Allocator allocator)
+{
+    allocator.dispose(storage.payload);
+    allocator.dispose(storage);
+}
+
+private void unifiedDeleter(T)(RefCountedStore!T storage,
+                               shared Allocator allocator)
+{
+    auto ptr1 = finalize(storage);
+    auto ptr2 = finalize(storage.payload);
+    allocator.deallocate(ptr1.ptr[0 .. ptr1.length + ptr2.length]);
+}
 
 /**
  * Reference-counted object containing a $(D_PARAM T) value as payload.
@@ -27,7 +81,7 @@ import tanya.memory;
  */
 struct RefCounted(T)
 {
-    static if (is(T == class) || is(T == interface))
+    static if (is(T == class) || is(T == interface) || isArray!T)
     {
         private alias Payload = T;
     }
@@ -35,70 +89,16 @@ struct RefCounted(T)
     {
         private alias Payload = T*;
     }
-
-    private class Storage
-    {
-        private Payload payload;
-        private size_t counter = 1;
-
-        private final size_t opUnary(string op)() pure nothrow @safe @nogc
-            if (op == "--" || op == "++")
-        in
-        {
-            assert(counter > 0);
-        }
-        body
-        {
-            mixin("return " ~ op ~ "counter;");
-        }
-
-        private final int opCmp(size_t counter) const pure nothrow @safe @nogc
-        {
-            if (this.counter > counter)
-            {
-                return 1;
-            }
-            else if (this.counter < counter)
-            {
-                return -1;
-            }
-            else
-            {
-                return 0;
-            }
-        }
-
-        private final int opEquals(size_t counter) const pure nothrow @safe @nogc
-        {
-            return this.counter == counter;
-        }
-    }
-
-    private final class RefCountedStorage : Storage
-    {
-        private shared Allocator allocator;
-
-        this(shared Allocator allocator) pure nothrow @safe @nogc
-        in
-        {
-            assert(allocator !is null);
-        }
-        body
-        {
-            this.allocator = allocator;
-        }
-
-        ~this() nothrow @nogc
-        {
-            allocator.dispose(payload);
-        }
-    }
+    private alias Storage = RefCountedStore!Payload;
 
     private Storage storage;
+    private void function(Storage storage,
+                          shared Allocator allocator) @nogc deleter;
 
     invariant
     {
         assert(storage is null || allocator_ !is null);
+        assert(storage is null || deleter !is null);
     }
 
     /**
@@ -112,11 +112,13 @@ struct RefCounted(T)
      *
      * Precondition: $(D_INLINECODE allocator !is null)
      */
-    this(Payload value, shared Allocator allocator = defaultAllocator)
+    this()(auto ref Payload value,
+           shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
-        storage = allocator.make!RefCountedStorage(allocator);
-        move(value, storage.payload);
+        this.storage = allocator.make!Storage();
+        this.deleter = &separateDeleter!Payload;
+        move(value, this.storage.payload);
     }
 
     /// Ditto.
@@ -148,9 +150,9 @@ struct RefCounted(T)
      */
     ~this()
     {
-        if (storage !is null && !(storage.counter && --storage))
+        if (this.storage !is null && !(this.storage.counter && --this.storage))
         {
-            allocator_.dispose(storage);
+            deleter(storage, allocator);
         }
     }
 
@@ -170,54 +172,48 @@ struct RefCounted(T)
      * Params:
      *  rhs = $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(Payload rhs)
+    ref typeof(this) opAssign()(auto ref Payload rhs)
     {
-        if (storage is null)
+        if (this.storage is null)
         {
-            storage = allocator.make!RefCountedStorage(allocator);
+            this.storage = allocator.make!Storage();
+            this.deleter = &separateDeleter!Payload;
         }
-        else if (storage > 1)
+        else if (this.storage > 1)
         {
-            --storage;
-            storage = allocator.make!RefCountedStorage(allocator);
-        }
-        else if (cast(RefCountedStorage) storage is null)
-        {
-            // Created with refCounted. Always destroyed togethter with the pointer.
-            assert(storage.counter != 0);
-            allocator.dispose(storage);
-            storage = allocator.make!RefCountedStorage(allocator);
+            --this.storage;
+            this.storage = allocator.make!Storage();
+            this.deleter = &separateDeleter!Payload;
         }
         else
         {
-            allocator.dispose(storage.payload);
+            // Created with refCounted. Always destroyed togethter with the pointer.
+            assert(this.storage.counter != 0);
+            finalize(this.storage.payload);
+            this.storage.payload = Payload.init;
         }
-        move(rhs, storage.payload);
+        move(rhs, this.storage.payload);
         return this;
     }
 
     /// Ditto.
     ref typeof(this) opAssign(typeof(null))
     {
-        if (storage is null)
+        if (this.storage is null)
         {
             return this;
         }
-        else if (storage > 1)
+        else if (this.storage > 1)
         {
-            --storage;
-            storage = null;
-        }
-        else if (cast(RefCountedStorage) storage is null)
-        {
-            // Created with refCounted. Always destroyed togethter with the pointer.
-            assert(storage.counter != 0);
-            allocator.dispose(storage);
-            return this;
+            --this.storage;
+            this.storage = null;
         }
         else
         {
-            allocator.dispose(storage.payload);
+            // Created with refCounted. Always destroyed togethter with the pointer.
+            assert(this.storage.counter != 0);
+            finalize(this.storage.payload);
+            this.storage.payload = Payload.init;
         }
         return this;
     }
@@ -225,8 +221,9 @@ struct RefCounted(T)
     /// Ditto.
     ref typeof(this) opAssign(typeof(this) rhs)
     {
-        swap(allocator_, rhs.allocator_);
-        swap(storage, rhs.storage);
+        swap(this.allocator_, rhs.allocator_);
+        swap(this.storage, rhs.storage);
+        swap(this.deleter, rhs.deleter);
         return this;
     }
 
@@ -380,15 +377,22 @@ private unittest
  *  args      = Constructor arguments of $(D_PARAM T).
  * 
  * Returns: Newly created $(D_PSYMBOL RefCounted!T).
+ *
+ * Precondition: $(D_INLINECODE allocator !is null)
  */
 RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
     if (!is(T == interface) && !isAbstractClass!T
-         && !isArray!T && !isAssociativeArray!T)
+     && !isAssociativeArray!T && !isArray!T)
+in
+{
+    assert(allocator !is null);
+}
+body
 {
     auto rc = typeof(return)(allocator);
 
-    immutable storageSize = alignedSize(stateSize!(RefCounted!T.Storage));
-    immutable size = alignedSize(stateSize!T + storageSize);
+    const storageSize = alignedSize(stateSize!(RefCounted!T.Storage));
+    const size = alignedSize(stateSize!T + storageSize);
 
     auto mem = (() @trusted => allocator.allocate(size))();
     if (mem is null)
@@ -399,7 +403,7 @@ RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
     {
         () @trusted { allocator.deallocate(mem); }();
     }
-    rc.storage = emplace!(RefCounted!T.Storage)(mem[0 .. storageSize]);
+    rc.storage = emplace!((RefCounted!T.Storage))(mem[0 .. storageSize]);
 
     static if (is(T == class))
     {
@@ -410,7 +414,36 @@ RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
         auto ptr = (() @trusted => (cast(T*) mem[storageSize .. $].ptr))();
         rc.storage.payload = emplace!T(ptr, args);
     }
+    rc.deleter = &unifiedDeleter!(RefCounted!T.Payload);
     return rc;
+}
+
+/**
+ * Constructs a new array with $(D_PARAM size) elements and wraps it in a
+ * $(D_PSYMBOL RefCounted) using.
+ *
+ * Params:
+ *  T         = Array type.
+ *  size      = Array size.
+ *  allocator = Allocator.
+ *
+ * Returns: Newly created $(D_PSYMBOL RefCounted!T).
+ *
+ * Precondition: $(D_INLINECODE allocator !is null
+ *                           && size <= size_t.max / ElementType!T.sizeof)
+ */
+ RefCounted!T refCounted(T)(shared Allocator allocator, const size_t size)
+    if (isArray!T)
+in
+{
+    assert(allocator !is null);
+    assert(size <= size_t.max / ElementType!T.sizeof);
+}
+body
+{
+    auto payload = cast(T) allocator.allocate(ElementType!T.sizeof * size);
+    initializeAll(payload);
+    return RefCounted!T(payload, allocator);
 }
 
 ///
@@ -455,4 +488,10 @@ private @nogc unittest
         auto rc = defaultAllocator.refCounted!E();
         assert(rc.count);
     }
+}
+
+private @nogc unittest
+{
+    auto rc = defaultAllocator.refCounted!(int[])(5);
+    assert(rc.length == 5);
 }
