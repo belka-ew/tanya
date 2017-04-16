@@ -495,3 +495,20 @@ private @nogc unittest
     auto rc = defaultAllocator.refCounted!(int[])(5);
     assert(rc.length == 5);
 }
+
+private @nogc unittest
+{
+    static bool destroyed = false;
+
+    struct F
+    {
+        ~this() @nogc
+        {
+            destroyed = true;
+        }
+    }
+    {
+        auto rc = defaultAllocator.refCounted!F();
+    }
+    assert(destroyed);
+}
