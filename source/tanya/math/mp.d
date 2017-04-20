@@ -129,12 +129,8 @@ struct Integer
      * Precondition: $(D_INLINECODE allocator !is null)
      */
     this(R)(const Sign sign, R value, shared Allocator allocator = defaultAllocator)
+    @trusted
         if (isInputRange!R && hasLength!R && is(Unqual!(ElementType!R) == ubyte))
-    out
-    {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
     {
         this(allocator);
         while (!value.empty && value.front == 0)
@@ -144,7 +140,14 @@ struct Integer
         this.rep = allocator.resize(this.rep[0 .. this.size], value.length).ptr;
         this.size = value.length;
         this.sign = sign;
-        value.copy(this.rep[0 .. this.size]);
+        value.copy(this.rep[0 .. this.size].retro);
+    }
+
+    private @nogc unittest
+    {
+        ubyte[5] range = [ 0x02, 0x11, 0x00, 0x00, 0x01 ];
+        auto integer = Integer(Sign.positive, range[]);
+        assert(equal(range[].retro, integer.rep[0 .. integer.size]));
     }
 
     /**
@@ -205,9 +208,9 @@ struct Integer
            big-endian format. */
         mask = 0xff;
         ubyte shift;
-        for (auto i = this.size; i; --i, mask <<= 8, shift += 8)
+        for (size_t i; i < this.size; ++i, mask <<= 8, shift += 8)
         {
-            this.rep[i - 1] = cast(ubyte) ((absolute & mask) >> shift);
+            this.rep[i] = cast(ubyte) ((absolute & mask) >> shift);
         }
     }
 
@@ -263,15 +266,15 @@ struct Integer
     {
         auto integer = Integer(1019);
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0b00000011 && integer.rep[1] == 0b11111011);
+        assert(integer.rep[1] == 0b00000011 && integer.rep[0] == 0b11111011);
 
         integer = 3337;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0b00001101 && integer.rep[1] == 0b00001001);
+        assert(integer.rep[1] == 0b00001101 && integer.rep[0] == 0b00001001);
 
         integer = 688;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0b00000010 && integer.rep[1] == 0b10110000);
+        assert(integer.rep[1] == 0b00000010 && integer.rep[0] == 0b10110000);
 
         integer = 0;
         assert(integer.length == 0);
@@ -283,10 +286,8 @@ struct Integer
     private void expand() nothrow @trusted @nogc
     {
         rep = allocator.resize(this.rep[0 .. this.size], this.size + 1).ptr;
+        this.rep[this.size] = 0x01;
         ++this.size;
-        auto target = this.rep[1 .. this.size].retro;
-        this.rep[0 .. this.size - 1].retro.copy(target);
-        this.rep[0] = 0x01;
     }
 
     /*
@@ -295,11 +296,12 @@ struct Integer
      */
     private void contract() nothrow @trusted @nogc
     {
-        const i = this.rep[0 .. this.size].countUntil!((const ref a) => a != 0);
+        const i = this.rep[0 .. this.size]
+                      .retro
+                      .countUntil!((const ref a) => a != 0);
 
         if (i > 0)
         {
-            this.rep[i .. this.size].copy(this.rep[0 .. this.size - i]);
             this.rep = allocator.resize(this.rep[0 .. this.size], this.size - i).ptr;
             this.size -= i;
         }
@@ -315,28 +317,22 @@ struct Integer
     {
         if (summand.length > this.length)
         {
-            const delta = summand.size - this.size;
-            auto tmp = this.rep[0 .. this.size];
+            this.rep =  allocator.resize!ubyte(this.rep[0 .. this.size], summand.size).ptr;
+            this.rep[this.size .. summand.size].initializeAll();
 
-            this.rep =  allocator.resize!ubyte(null, summand.size).ptr;
-            tmp.copy(this.rep[delta .. summand.size]);
-            this.rep[0 .. delta].initializeAll();
-
-            allocator.deallocate(tmp[0 .. this.size]);
             this.size = summand.size;
         }
 
         bool carry;
-        size_t i = this.size;
-        size_t j = summand.size;
+        size_t i;
+        size_t j;
         do
         {
             uint sum;
-            --i;
-            if (j)
+            if (j < summand.size)
             {
-                --j;
                 sum = this.rep[i] + summand.rep[j] + carry;
+                ++j;
             }
             else
             {
@@ -346,7 +342,7 @@ struct Integer
             carry = sum > 0xff;
             this.rep[i] = cast(ubyte) sum;
         }
-        while (i);
+        while (++i < this.size);
 
         if (carry)
         {
@@ -357,19 +353,18 @@ struct Integer
 
     private void subtract(const ref Integer subtrahend) nothrow @trusted @nogc
     {
-        size_t i = this.size;
-        size_t j = subtrahend.size;
+        size_t i;
+        size_t j;
         bool borrow;
 
-        while (i)
+        while (i < this.size)
         {
             int difference;
-            --i;
 
-            if (j)
+            if (j < subtrahend.size)
             {
-                --j;
                 difference = this.rep[i] - subtrahend.rep[j] - borrow;
+                ++j;
             }
             else
             {
@@ -377,29 +372,30 @@ struct Integer
             }
             borrow = difference < 0;
             this.rep[i] = cast(ubyte) difference;
+
+            ++i;
         }
 
-        if (borrow && i > 0)
+        if (borrow && i < this.size && this.rep[i])
         {
-            if (this.rep[i - 1]) // Don't borrow i
-            {
-                --this.rep[i - 1];
-            }
+            --this.rep[i];
         }
         contract();
     }
 
     private int compare(const ref Integer that) const nothrow @trusted @nogc
     {
-        if (this.length > that.length)
+        if (length > that.length)
         {
             return 1;
         }
-        else if (this.length < that.length)
+        else if (length < that.length)
         {
             return -1;
         }
-        return this.rep[0 .. this.size].cmp(that.rep[0 .. that.size]);
+        return this.rep[0 .. this.size]
+                   .retro
+                   .cmp(that.rep[0 .. that.size].retro);
     }
 
     /**
@@ -508,11 +504,6 @@ struct Integer
      * Returns: $(D_KEYWORD this).
      */
     ref Integer opOpAssign(string op : "+")(const auto ref Integer operand)
-    out
-    {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
     {
         if (this.sign == operand.sign)
         {
@@ -544,19 +535,19 @@ struct Integer
             auto h2 = Integer(3337);
             h1 += h2;
             assert(h1.length == 2);
-            assert(h1.rep[0] == 0x11 && h1.rep[1] == 0x04);
+            assert(h1.rep[1] == 0x11 && h1.rep[0] == 0x04);
         }
         {
             auto h1 = Integer(4356);
             auto h2 = Integer(2_147_483_647);
-            ubyte[4] expected = [0x80, 0x00, 0x11, 0x03];
+            ubyte[4] expected = [ 0x03, 0x11, 0x00, 0x80 ];
             h1 += h2;
             assert(h1.rep[0 .. h1.size] == expected);
         }
         {
             auto h1 = Integer(2147488003L);
             auto h2 = Integer(2_147_483_647);
-            ubyte[5] expected = [0x01, 0x00, 0x00, 0x11, 0x02];
+            ubyte[5] expected = [ 0x02, 0x11, 0x00, 0x00, 0x01 ];
             h1 += h2;
             assert(h1.rep[0 .. h1.size] == expected);
         }
@@ -564,11 +555,6 @@ struct Integer
 
     /// Ditto.
     ref Integer opOpAssign(string op : "-")(const auto ref Integer operand)
-    out
-    {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
     {
         if (operand.sign == this.sign)
         {
@@ -608,12 +594,12 @@ struct Integer
             h1 -= h2;
             assert(h1.length == 1);
             assert(h1.rep[0] == 0x01);
-            assert(h1.sign);
+            assert(h1.sign == Sign.negative);
         }
         {
             auto h1 = Integer(8589934590L);
             auto h2 = Integer(2147483647);
-            ubyte[5] expected = [0x01, 0x7f, 0xff, 0xff, 0xff];
+            ubyte[5] expected = [ 0xff, 0xff, 0xff, 0x7f, 0x01 ];
 
             h1 -= h2;
             assert(h1.rep[0 .. h1.size] == expected);
@@ -621,7 +607,7 @@ struct Integer
         {
             auto h1 = Integer(6442450943);
             auto h2 = Integer(4294967294);
-            ubyte[4] expected = [0x80, 0x00, 0x00, 0x01];
+            ubyte[4] expected = [ 0x01, 0x00, 0x00, 0x80 ];
             h1 -= h2;
             assert(h1.rep[0 .. h1.size] == expected);
         }
@@ -635,18 +621,13 @@ struct Integer
 
     /// Ditto.
     ref Integer opOpAssign(string op : "*")(const auto ref Integer operand) @trusted
-    out
     {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
-    {
-        size_t i = operand.size;
+        size_t i;
         if (this.length == 0)
         {
             return this;
         }
-        else if (i == 0)
+        else if (operand.length == 0)
         {
             this = 0;
             return this;
@@ -657,7 +638,6 @@ struct Integer
         this = 0;
         do
         {
-            --i;
             for (ubyte mask = 0x01; mask; mask <<= 1)
             {
                 if (mask & operand.rep[i])
@@ -666,8 +646,9 @@ struct Integer
                 }
                 temp <<= 1;
             }
+            ++i;
         }
-        while (i);
+        while (i < operand.size);
 
         this.sign = sign ? Sign.negative : Sign.positive;
 
@@ -691,20 +672,14 @@ struct Integer
     /// Ditto.
     ref Integer opOpAssign(string op : "^^")(const auto ref Integer operand)
     @trusted
-    out
     {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
-    {
-        size_t i = operand.size;
+        size_t i;
 
         auto tmp1 = Integer(this, this.allocator);
         this = 1;
 
         do
         {
-            --i;
             for (ubyte mask = 0x01; mask; mask <<= 1)
             {
                 if (operand.rep[i] & mask)
@@ -715,8 +690,9 @@ struct Integer
                 auto tmp2 = tmp1;
                 tmp1 *= tmp2;
             }
+            ++i;
         }
-        while (i);
+        while (i < operand.size);
 
         return this;
     }
@@ -732,7 +708,7 @@ struct Integer
 
         h1 = Integer(2342);
         h1 ^^= h2;
-        ubyte[6] expected = [0x1b, 0x5c, 0xab, 0x9c, 0x31, 0x10];
+        ubyte[6] expected = [ 0x10, 0x31, 0x9c, 0xab, 0x5c, 0x1b ];
         assert(h1.rep[0 .. h1.size] == expected);
     }
 
@@ -742,10 +718,6 @@ struct Integer
     in
     {
         assert(operand.length > 0, "Division by zero.");
-    }
-    out
-    {
-        assert(this.size == 0 || this.rep[0] > 0);
     }
     body
     {
@@ -774,7 +746,7 @@ struct Integer
                 subtract(divisor); // dividend -= divisor
                 static if (op == "/")
                 {
-                    quotient[bitPosition / 8] |= 0x80 >> (bitPosition % 8);
+                    quotient[$ - 1 - bitPosition / 8] |= 0x80 >> (bitPosition % 8);
                 }
             }
             if (bitSize != 0)
@@ -823,11 +795,6 @@ struct Integer
 
     /// Ditto.
     ref Integer opOpAssign(string op : ">>")(const size_t operand) @trusted
-    out
-    {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
     {
         const step = operand / 8;
 
@@ -843,20 +810,18 @@ struct Integer
         const bit = operand % 8;
         const delta = 8 - bit;
 
-        carry = cast(ubyte) (this.rep[0] << delta);
-        this.rep[0] = this.rep[0] >> bit;
-        if (rep[0])
+        for (j = step; j < length - 1; ++i, ++j)
         {
-            ++j;
+            carry = cast(ubyte) (this.rep[i + 1] << delta);
+            this.rep[i] = (this.rep[i] >> bit) | carry;
         }
-        for (i = 1; i < this.length; ++i)
+
+        this.rep[i] = this.rep[j] >> bit;
+        size_t newSize = length - step;
+        if (this.rep[i] == 0)
         {
-            immutable oldCarry = carry;
-            carry = cast(ubyte) (this.rep[i] << delta);
-            this.rep[j] = this.rep[i] >> bit | oldCarry;
-            ++j;
+            --newSize;
         }
-        const newSize = this.length - operand / 8 - (i == j ? 0 : 1);
         this.rep = allocator.resize(this.rep[0 .. this.size], newSize).ptr;
         this.size = newSize;
 
@@ -868,21 +833,21 @@ struct Integer
         auto integer = Integer(4294967294);
         integer >>= 10;
         assert(integer.length == 3);
-        assert(integer.rep[0] == 0x3f && integer.rep[1] == 0xff && integer.rep[2] == 0xff);
+        assert(integer.rep[2] == 0x3f && integer.rep[1] == 0xff && integer.rep[0] == 0xff);
 
         integer = 27336704;
         integer >>= 1;
         assert(integer.length == 3);
-        assert(integer.rep[0] == 0xd0 && integer.rep[1] == 0x90 && integer.rep[2] == 0x00);
+        assert(integer.rep[2] == 0xd0 && integer.rep[1] == 0x90 && integer.rep[0] == 0x00);
 
         integer = 4294967294;
         integer >>= 20;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0x0f && integer.rep[1] == 0xff);
+        assert(integer.rep[1] == 0x0f && integer.rep[0] == 0xff);
 
         integer >>= 0;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0x0f && integer.rep[1] == 0xff);
+        assert(integer.rep[1] == 0x0f && integer.rep[0] == 0xff);
 
         integer >>= 20;
         assert(integer.length == 0);
@@ -893,7 +858,7 @@ struct Integer
         integer = 1431655765;
         integer >>= 16;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0x55 && integer.rep[1] == 0x55);
+        assert(integer.rep[1] == 0x55 && integer.rep[0] == 0x55);
 
         integer >>= 16;
         assert(integer.length == 0);
@@ -901,50 +866,45 @@ struct Integer
 
     /// Ditto.
     ref Integer opOpAssign(string op : "<<")(const size_t operand) @trusted
-    out
     {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
-    {
-        ubyte carry;
         auto i = this.length;
         size_t j;
+        size_t newSize;
         const bit = operand % 8;
         const delta = 8 - bit;
+        const step = operand / 8;
 
-        if (cast(ubyte) (this.rep[0] >> delta))
+        auto carry = cast(ubyte) (this.rep[this.size - 1] >> delta);
+        if (carry != 0)
         {
-            const newSize = i + operand / 8 + 1;
+            newSize = length + step + 1;
             this.rep = allocator.resize(this.rep[0 .. this.size], newSize).ptr;
             this.size = newSize;
-            j = i + 1;
+            j = newSize - 1;
+            this.rep[j] = carry;
         }
         else
         {
-            const newSize = i + operand / 8;
+            newSize = length + step;
             this.rep = allocator.resize(this.rep[0 .. this.size], newSize).ptr;
-            j = i;
+            this.size = j = newSize;
         }
-        do
+
+        --i, --j;
+        for (; i > 0; --i, --j)
         {
-            --i, --j;
-            const oldCarry = carry;
-            carry = rep[i] >> delta;
-            rep[j] = cast(ubyte) ((this.rep[i] << bit) | oldCarry);
+            this.rep[i] = cast(ubyte) (this.rep[j] << bit) | (this.rep[j - 1] >> delta);
         }
-        while (i);
-        if (carry)
-        {
-            rep[0] = carry;
-        }
+        this.rep[i] = cast(ubyte) (this.rep[j] << bit);
+        this.rep[0 .. step].fill(cast(ubyte) 0);
+
         return this;
     }
 
     private @nogc unittest
     {
         auto integer = Integer(4294967295);
-        ubyte[5] expected = [0x01, 0xff, 0xff, 0xff, 0xfe];
+        ubyte[5] expected = [ 0xfe, 0xff, 0xff, 0xff, 0x01 ];
         integer <<= 1;
         assert(integer.rep[0 .. integer.size] == expected);
     }
@@ -956,10 +916,9 @@ struct Integer
     }
     body
     {
-        auto p = this.rep + this.size;
-        while (p != this.rep)
+        for (ubyte* p  = this.rep; p < this.rep + this.size; ++p)
         {
-            --p, --*p;
+            --*p;
             if (*p != ubyte.max)
             {
                 break;
@@ -970,16 +929,16 @@ struct Integer
 
     private void increment() nothrow @trusted @nogc
     {
-        auto p = this.rep + this.size;
-        while (p != this.rep)
+        ubyte* p;
+        for (p = this.rep; p < this.rep + this.size; ++p)
         {
-            --p, ++*p;
+            ++*p;
             if (*p > 0)
             {
                 return;
             }
         }
-        if (p == this.rep)
+        if (p == this.rep + this.size)
         {
             expand();
         }
@@ -1054,11 +1013,6 @@ struct Integer
 
     /// Ditto.
     ref Integer opUnary(string op : "++")()
-    out
-    {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
     {
         if (this.sign)
         {
@@ -1077,11 +1031,6 @@ struct Integer
 
     /// Ditto.
     ref Integer opUnary(string op : "--")()
-    out
-    {
-        assert(this.size == 0 || this.rep[0] > 0);
-    }
-    body
     {
         if (this.sign)
         {
@@ -1108,11 +1057,11 @@ struct Integer
         integer = 511;
         ++integer;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0x02 && integer.rep[1] == 0x00);
+        assert(integer.rep[1] == 0x02 && integer.rep[0] == 0x00);
 
         --integer;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0x01 && integer.rep[1] == 0xff);
+        assert(integer.rep[1] == 0x01 && integer.rep[0] == 0xff);
 
         integer = 79;
         ++integer;
@@ -1126,11 +1075,11 @@ struct Integer
         integer = 65535;
         ++integer;
         assert(integer.length == 3);
-        assert(integer.rep[0] == 0x01 && integer.rep[1] == 0x00 && integer.rep[2] == 0x00);
+        assert(integer.rep[2] == 0x01 && integer.rep[1] == 0x00 && integer.rep[0] == 0x00);
 
         --integer;
         assert(integer.length == 2);
-        assert(integer.rep[0] == 0xff && integer.rep[1] == 0xff);
+        assert(integer.rep[1] == 0xff && integer.rep[0] == 0xff);
 
         integer = -2;
         ++integer;
@@ -1217,10 +1166,11 @@ struct Integer
             return 0;
         }
         T ret;
-        const(ubyte)* src = this.rep + this.size - 1;
-        for (ubyte shift; src >= this.rep && shift <= T.sizeof * 8; --src, shift += 8)
+        const(ubyte)* src = this.rep;
+        ubyte shift;
+        for (; src < this.rep + this.size && shift <= T.sizeof * 8; ++src, shift += 8)
         {
-            ret |= cast(T) (*src) << shift;
+            ret |= (cast(T) *src) << shift;
         }
         return ret;
     }

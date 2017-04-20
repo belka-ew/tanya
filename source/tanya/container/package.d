@@ -14,5 +14,5 @@ module tanya.container;
 
 public import tanya.container.buffer;
 public import tanya.container.list;
-public import tanya.container.vector;
+public import tanya.container.slice;
 public import tanya.container.queue;
