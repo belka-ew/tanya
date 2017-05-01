@@ -15,6 +15,7 @@ module tanya.container.string;
 import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
+import std.algorithm.searching;
 import std.range;
 import std.traits;
 import tanya.memory;
@@ -205,6 +206,127 @@ struct ByCodeUnit(E)
 }
 
 /**
+ * Iterates $(D_PSYMBOL String) by UTF-8 code point.
+ *
+ * Params:
+ *  E = Element type ($(D_KEYWORD char) or $(D_INLINECODE const(char))).
+ */
+struct ByCodePoint(E)
+    if (is(Unqual!E == char))
+{
+    private E* begin, end;
+    private alias ContainerType = CopyConstness!(E, String);
+    private ContainerType* container;
+
+    invariant
+    {
+        assert(this.begin <= this.end);
+        assert(this.container !is null);
+        assert(this.begin >= this.container.data);
+        assert(this.end <= this.container.data + this.container.length);
+    }
+
+    private this(ref ContainerType container, E* begin, E* end) @trusted
+    in
+    {
+        assert(begin <= end);
+        assert(begin >= container.data);
+        assert(end <= container.data + container.length);
+    }
+    body
+    {
+        this.container = &container;
+        this.begin = begin;
+        this.end = end;
+    }
+
+    @disable this();
+
+    @property ByCodePoint save()
+    {
+        return this;
+    }
+
+    @property bool empty() const
+    {
+        return this.begin == this.end;
+    }
+
+    @property dchar front() const
+    in
+    {
+        assert(!empty);
+    }
+    out (chr)
+    {
+        assert(chr < 0xd800 || chr > 0xdfff);
+    }
+    body
+    {
+        dchar chr;
+        ubyte units;
+        char mask;
+        const(char)* it = begin;
+
+        if (*it & 0x80)
+        {
+            mask = 0xe0;
+            for (units = 1; (*it & mask) != (mask << 1); ++units)
+            {
+                mask = (mask >> 1) | 0x80;
+            }
+        }
+        chr = *it++ ^ mask;
+
+        for (; units > 0; --units)
+        {
+            if (begin >= end)
+            {
+                throw defaultAllocator.make!UTFException("Invalid UTF-8 character");
+            }
+            chr = (chr << 6) | (*it++ & 0x3f);
+        }
+
+        return chr;
+    }
+
+    void popFront()
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        if (*begin & 0x80)
+        {
+            char mask = 0xe0;
+            for (auto chr = *begin; (chr & mask) != (mask << 1); ++begin)
+            {
+                if (begin >= end)
+                {
+                    throw defaultAllocator.make!UTFException("Invalid UTF-8 character");
+                }
+                mask = (mask >> 1) | 0x80;
+            }
+        }
+        else
+        {
+            ++begin;
+        }
+    }
+
+    ByCodePoint opIndex()
+    {
+        return typeof(return)(*this.container, this.begin, this.end);
+    }
+
+    ByCodePoint!(const E) opIndex() const
+    {
+        return typeof(return)(*this.container, this.begin, this.end);
+    }
+}
+
+/**
  * UTF-8 string.
  */
 struct String
@@ -222,7 +344,7 @@ struct String
      * Constructs the string from a stringish range.
      *
      * Params:
-     *  R         = String type.
+     *  S         = String type.
      *  str       = Initial string.
      *  allocator = Allocator.
      *
@@ -230,10 +352,10 @@ struct String
      *
      * Precondition: $(D_INLINECODE allocator is null).
      */
-    this(R)(const R str, shared Allocator allocator = defaultAllocator)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isSomeChar!(ElementEncodingType!R))
+    this(S)(const S str, shared Allocator allocator = defaultAllocator)
+        if (!isInfinite!S
+         && isInputRange!S
+         && isSomeChar!(ElementEncodingType!S))
     {
         this(allocator);
         insertBack(str);
@@ -265,13 +387,15 @@ struct String
      * If $(D_PARAM init) is passed by reference, it will be copied.
      *
      * Params:
+     *  S         = Source string type.
      *  init      = Source string.
      *  allocator = Allocator.
      *
      * Precondition: $(D_INLINECODE allocator is null).
      */
-    this(String init, shared Allocator allocator = defaultAllocator)
+    this(S)(S init, shared Allocator allocator = defaultAllocator)
     nothrow @trusted @nogc
+        if (is(S == String))
     {
         this(allocator);
         if (allocator !is init.allocator)
@@ -294,8 +418,9 @@ struct String
     }
 
     /// Ditto.
-    this(ref const String init, shared Allocator allocator = defaultAllocator)
+    this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     nothrow @trusted @nogc
+        if (is(Unqual!S == String))
     {
         this(allocator);
         reserve(init.length);
@@ -322,7 +447,8 @@ struct String
      *  n   = Number of characters to copy.
      *  chr = Character to fill the string with.
      */
-    this(C)(const size_t n, const C chr,
+    this(C)(const size_t n,
+            const C chr,
             shared Allocator allocator = defaultAllocator) @trusted
         if (isSomeChar!C)
     {
@@ -351,7 +477,8 @@ struct String
         this.length_ += remaining;
     }
 
-    private unittest
+    ///
+    unittest
     {
         {
             auto s = String(1, 'О');
@@ -372,7 +499,7 @@ struct String
      */
     ~this() nothrow @trusted @nogc
     {
-        allocator.deallocate(this.data[0 .. this.capacity_]);
+        allocator.resize(this.data[0 .. this.capacity_], 0);
     }
 
     private void write4Bytes(ref const dchar src)
@@ -583,7 +710,7 @@ struct String
 
         while (!range.empty)
         {
-            reserve(length + 4);
+            reserve(length + wchar.sizeof * 2);
 
             auto ret = insertWideChar(range.front);
             if (ret > 0)
@@ -830,6 +957,20 @@ struct String
     }
 
     /**
+     * Returns: Forward range that iterates over the string by code points.
+     */
+    ByCodePoint!char byCodePoint() pure nothrow @trusted @nogc
+    {
+        return typeof(return)(this, this.data, this.data + length);
+    }
+
+    /// Ditto.
+    ByCodePoint!(const char) byCodePoint() const pure nothrow @trusted @nogc
+    {
+        return typeof(return)(this, this.data, this.data + length);
+    }
+
+    /**
      * Returns: $(D_KEYWORD true) if the vector is empty.
      */
     @property bool empty() const pure nothrow @safe @nogc
@@ -899,6 +1040,76 @@ struct String
         r.popFront();
         r.popBack();
         assert(r.empty);
+    }
+
+    /**
+     * Assigns another string.
+     *
+     * If $(D_PARAM that) is passed by value, it won't be copied, but moved.
+     * This string will take the ownership over $(D_PARAM that)'s storage and
+     * the allocator.
+     *
+     * If $(D_PARAM that) is passed by reference, it will be copied.
+     *
+     * Params:
+     *  S    = Content type.
+     *  that = The value should be assigned.
+     *
+     * Returns: $(D_KEYWORD this).
+     */
+    ref String opAssign(S)(S that) nothrow @safe @nogc
+        if (is(S == String))
+    {
+        swap(this.data, that.data);
+        swap(this.length_, that.length_);
+        swap(this.capacity_, that.capacity_);
+        swap(this.allocator_, that.allocator_);
+        return this;
+    }
+
+    /// Ditto.
+    ref String opAssig(S)(ref S that) nothrow @trusted @nogc
+        if (is(Unqual!S == String))
+    {
+        reserve(that.length);
+        that.data[0 .. that.length].copy(this.data[0 .. that.length]);
+        this.length_ = that.length;
+        return this;
+    }
+
+    ///
+    unittest
+    {
+        auto s = String("Черная, потом пропахшая выть!");
+        s = String("Как мне тебя не ласкать, не любить?");
+    }
+
+    /**
+     * Assigns a stringish range.
+     *
+     * Params:
+     *  S    = String type.
+     *  that = Initial string.
+     *
+     * Returns: $(D_KEYWORD this).
+     *
+     * Throws: $(D_PSYMBOL UTFException).
+     */
+    ref String opAssign(S)(S that) nothrow @safe @nogc
+        if (!isInfinite!S
+         && isInputRange!S
+         && isSomeChar!(ElementEncodingType!S))
+    {
+        this.length_ = 0;
+        insertBack(that);
+        return this;
+    }
+
+    ///
+    unittest
+    {
+        auto s = String("Оловом светится лужная голь...");
+        s = "Грустная песня, ты - русская боль.";
     }
 
     mixin DefaultAllocator;
