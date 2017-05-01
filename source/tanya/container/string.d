@@ -478,7 +478,7 @@ struct String
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         {
             auto s = String(1, 'О');
@@ -859,7 +859,7 @@ struct String
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto s = String("In allem Schreiben ist Schamlosigkeit.");
         assert(s.capacity == 38);
@@ -889,7 +889,7 @@ struct String
     alias opDollar = length;
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto s = String("Piscis primuin a capite foetat.");
         assert(s.length == 31);
@@ -915,7 +915,7 @@ struct String
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto s = String("Alea iacta est.");
         assert(s[0] == 'A');
@@ -938,7 +938,7 @@ struct String
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto s = String("Plutarchus");
         auto r = s[];
@@ -1014,7 +1014,7 @@ struct String
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto s = String("Vladimir Soloviev");
         auto r = s[9 .. $];
@@ -1057,7 +1057,7 @@ struct String
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref String opAssign(S)(S that) nothrow @safe @nogc
+    ref String opAssign(S)(S that)
         if (is(S == String))
     {
         swap(this.data, that.data);
@@ -1068,7 +1068,7 @@ struct String
     }
 
     /// Ditto.
-    ref String opAssig(S)(ref S that) nothrow @trusted @nogc
+    ref String opAssig(S)(ref S that) @trusted
         if (is(Unqual!S == String))
     {
         reserve(that.length);
@@ -1078,7 +1078,7 @@ struct String
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto s = String("Черная, потом пропахшая выть!");
         s = String("Как мне тебя не ласкать, не любить?");
@@ -1095,7 +1095,7 @@ struct String
      *
      * Throws: $(D_PSYMBOL UTFException).
      */
-    ref String opAssign(S)(S that) nothrow @safe @nogc
+    ref String opAssign(S)(S that) nothrow
         if (!isInfinite!S
          && isInputRange!S
          && isSomeChar!(ElementEncodingType!S))
@@ -1106,10 +1106,125 @@ struct String
     }
 
     ///
-    unittest
+    @safe @nogc unittest
     {
         auto s = String("Оловом светится лужная голь...");
         s = "Грустная песня, ты - русская боль.";
+    }
+
+    /**
+     * Comparison for equality.
+     *
+     * Params:
+     *  that = The string to compare with.
+     *
+     * Returns: A positive number if $(D_KEYWORD this) is lexicographically
+     *          greater than $(D_PARAM that), if equal `0`, else `-1`.
+     */
+    int opCmp(S)(auto ref S that) const @trusted
+        if (is(Unqual!S == String))
+    {
+        return cmp(this.data[0 .. length], that.data[0 .. that.length]);
+    }
+
+    /**
+     * Comparison for equality.
+     *
+     * Params:
+     *  R    = Right hand side type.
+     *  that = Right hand side string range.
+     *
+     * Returns: A positive number if $(D_KEYWORD this) is lexicographically
+     *          greater than $(D_PARAM that), if equal `0`, else `-1`.
+     */
+    int opCmp(E)(ByCodeUnit!E that) const @trusted
+        if (is(Unqual!E == char))
+    {
+        return cmp(this.data[0 .. length],
+                   that.begin[0 .. that.end - that.begin]);
+    }
+
+    /// Ditto.
+    int opCmp(E)(ByCodePoint!E that) const @trusted
+        if (is(Unqual!E == char))
+    {
+        return cmp(this.data[0 .. length],
+                   that.begin[0 .. that.end - that.begin]);
+    }
+
+    /// Ditto.
+    int opCmp()(const char[] that) const @trusted
+    {
+        return cmp(this.data[0 .. length], that);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        assert(String("Голубая кофта.") < String("Синие глаза."));
+        assert(String("Никакой я правды") < String("милой не сказал")[]);
+    }
+
+    /**
+     * Comparison for equality.
+     *
+     * Params:
+     *  that = The string to compare with.
+     *
+     * Returns: $(D_KEYWORD true) if the strings are equal, $(D_KEYWORD false)
+     *          otherwise.
+     */
+    bool opEquals(S)(auto ref S that) const @trusted
+        if (is(Unqual!S == String))
+    {
+        return equal(this.data[0 .. length], that.data[0 .. that.length]);
+    }
+
+    /**
+     * Comparison for equality.
+     *
+     * Params:
+     *  R    = Right hand side type.
+     *  that = Right hand side string range.
+     *
+     * Returns: $(D_KEYWORD true) if the string and the range are equal,
+     *          $(D_KEYWORD false) otherwise.
+     */
+    bool opEquals(E)(ByCodeUnit!E that) const @trusted
+        if (is(Unqual!E == char))
+    {
+        return equal(this.data[0 .. length],
+                     that.begin[0 .. that.end - that.begin]);
+    }
+
+    /// Ditto.
+    bool opEquals(E)(ByCodePoint!E that) const @trusted
+        if (is(Unqual!E == char))
+    {
+        return equal(this.data[0 .. length],
+                     that.begin[0 .. that.end - that.begin]);
+    }
+
+    /// Ditto.
+    bool opEquals()(const char[] that) const @trusted
+    {
+        return equal(this.data[0 .. length], that);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        assert(String("Милая спросила:") != String("Крутит ли метель?"));
+        assert(String("Затопить бы печку,") != String("постелить постель.")[]);
+        assert(const String("Я ответил милой:") != String("Нынче с высоты"));
+        assert(String("Кто-то осыпает") != "белые цветы");
+        assert(const String("Затопи ты печку,") != String("постели постель,")[]);
+
+        auto s = const String("У меня на сердце");
+        assert(s[] != String("без тебя метель."));
+        assert(s == s);
+        assert(s == s[]);
+        assert(s == "У меня на сердце");
     }
 
     mixin DefaultAllocator;
