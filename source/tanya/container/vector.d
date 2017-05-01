@@ -225,11 +225,11 @@ struct Vector(T)
      * If $(D_PARAM init) is passed by reference, it will be copied.
      *
      * Params:
-     *  R         = Vector type.
+     *  R         = Source vector type.
      *  init      = Source vector.
      *  allocator = Allocator.
      */
-    this(R)(const ref R init, shared Allocator allocator = defaultAllocator)
+    this(R)(ref R init, shared Allocator allocator = defaultAllocator)
         if (is(Unqual!R == Vector))
     {
         this(allocator);
@@ -1413,7 +1413,7 @@ struct Vector(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(R)(const ref R that)
+    ref typeof(this) opAssign(R)(ref R that)
         if (is(Unqual!R == Vector))
     {
         return this = that[];

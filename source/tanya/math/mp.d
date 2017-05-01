@@ -245,16 +245,10 @@ struct Integer
     ref Integer opAssign(T)(T value) nothrow @safe @nogc
         if (is(T == Integer))
     {
-        if (this.allocator is value.allocator)
-        {
-            swap(this.rep, value.rep);
-            swap(this.sign, value.sign);
-            swap(this.size, value.size);
-        }
-        else
-        {
-            this = value;
-        }
+        swap(this.rep, value.rep);
+        swap(this.sign, value.sign);
+        swap(this.size, value.size);
+        swap(this.allocator_, value.allocator_);
         return this;
     }
 
