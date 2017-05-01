@@ -215,16 +215,19 @@ struct SList(T)
      * If $(D_PARAM init) is passed by reference, it will be copied.
      *
      * Params:
+     *  R         = Source list type.
      *  init      = Source list.
      *  allocator = Allocator.
      */
-    this(ref SList init, shared Allocator allocator = defaultAllocator)
+    this(R)(ref R init, shared Allocator allocator = defaultAllocator)
+        if (is(Unqual!R == SList))
     {
         this(init[], allocator);
     }
 
     /// Ditto.
-    this(SList init, shared Allocator allocator = defaultAllocator) @trusted
+    this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
+        if (is(R == SList))
     {
         this(allocator);
         if (allocator is init.allocator)
@@ -734,18 +737,19 @@ struct SList(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(R)(const ref R that)
+    ref typeof(this) opAssign(R)(ref R that)
         if (is(Unqual!R == SList))
     {
         return this = that[];
     }
 
     /// Ditto.
-    ref typeof(this) opAssign(R)(const ref R that)
-        if (is(Unqual!R == SList))
+    ref typeof(this) opAssign(R)(R that)
+        if (is(R == SList))
     {
         swap(this.head, that.head);
         swap(this.allocator_, that.allocator_);
+        return this;
     }
 
     /**

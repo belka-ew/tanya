@@ -90,18 +90,19 @@ body
     size_t i;
     auto tmp1 = Integer(x, x.allocator);
     auto result = Integer(x.allocator);
+    bool firstBit;
 
-    if (x.length == 0 && y.length != 0)
+    if (x.size == 0 && y.size != 0)
     {
-        i = y.length;
+        i = y.size;
     }
     else
     {
         result = 1;
     }
-    while (i < y.length)
+    while (i < y.size)
     {
-        for (ubyte mask = 0x01; mask; mask <<= 1)
+        for (uint mask = 0x01; mask != 0x10000000; mask <<= 1)
         {
             if (y.rep[i] & mask)
             {
