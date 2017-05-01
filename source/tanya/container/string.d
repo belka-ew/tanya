@@ -1116,6 +1116,7 @@ struct String
      * Comparison for equality.
      *
      * Params:
+     *  S    = Right hand side type.
      *  that = The string to compare with.
      *
      * Returns: A positive number if $(D_KEYWORD this) is lexicographically
@@ -1127,26 +1128,17 @@ struct String
         return cmp(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
-    /**
-     * Comparison for equality.
-     *
-     * Params:
-     *  R    = Right hand side type.
-     *  that = Right hand side string range.
-     *
-     * Returns: A positive number if $(D_KEYWORD this) is lexicographically
-     *          greater than $(D_PARAM that), if equal `0`, else `-1`.
-     */
-    int opCmp(E)(ByCodeUnit!E that) const @trusted
-        if (is(Unqual!E == char))
+    /// Ditto.
+    int opCmp(S)(ByCodeUnit!S that) const @trusted
+        if (is(Unqual!S == char))
     {
         return cmp(this.data[0 .. length],
                    that.begin[0 .. that.end - that.begin]);
     }
 
     /// Ditto.
-    int opCmp(E)(ByCodePoint!E that) const @trusted
-        if (is(Unqual!E == char))
+    int opCmp(S)(ByCodePoint!S that) const @trusted
+        if (is(Unqual!S == char))
     {
         return cmp(this.data[0 .. length],
                    that.begin[0 .. that.end - that.begin]);
@@ -1169,6 +1161,7 @@ struct String
      * Comparison for equality.
      *
      * Params:
+     *  S    = Right hand side type.
      *  that = The string to compare with.
      *
      * Returns: $(D_KEYWORD true) if the strings are equal, $(D_KEYWORD false)
@@ -1184,22 +1177,21 @@ struct String
      * Comparison for equality.
      *
      * Params:
-     *  R    = Right hand side type.
      *  that = Right hand side string range.
      *
      * Returns: $(D_KEYWORD true) if the string and the range are equal,
      *          $(D_KEYWORD false) otherwise.
      */
-    bool opEquals(E)(ByCodeUnit!E that) const @trusted
-        if (is(Unqual!E == char))
+    bool opEquals(S)(ByCodeUnit!S that) const @trusted
+        if (is(Unqual!S == char))
     {
         return equal(this.data[0 .. length],
                      that.begin[0 .. that.end - that.begin]);
     }
 
     /// Ditto.
-    bool opEquals(E)(ByCodePoint!E that) const @trusted
-        if (is(Unqual!E == char))
+    bool opEquals(S)(ByCodePoint!S that) const @trusted
+        if (is(Unqual!S == char))
     {
         return equal(this.data[0 .. length],
                      that.begin[0 .. that.end - that.begin]);
