@@ -976,6 +976,7 @@ struct Vector(T)
      * Assigns a value to the element with the index $(D_PARAM pos).
      *
      * Params:
+     *  E     = Value type.
      *  value = Value.
      *  pos   = Position.
      *
@@ -983,58 +984,45 @@ struct Vector(T)
      *
      * Precondition: $(D_INLINECODE length > pos).
      */
-    ref T opIndexAssign(ref T value, const size_t pos)
+    ref T opIndexAssign(E : T)(auto ref E value, const size_t pos)
     {
         return opIndex(pos) = value;
     }
 
-    @safe unittest
+    /// Ditto.
+    Range!T opIndexAssign(E : T)(auto ref E value)
+    {
+        return opSliceAssign(value, 0, length);
+    }
+
+    ///
+    nothrow @safe @nogc unittest
     {
         Vector!int a = Vector!int(1);
         a[0] = 5;
         assert(a[0] == 5);
     }
 
-    /// Ditto.
-    T opIndexAssign(T value, const size_t pos)
-    {
-        return opIndexAssign(value, pos);
-    }
-
-    /// Ditto.
-    Range!T opIndexAssign(T value)
-    {
-        return opSliceAssign(value, 0, length);
-    }
-
-    /// Ditto.
-    Range!T opIndexAssign(ref T value)
-    {
-        return opSliceAssign(value, 0, length);
-    }
-
     /**
      * Assigns a range or a static array.
      *
      * Params:
-     *  R     = Range type or static array length.
+     *  R     = Value type.
      *  value = Value.
      *
      * Returns: Assigned value.
      *
      * Precondition: $(D_INLINECODE length == value.length).
      */
-    Range!T opIndexAssign(R)(R value)
-        if (!isInfinite!R && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    Range!T opIndexAssign(size_t R)(T[R] value)
     {
         return opSliceAssign!R(value, 0, length);
     }
 
     /// Ditto.
-    Range!T opIndexAssign(size_t R)(T[R] value)
+    Range!T opIndexAssign(Range!T value)
     {
-        return opSliceAssign!R(value, 0, length);
+        return opSliceAssign(value, 0, length);
     }
 
     ///
@@ -1296,9 +1284,9 @@ struct Vector(T)
      * Slicing assignment.
      *
      * Params:
-     *  R     = Type of the assigned slice or length of the static array should be
-     *          assigned.
-     *  value = New value (single value, input range or static array).
+     *  R     = Type of the assigned slice or length of the static array should
+     *          be assigned.
+     *  value = New value (single value, range or static array).
      *  i     = Slice start.
      *  j     = Slice end.
      *
@@ -1307,30 +1295,22 @@ struct Vector(T)
      * Precondition: $(D_INLINECODE i <= j && j <= length
      *                           && value.length == j - i)
      */
-    Range!T opSliceAssign(R)(R value, const size_t i, const size_t j) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    Range!T opSliceAssign(size_t R)(T[R] value, const size_t i, const size_t j)
+    @trusted
     in
     {
         assert(i <= j);
         assert(j <= length);
-        assert(j - i == walkLength(value));
     }
     body
     {
-        copy(value, this.data[i .. j]);
+        copy(value[], this.data[i .. j]);
         return opSlice(i, j);
     }
 
     /// Ditto.
-    Range!T opSliceAssign(size_t R)(T[R] value, const size_t i, const size_t j)
-    {
-        return opSliceAssign!(T[])(value[], i, j);
-    }
-
-    /// Ditto.
-    Range!T opSliceAssign(ref T value, const size_t i, const size_t j) @trusted
+    Range!T opSliceAssign(R : T)(auto ref R value, const size_t i, const size_t j)
+    @trusted
     in
     {
         assert(i <= j);
@@ -1343,9 +1323,17 @@ struct Vector(T)
     }
 
     /// Ditto.
-    Range!T opSliceAssign(T value, const size_t i, const size_t j)
+    Range!T opSliceAssign(Range!T value, const size_t i, const size_t j) @trusted
+    in
     {
-        return opSliceAssign(value, i, j);
+        assert(i <= j);
+        assert(j <= length);
+        assert(j - i == value.length);
+    }
+    body
+    {
+        copy(value, this.data[i .. j]);
+        return opSlice(i, j);
     }
 
     ///
