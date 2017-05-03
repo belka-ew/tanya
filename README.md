@@ -22,10 +22,11 @@ Tanya consists of the following packages:
 
 * `async`: Event loop (epoll, kqueue and IOCP).
 * `container`: Queue, Vector, Singly linked list, buffers.
+* `crypto`: HMAC.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocator, reference counting,
 helper functions).
-* `network`: URL-Parsing, sockets.
+* `network`: URL-Parsing, sockets, utilities.
 
 ### Supported compilers
 
@@ -43,15 +44,12 @@ stable.
 
 Following modules are coming soon:
 
-| Feature      | Build status                                                                                                            |
-|--------------|:-----------------------------------------------------------------------------------------------------------------------:|
-| UTF-8 string | [![utf8string](https://travis-ci.org/caraus-ecms/tanya.svg?branch=utf8string)](https://travis-ci.org/caraus-ecms/tanya) |
-| BitVector    | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya)   |
-| Hash table   | N/A                                                                                                                     |
-
-`math` package contains an arbitrary precision integer implementation that
-needs more test cases, better performance and some additional features
-(constructing from a string and an ubyte array, and converting it back).
+| Feature      | Branch     | Build status                                                                                                            |
+|--------------|:----------:|:-----------------------------------------------------------------------------------------------------------------------:|
+| UTF-8 string | utf8string | [![utf8string](https://travis-ci.org/caraus-ecms/tanya.svg?branch=utf8string)](https://travis-ci.org/caraus-ecms/tanya) |
+| BitVector    | bitvector  | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya)   |
+| TLS          | crypto     | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya)         |
+| Hash table   | N/A        | N/A                                                                                                                     |
 
 ### Further characteristics
 
@@ -61,6 +59,10 @@ needs more test cases, better performance and some additional features
 is being tested on Windows and FreeBSD as well.
 
 * The library isn't thread-safe. Thread-safity should be added later.
+
+## Release management
+
+4-week release cycle.
 
 ## Contributing
 
