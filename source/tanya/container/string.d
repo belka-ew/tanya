@@ -252,7 +252,7 @@ struct ByCodePoint(E)
         return this.begin == this.end;
     }
 
-    @property dchar front() const
+    @property dchar front() const @trusted
     in
     {
         assert(!empty);
@@ -264,55 +264,60 @@ struct ByCodePoint(E)
     body
     {
         dchar chr;
-        ubyte units;
-        char mask;
-        const(char)* it = begin;
+        ubyte units, mask;
+        const(char)* it = this.begin;
 
         if (*it & 0x80)
         {
             mask = 0xe0;
-            for (units = 1; (*it & mask) != (mask << 1); ++units)
+            for (units = 2; ((*it << units) & 0x80) != 0; ++units)
             {
                 mask = (mask >> 1) | 0x80;
             }
         }
-        chr = *it++ ^ mask;
-
-        for (; units > 0; --units)
+        if (this.begin + units > end || units > 4)
         {
-            if (begin >= end)
-            {
-                throw defaultAllocator.make!UTFException("Invalid UTF-8 character");
-            }
+            throw defaultAllocator.make!UTFException("Invalid UTF-8 character");
+        }
+        chr = *it++ & ~mask;
+
+        for (; units > 1; --units)
+        {
             chr = (chr << 6) | (*it++ & 0x3f);
         }
 
         return chr;
     }
 
-    void popFront()
+    void popFront() @trusted
     in
     {
         assert(!empty);
     }
     body
     {
-        if (*begin & 0x80)
+        ubyte units;
+        if ((*begin & 0x80) == 0)
         {
-            char mask = 0xe0;
-            for (auto chr = *begin; (chr & mask) != (mask << 1); ++begin)
-            {
-                if (begin >= end)
-                {
-                    throw defaultAllocator.make!UTFException("Invalid UTF-8 character");
-                }
-                mask = (mask >> 1) | 0x80;
-            }
+            units = 1;
         }
-        else
+        else if ((*begin & 0xc0) == 0xc0)
         {
-            ++begin;
+            units = 2;
         }
+        else if ((*begin & 0xe0) == 0xe0)
+        {
+            units = 3;
+        }
+        else if ((*begin & 0xf0) == 0xf0)
+        {
+            units = 4;
+        }
+        if (units == 0 || this.begin + units > this.end)
+        {
+            throw defaultAllocator.make!UTFException("Invalid UTF-8 character");
+        }
+        this.begin += units;
     }
 
     ByCodePoint opIndex()
@@ -866,6 +871,68 @@ struct String
     }
 
     /**
+     * Slicing assignment.
+     *
+     * Params:
+     *  R     = Type of the assigned slice.
+     *  value = New value (single value, range or string).
+     *  i     = Slice start.
+     *  j     = Slice end.
+     *
+     * Returns: Slice with the assigned part of the string.
+     *
+     * Precondition: $(D_INLINECODE i <= j && j <= length
+     *                           && value.length == j - i)
+     */
+    ByCodeUnit!char opSliceAssign(R)(ByCodeUnit!R value,
+                                     const size_t i,
+                                     const size_t j) @trusted
+        if (is(Unqual!R == char))
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+        assert(j - i == value.length);
+    }
+    body
+    {
+        copy(value, this.data[i .. j]);
+        return opSlice(i, j);
+    }
+
+    /// Ditto.
+    ByCodeUnit!char opSliceAssign(const char[] value,
+                                  const size_t i,
+                                  const size_t j)
+    pure nothrow @trusted @nogc
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    body
+    {
+        copy(value[], this.data[i .. j]);
+        return opSlice(i, j);
+    }
+
+    /// Ditto.
+    ByCodeUnit!char opSliceAssign(const char value,
+                                  const size_t i,
+                                  const size_t j)
+    pure nothrow @trusted @nogc
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    body
+    {
+        fill(this.data[i .. j], value);
+        return opSlice(i, j);
+    }
+
+    /**
      * Returns an array used internally by the string.
      * The length of the returned array may be smaller than the size of the
      * reserved memory for the string.
@@ -970,8 +1037,30 @@ struct String
         return typeof(return)(this, this.data, this.data + length);
     }
 
+    ///
+    @safe @nogc unittest
+    {
+        auto s = String("Высоцкий");
+        auto cp = s.byCodePoint();
+        assert(cp.front == 'В');
+        cp.popFront();
+        assert(cp.front == 'ы');
+        cp.popFront();
+        assert(cp.front == 'с');
+
+        s = String("€");
+        cp = s.byCodePoint();
+        assert(cp.front == '€');
+        assert(s.length == 3);
+
+        s = String("\U00024B62");
+        cp = s.byCodePoint();
+        assert(cp.front == '\U00024B62');
+        assert(s.length == 4);
+    }
+
     /**
-     * Returns: $(D_KEYWORD true) if the vector is empty.
+     * Returns: $(D_KEYWORD true) if the string is empty.
      */
     @property bool empty() const pure nothrow @safe @nogc
     {
@@ -1068,7 +1157,7 @@ struct String
     }
 
     /// Ditto.
-    ref String opAssig(S)(ref S that) @trusted
+    ref String opAssign(S)(ref S that) @trusted
         if (is(Unqual!S == String))
     {
         reserve(that.length);
@@ -1217,6 +1306,52 @@ struct String
         assert(s == s);
         assert(s == s[]);
         assert(s == "У меня на сердце");
+    }
+
+    /**
+     * Assigns a value to the character with the index $(D_PARAM pos).
+     *
+     * Params:
+     *  value = Value.
+     *  pos   = Position.
+     *
+     * Returns: Assigned value.
+     *
+     * Precondition: $(D_INLINECODE length > pos).
+     */
+    ref char opIndexAssign(const char value, const size_t pos)
+    pure nothrow @safe @nogc
+    {
+        return opIndex(pos) = value;
+    }
+
+    /**
+     * Assigns a range or a string.
+     *
+     * Params:
+     *  R     = Value type.
+     *  value = Value.
+     *
+     * Returns: Assigned value.
+     *
+     * Precondition: $(D_INLINECODE length == value.length).
+     */
+    ByCodeUnit!char opIndexAssign(R)(ByCodeUnit!R value)
+        if (is(Unqual!R == char))
+    {
+        return opSliceAssign(value, 0, length);
+    }
+
+    /// Ditto.
+    ByCodeUnit!char opIndexAssign(const char value) pure nothrow @safe @nogc
+    {
+        return opSliceAssign(value, 0, length);
+    }
+
+    /// Ditto.
+    ByCodeUnit!char opIndexAssign(const char[] value) pure nothrow @safe @nogc
+    {
+        return opSliceAssign(value, 0, length);
     }
 
     mixin DefaultAllocator;
