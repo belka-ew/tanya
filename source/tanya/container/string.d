@@ -928,7 +928,10 @@ struct String
     }
     body
     {
-        fill(this.data[i .. j], value);
+        for (auto p = this.data + i; p < this.data + j; ++p)
+        {
+            *p = value;
+        }
         return opSlice(i, j);
     }
 
