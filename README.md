@@ -21,7 +21,7 @@ data structures and utilities that depend on the Garbage Collector in Phobos.
 Tanya consists of the following packages:
 
 * `async`: Event loop (epoll, kqueue and IOCP).
-* `container`: Queue, Vector, Singly linked list, buffers.
+* `container`: Queue, Vector, Singly linked list, buffers, UTF-8 string.
 * `crypto`: HMAC.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocator, reference counting,
@@ -46,7 +46,6 @@ Following modules are coming soon:
 
 | Feature      | Branch     | Build status                                                                                                            |
 |--------------|:----------:|:-----------------------------------------------------------------------------------------------------------------------:|
-| UTF-8 string | utf8string | [![utf8string](https://travis-ci.org/caraus-ecms/tanya.svg?branch=utf8string)](https://travis-ci.org/caraus-ecms/tanya) |
 | BitVector    | bitvector  | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya)   |
 | TLS          | crypto     | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya)         |
 | Hash table   | N/A        | N/A                                                                                                                     |
