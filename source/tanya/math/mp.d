@@ -178,12 +178,64 @@ struct Integer
         allocator.resize(this.rep, 0);
     }
 
+    static private const short[16] bitCounts = [
+        4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0
+    ];
+
+    // Counts the number of LSBs before the first non-zero bit.
+    private ptrdiff_t countLSBs() const pure nothrow @safe @nogc
+    {
+        if (this.size == 0)
+        {
+            return 0;
+        }
+
+        ptrdiff_t bits;
+        for (bits = 0; (bits < this.size) && (this.rep[bits] == 0); ++bits)
+        {
+        }
+        digit nonZero = this.rep[bits];
+        bits *= digitBitCount;
+
+        /* now scan this digit until a 1 is found */
+        if ((nonZero & 0x01) == 0)
+        {
+            digit bitCountsPos;
+            do
+            {
+                bitCountsPos = nonZero & 0x0f;
+                bits += bitCounts[bitCountsPos];
+                nonZero >>= 4;
+            }
+            while (bitCountsPos == 0);
+        }
+        return bits;
+    }
+
     /**
-     * Returns: Integer byte length.
+     * Returns: Number of bytes in the two's complement representation.
      */
     @property size_t length() const pure nothrow @safe @nogc
     {
-        return (countBits() + 7) / 8; // Round up.
+        if (this.sign)
+        {
+            const bitCount = countBits();
+            auto length = bitCount + (8 - (bitCount & 0x07));
+
+            if (((countLSBs() + 1) == bitCount) && ((bitCount & 0x07) == 0))
+            {
+                --length;
+            }
+            return length / 8;
+        }
+        else if (this.size == 0)
+        {
+            return 0;
+        }
+        else
+        {
+            return (countBits() / 8) + 1;
+        }
     }
 
     /**
