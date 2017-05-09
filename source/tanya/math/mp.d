@@ -1389,77 +1389,70 @@ struct Integer
         return result;
     }
 
+    // Returns 2^^n.
+    private Integer exp2(size_t n) const nothrow @safe @nogc
+    {
+        auto ret = Integer(allocator);
+        const bytes = n / digitBitCount;
+
+        ret.grow(bytes + 1);
+        ret.size = bytes + 1;
+        ret.rep[bytes] = (cast(digit) 1) << (n % digitBitCount);
+
+        return ret;
+    }
+
+    /**
+     * Returns: Two's complement representation of the integer.
+     */
     Vector!ubyte toVector() const nothrow @safe @nogc
+    out (vector)
+    {
+        assert(vector.length == length);
+    }
+    body
     {
         Vector!ubyte vector;
-        bool firstBit;
-        ubyte carry;
 
         if (this.size == 0)
         {
             return vector;
         }
-        vector.reserve(this.size * digit.sizeof);
+        const bitCount = countBits();
+        const remainingBits = bitCount & 0x07;
 
-        // The first digit needs extra handling since it can have leading
-        // non significant zeros.
-        int digitCount = digitBitCount - 8;
-        const first = this.rep[this.size - 1];
-        const prevBitCount = ((this.size - 1) * digitBitCount);
-        const fullBytesBitCount = ((prevBitCount - 1) / 8 + 1) * 8;
-
-        // Find out the right alignment of the first byte.
-        if ((fullBytesBitCount - prevBitCount) == 0)
+        vector.reserve(bitCount / 8);
+        if (remainingBits == 0)
         {
-            digitCount -= digit.sizeof * 8 - digitBitCount;
+            vector.insertBack(ubyte.init);
+
         }
-        for (; digitCount >= 0; digitCount -= 8)
+
+        Integer tmp;
+        if (this.sign)
         {
-            if (firstBit || ((first >> digitCount) != 0))
+            auto length = bitCount + (8 - remainingBits);
+
+            if (((countLSBs() + 1) == bitCount) && (remainingBits == 0))
             {
-                firstBit = true;
-                vector.insertBack(cast(ubyte) (first >> digitCount));
+                length -= 8;
             }
-        }
-        if (digitCount >= -8)
-        {
-            carry = (first << -digitCount) & 0xff;
-            digitCount += digitBitCount;
+
+            tmp = exp2(length) + this;
         }
         else
         {
-            carry = 0;
-            digitCount = digitBitCount - 8;
+            tmp = this;
         }
 
-        foreach_reverse (d; this.rep[0 .. this.size - 1])
+        do
         {
-            if (carry != 0) // Check the carry from the previous digit.
-            {
-                vector.insertBack(cast(ubyte) (carry | (d >> digitCount)));
-                digitCount -= 8;
-            }
-            // Write the digit by bytes.
-            for (; digitCount >= 0; digitCount -= 8)
-            {
-                vector.insertBack(cast(ubyte) (d >> digitCount));
-            }
-            // Check for an incomplete byte.
-            if (digitCount >= -8)
-            {
-                carry = (d << -digitCount) & 0xff;
-                digitCount += digitBitCount;
-            }
-            else
-            {
-                carry = 0;
-                digitCount = digitBitCount - 8;
-            }
+            vector.insertBack(cast(ubyte) (tmp.rep[0] & 0xff));
+            tmp >>= 8;
         }
-        if (carry != 0)
-        {
-            vector.insertBack(cast(ubyte) (carry >> (digitBitCount - digitCount)));
-        }
+        while (tmp != 0);
+
+        vector[].reverse();
 
         return vector;
     }
