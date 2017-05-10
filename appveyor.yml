@@ -31,7 +31,6 @@ install:
         }
   - ps: SetUpDCompiler
   - set PATH=%CD%\%binpath%;%PATH%
-  - dub --version
 
 before_build:
   - ps: if($env:arch -eq "x86"){
