@@ -44,11 +44,11 @@ stable.
 
 Following modules are coming soon:
 
-| Feature      | Branch     | Build status                                                                                                            |
-|--------------|:----------:|:-----------------------------------------------------------------------------------------------------------------------:|
-| BitVector    | bitvector  | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya)   |
-| TLS          | crypto     | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya)         |
-| Hash table   | N/A        | N/A                                                                                                                     |
+| Feature      | Branch    | Build status                                                                                                          |
+|--------------|:---------:|:---------------------------------------------------------------------------------------------------------------------:|
+| BitVector    | bitvector | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya) |
+| TLS          | crypto    | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya)       |
+| File IO      | io        | [![io](https://travis-ci.org/caraus-ecms/tanya.svg?branch=io)](https://travis-ci.org/caraus-ecms/tanya)               |
 
 ### Further characteristics
 
