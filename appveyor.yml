@@ -62,7 +62,7 @@ before_build:
             $env:Darch = "x86_64";
         }
   - ps: $env:PATH += ";C:\dmd2\windows\bin;";
-  - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 15.0\VC\vcvarsall";
+  - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall";
   - '"%compilersetup%" %compilersetupargs%'
 
 build_script:
