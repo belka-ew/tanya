@@ -5,25 +5,13 @@ environment:
  matrix:
   - DC: dmd
     DVersion: 2.074.0
-    arch: x64
-  - DC: dmd
-    DVersion: 2.074.0
     arch: x86
-  - DC: dmd
-    DVersion: 2.073.2
-    arch: x64
   - DC: dmd
     DVersion: 2.073.2
     arch: x86
   - DC: dmd
     DVersion: 2.072.2
-    arch: x64
-  - DC: dmd
-    DVersion: 2.072.2
     arch: x86
-  - DC: dmd
-    DVersion: 2.071.2
-    arch: x64
   - DC: dmd
     DVersion: 2.071.2
     arch: x86
@@ -42,9 +30,7 @@ install:
             popd;
         }
   - ps: SetUpDCompiler
-  - powershell -Command Invoke-WebRequest http://code.dlang.org/files/dub-1.0.0-windows-x86.zip -OutFile dub.zip
-  - 7z x dub.zip -odub > nul
-  - set PATH=%CD%\%binpath%;%CD%\dub;%PATH%
+  - set PATH=%CD%\%binpath%;%PATH%
   - dub --version
 
 before_build:
@@ -56,10 +42,8 @@ before_build:
             $env:compilersetupargs = "x64";
             $env:Darch = "x86_64";
         }
-  - set LINKCMD64=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.10.25017\bin\HostX64\x64\link.exe
   - ps: $env:PATH += ";C:\dmd2\windows\bin;";
-  - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat";
-  - '"%compilersetup%" -arch=%compilersetupargs%'
+  - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat" -arch=%arch%
 
 build_script:
  - echo dummy build script - dont remove me
