@@ -30,17 +30,14 @@ install:
             popd;
         }
   - ps: SetUpDCompiler
-  - set PATH=%CD%\%binpath%;%PATH%
+
+  - ps: if($env:DC -eq "2.071.2"){
+            Invoke-WebRequest http://code.dlang.org/files/dub-1.2.1-windows-x86.zip -OutFile dub.zip
+            7z x dub.zip -odub > nul
+            Move-Item dub/dub.exe C:\dmd2\windows\bin
+          }
 
 before_build:
-  - ps: if($env:arch -eq "x86"){
-            $env:compilersetupargs = "x86";
-            $env:Darch = "x86";
-          }
-        elseif($env:arch -eq "x64"){
-            $env:compilersetupargs = "x64";
-            $env:Darch = "x86_64";
-        }
   - ps: $env:PATH += ";C:\dmd2\windows\bin;";
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat" -arch=%arch%
 
@@ -48,9 +45,8 @@ build_script:
  - echo dummy build script - dont remove me
 
 test_script:
- - echo %PLATFORM%
- - echo %Darch%
  - echo %DC%
  - echo %PATH%
+ - 'dub --version'
  - '%DC% --version'
- - dub test --arch=%Darch% --compiler=%DC%
+ - dub test --arch=x86 --compiler=%DC%
