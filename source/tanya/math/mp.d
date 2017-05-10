@@ -161,6 +161,45 @@ struct Integer
     }
 
     /**
+     * Constructs the integer from a two's complement representation.
+     *
+     * Params:
+     *  R         = Range type.
+     *  value     = Range.
+     *  allocator = Allocator.
+     *
+     * Precondition: $(D_INLINECODE allocator !is null)
+     */
+    this(R)(R value,
+            shared Allocator allocator = defaultAllocator)
+        if (isBidirectionalRange!R && hasLength!R
+         && is(Unqual!(ElementType!R) == ubyte))
+    {
+        this(Sign.positive, value, allocator);
+
+        if (!value.empty && ((value.front & 0x80) != 0))
+        {
+            // Negative number.
+            opOpAssign!"-"(exp2(countBits()));
+        }
+    }
+
+    ///
+    nothrow @safe @nogc unittest
+    {
+        {
+            ubyte[8] range = [ 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xdd, 0xee ];
+            auto integer = Integer(range[]);
+            assert(integer == 7383520307673030126);
+        }
+        {
+            ubyte[8] range = [ 0xe6, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xdd, 0xee ];
+            auto integer = Integer(range[]);
+            assert(integer == -1839851729181745682);
+        }
+    }
+
+    /**
      * Copies the integer.
      */
     this(this) nothrow @trusted @nogc
@@ -219,10 +258,10 @@ struct Integer
     {
         if (this.sign)
         {
-            const bitCount = countBits();
-            auto length = bitCount + (8 - (bitCount & 0x07));
+            const bc = countBits();
+            auto length = bc + (8 - (bc & 0x07));
 
-            if (((countLSBs() + 1) == bitCount) && ((bitCount & 0x07) == 0))
+            if (((countLSBs() + 1) == bc) && ((bc & 0x07) == 0))
             {
                 --length;
             }
@@ -1418,10 +1457,10 @@ struct Integer
         {
             return vector;
         }
-        const bitCount = countBits();
-        const remainingBits = bitCount & 0x07;
+        const bc = countBits();
+        const remainingBits = bc & 0x07;
 
-        vector.reserve(bitCount / 8);
+        vector.reserve(bc / 8);
         if (remainingBits == 0)
         {
             vector.insertBack(ubyte.init);
@@ -1431,9 +1470,9 @@ struct Integer
         Integer tmp;
         if (this.sign)
         {
-            auto length = bitCount + (8 - remainingBits);
+            auto length = bc + (8 - remainingBits);
 
-            if (((countLSBs() + 1) == bitCount) && (remainingBits == 0))
+            if (((countLSBs() + 1) == bc) && (remainingBits == 0))
             {
                 length -= 8;
             }
