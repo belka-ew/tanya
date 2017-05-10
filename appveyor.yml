@@ -51,7 +51,7 @@ before_build:
   - ps: if($env:arch -eq "x86"){
             $env:compilersetupargs = "x86";
             $env:Darch = "x86";
-            $env:LINKCMD64 = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\amd64\bin\link.exe"
+            $env:LINKCMD64 = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.10.25017\bin\HostX64\x64\link.exe"
           }
         elseif($env:arch -eq "x64"){
             $env:compilersetupargs = "amd64";
@@ -59,7 +59,7 @@ before_build:
         }
   - ps: $env:PATH += ";C:\dmd2\windows\bin;";
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat";
-  - dir "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC"
+  - dir "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.10.25017\bin\HostX64\x64"
   - '"%compilersetup%" -arch=%compilersetupargs%'
 
 build_script:
