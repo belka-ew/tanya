@@ -31,7 +31,7 @@ install:
         }
   - ps: SetUpDCompiler
 
-  - ps: if($env:DC -eq "2.071.2"){
+  - ps: if($env:DVersion -eq "2.071.2"){
             Invoke-WebRequest http://code.dlang.org/files/dub-1.2.1-windows-x86.zip -OutFile dub.zip
             7z x dub.zip -odub > nul
             Move-Item dub/dub.exe C:\dmd2\windows\bin
