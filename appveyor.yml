@@ -59,7 +59,7 @@ before_build:
   - set LINKCMD64=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.10.25017\bin\HostX64\x64\link.exe
   - ps: $env:PATH += ";C:\dmd2\windows\bin;";
   - ps: $env:compilersetup = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat";
-  - '"%compilersetup%" -arch=%compilersetupargs%'
+  - '"%compilersetup%" -arch=%compilersetupargs%' x64
 
 build_script:
  - echo dummy build script - dont remove me
