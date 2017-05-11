@@ -17,4 +17,7 @@ env:
   - ARCH=x86_64
 
 script:
- - dub test --arch=$ARCH
+ - dub test -b unittest-cov --arch=$ARCH
+
+after_success:
+ - bash <(curl -s https://codecov.io/bash)
