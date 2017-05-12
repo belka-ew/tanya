@@ -1412,7 +1412,7 @@ struct String
      * Params:
      *  R = $(D_PSYMBOL ByCodeUnit) or $(D_PSYMBOL ByCodePoint).
      *  T  = Stringish type.
-     *  r  = Range originally obtained from this vector.
+     *  r  = Range originally obtained from this string.
      *  el = Value(s) should be inserted.
      *
      * Returns: The number of elements inserted.
@@ -1442,13 +1442,13 @@ struct String
     ///
     @safe @nogc unittest
     {
-        auto s = String("Нельзя казнить помиловать.");
+        auto s = String("Казнить нельзя помиловать.");
         s.insertAfter(s[0 .. 27], ",");
-        assert(s == "Нельзя казнить, помиловать.");
+        assert(s == "Казнить нельзя, помиловать.");
 
-        s = String("Нельзя казнить помиловать.");
-        s.insertAfter(s[0 .. 27], ',');
-        assert(s == "Нельзя казнить, помиловать.");
+        s = String("Казнить нельзя помиловать.");
+        s.insertAfter(s[0 .. 14], ',');
+        assert(s == "Казнить, нельзя помиловать.");
     }
 
     ///
@@ -1471,13 +1471,13 @@ struct String
     ///
     @safe @nogc unittest
     {
-        auto s = String("Нельзя казнить помиловать.");
+        auto s = String("Казнить нельзя помиловать.");
         s.insertBefore(s[27 .. $], ",");
-        assert(s == "Нельзя казнить, помиловать.");
+        assert(s == "Казнить нельзя, помиловать.");
 
-        s = String("Нельзя казнить помиловать.");
-        s.insertBefore(s[27 .. $], ',');
-        assert(s == "Нельзя казнить, помиловать.");
+        s = String("Казнить нельзя помиловать.");
+        s.insertBefore(s[14 .. $], ',');
+        assert(s == "Казнить, нельзя помиловать.");
     }
 
     mixin DefaultAllocator;
