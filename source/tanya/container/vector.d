@@ -32,26 +32,26 @@ struct Range(E)
 {
     private E* begin, end;
     private alias ContainerType = CopyConstness!(E, Vector!(Unqual!E));
-    private ContainerType* vector;
+    private ContainerType* container;
 
     invariant
     {
         assert(this.begin <= this.end);
-        assert(this.vector !is null);
-        assert(this.begin >= this.vector.data);
-        assert(this.end <= this.vector.data + this.vector.length);
+        assert(this.container !is null);
+        assert(this.begin >= this.container.data);
+        assert(this.end <= this.container.data + this.container.length);
     }
 
-    private this(ref ContainerType vector, E* begin, E* end) @trusted
+    private this(ref ContainerType container, E* begin, E* end) @trusted
     in
     {
         assert(begin <= end);
-        assert(begin >= vector.data);
-        assert(end <= vector.data + vector.length);
+        assert(begin >= container.data);
+        assert(end <= container.data + container.length);
     }
     body
     {
-        this.vector = &vector;
+        this.container = &container;
         this.begin = begin;
         this.end = end;
     }
@@ -127,12 +127,12 @@ struct Range(E)
 
     Range opIndex()
     {
-        return typeof(return)(*this.vector, this.begin, this.end);
+        return typeof(return)(*this.container, this.begin, this.end);
     }
 
     Range!(const E) opIndex() const
     {
-        return typeof(return)(*this.vector, this.begin, this.end);
+        return typeof(return)(*this.container, this.begin, this.end);
     }
 
     Range opSlice(const size_t i, const size_t j) @trusted
@@ -143,7 +143,7 @@ struct Range(E)
     }
     body
     {
-        return typeof(return)(*this.vector, this.begin + i, this.begin + j);
+        return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
     Range!(const E) opSlice(const size_t i, const size_t j) const @trusted
@@ -154,7 +154,7 @@ struct Range(E)
     }
     body
     {
-        return typeof(return)(*this.vector, this.begin + i, this.begin + j);
+        return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
     inout(E[]) get() inout @trusted
@@ -638,7 +638,7 @@ struct Vector(T)
     Range!T remove(Range!T r) @trusted
     in
     {
-        assert(r.vector is &this);
+        assert(r.container is &this);
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
@@ -791,7 +791,7 @@ struct Vector(T)
          && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
-        assert(r.vector is &this);
+        assert(r.container is &this);
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
@@ -808,7 +808,7 @@ struct Vector(T)
     size_t insertAfter(size_t R)(Range!T r, T[R] el)
     in
     {
-        assert(r.vector is &this);
+        assert(r.container is &this);
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
@@ -822,7 +822,7 @@ struct Vector(T)
         if (isImplicitlyConvertible!(R, T))
     in
     {
-        assert(r.vector is &this);
+        assert(r.container is &this);
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
@@ -851,7 +851,7 @@ struct Vector(T)
          && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
-        assert(r.vector is &this);
+        assert(r.container is &this);
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
@@ -864,7 +864,7 @@ struct Vector(T)
     size_t insertBefore(size_t R)(Range!T r, T[R] el)
     in
     {
-        assert(r.vector is &this);
+        assert(r.container is &this);
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
@@ -878,7 +878,7 @@ struct Vector(T)
         if (isImplicitlyConvertible!(R, T))
     in
     {
-        assert(r.vector is &this);
+        assert(r.container is &this);
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }

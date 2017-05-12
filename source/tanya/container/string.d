@@ -1361,6 +1361,7 @@ struct String
      * Remove all characters beloning to $(D_PARAM r).
      *
      * Params:
+     *  R = $(D_PSYMBOL ByCodeUnit) or $(D_PSYMBOL ByCodePoint).
      *  r = Range originally obtained from this string.
      *
      * Returns: A range spanning the remaining characters in the string that
@@ -1368,7 +1369,7 @@ struct String
      *
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
-    R remove(R)(R r) pure nothrow @trusted @nogc
+    R remove(R)(R r) @trusted
         if (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char))
     in
     {
@@ -1387,11 +1388,11 @@ struct String
     ///
     @nogc @safe unittest
     {
-        auto s = String("Из пословицы слова не выкинешь");
+        auto s = String("Из пословицы слова не выкинешь.");
 
-        assert(s.remove(s[5 .. 24]).length == 32);
-        assert(s == "Из слова не выкинешь");
-        assert(s.length == 37);
+        assert(s.remove(s[5 .. 24]).length == 33);
+        assert(s == "Из слова не выкинешь.");
+        assert(s.length == 38);
 
         auto byCodePoint = s.byCodePoint();
         byCodePoint.popFrontN(8);
@@ -1403,6 +1404,80 @@ struct String
         assert(s.length == 0);
 
         assert(s.remove(s[]).length == 0);
+    }
+
+    /**
+     * Inserts $(D_PARAM el) before or after $(D_PARAM r).
+     *
+     * Params:
+     *  R = $(D_PSYMBOL ByCodeUnit) or $(D_PSYMBOL ByCodePoint).
+     *  T  = Stringish type.
+     *  r  = Range originally obtained from this vector.
+     *  el = Value(s) should be inserted.
+     *
+     * Returns: The number of elements inserted.
+     *
+     * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
+     */
+    size_t insertAfter(T, R)(R r, T el) @trusted
+        if ((isSomeChar!T || (!isInfinite!T
+         && isInputRange!T
+         && isSomeChar!(ElementEncodingType!T)))
+         && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    body
+    {
+        const oldLen = length;
+        const offset = r.end - this.data;
+        const inserted = insertBack(el);
+        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
+        return inserted;
+    }
+
+    ///
+    @nogc @safe unittest
+    {
+        auto s = String("Нельзя казнить помиловать.");
+        s.insertAfter(s[0 .. 27], ",");
+        assert(s == "Нельзя казнить, помиловать.");
+
+        s = String("Нельзя казнить помиловать.");
+        s.insertAfter(s[0 .. 27], ',');
+        assert(s == "Нельзя казнить, помиловать.");
+    }
+
+    ///
+    size_t insertBefore(T, R)(R r, T el) @trusted
+        if ((isSomeChar!T || (!isInfinite!T
+         && isInputRange!T
+         && isSomeChar!(ElementEncodingType!T)))
+         && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    body
+    {
+        return insertAfter(R(this, this.data, r.begin), el);
+    }
+
+    ///
+    @nogc @safe unittest
+    {
+        auto s = String("Нельзя казнить помиловать.");
+        s.insertBefore(s[27 .. $], ",");
+        assert(s == "Нельзя казнить, помиловать.");
+
+        s = String("Нельзя казнить помиловать.");
+        s.insertBefore(s[27 .. $], ',');
+        assert(s == "Нельзя казнить, помиловать.");
     }
 
     mixin DefaultAllocator;
