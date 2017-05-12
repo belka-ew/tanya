@@ -1357,5 +1357,53 @@ struct String
         return opSliceAssign(value, 0, length);
     }
 
+    /**
+     * Remove all characters beloning to $(D_PARAM r).
+     *
+     * Params:
+     *  r = Range originally obtained from this string.
+     *
+     * Returns: A range spanning the remaining characters in the string that
+     *          initially were right after $(D_PARAM r).
+     *
+     * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
+     */
+    R remove(R)(R r) pure nothrow @trusted @nogc
+        if (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char))
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    body
+    {
+        auto end = this.data + this.length;
+        copy(ByCodeUnit!char(this, r.end, end), ByCodeUnit!char(this, r.begin, end));
+        this.length_ = length - (r.end - r.begin);
+        return R(this, r.begin, this.data + length);
+    }
+
+    ///
+    @nogc @safe unittest
+    {
+        auto s = String("Из пословицы слова не выкинешь");
+
+        assert(s.remove(s[5 .. 24]).length == 32);
+        assert(s == "Из слова не выкинешь");
+        assert(s.length == 37);
+
+        auto byCodePoint = s.byCodePoint();
+        byCodePoint.popFrontN(8);
+
+        assert(s.remove(byCodePoint).count == 0);
+        assert(s == "Из слова");
+
+        assert(s.remove(s[]).length == 0);
+        assert(s.length == 0);
+
+        assert(s.remove(s[]).length == 0);
+    }
+
     mixin DefaultAllocator;
 }
