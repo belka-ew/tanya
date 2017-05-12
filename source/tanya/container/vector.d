@@ -483,7 +483,7 @@ struct Vector(T)
             return;
         }
         bool overflow;
-        immutable byteSize = mulu(size, T.sizeof, overflow);
+        const byteSize = mulu(size, T.sizeof, overflow);
         assert(!overflow);
 
         void[] buf = this.data[0 .. this.capacity_];
@@ -540,7 +540,7 @@ struct Vector(T)
         {
             return;
         }
-        immutable n = max(length, size);
+        const n = max(length, size);
         void[] buf = this.data[0 .. this.capacity_];
         if (allocator.reallocateInPlace(buf, n * T.sizeof))
         {
@@ -606,7 +606,7 @@ struct Vector(T)
     }
     body
     {
-        immutable toRemove = min(howMany, length);
+        const toRemove = min(howMany, length);
 
         length = length - toRemove;
 
@@ -797,9 +797,9 @@ struct Vector(T)
     }
     body
     {
-        immutable oldLen = length;
-        immutable offset = r.end - this.data;
-        immutable inserted = insertBack(el);
+        const oldLen = length;
+        const offset = r.end - this.data;
+        const inserted = insertBack(el);
         bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
         return inserted;
     }
@@ -828,8 +828,8 @@ struct Vector(T)
     }
     body
     {
-        immutable oldLen = length;
-        immutable offset = r.end - this.data;
+        const oldLen = length;
+        const offset = r.end - this.data;
 
         static if (__traits(isRef, el))
         {
@@ -884,8 +884,8 @@ struct Vector(T)
     }
     body
     {
-        immutable oldLen = length;
-        immutable offset = r.begin - this.data;
+        const oldLen = length;
+        const offset = r.begin - this.data;
 
         static if (__traits(isRef, el))
         {
