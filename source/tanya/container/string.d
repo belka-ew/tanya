@@ -1432,15 +1432,15 @@ struct String
     }
     body
     {
-        const oldLen = length;
-        const offset = r.end - this.data;
+        auto oldLen = this.data + length;
         const inserted = insertBack(el);
-        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
+        bringToFront(ByCodeUnit!char(this, r.end, oldLen),
+                     ByCodeUnit!char(this, oldLen, this.data + length));
         return inserted;
     }
 
-    /// bringToFront before 2.073 isn't @nogc for chars.
-    @safe unittest
+    ///
+    @safe @nogc unittest
     {
         auto s = String("Нельзя казнить помиловать.");
         s.insertAfter(s[0 .. 27], ",");
@@ -1469,7 +1469,7 @@ struct String
     }
 
     ///
-    @safe unittest
+    @safe @nogc unittest
     {
         auto s = String("Нельзя казнить помиловать.");
         s.insertBefore(s[27 .. $], ",");
