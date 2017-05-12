@@ -1439,8 +1439,8 @@ struct String
         return inserted;
     }
 
-    ///
-    @nogc @safe unittest
+    /// bringToFront before 2.073 isn't @nogc for chars.
+    @safe unittest
     {
         auto s = String("Нельзя казнить помиловать.");
         s.insertAfter(s[0 .. 27], ",");
@@ -1469,7 +1469,7 @@ struct String
     }
 
     ///
-    @nogc @safe unittest
+    @safe unittest
     {
         auto s = String("Нельзя казнить помиловать.");
         s.insertBefore(s[27 .. $], ",");
