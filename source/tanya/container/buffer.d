@@ -333,9 +333,9 @@ struct WriteBuffer(T = ubyte)
 
     /**
      * Params:
-     * 	size      = Initial buffer size and the size by which the buffer will
-     * 	            grow.
-     * 	allocator = Allocator.
+     *  size      = Initial buffer size and the size by which the buffer will
+     *              grow.
+     *  allocator = Allocator.
      *
      * Precondition: $(D_INLINECODE size > 0 && allocator !is null)
      */
@@ -428,7 +428,7 @@ struct WriteBuffer(T = ubyte)
      * Appends data to the buffer.
      *
      * Params:
-     * 	buffer = Buffer chunk got with $(D_PSYMBOL opIndex).
+     *  buffer = Buffer chunk got with $(D_PSYMBOL opIndex).
      */
     ref WriteBuffer opOpAssign(string op)(in T[] buffer)
         if (op == "~")
@@ -535,7 +535,7 @@ struct WriteBuffer(T = ubyte)
      * appropriately. Always call it after $(D_PSYMBOL opIndex).
      *
      * Params:
-     * 	length = Length of the written data.
+     *  length = Length of the written data.
      *
      * Returns: $(D_KEYWORD this).
      */
