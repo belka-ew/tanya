@@ -18,6 +18,18 @@ import std.range;
 import std.traits;
 import tanya.memory;
 
+private template Payload(T)
+{
+    static if (is(T == class) || is(T == interface) || isArray!T)
+    {
+        alias Payload = T;
+    }
+    else
+    {
+        alias Payload = T*;
+    }
+}
+
 final class RefCountedStore(T)
 {
     T payload;
@@ -81,15 +93,7 @@ private void unifiedDeleter(T)(RefCountedStore!T storage,
  */
 struct RefCounted(T)
 {
-    static if (is(T == class) || is(T == interface) || isArray!T)
-    {
-        private alias Payload = T;
-    }
-    else
-    {
-        private alias Payload = T*;
-    }
-    private alias Storage = RefCountedStore!Payload;
+    private alias Storage = RefCountedStore!(Payload!T);
 
     private Storage storage;
     private void function(Storage storage,
@@ -112,12 +116,12 @@ struct RefCounted(T)
      *
      * Precondition: $(D_INLINECODE allocator !is null)
      */
-    this()(auto ref Payload value,
+    this()(auto ref Payload!T value,
            shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         this.storage = allocator.make!Storage();
-        this.deleter = &separateDeleter!Payload;
+        this.deleter = &separateDeleter!(Payload!T);
 
         move(value, this.storage.payload);
         static if (__traits(isRef, value))
@@ -179,23 +183,23 @@ struct RefCounted(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign()(auto ref Payload rhs)
+    ref typeof(this) opAssign()(auto ref Payload!T rhs)
     {
         if (this.storage is null)
         {
             this.storage = allocator.make!Storage();
-            this.deleter = &separateDeleter!Payload;
+            this.deleter = &separateDeleter!(Payload!T);
         }
         else if (this.storage > 1)
         {
             --this.storage;
             this.storage = allocator.make!Storage();
-            this.deleter = &separateDeleter!Payload;
+            this.deleter = &separateDeleter!(Payload!T);
         }
         else
         {
             finalize(this.storage.payload);
-            this.storage.payload = Payload.init;
+            this.storage.payload = Payload!T.init;
         }
         move(rhs, this.storage.payload);
         return this;
@@ -235,7 +239,7 @@ struct RefCounted(T)
      *
      * Precondition: $(D_INLINECODE cound > 0).
      */
-    inout(Payload) get() inout pure nothrow @safe @nogc
+    Payload!T get() pure nothrow @safe @nogc
     in
     {
         assert(count > 0, "Attempted to access an uninitialized reference.");
@@ -259,7 +263,7 @@ struct RefCounted(T)
         ref T opUnary(string op)()
             if (op == "*");
     }
-    else static if (isPointer!Payload)
+    else static if (isPointer!(Payload!T))
     {
         ref T opUnary(string op)()
             if (op == "*")
@@ -462,7 +466,7 @@ body
         auto ptr = (() @trusted => (cast(T*) mem[storageSize .. $].ptr))();
         rc.storage.payload = emplace!T(ptr, args);
     }
-    rc.deleter = &unifiedDeleter!(RefCounted!T.Payload);
+    rc.deleter = &unifiedDeleter!(Payload!T);
     return rc;
 }
 
@@ -569,15 +573,7 @@ private @nogc unittest
  */
 struct Scoped(T)
 {
-    static if (is(T == class) || is(T == interface) || isArray!T)
-    {
-        private alias Payload = T;
-    }
-    else
-    {
-        private alias Payload = T*;
-    }
-    private Payload payload;
+    private Payload!T payload;
 
     invariant
     {
@@ -595,7 +591,7 @@ struct Scoped(T)
      *
      * Precondition: $(D_INLINECODE allocator !is null)
      */
-    this()(auto ref Payload value,
+    this()(auto ref Payload!T value,
            shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
@@ -649,7 +645,7 @@ struct Scoped(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign()(auto ref Payload rhs)
+    ref typeof(this) opAssign()(auto ref Payload!T rhs)
     {
         allocator.dispose(this.payload);
         move(rhs, this.payload);
@@ -676,7 +672,7 @@ struct Scoped(T)
     /**
      * Returns: Reference to the owned object.
      */
-    inout(Payload) get() inout pure nothrow @safe @nogc
+    Payload!T get() pure nothrow @safe @nogc
     {
         return payload;
     }
@@ -695,7 +691,7 @@ struct Scoped(T)
         ref T opUnary(string op)()
             if (op == "*");
     }
-    else static if (isPointer!Payload)
+    else static if (isPointer!(Payload!T))
     {
         ref T opUnary(string op)()
             if (op == "*")
