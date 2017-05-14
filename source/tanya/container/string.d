@@ -199,7 +199,12 @@ struct ByCodeUnit(E)
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
-    inout(E[]) get() inout @trusted
+    const(E)[] toString() const @trusted
+    {
+        return this.begin[0 .. length];
+    }
+
+    E[] toString() @trusted
     {
         return this.begin[0 .. length];
     }
@@ -370,14 +375,14 @@ struct String
     @safe @nogc unittest
     {
         auto s = String("\u10437"w);
-        assert("\u10437" == s.get());
+        assert(s == "\u10437");
     }
 
     ///
     @safe @nogc unittest
     {
         auto s = String("Отказаться от вина - в этом страшная вина."d);
-        assert("Отказаться от вина - в этом страшная вина." == s.get());
+        assert(s == "Отказаться от вина - в этом страшная вина.");
     }
 
     /**
@@ -942,9 +947,36 @@ struct String
      *
      * Returns: The array representing the string.
      */
-    inout(char[]) get() inout pure nothrow @trusted @nogc
+    const(char)[] toString() const pure nothrow @trusted @nogc
     {
         return this.data[0 .. this.length_];
+    }
+
+    /// Ditto.
+    char[] toString() pure nothrow @trusted @nogc
+    {
+        return this.data[0 .. this.length_];
+    }
+
+    /**
+     * Returns null-terminated string. The returned string is managed by this
+     * object and shouldn't be freed.
+     *
+     * Returns: Null-terminated string.
+     */
+    const(char)[] toStringz() nothrow @trusted @nogc
+    {
+        reserve(length + 1);
+        this.data[length] = '\0';
+        return this.data[0 .. length + 1];
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto s = String("C string.");
+        assert(s.toStringz().length == 10);
+        assert(s.toStringz()[$ - 1] == '\0');
     }
 
     /**
