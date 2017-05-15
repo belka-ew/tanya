@@ -14,9 +14,18 @@ module tanya.container.entry;
 
 package struct SEntry(T)
 {
-    /// Item content.
+    // Item content.
     T content;
 
-    /// Next item.
+    // Next item.
     SEntry* next;
+}
+
+package struct DEntry(T)
+{
+    // Item content.
+    T content;
+
+    // Previous and next item.
+    DEntry* next, prev;
 }
