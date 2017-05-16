@@ -27,13 +27,13 @@ import tanya.network.socket;
  */
 abstract class Watcher
 {
-	/// Whether the watcher is active.
-	bool active;
+    /// Whether the watcher is active.
+    bool active;
 
-	/**
-	 * Invoke some action on event.
-	 */
-	void invoke() @nogc;
+    /**
+     * Invoke some action on event.
+     */
+    void invoke() @nogc;
 }
 
 /**
@@ -41,32 +41,32 @@ abstract class Watcher
  */
 abstract class SocketWatcher : Watcher
 {
-	/// Watched socket.
-	protected Socket socket_;
+    /// Watched socket.
+    protected Socket socket_;
 
-	/**
-	 * Params:
-	 * 	socket = Socket.
-	 *
-	 * Precondition: $(D_INLINECODE socket !is null)
-	 */
-	this(Socket socket) pure nothrow @safe @nogc
-	in
-	{
-		assert(socket !is null);
-	}
-	body
-	{
-		socket_ = socket;
-	}
+    /**
+     * Params:
+     *  socket = Socket.
+     *
+     * Precondition: $(D_INLINECODE socket !is null)
+     */
+    this(Socket socket) pure nothrow @safe @nogc
+    in
+    {
+        assert(socket !is null);
+    }
+    body
+    {
+        socket_ = socket;
+    }
 
-	/**
-	 * Returns: Socket.
-	 */
-	@property Socket socket() pure nothrow @safe @nogc
-	{
-		return socket_;
-	}
+    /**
+     * Returns: Socket.
+     */
+    @property Socket socket() pure nothrow @safe @nogc
+    {
+        return socket_;
+    }
 }
 
 /**
@@ -74,44 +74,44 @@ abstract class SocketWatcher : Watcher
  */
 class ConnectionWatcher : SocketWatcher
 {
-	/// Incoming connection queue.
-	Queue!DuplexTransport incoming;
+    /// Incoming connection queue.
+    Queue!DuplexTransport incoming;
 
-	private Protocol delegate() @nogc protocolFactory;
+    private Protocol delegate() @nogc protocolFactory;
 
-	/**
-	 * Params:
-	 * 	socket = Socket.
-	 */
-	this(Socket socket) @nogc
-	{
-		super(socket);
-		incoming = Queue!DuplexTransport(MmapPool.instance);
-	}
+    /**
+     * Params:
+     *  socket = Socket.
+     */
+    this(Socket socket) @nogc
+    {
+        super(socket);
+        incoming = Queue!DuplexTransport(MmapPool.instance);
+    }
 
-	/**
-	 * Params:
-	 * 	P = Protocol should be used.
-	 */
-	void setProtocol(P : Protocol)() @nogc
-	{
-		this.protocolFactory = () @nogc => cast(Protocol) MmapPool.instance.make!P;
-	}
+    /**
+     * Params:
+     *  P = Protocol should be used.
+     */
+    void setProtocol(P : Protocol)() @nogc
+    {
+        this.protocolFactory = () @nogc => cast(Protocol) MmapPool.instance.make!P;
+    }
 
-	/**
-	 * Invokes new connection callback.
-	 */
-	override void invoke() @nogc
-	in
-	{
-		assert(protocolFactory !is null, "Protocol isn't set.");
-	}
-	body
-	{
-		foreach (transport; incoming)
-		{
-			transport.protocol = protocolFactory();
-			transport.protocol.connected(transport);
-		}
-	}
+    /**
+     * Invokes new connection callback.
+     */
+    override void invoke() @nogc
+    in
+    {
+        assert(protocolFactory !is null, "Protocol isn't set.");
+    }
+    body
+    {
+        foreach (transport; incoming)
+        {
+            transport.protocol = protocolFactory();
+            transport.protocol.connected(transport);
+        }
+    }
 }

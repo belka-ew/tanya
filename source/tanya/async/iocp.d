@@ -21,12 +21,12 @@ import core.sys.windows.windef;
  */
 class State
 {
-	/// For internal use by Windows API.
-	align(1) OVERLAPPED overlapped;
+    /// For internal use by Windows API.
+    align(1) OVERLAPPED overlapped;
 
-	/// File/socket handle.
-	HANDLE handle;
+    /// File/socket handle.
+    HANDLE handle;
 
-	/// For keeping events or event masks.
-	int event;
+    /// For keeping events or event masks.
+    int event;
 }

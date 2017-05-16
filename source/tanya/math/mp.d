@@ -16,7 +16,7 @@ import std.algorithm;
 import std.ascii;
 import std.range;
 import std.traits;
-import tanya.container.vector;
+import tanya.container.array;
 import tanya.memory;
 
 /**
@@ -1444,26 +1444,26 @@ struct Integer
     /**
      * Returns: Two's complement representation of the integer.
      */
-    Vector!ubyte toVector() const nothrow @safe @nogc
-    out (vector)
+    Array!ubyte toArray() const nothrow @safe @nogc
+    out (array)
     {
-        assert(vector.length == length);
+        assert(array.length == length);
     }
     body
     {
-        Vector!ubyte vector;
+        Array!ubyte array;
 
         if (this.size == 0)
         {
-            return vector;
+            return array;
         }
         const bc = countBits();
         const remainingBits = bc & 0x07;
 
-        vector.reserve(bc / 8);
+        array.reserve(bc / 8);
         if (remainingBits == 0)
         {
-            vector.insertBack(ubyte.init);
+            array.insertBack(ubyte.init);
 
         }
 
@@ -1486,14 +1486,14 @@ struct Integer
 
         do
         {
-            vector.insertBack(cast(ubyte) (tmp.rep[0] & 0xff));
+            array.insertBack(cast(ubyte) (tmp.rep[0] & 0xff));
             tmp >>= 8;
         }
         while (tmp != 0);
 
-        vector[].reverse();
+        array[].reverse();
 
-        return vector;
+        return array;
     }
 
     ///
@@ -1503,15 +1503,15 @@ struct Integer
             auto integer = Integer(0x66778899aabbddee);
             ubyte[8] expected = [ 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xdd, 0xee ];
 
-            auto vector = integer.toVector();
-            assert(equal(vector[], expected[]));
+            auto array = integer.toArray();
+            assert(equal(array[], expected[]));
         }
         {
             auto integer = Integer(0x03);
             ubyte[1] expected = [ 0x03 ];
 
-            auto vector = integer.toVector();
-            assert(equal(vector[], expected[]));
+            auto array = integer.toArray();
+            assert(equal(array[], expected[]));
         }
         {
             ubyte[63] expected = [
@@ -1526,8 +1526,8 @@ struct Integer
             ];
             auto integer = Integer(Sign.positive, expected[]);
 
-            auto vector = integer.toVector();
-            assert(equal(vector[], expected[]));
+            auto array = integer.toArray();
+            assert(equal(array[], expected[]));
         }
         {
             ubyte[14] expected = [
@@ -1536,8 +1536,8 @@ struct Integer
             ];
             auto integer = Integer(Sign.positive, expected[]);
 
-            auto vector = integer.toVector();
-            assert(equal(vector[], expected[]));
+            auto array = integer.toArray();
+            assert(equal(array[], expected[]));
         }
     }
 

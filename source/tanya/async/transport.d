@@ -32,13 +32,13 @@ interface ReadTransport : Transport
  */
 interface WriteTransport : Transport
 {
-	/**
-	 * Write some data to the transport.
-	 *
-	 * Params:
-	 * 	data = Data to send.
-	 */
-	void write(ubyte[] data) @nogc;
+    /**
+     * Write some data to the transport.
+     *
+     * Params:
+     *  data = Data to send.
+     */
+    void write(ubyte[] data) @nogc;
 }
 
 /**
@@ -46,46 +46,46 @@ interface WriteTransport : Transport
  */
 interface DuplexTransport : ReadTransport, WriteTransport
 {
-	/**
-	 * Returns: Application protocol.
-	 *
-	 * Postcondition: $(D_INLINECODE protocol !is null)
-	 */
-	@property Protocol protocol() pure nothrow @safe @nogc
-	out (protocol)
-	{
-		assert(protocol !is null);
-	}
+    /**
+     * Returns: Application protocol.
+     *
+     * Postcondition: $(D_INLINECODE protocol !is null)
+     */
+    @property Protocol protocol() pure nothrow @safe @nogc
+    out (protocol)
+    {
+        assert(protocol !is null);
+    }
 
-	/**
-	 * Switches the protocol.
-	 *
-	 * The protocol is deallocated by the event loop, it should currently be
-	 * allocated with $(D_PSYMBOL MmapPool).
-	 *
-	 * Params:
-	 * 	protocol = Application protocol.
-	 *
-	 * Precondition: $(D_INLINECODE protocol !is null)
-	 */
-	@property void protocol(Protocol protocol) pure nothrow @safe @nogc
-	in
-	{
-		assert(protocol !is null);
-	}
+    /**
+     * Switches the protocol.
+     *
+     * The protocol is deallocated by the event loop, it should currently be
+     * allocated with $(D_PSYMBOL MmapPool).
+     *
+     * Params:
+     *  protocol = Application protocol.
+     *
+     * Precondition: $(D_INLINECODE protocol !is null)
+     */
+    @property void protocol(Protocol protocol) pure nothrow @safe @nogc
+    in
+    {
+        assert(protocol !is null);
+    }
 
 
-	/**
-	 * Returns $(D_PARAM true) if the transport is closing or closed.
-	 */
-	bool isClosing() const pure nothrow @safe @nogc;
+    /**
+     * Returns $(D_PARAM true) if the transport is closing or closed.
+     */
+    bool isClosing() const pure nothrow @safe @nogc;
 
-	/**
-	 * Close the transport.
-	 *
-	 * Buffered data will be flushed.  No more data will be received.
-	 */
-	void close() @nogc;
+    /**
+     * Close the transport.
+     *
+     * Buffered data will be flushed.  No more data will be received.
+     */
+    void close() @nogc;
 }
 
 /**
@@ -93,8 +93,8 @@ interface DuplexTransport : ReadTransport, WriteTransport
  */
 interface SocketTransport : Transport
 {
-	/**
-	 * Returns: Socket.
-	 */
-	@property Socket socket() pure nothrow @safe @nogc;
+    /**
+     * Returns: Socket.
+     */
+    @property Socket socket() pure nothrow @safe @nogc;
 }
