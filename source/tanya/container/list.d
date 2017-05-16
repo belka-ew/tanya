@@ -348,6 +348,20 @@ struct SList(T)
         return 1;
     }
 
+    ///
+    unittest
+    {
+        SList!int l;
+        int value = 5;
+
+        l.insertFront(value);
+        assert(l.front == value);
+
+        value = 8;
+        l.insertFront(value);
+        assert(l.front == 8);
+    }
+
     /// Ditto.
     size_t insertFront(R)(R el) @trusted
         if (!isInfinite!R
@@ -1219,18 +1233,17 @@ struct DList(T)
         el.moveEmplace(temp.content);
         temp.next = head;
         temp.prev = null;
-        setTailIfNull(temp);
+        if (this.tail is null)
+        {
+            this.tail = temp;
+        }
+        else
+        {
+            head.prev = temp;
+        }
 
         head = temp;
         return 1;
-    }
-
-    private void setTailIfNull(ref Entry* tail = this.tail)
-    {
-        if (this.tail is null)
-        {
-            this.tail = tail;
-        }
     }
 
     /**
@@ -1252,9 +1265,32 @@ struct DList(T)
     size_t insertFront(R)(ref R el) @trusted
         if (isImplicitlyConvertible!(R, T))
     {
-        this.head = allocator.make!Entry(el, this.head);
-        setTailIfNull();
+        if (this.tail is null)
+        {
+            this.head = this.tail = allocator.make!Entry(el);
+        }
+        else
+        {
+            this.head.prev = allocator.make!Entry(el, this.head);
+            this.head = this.head.prev;
+        }
         return 1;
+    }
+
+    ///
+    unittest
+    {
+        DList!int l;
+        int value = 5;
+
+        l.insertFront(value);
+        assert(l.front == value);
+        assert(l.back == value);
+
+        value = 8;
+        l.insertFront(value);
+        assert(l.front == 8);
+        assert(l.back == 5);
     }
 
     /// Ditto.
@@ -1299,7 +1335,7 @@ struct DList(T)
     }
 
     /// Ditto.
-    alias insert = insertFront;
+    alias insert = insertBack;
 
     ///
     @safe @nogc unittest
@@ -1318,6 +1354,109 @@ struct DList(T)
         l2.insertFront(l1[]);
         assert(l2.length == 5);
         assert(l2.front == 9);
+    }
+
+    /**
+     * Inserts a new element at the end.
+     *
+     * Params:
+     *  R  = Type of the inserted value(s).
+     *  el = New element(s).
+     *
+     * Returns: The number of elements inserted.
+     */
+    size_t insertBack(R)(R el) @trusted
+        if (isImplicitlyConvertible!(R, T))
+    {
+        auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
+
+        el.moveEmplace(temp.content);
+        temp.next = null;
+        temp.prev = tail;
+        if (this.head is null)
+        {
+            this.head = temp;
+        }
+        else
+        {
+            this.tail.next = temp;
+        }
+
+        this.tail = temp;
+        return 1;
+    }
+
+    /// Ditto.
+    size_t insertBack(R)(ref R el) @trusted
+        if (isImplicitlyConvertible!(R, T))
+    {
+        if (this.tail is null)
+        {
+            this.head = this.tail = allocator.make!Entry(el);
+        }
+        else
+        {
+            this.tail.next = allocator.make!Entry(el, null, this.tail);
+            this.tail = this.tail.next;
+        }
+        return 1;
+    }
+
+    ///
+    unittest
+    {
+        DList!int l;
+        int value = 5;
+
+        l.insertBack(value);
+        assert(l.front == value);
+        assert(l.back == value);
+
+        value = 8;
+        l.insertBack(value);
+        assert(l.front == 5);
+        assert(l.back == value);
+    }
+
+    /// Ditto.
+    size_t insertBack(R)(R el) @trusted
+        if (!isInfinite!R
+         && isInputRange!R
+         && isImplicitlyConvertible!(ElementType!R, T))
+    {
+        size_t inserted;
+
+        foreach (ref e; el)
+        {
+            inserted += insertBack(e);
+        }
+
+        return inserted;
+    }
+
+    /// Ditto.
+    size_t insertBack(size_t R)(T[R] el)
+    {
+        return insertBack!(T[])(el[]);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        DList!int l1;
+
+        assert(l1.insertBack(8) == 1);
+        assert(l1.back == 8);
+        assert(l1.insertBack(9) == 1);
+        assert(l1.back == 9);
+
+        DList!int l2;
+        assert(l2.insertBack([25, 30, 15]) == 3);
+        assert(l2.back == 15);
+
+        l2.insertBack(l1[]);
+        assert(l2.length == 5);
+        assert(l2.back == 9);
     }
 
     version (assert)
