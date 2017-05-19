@@ -41,10 +41,7 @@ helper functions).
 
 ### Current status
 
-The library is currently under development, but the API is becoming gradually
-stable.
-
-Following modules are coming soon:
+Following modules are under development:
 
 | Feature      | Branch       | Build status                                                                                                                                                                                                                                                                                                 |
 |--------------|:------------:|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -72,4 +69,4 @@ Since I'm mostly busy writing new code and implementing new features I would
 appreciate, if anyone uses the library. It would help me to improve the
 codebase and fix issues.
 
-Feel free to contact me if you have any questions.
+Feel free to contact me if you have any questions: info@caraus.de.

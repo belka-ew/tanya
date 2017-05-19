@@ -456,6 +456,7 @@ struct String
      *  C   = Type of the character to fill the string with.
      *  n   = Number of characters to copy.
      *  chr = Character to fill the string with.
+     *  allocator = Allocator.
      */
     this(C)(const size_t n,
             const C chr,
