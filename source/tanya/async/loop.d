@@ -38,11 +38,11 @@
  *
  *  version (Windows)
  *  {
- *      auto sock = defaultAllocator.make!OverlappedStreamSocket(AddressFamily.INET);
+ *      auto sock = defaultAllocator.make!OverlappedStreamSocket(AddressFamily.inet);
  *  }
  *  else
  *  {
- *      auto sock = defaultAllocator.make!StreamSocket(AddressFamily.INET);
+ *      auto sock = defaultAllocator.make!StreamSocket(AddressFamily.inet);
  *      sock.blocking = false;
  *  }
  *

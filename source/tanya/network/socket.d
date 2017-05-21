@@ -12,15 +12,13 @@
  */
 module tanya.network.socket;
 
-import tanya.memory;
 import core.stdc.errno;
 import core.time;
-import std.algorithm.comparison;
-import std.algorithm.searching;
 public import std.socket : socket_t, Linger, SocketOptionLevel, SocketOption,
-                           SocketType, AddressFamily, AddressInfo;
+                           AddressInfo;
 import std.traits;
 import std.typecons;
+import tanya.memory;
 
 version (Posix)
 {
@@ -432,7 +430,7 @@ else version (Windows)
          */
         bool beginAccept(SocketState overlapped) @nogc @trusted
         {
-            auto socket = cast(socket_t) socket(addressFamily, SOCK_STREAM, 0);
+            auto socket = cast(socket_t) socket(addressFamily, 1, 0);
             if (socket == socket_t.init)
             {
                 throw defaultAllocator.make!SocketException("Unable to create socket");
@@ -553,11 +551,31 @@ shared static this()
 }
 
 /**
+ * $(D_PSYMBOL AddressFamily) specifies a communication domain; this selects
+ * the protocol family which will be used for communication.
+ */
+enum AddressFamily : int
+{
+    unspec    = 0,     /// Unspecified.
+    local     = 1,     /// Local to host (pipes and file-domain).
+    unix      = local, /// POSIX name for PF_LOCAL.
+    inet      = 2,     /// IP protocol family.
+    ax25      = 3,     /// Amateur Radio AX.25.
+    ipx       = 4,     /// Novell Internet Protocol.
+    appletalk = 5,     /// Appletalk DDP.
+    netrom    = 6,     /// Amateur radio NetROM.
+    bridge    = 7,     /// Multiprotocol bridge.
+    atmpvc    = 8,     /// ATM PVCs.
+    x25       = 9,     /// Reserved for X.25 project.
+    inet6     = 10,    /// IP version 6.
+}
+
+/**
  * Error codes for $(D_PSYMBOL Socket).
  */
 enum SocketError : int
 {
-    /// Unknown error
+    /// Unknown error.
     unknown                = 0,
     /// Firewall rules forbid connection.
     accessDenied           = EPERM,
@@ -1029,7 +1047,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
      */
     this(AddressFamily af) @trusted @nogc
     {
-        auto handle = cast(socket_t) socket(af, SOCK_STREAM, 0);
+        auto handle = cast(socket_t) socket(af, 1, 0);
         if (handle == socket_t.init)
         {
             throw defaultAllocator.make!SocketException("Unable to create socket");
@@ -1333,7 +1351,7 @@ class InternetAddress : Address
         {
             *dp = *sp;
         }
-        if (ai_res.ai_family != AddressFamily.INET && ai_res.ai_family != AddressFamily.INET6)
+        if (ai_res.ai_family != AddressFamily.inet && ai_res.ai_family != AddressFamily.inet6)
         {
             throw defaultAllocator.make!SocketException("Wrong address family");
         }
@@ -1355,9 +1373,9 @@ class InternetAddress : Address
         // FreeBSD wants to know the exact length of the address on bind.
         switch (family)
         {
-            case AddressFamily.INET:
+            case AddressFamily.inet:
                 return sockaddr_in.sizeof;
-            case AddressFamily.INET6:
+            case AddressFamily.inet6:
                 return sockaddr_in6.sizeof;
             default:
                 assert(false);
