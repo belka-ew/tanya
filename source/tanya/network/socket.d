@@ -14,6 +14,7 @@ module tanya.network.socket;
 
 import core.stdc.errno;
 import core.time;
+import std.algorithm.comparison;
 public import std.socket : socket_t, Linger, SocketOptionLevel, SocketOption,
                            AddressInfo;
 import std.traits;
