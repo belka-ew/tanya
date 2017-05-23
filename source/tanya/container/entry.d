@@ -12,6 +12,8 @@
  */
 module tanya.container.entry;
 
+import tanya.typecons;
+
 package struct SEntry(T)
 {
     // Item content.
@@ -28,4 +30,15 @@ package struct DEntry(T)
 
     // Previous and next item.
     DEntry* next, prev;
+}
+
+package struct HashEntry(K, V)
+{
+    this(ref K key, ref V value)
+    {
+        this.pair = Pair!(K, V)(key, value);
+    }
+
+    Pair!(K, V) pair;
+    HashEntry* next;
 }

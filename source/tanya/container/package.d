@@ -14,6 +14,7 @@ module tanya.container;
 
 public import tanya.container.array;
 public import tanya.container.buffer;
+public import tanya.container.hashtable;
 public import tanya.container.list;
 public import tanya.container.string;
 public import tanya.container.queue;
