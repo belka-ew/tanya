@@ -15,11 +15,13 @@ module tanya.network.socket;
 import core.stdc.errno;
 import core.time;
 import std.algorithm.comparison;
-public import std.socket : socket_t, Linger, SocketOptionLevel, SocketOption,
+public import std.socket : Linger, SocketOptionLevel, SocketOption,
                            AddressInfo;
 import std.traits;
 import std.typecons;
 import tanya.memory;
+
+enum int socketError = -1;
 
 version (Posix)
 {
@@ -31,7 +33,10 @@ version (Posix)
     import core.sys.posix.sys.time;
     import core.sys.posix.unistd;
 
-    private enum SOCKET_ERROR = -1;
+    enum SocketType : int
+    {
+        init = -1,
+    }
 }
 else version (Windows)
 {
@@ -41,6 +46,11 @@ else version (Windows)
     import core.sys.windows.winbase;
     import core.sys.windows.windef;
     import core.sys.windows.winsock2;
+
+    enum SocketType : size_t
+    {
+        init = ~0,
+    }
 
     enum : uint
     {
@@ -182,19 +192,26 @@ else version (Windows)
                                                     LPINT,
                                                     SOCKADDR**,
                                                     LPINT);
-    const GUID WSAID_GETACCEPTEXSOCKADDRS = {0xb5367df2,0xcbac,0x11cf,[0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92]};
+    const GUID WSAID_GETACCEPTEXSOCKADDRS = {
+        0xb5367df2, 0xcbac, 0x11cf,
+        [ 0x95, 0xca, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92 ],
+    };
 
-    struct WSABUF {
+    struct WSABUF
+    {
         ULONG len;
         CHAR* buf;
     }
     alias WSABUF* LPWSABUF;
 
-    struct WSAOVERLAPPED {
+    struct WSAOVERLAPPED
+    {
         ULONG_PTR Internal;
         ULONG_PTR InternalHigh;
-        union {
-            struct {
+        union
+        {
+            struct
+            {
                 DWORD Offset;
                 DWORD OffsetHigh;
             }
@@ -230,7 +247,7 @@ else version (Windows)
          *  handle = Socket handle.
          *  af     = Address family.
          */
-        this(socket_t handle, AddressFamily af) @nogc
+        this(SocketType handle, AddressFamily af) @nogc
         {
             super(handle, af);
         }
@@ -267,7 +284,7 @@ else version (Windows)
                                   &overlapped.overlapped,
                                   NULL);
 
-            if (result == SOCKET_ERROR && !wouldHaveBlocked)
+            if (result == socketError && !wouldHaveBlocked)
             {
                 throw defaultAllocator.make!SocketException("Unable to receive");
             }
@@ -338,7 +355,7 @@ else version (Windows)
                                   &overlapped.overlapped,
                                   NULL);
 
-            if (result == SOCKET_ERROR && !wouldHaveBlocked)
+            if (result == socketError && !wouldHaveBlocked)
             {
                 disconnected_ = true;
                 throw defaultAllocator.make!SocketException("Unable to send");
@@ -411,7 +428,7 @@ else version (Windows)
                                    &dwBytes,
                                    NULL,
                                    NULL);
-            if (!result == SOCKET_ERROR)
+            if (!result == socketError)
             {
                 throw make!SocketException(defaultAllocator,
                                            "Unable to retrieve an accept extension function pointer");
@@ -431,8 +448,8 @@ else version (Windows)
          */
         bool beginAccept(SocketState overlapped) @nogc @trusted
         {
-            auto socket = cast(socket_t) socket(addressFamily, 1, 0);
-            if (socket == socket_t.init)
+            auto socket = cast(SocketType) socket(addressFamily, 1, 0);
+            if (socket == SocketType.init)
             {
                 throw defaultAllocator.make!SocketException("Unable to create socket");
             }
@@ -482,7 +499,7 @@ else version (Windows)
                 defaultAllocator.dispose(overlapped.buffer.buf[0 .. overlapped.buffer.len]);
             }
             auto socket = make!OverlappedConnectedSocket(defaultAllocator,
-                                                         cast(socket_t) overlapped.handle,
+                                                         cast(SocketType) overlapped.handle,
                                                          addressFamily);
             scope (failure)
             {
@@ -606,8 +623,8 @@ enum SocketError : int
 
 /**
  * $(D_PSYMBOL SocketException) should be thrown only if one of the socket functions
- * returns -1 or $(D_PSYMBOL SOCKET_ERROR) and sets $(D_PSYMBOL errno),
- * because $(D_PSYMBOL SocketException) relies on the $(D_PSYMBOL errno) value.
+ * $(D_PSYMBOL socketError) and sets $(D_PSYMBOL errno), because
+ * $(D_PSYMBOL SocketException) relies on the $(D_PSYMBOL errno) value.
  */
 class SocketException : Exception
 {
@@ -699,16 +716,16 @@ abstract class Socket
     }
 
     /// Socket handle.
-    protected socket_t handle_;
+    protected SocketType handle_;
 
     /// Address family.
     protected AddressFamily family;
 
-    private @property void handle(socket_t handle) @nogc
+    private @property void handle(SocketType handle) @nogc
     in
     {
-        assert(handle != socket_t.init);
-        assert(handle_ == socket_t.init, "Socket handle cannot be changed");
+        assert(handle != SocketType.init);
+        assert(handle_ == SocketType.init, "Socket handle cannot be changed");
     }
     body
     {
@@ -722,7 +739,7 @@ abstract class Socket
         }
     }
 
-    @property inout(socket_t) handle() inout const pure nothrow @safe @nogc
+    @property inout(SocketType) handle() inout const pure nothrow @safe @nogc
     {
         return handle_;
     }
@@ -734,10 +751,10 @@ abstract class Socket
      *  handle = Socket.
      *  af     = Address family.
      */
-    this(socket_t handle, AddressFamily af) @nogc
+    this(SocketType handle, AddressFamily af) @nogc
     in
     {
-        assert(handle != socket_t.init);
+        assert(handle != SocketType.init);
     }
     body
     {
@@ -778,7 +795,7 @@ abstract class Socket
                        cast(int) level,
                        cast(int) option,
                        result.ptr,
-                       &length) == SOCKET_ERROR)
+                       &length) == socketError)
         {
             throw defaultAllocator.make!SocketException("Unable to get socket option");
         }
@@ -845,7 +862,7 @@ abstract class Socket
                        cast(int)level,
                        cast(int)option,
                        value.ptr,
-                       cast(uint) value.length) == SOCKET_ERROR)
+                       cast(uint) value.length) == socketError)
         {
             throw defaultAllocator.make!SocketException("Unable to set socket option");
         }
@@ -911,12 +928,12 @@ abstract class Socket
         {
             int fl = fcntl(handle_, F_GETFL, 0);
 
-            if (fl != SOCKET_ERROR)
+            if (fl != socketError)
             {
                 fl = yes ? fl & ~O_NONBLOCK : fl | O_NONBLOCK;
                 fl = fcntl(handle_, F_SETFL, fl);
             }
-            if (fl == SOCKET_ERROR)
+            if (fl == socketError)
             {
                 throw make!SocketException(defaultAllocator,
                                            "Unable to set socket blocking");
@@ -925,7 +942,7 @@ abstract class Socket
         else version (Windows)
         {
             uint num = !yes;
-            if (ioctlsocket(handle_, FIONBIO, &num) == SOCKET_ERROR)
+            if (ioctlsocket(handle_, FIONBIO, &num) == socketError)
             {
                 throw make!SocketException(defaultAllocator,
                                            "Unable to set socket blocking");
@@ -982,7 +999,7 @@ abstract class Socket
         {
             .close(handle_);
         }
-        handle_ = socket_t.init;
+        handle_ = SocketType.init;
     }
 
     /**
@@ -990,12 +1007,12 @@ abstract class Socket
      * can $(D_PSYMBOL listen).
      *
      * Params:
-     *  backlog = Request of how many pending incoming connections are 
+     *  backlog = Request of how many pending incoming connections are
      *            queued until $(D_PSYMBOL accept)ed.
      */
     void listen(int backlog) const @trusted @nogc
     {
-        if (.listen(handle_, backlog) == SOCKET_ERROR)
+        if (.listen(handle_, backlog) == socketError)
         {
             throw defaultAllocator.make!SocketException("Unable to listen on socket");
         }
@@ -1048,8 +1065,8 @@ class StreamSocket : Socket, ConnectionOrientedSocket
      */
     this(AddressFamily af) @trusted @nogc
     {
-        auto handle = cast(socket_t) socket(af, 1, 0);
-        if (handle == socket_t.init)
+        auto handle = cast(SocketType) socket(af, 1, 0);
+        if (handle == SocketType.init)
         {
             throw defaultAllocator.make!SocketException("Unable to create socket");
         }
@@ -1066,7 +1083,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
      */
     void bind(Address address) const @trusted @nogc
     {
-        if (.bind(handle_, address.name, address.length) == SOCKET_ERROR)
+        if (.bind(handle_, address.name, address.length) == socketError)
         {
             throw defaultAllocator.make!SocketException("Unable to bind socket");
         }
@@ -1085,7 +1102,7 @@ class StreamSocket : Socket, ConnectionOrientedSocket
      */
     ConnectedSocket accept() @trusted @nogc
     {
-        socket_t sock;
+        SocketType sock;
 
         version (linux)
         {
@@ -1094,14 +1111,14 @@ class StreamSocket : Socket, ConnectionOrientedSocket
             {
                 flags |= SOCK_NONBLOCK;
             }
-            sock = cast(socket_t).accept4(handle_, null, null, flags);
+            sock = cast(SocketType).accept4(handle_, null, null, flags);
         }
         else
         {
-            sock = cast(socket_t).accept(handle_, null, null);
+            sock = cast(SocketType).accept(handle_, null, null);
         }
 
-        if (sock == socket_t.init)
+        if (sock == SocketType.init)
         {
             if (wouldHaveBlocked())
             {
@@ -1166,7 +1183,7 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
      *  handle = Socket.
      *  af     = Address family.
      */
-    this(socket_t handle, AddressFamily af) @nogc
+    this(SocketType handle, AddressFamily af) @nogc
     {
         super(handle, af);
     }
@@ -1215,7 +1232,7 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
         {
             disconnected_ = true;
         }
-        else if (ret == SOCKET_ERROR)
+        else if (ret == socketError)
         {
             if (wouldHaveBlocked())
             {
@@ -1252,7 +1269,7 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
         }
 
         sent = .send(handle_, buf.ptr, capToMaxBuffer(buf.length), sendFlags);
-        if (sent != SOCKET_ERROR)
+        if (sent != socketError)
         {
             return sent;
         }
@@ -1346,7 +1363,7 @@ class InternetAddress : Address
         {
             freeaddrinfoPointer(ai_res);
         }
-        
+
         ubyte* dp = cast(ubyte*) &storage, sp = cast(ubyte*) ai_res.ai_addr;
         for (auto i = ai_res.ai_addrlen; i > 0; --i, *dp++, *sp++)
         {
