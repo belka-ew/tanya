@@ -151,7 +151,7 @@ final class KqueueLoop : SelectorLoop
         close(fd);
     }
 
-    private void set(socket_t socket, short filter, ushort flags) @nogc
+    private void set(SocketType socket, short filter, ushort flags) @nogc
     {
         if (changes.length <= changeCount)
         {
