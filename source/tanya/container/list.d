@@ -93,6 +93,12 @@ struct SRange(E)
  */
 struct SList(T)
 {
+    /// The range types for $(D_PSYMBOL SList).
+    alias Range = SRange!T;
+
+    /// Ditto.
+    alias ConstRange = SRange!(const T);
+
     private alias Entry = SEntry!T;
 
     // 0th element of the list.
@@ -497,7 +503,7 @@ struct SList(T)
     }
 
     /// Ditto.
-    size_t insertBefore(SRange!T r, ref T el) @trusted
+    size_t insertBefore(Range r, ref T el) @trusted
     in
     {
         assert(checkRangeBelonging(r));
@@ -530,7 +536,7 @@ struct SList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    size_t insertBefore(size_t R)(SRange!T r, T[R] el)
+    size_t insertBefore(size_t R)(Range r, T[R] el)
     {
         return insertFront!(T[])(el[]);
     }
@@ -685,7 +691,7 @@ struct SList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    SRange!T remove(SRange!T r)
+    Range remove(Range r)
     in
     {
         assert(checkRangeBelonging(r));
@@ -716,13 +722,13 @@ struct SList(T)
      * Returns: Range that iterates over all elements of the container, in
      *          forward order.
      */
-    SRange!T opIndex()
+    Range opIndex()
     {
         return typeof(return)(this.head);
     }
 
     /// Ditto.
-    SRange!(const T) opIndex() const
+    ConstRange opIndex() const
     {
         return typeof(return)(this.head);
     }
@@ -966,6 +972,12 @@ struct DRange(E)
  */
 struct DList(T)
 {
+    /// The range types for $(D_PSYMBOL DList).
+    alias Range = DRange!T;
+
+    /// Ditto.
+    alias ConstRange = DRange!(const T);
+
     private alias Entry = DEntry!T;
 
     // 0th and the last elements of the list.
@@ -1536,7 +1548,7 @@ struct DList(T)
     }
 
     /// Ditto.
-    size_t insertBefore(DRange!T r, ref T el) @trusted
+    size_t insertBefore(Range r, ref T el) @trusted
     in
     {
         assert(checkRangeBelonging(r));
@@ -1569,7 +1581,7 @@ struct DList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    size_t insertBefore(size_t R)(DRange!T r, T[R] el)
+    size_t insertBefore(size_t R)(Range r, T[R] el)
     {
         return insertFront!(T[])(el[]);
     }
@@ -1728,7 +1740,7 @@ struct DList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    DRange!T remove(DRange!T r)
+    Range remove(Range r)
     in
     {
         assert(checkRangeBelonging(r));
@@ -1768,13 +1780,13 @@ struct DList(T)
      * Returns: Range that iterates over all elements of the container, in
      *          forward order.
      */
-    DRange!T opIndex()
+    Range opIndex()
     {
         return typeof(return)(this.head, this.tail);
     }
 
     /// Ditto.
-    DRange!(const T) opIndex() const
+    ConstRange opIndex() const
     {
         return typeof(return)(this.head, this.tail);
     }

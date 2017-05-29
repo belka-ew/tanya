@@ -174,6 +174,12 @@ struct Range(E)
  */
 struct Array(T)
 {
+    /// The range types for $(D_PSYMBOL Array).
+    alias Range = .Range!T;
+
+    /// Ditto.
+    alias ConstRange = .Range!(const T);
+
     private size_t length_;
     private T* data;
     private size_t capacity_;
@@ -638,7 +644,7 @@ struct Array(T)
      *
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
-    Range!T remove(Range!T r) @trusted
+    Range remove(Range r) @trusted
     in
     {
         assert(r.container is &this);
@@ -648,9 +654,9 @@ struct Array(T)
     body
     {
         auto end = this.data + this.length;
-        moveAll(Range!T(this, r.end, end), Range!T(this, r.begin, end));
+        moveAll(.Range!T(this, r.end, end), .Range!T(this, r.begin, end));
         length = length - r.length;
-        return Range!T(this, r.begin, this.data + length);
+        return .Range!T(this, r.begin, this.data + length);
     }
 
     ///
@@ -788,7 +794,7 @@ struct Array(T)
      *
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
-    size_t insertAfter(R)(Range!T r, R el)
+    size_t insertAfter(R)(Range r, R el)
         if (!isInfinite!R
          && isInputRange!R
          && isImplicitlyConvertible!(ElementType!R, T))
@@ -808,7 +814,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    size_t insertAfter(size_t R)(Range!T r, T[R] el)
+    size_t insertAfter(size_t R)(Range r, T[R] el)
     in
     {
         assert(r.container is &this);
@@ -821,7 +827,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    size_t insertAfter(R)(Range!T r, auto ref R el)
+    size_t insertAfter(R)(Range r, auto ref R el)
         if (isImplicitlyConvertible!(R, T))
     in
     {
@@ -848,7 +854,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    size_t insertBefore(R)(Range!T r, R el)
+    size_t insertBefore(R)(Range r, R el)
         if (!isInfinite!R
          && isInputRange!R
          && isImplicitlyConvertible!(ElementType!R, T))
@@ -860,11 +866,11 @@ struct Array(T)
     }
     body
     {
-        return insertAfter(Range!T(this, this.data, r.begin), el);
+        return insertAfter(.Range!T(this, this.data, r.begin), el);
     }
 
     /// Ditto.
-    size_t insertBefore(size_t R)(Range!T r, T[R] el)
+    size_t insertBefore(size_t R)(Range r, T[R] el)
     in
     {
         assert(r.container is &this);
@@ -877,7 +883,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    size_t insertBefore(R)(Range!T r, auto ref R el)
+    size_t insertBefore(R)(Range r, auto ref R el)
         if (isImplicitlyConvertible!(R, T))
     in
     {
@@ -993,7 +999,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    Range!T opIndexAssign(E : T)(auto ref E value)
+    Range opIndexAssign(E : T)(auto ref E value)
     {
         return opSliceAssign(value, 0, length);
     }
@@ -1017,13 +1023,13 @@ struct Array(T)
      *
      * Precondition: $(D_INLINECODE length == value.length).
      */
-    Range!T opIndexAssign(size_t R)(T[R] value)
+    Range opIndexAssign(size_t R)(T[R] value)
     {
         return opSliceAssign!R(value, 0, length);
     }
 
     /// Ditto.
-    Range!T opIndexAssign(Range!T value)
+    Range opIndexAssign(Range value)
     {
         return opSliceAssign(value, 0, length);
     }
@@ -1066,13 +1072,13 @@ struct Array(T)
      * Returns: Random access range that iterates over elements of the array,
      *          in forward order.
      */
-    Range!T opIndex() @trusted
+    Range opIndex() @trusted
     {
         return typeof(return)(this, this.data, this.data + length);
     }
 
     /// Ditto.
-    Range!(const T) opIndex() const @trusted
+    ConstRange opIndex() const @trusted
     {
         return typeof(return)(this, this.data, this.data + length);
     }
@@ -1105,13 +1111,13 @@ struct Array(T)
     }
 
     /// Ditto.
-    bool opEquals()(const auto ref typeof(this) that) const @trusted
+    bool opEquals()(auto ref const typeof(this) that) const @trusted
     {
         return equal(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
     /// Ditto.
-    bool opEquals(Range!T that)
+    bool opEquals(Range that)
     {
         return equal(opIndex(), that);
     }
@@ -1126,8 +1132,8 @@ struct Array(T)
      * Returns: $(D_KEYWORD true) if the array and the range are equal,
      *          $(D_KEYWORD false) otherwise.
      */
-    bool opEquals(R)(Range!R that) const
-        if (is(Unqual!R == T))
+    bool opEquals(R)(R that) const
+        if (is(R == Range) || is(R == ConstRange))
     {
         return equal(opIndex(), that);
     }
@@ -1216,7 +1222,7 @@ struct Array(T)
      *
      * Precondition: $(D_INLINECODE i <= j && j <= length).
      */
-    Range!T opSlice(const size_t i, const size_t j) @trusted
+    Range opSlice(const size_t i, const size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -1228,7 +1234,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    Range!(const T) opSlice(const size_t i, const size_t j) const @trusted
+    ConstRange opSlice(const size_t i, const size_t j) const @trusted
     in
     {
         assert(i <= j);
@@ -1298,7 +1304,7 @@ struct Array(T)
      * Precondition: $(D_INLINECODE i <= j && j <= length
      *                           && value.length == j - i)
      */
-    Range!T opSliceAssign(size_t R)(T[R] value, const size_t i, const size_t j)
+    Range opSliceAssign(size_t R)(T[R] value, const size_t i, const size_t j)
     @trusted
     in
     {
@@ -1312,7 +1318,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    Range!T opSliceAssign(R : T)(auto ref R value, const size_t i, const size_t j)
+    Range opSliceAssign(R : T)(auto ref R value, const size_t i, const size_t j)
     @trusted
     in
     {
@@ -1326,7 +1332,7 @@ struct Array(T)
     }
 
     /// Ditto.
-    Range!T opSliceAssign(Range!T value, const size_t i, const size_t j) @trusted
+    Range opSliceAssign(Range value, const size_t i, const size_t j) @trusted
     in
     {
         assert(i <= j);

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * This module implements a $(D_PSymbol Set) container that stores unique
+ * This module implements a $(D_PSYMBOL Set) container that stores unique
  * values without any particular order.
  *
  * Copyright: Eugene Wissner 2017.
@@ -47,6 +47,12 @@ struct Range(E)
  */
 struct Set(T)
 {
+    /// The range types for $(D_PSYMBOL Set).
+    alias Range = .Range!T;
+
+    /// Ditto.
+    alias ConstRange = .Range!(const T);
+
     invariant
     {
         assert(this.lengthIndex < primes.length);
