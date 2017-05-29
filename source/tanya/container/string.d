@@ -199,12 +199,7 @@ struct ByCodeUnit(E)
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
-    const(E)[] toString() const @trusted
-    {
-        return this.begin[0 .. length];
-    }
-
-    E[] toString() @trusted
+    inout(E)[] get() inout @trusted
     {
         return this.begin[0 .. length];
     }

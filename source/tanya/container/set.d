@@ -27,6 +27,9 @@ import tanya.memory;
  */
 struct Range(E)
 {
+    private alias ContainerType = CopyConstness!(E, Array!(Bucket!(Unqual!E)));
+    private ContainerType* container;
+
     @disable this();
 
     @property Range save()

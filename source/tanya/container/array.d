@@ -160,7 +160,7 @@ struct Range(E)
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
-    inout(E[]) get() inout @trusted
+    inout(E)[] get() inout @trusted
     {
         return this.begin[0 .. length];
     }
