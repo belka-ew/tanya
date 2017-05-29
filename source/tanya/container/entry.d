@@ -42,3 +42,38 @@ package struct HashEntry(K, V)
     Pair!(K, V) pair;
     HashEntry* next;
 }
+
+package enum BucketStatus : byte
+{
+    deleted = -1,
+    empty = 0,
+    used = 1,
+}
+
+package struct Bucket(T)
+{
+    this(ref T content)
+    {
+        this.content = content;
+    }
+
+    @property void content(ref T content)
+    {
+        this.content_ = content;
+        this.status = BucketStatus.used;
+    }
+
+    @property ref T content()
+    {
+        return this.content_;
+    }
+
+    void remove()
+    {
+        this.content = T.init;
+        this.status = BucketStatus.deleted;
+    }
+
+    T content_;
+    BucketStatus status = BucketStatus.empty;
+}

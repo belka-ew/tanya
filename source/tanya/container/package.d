@@ -14,7 +14,29 @@ module tanya.container;
 
 public import tanya.container.array;
 public import tanya.container.buffer;
-public import tanya.container.hashtable;
+public import tanya.container.set;
 public import tanya.container.list;
 public import tanya.container.string;
 public import tanya.container.queue;
+
+/**
+ * Thrown if $(D_PSYMBOL Set) cannot insert a new element because the container
+ * is full.
+ */
+class HashContainerFullException : Exception
+{
+    /**
+     * Params:
+     *  msg  = The message for the exception.
+     *  file = The file where the exception occurred.
+     *  line = The line number where the exception occurred.
+     *  next = The previous exception in the chain of exceptions, if any.
+     */
+    this(string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+}
