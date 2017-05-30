@@ -27,14 +27,111 @@ import tanya.memory;
  */
 struct Range(E)
 {
-    private alias ContainerType = CopyConstness!(E, Array!(Bucket!(Unqual!E)));
-    private ContainerType* container;
+    static if (isMutable!E)
+    {
+        private alias DataRange = Array!(Bucket!(Unqual!E)).Range;
+    }
+    else
+    {
+        private alias DataRange = Array!(Bucket!(Unqual!E)).ConstRange;
+    }
+    private DataRange dataRange;
 
     @disable this();
+
+    private this(DataRange dataRange)
+    {
+        while (!dataRange.empty && dataRange.front.status != BucketStatus.used)
+        {
+            dataRange.popFront();
+        }
+        while (!dataRange.empty && dataRange.back.status != BucketStatus.used)
+        {
+            dataRange.popBack();
+        }
+        this.dataRange = dataRange;
+    }
 
     @property Range save()
     {
         return this;
+    }
+
+    @property bool empty() const
+    {
+        return this.dataRange.empty();
+    }
+
+    @property void popFront()
+    in
+    {
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(this.dataRange.empty
+            || this.dataRange.back.status == BucketStatus.used);
+    }
+    body
+    {
+        do
+        {
+            dataRange.popFront();
+        }
+        while (!dataRange.empty && dataRange.front.status != BucketStatus.used);
+    }
+
+    @property void popBack()
+    in
+    {
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(this.dataRange.empty
+            || this.dataRange.back.status == BucketStatus.used);
+    }
+    body
+    {
+        do
+        {
+            dataRange.popBack();
+        }
+        while (!dataRange.empty && dataRange.back.status != BucketStatus.used);
+    }
+
+    @property ref inout(E) front() inout
+    in
+    {
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    body
+    {
+        return dataRange.front.content;
+    }
+
+    @property ref inout(E) back() inout
+    in
+    {
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    body
+    {
+        return dataRange.back.content;
+    }
+
+    Range opIndex()
+    {
+        return typeof(return)(this.dataRange[]);
+    }
+
+    Range!(const E) opIndex() const
+    {
+        return typeof(return)(this.dataRange[]);
     }
 }
 
@@ -93,6 +190,24 @@ struct Set(T)
     @property size_t capacity() const
     {
         return this.data.length;
+    }
+
+    /**
+     * Iterates over the $(D_PSYMBOL Set) and counts the elements.
+     *
+     * Returns: Count of elements within the $(D_PSYMBOL Set).
+     */
+    @property size_t length() const
+    {
+        size_t count;
+        foreach (ref e; this.data[])
+        {
+            if (e.status == BucketStatus.used)
+            {
+                ++count;
+            }
+        }
+        return count;
     }
 
     private static const size_t[41] primes = [
@@ -229,6 +344,21 @@ struct Set(T)
     private DataType data;
     private size_t lengthIndex;
 
+    /**
+     * Returns: A bidirectional range that iterates over the $(D_PSYMBOL Set)'s
+     *          elements.
+     */
+    Range opIndex()
+    {
+        return typeof(return)(data[]);
+    }
+
+    /// Ditto.
+    ConstRange opIndex() const
+    {
+        return typeof(return)(data[]);
+    }
+
     mixin DefaultAllocator;
 }
 
@@ -268,4 +398,16 @@ private unittest
     assert(set.data[2].content == 9);
     assert(set.data[3].content == 16);
     assert(set.data[4].status == BucketStatus.empty);
+}
+
+// Static checks.
+private unittest
+{
+    import std.range.primitives;
+
+    static assert(isBidirectionalRange!(Set!int.ConstRange));
+    static assert(isBidirectionalRange!(Set!int.Range));
+
+    static assert(!isInfinite!(Set!int.Range));
+    static assert(!hasLength!(Set!int.Range));
 }

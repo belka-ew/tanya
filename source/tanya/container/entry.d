@@ -12,6 +12,7 @@
  */
 module tanya.container.entry;
 
+import std.traits;
 import tanya.typecons;
 
 package struct SEntry(T)
@@ -63,14 +64,17 @@ package struct Bucket(T)
         this.status = BucketStatus.used;
     }
 
-    @property ref T content()
+    @property ref inout(T) content() inout
     {
         return this.content_;
     }
 
     void remove()
     {
-        this.content = T.init;
+        static if (hasElaborateDestructor!T)
+        {
+            destroy(this.content);
+        }
         this.status = BucketStatus.deleted;
     }
 
