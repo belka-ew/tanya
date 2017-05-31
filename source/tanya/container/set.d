@@ -217,6 +217,9 @@ struct Set(T)
         12582917, 25165843, 139022417, 282312799, 573292817, 1164186217,
     ];
 
+    /// The maximum number of buckets the container can have.
+    enum size_t maxBucketCount = primes[$ - 1];
+
     static private size_t calculateHash(ref T value)
     {
         static if (isIntegral!T || isSomeChar!T || is(T == bool))
@@ -229,7 +232,7 @@ struct Set(T)
         }
     }
 
-    static private size_t locateBucket(ref DataType buckets, size_t hash)
+    static private size_t locateBucket(ref const DataType buckets, size_t hash)
     {
         return hash % buckets.length;
     }
@@ -241,15 +244,16 @@ struct Set(T)
         added = 1,
     }
 
-    // Inserts the value in an empty or deleted bucket. If the value is
-    // already in there, does nothing and returns true. If the hash array
-    // is full returns false.
-    static private InsertStatus insertInUnusedBucket(ref DataType buckets,
-                                                     ref T value)
+    /*
+     * Inserts the value in an empty or deleted bucket. If the value is
+     * already in there, does nothing and returns true. If the hash array
+     * is full returns false.
+     */
+    private InsertStatus insertInUnusedBucket(ref T value)
     {
-        auto bucketPosition = locateBucket(buckets, calculateHash(value));
+        auto bucketPosition = locateBucket(this.data, calculateHash(value));
 
-        foreach (ref e; buckets[bucketPosition .. $])
+        foreach (ref e; this.data[bucketPosition .. $])
         {
             if (e.content == value) // Already in the set.
             {
@@ -281,10 +285,15 @@ struct Set(T)
             this.data = DataType(primes[0], allocator);
         }
 
-        InsertStatus status = insertInUnusedBucket(this.data, value);
-        for (; !status; status = insertInUnusedBucket(this.data, value))
+        InsertStatus status = insertInUnusedBucket(value);
+        for (; !status; status = insertInUnusedBucket(value))
         {
-            rehash();
+            if ((this.primes.length - 1) == this.lengthIndex)
+            {
+                throw make!HashContainerFullException(defaultAllocator,
+                                                      "Set is full");
+            }
+            rehashToSize(this.lengthIndex + 1);
         }
         return status == InsertStatus.added;
     }
@@ -295,7 +304,8 @@ struct Set(T)
      * Params:
      *  value = Element value.
      *
-     * Returns: Amount of the elements removed.
+     * Returns: Number of elements removed, which is in the container with
+     *          unique values `1` if an element existed, and `0` otherwise.
      */
     size_t remove(T value)
     {
@@ -312,37 +322,140 @@ struct Set(T)
                 e.remove();
                 return 1;
             }
-            else if (e.status == BucketStatus.empty) // Insert the value.
+            else if (e.status == BucketStatus.empty)
             {
-                return 0;
+                break;
             }
         }
         return 0;
     }
 
-    private void rehash()
+    /**
+     * $(D_KEYWORD in) operator.
+     *
+     * Params:
+     *  value = Element to be searched for.
+     *
+     * Returns: $(D_KEYWORD true) if the given element exists in the container,
+     *          $(D_KEYWORD false) otherwise.
+     */
+    bool opBinaryRight(string op : "in")(auto ref T value)
     {
-        if ((this.primes.length - 1) == this.lengthIndex)
+        if (this.data.length == 0)
         {
-            throw make!HashContainerFullException(defaultAllocator,
-                                                  "Set is full");
+            return 0;
         }
 
-        auto storage = DataType(primes[this.lengthIndex + 1], allocator);
-        foreach (ref e; this.data[])
+        auto bucketPosition = locateBucket(this.data, calculateHash(value));
+        foreach (ref e; this.data[bucketPosition .. $])
         {
-            if (e.status == BucketStatus.used)
+            if (e.content == value) // Found.
             {
-                insertInUnusedBucket(storage, e.content);
+                return true;
+            }
+            else if (e.status == BucketStatus.empty)
+            {
+                break;
+            }
+        }
+        return false;
+    }
+
+    /// Ditto.
+    bool opBinaryRight(string op : "in")(auto ref const T value) const
+    {
+        if (this.data.length == 0)
+        {
+            return 0;
+        }
+
+        auto bucketPosition = locateBucket(this.data, calculateHash(value));
+        foreach (ref e; this.data[bucketPosition .. $])
+        {
+            if (e.content == value) // Found.
+            {
+                return true;
+            }
+            else if (e.status == BucketStatus.empty)
+            {
+                break;
+            }
+        }
+        return false;
+    }
+
+
+    ///
+    unittest
+    {
+        Set!int set;
+
+        assert(5 !in set);
+        set.insert(5);
+        assert(5 in set);
+    }
+
+    /**
+     * Sets the number of buckets in the container to at least $(D_PARAM n)
+     * and rearranges all the elements according to their hash values.
+     *
+     * If $(D_PARAM n) is greater than the current $(D_PSYMBOL capacity)
+     * and lower than or equal to $(D_PSYMBOL maxBucketCount), a rehash is
+     * forced.
+     *
+     * If $(D_PARAM n) is greater than $(D_PSYMBOL maxBucketCount),
+     * $(D_PSYMBOL maxBucketCount) is used instead as a new number of buckets.
+i    *
+     * If $(D_PARAM n) is equal to the current $(D_PSYMBOL capacity), rehashing
+     * is forced without resizing the container.
+     *
+     * If $(D_PARAM n) is lower than the current $(D_PSYMBOL capacity), the
+     * function may have no effect.
+     *
+     * Rehashing is automatically performed whenever the container needs space
+     * to insert new elements.
+     *
+     * Params:
+     *  n = Minimum number of buckets.
+     */
+    void rehash(const size_t n)
+    {
+        size_t lengthIndex;
+        for (; lengthIndex < primes.length; ++lengthIndex)
+        {
+            if (primes[lengthIndex] >= n)
+            {
+                break;
+            }
+        }
+        rehashToSize(lengthIndex);
+    }
+
+    // Takes an index in the primes array.
+    private void rehashToSize(const size_t n)
+    {
+        auto storage = DataType(primes[n], allocator);
+        DataLoop: foreach (ref e1; this.data[])
+        {
+            if (e1.status == BucketStatus.used)
+            {
+                auto bucketPosition = locateBucket(storage,
+                                                   calculateHash(e1.content));
+
+                foreach (ref e2; storage[bucketPosition .. $])
+                {
+                    if (e2.status != BucketStatus.used) // Insert the value.
+                    {
+                        e2.content = e1.content;
+                        continue DataLoop;
+                    }
+                }
+                return; // Rehashing failed.
             }
         }
         move(storage, this.data);
-        ++this.lengthIndex;
+        this.lengthIndex = n;
     }
-
-    private alias DataType = Array!(Bucket!T);
-    private DataType data;
-    private size_t lengthIndex;
 
     /**
      * Returns: A bidirectional range that iterates over the $(D_PSYMBOL Set)'s
@@ -350,14 +463,18 @@ struct Set(T)
      */
     Range opIndex()
     {
-        return typeof(return)(data[]);
+        return typeof(return)(this.data[]);
     }
 
     /// Ditto.
     ConstRange opIndex() const
     {
-        return typeof(return)(data[]);
+        return typeof(return)(this.data[]);
     }
+
+    private alias DataType = Array!(Bucket!T);
+    private DataType data;
+    private size_t lengthIndex;
 
     mixin DefaultAllocator;
 }
