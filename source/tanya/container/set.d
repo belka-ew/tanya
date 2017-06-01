@@ -239,8 +239,8 @@ struct Set(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(S)(ref R that)
-        if (is(Unqual!R == Set))
+    ref typeof(this) opAssign(S)(ref S that)
+        if (is(Unqual!S == Set))
     {
         this.data = that.data;
         this.lengthIndex = that.lengthIndex;
@@ -248,8 +248,8 @@ struct Set(T)
     }
 
     /// Ditto.
-    ref typeof(this) opAssign(S)(R that) @trusted
-        if (is(R == Set))
+    ref typeof(this) opAssign(S)(S that) @trusted
+        if (is(S == Set))
     {
         swap(this.data, that.data);
         swap(this.lengthIndex, that.lengthIndex);
