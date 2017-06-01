@@ -164,10 +164,23 @@ struct Set(T)
      * Constructor.
      *
      * Params:
+     *  n         = Minimum number of buckets.
      *  allocator = Allocator.
      *
      * Precondition: $(D_INLINECODE allocator !is null).
      */
+    this(const size_t n, shared Allocator allocator = defaultAllocator)
+    in
+    {
+        assert(allocator !is null);
+    }
+    body
+    {
+        this(allocator);
+        rehash(n);
+    }
+
+    /// Ditto.
     this(shared Allocator allocator)
     in
     {
@@ -175,7 +188,87 @@ struct Set(T)
     }
     body
     {
-        this.allocator_ = allocator;
+        this.data = typeof(this.data)(allocator);
+    }
+
+    /**
+     * Initializes this $(D_PARAM Set) from another one.
+     *
+     * If $(D_PARAM init) is passed by reference, it will be copied.
+     * If $(D_PARAM init) is passed by value, it will be moved.
+     *
+     * Params:
+     *  S         = Source set type.
+     *  init      = Source set.
+     *  allocator = Allocator.
+     */
+    this(S)(ref S init, shared Allocator allocator = defaultAllocator)
+        if (is(Unqual!S == Set))
+    in
+    {
+        assert(allocator !is null);
+    }
+    body
+    {
+        this.data = typeof(this.data)(init.data, allocator);
+    }
+
+    /// Ditto.
+    this(S)(S init, shared Allocator allocator = defaultAllocator)
+        if (is(S == Set))
+    in
+    {
+        assert(allocator !is null);
+    }
+    body
+    {
+        this.data = typeof(this.data)(move(init.data), allocator);
+        this.lengthIndex = init.lengthIndex;
+        init.lengthIndex = 0;
+    }
+
+    /**
+     * Assigns another set.
+     *
+     * If $(D_PARAM that) is passed by reference, it will be copied.
+     * If $(D_PARAM that) is passed by value, it will be moved.
+     *
+     * Params:
+     *  S    = Content type.
+     *  that = The value should be assigned.
+     *
+     * Returns: $(D_KEYWORD this).
+     */
+    ref typeof(this) opAssign(S)(ref R that)
+        if (is(Unqual!R == Set))
+    {
+        this.data = that.data;
+        this.lengthIndex = that.lengthIndex;
+        return this;
+    }
+
+    /// Ditto.
+    ref typeof(this) opAssign(S)(R that) @trusted
+        if (is(R == Set))
+    {
+        swap(this.data, that.data);
+        swap(this.lengthIndex, that.lengthIndex);
+        return this;
+    }
+
+    /**
+     * Returns: Used allocator.
+     *
+     * Postcondition: $(D_INLINECODE allocator !is null)
+     */
+    @property shared(Allocator) allocator() const
+    out (allocator)
+    {
+        assert(allocator !is null);
+    }
+    body
+    {
+        return cast(shared Allocator) this.data.allocator;
     }
 
     /**
@@ -405,7 +498,7 @@ struct Set(T)
      *
      * If $(D_PARAM n) is greater than $(D_PSYMBOL maxBucketCount),
      * $(D_PSYMBOL maxBucketCount) is used instead as a new number of buckets.
-i    *
+     *
      * If $(D_PARAM n) is equal to the current $(D_PSYMBOL capacity), rehashing
      * is forced without resizing the container.
      *
@@ -475,8 +568,6 @@ i    *
     private alias DataType = Array!(Bucket!T);
     private DataType data;
     private size_t lengthIndex;
-
-    mixin DefaultAllocator;
 }
 
 // Basic insertion logic.
