@@ -15,7 +15,7 @@ Garbage Collector heap. Everything in the library is usable in @nogc code.
 Tanya extends Phobos functionality and provides alternative implementations for
 data structures and utilities that depend on the Garbage Collector in Phobos.
 
-* [Bug tracker](https://issues.caraus.io/projects/tanya)
+* [Bug tracker](https://issues.caraus.io/projects/tanya/issues)
 * [Documentation](https://docs.caraus.io/tanya)
 
 ## Overview
@@ -34,7 +34,7 @@ helper functions).
 
 | dmd     |
 |:-------:|
-| 2.074.0 |
+| 2.074.1 |
 | 2.073.2 |
 | 2.072.2 |
 | 2.071.2 |
@@ -56,16 +56,14 @@ Following modules are under development:
 * Tanya is cross-platform. The development happens on a 64-bit Linux, but it
 is being tested on Windows and FreeBSD as well.
 
-* The library isn't thread-safe. Thread-safity should be added later.
+* The library isn't thread-safe yet.
 
 ## Release management
 
 3-week release cycle.
 
-## Contributing
+Deprecated features are removed after one release (in approximately 6 weeks after deprecating).
 
-Since I'm mostly busy writing new code and implementing new features I would
-appreciate, if anyone uses the library. It would help me to improve the
-codebase and fix issues.
+## Contributing
 
 Feel free to contact me if you have any questions: info@caraus.de.

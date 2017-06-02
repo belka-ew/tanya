@@ -1,6 +1,6 @@
 {
 	"name": "tanya",
-	"description": "General purpose, @nogc library",
+	"description": "General purpose, @nogc library. Containers, networking, memory management, utilities",
 	"license": "MPL-2.0",
 	"copyright": "(c) Eugene Wissner <info@caraus.de>",
 	"authors": [
