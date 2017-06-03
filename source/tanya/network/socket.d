@@ -410,7 +410,8 @@ else version (Windows)
             return result == TRUE;
         }
 
-        OverlappedConnectedSocket endAccept(SocketState overlapped) @nogc @trusted
+        OverlappedConnectedSocket endAccept(SocketState overlapped)
+        @nogc @trusted
         {
             scope (exit)
             {
@@ -480,11 +481,7 @@ else version (D_Ddoc)
          *
          * Postcondition: $(D_INLINECODE result >= 0).
          */
-        int endReceive(SocketState overlapped) @nogc @trusted
-        out (count)
-        {
-            assert(count >= 0);
-        }
+        int endReceive(SocketState overlapped) @nogc @trusted;
 
         /**
          * Sends data asynchronously to a connected socket.
@@ -515,11 +512,7 @@ else version (D_Ddoc)
          *
          * Postcondition: $(D_INLINECODE result >= 0).
         */
-        int endSend(SocketState overlapped) @nogc @trusted
-        out (count)
-        {
-            assert(count >= 0);
-        }
+        int endSend(SocketState overlapped) @nogc @trusted;
     }
 
     /**
@@ -582,6 +575,57 @@ struct Linger
     LingerField l_linger;
 
     /**
+     * If $(D_PARAM timeout) is `0`, linger is disabled, otherwise enables the
+     * linger and sets the timeout.
+     *
+     * Params:
+     *  timeout = Timeout, in seconds.
+     */
+    this(const ushort timeout)
+    {
+        time = timeout;
+    }
+
+    ///
+    unittest
+    {
+        {
+            auto linger = Linger(5);
+            assert(linger.enabled);
+            assert(linger.time == 5);
+        }
+        {
+            auto linger = Linger(0);
+            assert(!linger.enabled);
+        }
+        { // Default constructor.
+            Linger linger;
+            assert(!linger.enabled);
+        }
+    }
+
+    /**
+     * System dependent constructor.
+     *
+     * Params:
+     *  l_onoff  = $(D_PSYMBOL l_onoff) value.
+     *  l_linger = $(D_PSYMBOL l_linger) value.
+     */
+    this(LingerField l_onoff, LingerField l_linger)
+    {
+        this.l_onoff = l_onoff;
+        this.l_linger = l_linger;
+    }
+
+    ///
+    unittest
+    {
+        auto linger = Linger(1, 5);
+        assert(linger.l_onoff == 1);
+        assert(linger.l_linger == 5);
+    }
+
+    /**
      * Params:
      *  value = Whether to linger after the socket is closed.
      *
@@ -616,8 +660,9 @@ struct Linger
      * Params:
      *  timeout = Timeout period, in seconds.
      */
-    @property void time(ushort timeout) pure nothrow @safe @nogc
+    @property void time(const ushort timeout) pure nothrow @safe @nogc
     {
+        this.l_onoff = timeout > 0;
         this.l_linger = timeout;
     }
 }
@@ -1420,12 +1465,9 @@ class InternetAddress : Address
     }
     const ushort port_;
 
-    enum
-    {
-        anyPort = 0,
-    }
+    enum ushort anyPort = 0;
 
-    this(in string host, ushort port = anyPort) @nogc
+    this(string host, const ushort port = anyPort) @nogc
     {
         if (getaddrinfoPointer is null || freeaddrinfoPointer is null)
         {
@@ -1433,7 +1475,7 @@ class InternetAddress : Address
                                        "Address info lookup is not available on this system");
         }
         addrinfo* ai_res;
-        port_ = port;
+        this.port_ = port;
 
         // Make C-string from host.
         auto node = cast(char[]) allocator.allocate(host.length + 1);
@@ -1449,16 +1491,17 @@ class InternetAddress : Address
         const(char)* servicePointer;
         if (port)
         {
+            ushort originalPort = port;
             ushort start;
             for (ushort j = 10, i = 4; i > 0; j *= 10, --i)
             {
-                ushort rest = port % 10;
+                ushort rest = originalPort % 10;
                 if (rest != 0)
                 {
                     service[i] = cast(char) (rest + '0');
                     start = i;
                 }
-                port /= 10;
+                originalPort /= 10;
             }
             servicePointer = service[start .. $].ptr;
         }
@@ -1482,6 +1525,17 @@ class InternetAddress : Address
         {
             throw defaultAllocator.make!SocketException("Wrong address family");
         }
+    }
+
+    ///
+    unittest
+    {
+        auto address = defaultAllocator.make!InternetAddress("127.0.0.1");
+        assert(address.port == InternetAddress.anyPort);
+        assert(address.name !is null);
+        assert(address.family == AddressFamily.inet);
+
+        defaultAllocator.dispose(address);
     }
 
     /**
@@ -1520,6 +1574,15 @@ class InternetAddress : Address
     @property inout(ushort) port() inout const pure nothrow @nogc
     {
         return port_;
+    }
+
+    ///
+    unittest
+    {
+        auto address = defaultAllocator.make!InternetAddress("127.0.0.1",
+                                                             cast(ushort) 1234);
+        assert(address.port == 1234);
+        defaultAllocator.dispose(address);
     }
 }
 
