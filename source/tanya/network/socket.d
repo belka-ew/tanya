@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Socket programming.
+ * Low-level socket programming.
  *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
@@ -15,12 +15,12 @@ module tanya.network.socket;
 import core.stdc.errno;
 import core.time;
 import std.algorithm.comparison;
-public import std.socket : Linger, SocketOptionLevel, SocketOption,
-                           AddressInfo;
+public import std.socket : SocketOptionLevel, SocketOption;
 import std.traits;
 import std.typecons;
 import tanya.memory;
 
+/// Value returned by socket operations on error.
 enum int socketError = -1;
 
 version (Posix)
@@ -37,6 +37,8 @@ version (Posix)
     {
         init = -1,
     }
+
+    private alias LingerField = int;
 }
 else version (Windows)
 {
@@ -52,16 +54,18 @@ else version (Windows)
         init = ~0,
     }
 
+    private alias LingerField = ushort;
+
     enum : uint
     {
         IOC_UNIX     = 0x00000000,
         IOC_WS2      = 0x08000000,
         IOC_PROTOCOL = 0x10000000,
-        IOC_VOID     = 0x20000000,         /// No parameters.
-        IOC_OUT      = 0x40000000,         /// Copy parameters back.
-        IOC_IN       = 0x80000000,         /// Copy parameters into.
+        IOC_VOID     = 0x20000000,         // No parameters.
+        IOC_OUT      = 0x40000000,         // Copy parameters back.
+        IOC_IN       = 0x80000000,         // Copy parameters into.
         IOC_VENDOR   = 0x18000000,
-        IOC_INOUT    = (IOC_IN | IOC_OUT), /// Copy parameter into and get back.
+        IOC_INOUT    = (IOC_IN | IOC_OUT), // Copy parameter into and get back.
     }
 
     template _WSAIO(int x, int y)
@@ -235,36 +239,13 @@ else version (Windows)
         private WSABUF buffer;
     }
 
-    /**
-     * Socket returned if a connection has been established.
-     */
     class OverlappedConnectedSocket : ConnectedSocket
     {
-        /**
-         * Create a socket.
-         *
-         * Params:
-         *  handle = Socket handle.
-         *  af     = Address family.
-         */
         this(SocketType handle, AddressFamily af) @nogc
         {
             super(handle, af);
         }
 
-        /**
-         * Begins to asynchronously receive data from a connected socket.
-         *
-         * Params:
-         *  buffer     = Storage location for the received data.
-         *  flags      = Flags.
-         *  overlapped = Unique operation identifier.
-         *
-         * Returns: $(D_KEYWORD true) if the operation could be finished synchronously.
-         *          $(D_KEYWORD false) otherwise.
-         *
-         * Throws: $(D_PSYMBOL SocketException) if unable to receive.
-         */
         bool beginReceive(ubyte[] buffer,
                           SocketState overlapped,
                           Flags flags = Flags(Flag.none)) @nogc @trusted
@@ -291,16 +272,6 @@ else version (Windows)
             return result == 0;
         }
 
-        /**
-         * Ends a pending asynchronous read.
-         *
-         * Params
-         *  overlapped = Unique operation identifier.
-         *
-         * Returns: Number of bytes received.
-         *
-         * Throws: $(D_PSYMBOL SocketException) if unable to receive.
-         */
         int endReceive(SocketState overlapped) @nogc @trusted
         out (count)
         {
@@ -325,19 +296,6 @@ else version (Windows)
             return lpNumber;
         }
 
-        /**
-         * Sends data asynchronously to a connected socket.
-         *
-         * Params:
-         *  buffer     = Data to be sent.
-         *  flags      = Flags.
-         *  overlapped = Unique operation identifier.
-         *
-         * Returns: $(D_KEYWORD true) if the operation could be finished synchronously.
-         *          $(D_KEYWORD false) otherwise.
-         *
-         * Throws: $(D_PSYMBOL SocketException) if unable to send.
-         */
         bool beginSend(ubyte[] buffer,
                        SocketState overlapped,
                        Flags flags = Flags(Flag.none)) @nogc @trusted
@@ -363,16 +321,6 @@ else version (Windows)
             return result == 0;
         }
 
-        /**
-         * Ends a pending asynchronous send.
-         *
-         * Params
-         *  overlapped = Unique operation identifier.
-         *
-         * Returns: Number of bytes sent.
-         *
-         * Throws: $(D_PSYMBOL SocketException) if unable to receive.
-        */
         int endSend(SocketState overlapped) @nogc @trusted
         out (count)
         {
@@ -396,17 +344,9 @@ else version (Windows)
 
     class OverlappedStreamSocket : StreamSocket
     {
-        /// Accept extension function pointer.
+        // Accept extension function pointer.
         package LPFN_ACCEPTEX acceptExtension;
 
-        /**
-         * Create a socket.
-         *
-         * Params:
-         *  af = Address family.
-         *
-         * Throws: $(D_PSYMBOL SocketException) on errors.
-         */
         this(AddressFamily af) @nogc @trusted
         {
             super(af);
@@ -435,17 +375,6 @@ else version (Windows)
             }
         }
 
-        /**
-         * Begins an asynchronous operation to accept an incoming connection attempt.
-         *
-         * Params:
-         *  overlapped = Unique operation identifier.
-         *
-         * Returns: $(D_KEYWORD true) if the operation could be finished synchronously.
-         *          $(D_KEYWORD false) otherwise.
-         *
-         * Throws: $(D_PSYMBOL SocketException) on accept errors.
-         */
         bool beginAccept(SocketState overlapped) @nogc @trusted
         {
             auto socket = cast(SocketType) socket(addressFamily, 1, 0);
@@ -461,7 +390,7 @@ else version (Windows)
             overlapped.handle = cast(HANDLE) socket;
             overlapped.event = OverlappedSocketEvent.accept;
 
-            immutable len = (sockaddr_in.sizeof + 16) * 2;
+            const len = (sockaddr_in.sizeof + 16) * 2;
             overlapped.buffer.len = len;
             overlapped.buffer.buf = cast(char*) defaultAllocator.allocate(len).ptr;
 
@@ -481,17 +410,6 @@ else version (Windows)
             return result == TRUE;
         }
 
-        /**
-         * Asynchronously accepts an incoming connection attempt and creates a
-         * new socket to handle remote host communication.
-         *
-         * Params:
-         *  overlapped = Unique operation identifier.
-         *
-         * Returns: Connected socket.
-         *
-         * Throws: $(D_PSYMBOL SocketException) if unable to accept.
-         */
         OverlappedConnectedSocket endAccept(SocketState overlapped) @nogc @trusted
         {
             scope (exit)
@@ -510,6 +428,197 @@ else version (Windows)
                              cast(size_t) handle);
             return socket;
         }
+    }
+}
+else version (D_Ddoc)
+{
+    /// Native socket representation type.
+    enum SocketType;
+
+    /**
+     * Socket returned if a connection has been established.
+     *
+     * Note: Available only on Windows.
+     */
+    class OverlappedConnectedSocket : ConnectedSocket
+    {
+        /**
+         * Create a socket.
+         *
+         * Params:
+         *  handle = Socket handle.
+         *  af     = Address family.
+         */
+        this(SocketType handle, AddressFamily af) @nogc;
+
+        /**
+         * Begins to asynchronously receive data from a connected socket.
+         *
+         * Params:
+         *  buffer     = Storage location for the received data.
+         *  flags      = Flags.
+         *  overlapped = Unique operation identifier.
+         *
+         * Returns: $(D_KEYWORD true) if the operation could be finished synchronously.
+         *          $(D_KEYWORD false) otherwise.
+         *
+         * Throws: $(D_PSYMBOL SocketException) if unable to receive.
+         */
+        bool beginReceive(ubyte[] buffer,
+                          SocketState overlapped,
+                          Flags flags = Flags(Flag.none)) @nogc @trusted;
+
+        /**
+         * Ends a pending asynchronous read.
+         *
+         * Params:
+         *  overlapped = Unique operation identifier.
+         *
+         * Returns: Number of bytes received.
+         *
+         * Throws: $(D_PSYMBOL SocketException) if unable to receive.
+         *
+         * Postcondition: $(D_INLINECODE result >= 0).
+         */
+        int endReceive(SocketState overlapped) @nogc @trusted
+        out (count)
+        {
+            assert(count >= 0);
+        }
+
+        /**
+         * Sends data asynchronously to a connected socket.
+         *
+         * Params:
+         *  buffer     = Data to be sent.
+         *  flags      = Flags.
+         *  overlapped = Unique operation identifier.
+         *
+         * Returns: $(D_KEYWORD true) if the operation could be finished synchronously.
+         *          $(D_KEYWORD false) otherwise.
+         *
+         * Throws: $(D_PSYMBOL SocketException) if unable to send.
+         */
+        bool beginSend(ubyte[] buffer,
+                       SocketState overlapped,
+                       Flags flags = Flags(Flag.none)) @nogc @trusted;
+
+        /**
+         * Ends a pending asynchronous send.
+         *
+         * Params:
+         *  overlapped = Unique operation identifier.
+         *
+         * Returns: Number of bytes sent.
+         *
+         * Throws: $(D_PSYMBOL SocketException) if unable to receive.
+         *
+         * Postcondition: $(D_INLINECODE result >= 0).
+        */
+        int endSend(SocketState overlapped) @nogc @trusted
+        out (count)
+        {
+            assert(count >= 0);
+        }
+    }
+
+    /**
+     * Windows stream socket overlapped I/O.
+     */
+    class OverlappedStreamSocket : StreamSocket
+    {
+        /**
+         * Create a socket.
+         *
+         * Params:
+         *  af = Address family.
+         *
+         * Throws: $(D_PSYMBOL SocketException) on errors.
+         */
+        this(AddressFamily af) @nogc @trusted;
+
+        /**
+         * Begins an asynchronous operation to accept an incoming connection attempt.
+         *
+         * Params:
+         *  overlapped = Unique operation identifier.
+         *
+         * Returns: $(D_KEYWORD true) if the operation could be finished synchronously.
+         *          $(D_KEYWORD false) otherwise.
+         *
+         * Throws: $(D_PSYMBOL SocketException) on accept errors.
+         */
+        bool beginAccept(SocketState overlapped) @nogc @trusted;
+
+        /**
+         * Asynchronously accepts an incoming connection attempt and creates a
+         * new socket to handle remote host communication.
+         *
+         * Params:
+         *  overlapped = Unique operation identifier.
+         *
+         * Returns: Connected socket.
+         *
+         * Throws: $(D_PSYMBOL SocketException) if unable to accept.
+         */
+        OverlappedConnectedSocket endAccept(SocketState overlapped)
+        @nogc @trusted;
+    }
+}
+
+/**
+ * Socket option that specifies what should happen when the socket that
+ * promises reliable delivery still has untransmitted messages when
+ * it is closed.
+ */
+struct Linger
+{
+    /// If nonzero, $(D_PSYMBOL close) and $(D_PSYMBOL shutdown) block until
+    /// the data are transmitted or the timeout period has expired.
+    LingerField l_onoff;
+
+    /// Time, in seconds to wait before any buffered data to be sent is
+    /// discarded.
+    LingerField l_linger;
+
+    /**
+     * Params:
+     *  value = Whether to linger after the socket is closed.
+     *
+     * See_Also: $(D_PSYMBOL time).
+     */
+    @property enabled(const bool value) pure nothrow @safe @nogc
+    {
+        this.l_onoff = value;
+    }
+
+    /**
+     * Returns: Whether to linger after the socket is closed.
+     */
+    @property bool enabled() const pure nothrow @safe @nogc
+    {
+        return this.l_onoff != 0;
+    }
+
+    /**
+     * Returns: Timeout period, in seconds, to wait before closing the socket
+     *          if the $(D_PSYMBOL Linger) is $(D_PSYMBOL enabled).
+     */
+    @property ushort time() const pure nothrow @safe @nogc
+    {
+        return this.l_linger & ushort.max;
+    }
+
+    /**
+     *  Sets timeout period, to wait before closing the socket if the
+     *  $(D_PSYMBOL Linger) is $(D_PSYMBOL enabled), ignored otherwise.
+     *
+     * Params:
+     *  timeout = Timeout period, in seconds.
+     */
+    @property void time(ushort timeout) pure nothrow @safe @nogc
+    {
+        this.l_linger = timeout;
     }
 }
 
@@ -541,7 +650,7 @@ else version (DragonFlyBSD)
 
 version (MacBSD)
 {
-    enum ESOCKTNOSUPPORT = 44; /// Socket type not suppoted.
+    enum ESOCKTNOSUPPORT = 44; // Socket type not suppoted.
 }
 
 private immutable
@@ -628,7 +737,7 @@ enum SocketError : int
  */
 class SocketException : Exception
 {
-    immutable SocketError error = SocketError.unknown;
+    const SocketError error = SocketError.unknown;
 
     /**
      * Params:
@@ -807,7 +916,7 @@ abstract class Socket
                   SocketOption option,
                   out size_t result) const @trusted @nogc
     {
-        return getOption(level, option, (&result)[0..1]);
+        return getOption(level, option, (&result)[0 .. 1]);
     }
 
     /// Ditto.
@@ -815,7 +924,7 @@ abstract class Socket
                   SocketOption option,
                   out Linger result) const @trusted @nogc
     {
-        return getOption(level, option, (&result.clinger)[0..1]);
+        return getOption(level, option, (&result)[0 .. 1]);
     }
 
     /// Ditto.
@@ -828,7 +937,7 @@ abstract class Socket
         version (Posix)
         {
             timeval tv;
-            auto ret = getOption(level, option, (&tv)[0..1]);
+            auto ret = getOption(level, option, (&tv)[0 .. 1]);
             result = dur!"seconds"(tv.tv_sec) + dur!"usecs"(tv.tv_usec);
         }
         else version (Windows)
@@ -872,14 +981,14 @@ abstract class Socket
     void setOption(SocketOptionLevel level, SocketOption option, size_t value)
     const @trusted @nogc
     {
-        setOption(level, option, (&value)[0..1]);
+        setOption(level, option, (&value)[0 .. 1]);
     }
 
     /// Ditto.
     void setOption(SocketOptionLevel level, SocketOption option, Linger value)
     const @trusted @nogc
     {
-        setOption(level, option, (&value.clinger)[0..1]);
+        setOption(level, option, (&value)[0 .. 1]);
     }
 
     /// Ditto.
@@ -890,7 +999,7 @@ abstract class Socket
         {
             timeval tv;
             value.split!("seconds", "usecs")(tv.tv_sec, tv.tv_usec);
-            setOption(level, option, (&tv)[0..1]);
+            setOption(level, option, (&tv)[0 .. 1]);
         }
         else version (Windows)
         {
@@ -914,7 +1023,7 @@ abstract class Socket
         }
         else version (Windows)
         {
-            return blocking_;
+            return this.blocking_;
         }
     }
 
@@ -947,7 +1056,7 @@ abstract class Socket
                 throw make!SocketException(defaultAllocator,
                                            "Unable to set socket blocking");
             }
-            blocking_ = yes;
+            this.blocking_ = yes;
         }
     }
 
@@ -1309,7 +1418,7 @@ class InternetAddress : Address
         /// Internal internet address representation.
         protected sockaddr_storage storage;
     }
-    immutable ushort port_;
+    const ushort port_;
 
     enum
     {
@@ -1328,7 +1437,7 @@ class InternetAddress : Address
 
         // Make C-string from host.
         auto node = cast(char[]) allocator.allocate(host.length + 1);
-        node[0.. $ - 1] = host;
+        node[0 .. $ - 1] = host;
         node[$ - 1] = '\0';
         scope (exit)
         {
@@ -1351,7 +1460,7 @@ class InternetAddress : Address
                 }
                 port /= 10;
             }
-            servicePointer = service[start..$].ptr;
+            servicePointer = service[start .. $].ptr;
         }
 
         auto ret = getaddrinfoPointer(node.ptr, servicePointer, null, &ai_res);
