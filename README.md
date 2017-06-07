@@ -26,8 +26,7 @@ Tanya consists of the following packages:
 * `container`: Queue, Array, Singly and doubly linked lists, Buffers, UTF-8
 string, Hash set.
 * `math`: Arbitrary precision integer and a set of functions.
-* `memory`: Tools for manual memory management (allocator, reference counting,
-helper functions).
+* `memory`: Tools for manual memory management (allocators, smart pointers).
 * `network`: URL-Parsing, sockets, utilities.
 
 ### Supported compilers
@@ -43,15 +42,15 @@ helper functions).
 
 Following modules are under development:
 
-| Feature      | Branch       | Build status                                                                                                                                                                                                                                                                                                 |
-|--------------|:------------:|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| BitVector    | bitvector    | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya) [![bitvector](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/bitvector?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/bitvector)                |
-| TLS          | crypto       | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya) [![crypto](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/crypto?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/crypto)                               |
-| File IO      | io           | [![io](https://travis-ci.org/caraus-ecms/tanya.svg?branch=io)](https://travis-ci.org/caraus-ecms/tanya) [![io](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/io?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/io)                                                   |
+| Feature  | Branch    | Build status                                                                                                                                                                                                                                                                                  |
+|----------|:---------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| BitArray | bitvector | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya) [![bitvector](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/bitvector?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/bitvector) |
+| TLS      | crypto    | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya) [![crypto](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/crypto?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/crypto)                |
+| File IO  | io        | [![io](https://travis-ci.org/caraus-ecms/tanya.svg?branch=io)](https://travis-ci.org/caraus-ecms/tanya) [![io](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/io?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/io)                                    |
 
 ### Further characteristics
 
-* Tanya is a native D library.
+* Tanya is a native D library without any external dependencies.
 
 * Tanya is cross-platform. The development happens on a 64-bit Linux, but it
 is being tested on Windows and FreeBSD as well.
