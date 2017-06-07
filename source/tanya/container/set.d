@@ -142,10 +142,13 @@ struct Range(E)
  * This $(D_PSYMBOL Set) is implemented using closed hashing. Hash collisions
  * are resolved with linear probing.
  *
+ * Currently works only with integral types.
+ *
  * Params:
  *  T = Element type.
  */
 struct Set(T)
+    if (isIntegral!T || is(Unqual!T == bool))
 {
     /// The range types for $(D_PSYMBOL Set).
     alias Range = .Range!T;
@@ -189,6 +192,19 @@ struct Set(T)
     body
     {
         this.data = typeof(this.data)(allocator);
+    }
+
+    ///
+    unittest
+    {
+        {
+            auto set = Set!int(defaultAllocator);
+            assert(set.capacity == 0);
+        }
+        {
+            auto set = Set!int(8);
+            assert(set.capacity == 13);
+        }
     }
 
     /**
@@ -285,6 +301,16 @@ struct Set(T)
         return this.data.length;
     }
 
+    ///
+    unittest
+    {
+        Set!int set;
+        assert(set.capacity == 0);
+
+        set.insert(8);
+        assert(set.capacity == 3);
+    }
+
     /**
      * Iterates over the $(D_PSYMBOL Set) and counts the elements.
      *
@@ -301,6 +327,16 @@ struct Set(T)
             }
         }
         return count;
+    }
+
+    ///
+    unittest
+    {
+        Set!int set;
+        assert(set.length == 0);
+
+        set.insert(8);
+        assert(set.length == 1);
     }
 
     private static const size_t[41] primes = [
@@ -339,8 +375,8 @@ struct Set(T)
 
     /*
      * Inserts the value in an empty or deleted bucket. If the value is
-     * already in there, does nothing and returns true. If the hash array
-     * is full returns false.
+     * already in there, does nothing and returns InsertStatus.found. If the
+     * hash array is full returns InsertStatus.failed.
      */
     private InsertStatus insertInUnusedBucket(ref T value)
     {
@@ -348,7 +384,7 @@ struct Set(T)
 
         foreach (ref e; this.data[bucketPosition .. $])
         {
-            if (e.content == value) // Already in the set.
+            if (e == value) // Already in the set.
             {
                 return InsertStatus.found;
             }
@@ -391,6 +427,24 @@ struct Set(T)
         return status == InsertStatus.added;
     }
 
+    ///
+    unittest
+    {
+        Set!int set;
+        assert(8 !in set);
+
+        assert(set.insert(8) == 1);
+        assert(set.length == 1);
+        assert(8 in set);
+
+        assert(set.insert(8) == 0);
+        assert(set.length == 1);
+        assert(8 in set);
+
+        assert(set.remove(8));
+        assert(set.insert(8) == 1);
+    }
+
     /**
      * Removes an element.
      *
@@ -410,7 +464,7 @@ struct Set(T)
         auto bucketPosition = locateBucket(this.data, calculateHash(value));
         foreach (ref e; this.data[bucketPosition .. $])
         {
-            if (e.content == value) // Found.
+            if (e == value) // Found.
             {
                 e.remove();
                 return 1;
@@ -421,6 +475,20 @@ struct Set(T)
             }
         }
         return 0;
+    }
+
+    ///
+    unittest
+    {
+        Set!int set;
+        assert(8 !in set);
+
+        set.insert(8);
+        assert(8 in set);
+
+        assert(set.remove(8) == 1);
+        assert(set.remove(8) == 0);
+        assert(8 !in set);
     }
 
     /**
@@ -442,7 +510,7 @@ struct Set(T)
         auto bucketPosition = locateBucket(this.data, calculateHash(value));
         foreach (ref e; this.data[bucketPosition .. $])
         {
-            if (e.content == value) // Found.
+            if (e == value) // Found.
             {
                 return true;
             }
@@ -465,7 +533,7 @@ struct Set(T)
         auto bucketPosition = locateBucket(this.data, calculateHash(value));
         foreach (ref e; this.data[bucketPosition .. $])
         {
-            if (e.content == value) // Found.
+            if (e.status == BucketStatus.used && e.content == value) // Found.
             {
                 return true;
             }
@@ -476,7 +544,6 @@ struct Set(T)
         }
         return false;
     }
-
 
     ///
     unittest
@@ -565,6 +632,21 @@ struct Set(T)
         return typeof(return)(this.data[]);
     }
 
+    ///
+    unittest
+    {
+        Set!int set;
+        assert(set[].empty);
+
+        set.insert(8);
+        assert(!set[].empty);
+        assert(set[].front == 8);
+        assert(set[].back == 8);
+
+        set.remove(8);
+        assert(set[].empty);
+    }
+
     private alias DataType = Array!(Bucket!T);
     private DataType data;
     private size_t lengthIndex;
@@ -618,4 +700,11 @@ private unittest
 
     static assert(!isInfinite!(Set!int.Range));
     static assert(!hasLength!(Set!int.Range));
+
+    static assert(is(Set!uint));
+    static assert(is(Set!long));
+    static assert(is(Set!ulong));
+    static assert(is(Set!short));
+    static assert(is(Set!ushort));
+    static assert(is(Set!bool));
 }

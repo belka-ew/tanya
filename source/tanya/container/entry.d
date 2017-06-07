@@ -69,6 +69,34 @@ package struct Bucket(T)
         return this.content_;
     }
 
+    bool opEquals(ref T content)
+    {
+        if (this.status == BucketStatus.used && this.content == content)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    bool opEquals(ref T content) const
+    {
+        if (this.status == BucketStatus.used && this.content == content)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    bool opEquals(ref typeof(this) that)
+    {
+        return this.content == that.content && this.status == that.status;
+    }
+
+    bool opEquals(ref typeof(this) that) const
+    {
+        return this.content == that.content && this.status == that.status;
+    }
+
     void remove()
     {
         static if (hasElaborateDestructor!T)
