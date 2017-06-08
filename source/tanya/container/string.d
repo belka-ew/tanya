@@ -943,13 +943,7 @@ struct String
      *
      * Returns: The array representing the string.
      */
-    const(char)[] toString() const pure nothrow @trusted @nogc
-    {
-        return this.data[0 .. this.length_];
-    }
-
-    /// Ditto.
-    char[] toString() pure nothrow @trusted @nogc
+    inout(char)[] get() inout pure nothrow @trusted @nogc
     {
         return this.data[0 .. this.length_];
     }
