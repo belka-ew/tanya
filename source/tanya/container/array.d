@@ -22,9 +22,6 @@ import std.meta;
 import std.traits;
 import tanya.memory;
 
-deprecated("Use tanya.container.array instead.")
-alias Vector = Array;
-
 /**
  * Random-access range for the $(D_PSYMBOL Array).
  *
