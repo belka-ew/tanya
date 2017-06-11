@@ -36,6 +36,19 @@ abstract class Watcher
     void invoke() @nogc;
 }
 
+version (unittest)
+{
+    final class DummyWatcher : Watcher
+    {
+        bool invoked;
+
+        override void invoke() @nogc
+        {
+            this.invoked = true;
+        }
+    }
+}
+
 /**
  * Socket watcher.
  */

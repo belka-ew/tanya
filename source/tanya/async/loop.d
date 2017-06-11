@@ -109,6 +109,30 @@ else version (DragonFlyBSD)
 {
     version = Kqueue;
 }
+version (unittest)
+{
+    final class TestLoop : Loop
+    {
+        override protected bool reify(SocketWatcher watcher,
+                                      EventMask oldEvents,
+                                      EventMask events) @nogc
+        {
+            return true;
+        }
+
+        override protected void poll() @nogc
+        {
+            assert(!this.done);
+            unloop();
+        }
+
+        override protected @property uint maxEvents()
+        const pure nothrow @safe @nogc
+        {
+            return 64U;
+        }
+    }
+}
 
 /**
  * Events.
@@ -129,7 +153,7 @@ alias EventMask = BitFlags!Event;
  */
 abstract class Loop
 {
-    private bool done;
+    private bool done = true;
 
     /// Pending watchers.
     protected Queue!Watcher pendings;
@@ -142,6 +166,14 @@ abstract class Loop
     const pure nothrow @safe @nogc
     {
         return 128U;
+    }
+
+    private unittest
+    {
+        auto loop = defaultAllocator.make!TestLoop;
+        assert(loop.maxEvents == 64);
+
+        defaultAllocator.dispose(loop);
     }
 
     /**
@@ -168,18 +200,18 @@ abstract class Loop
      */
     void run() @nogc
     {
-        done = false;
+        this.done = false;
         do
         {
             poll();
 
             // Invoke pendings
-            foreach (ref w; pendings)
+            foreach (ref w; this.pendings)
             {
                 w.invoke();
             }
         }
-        while (!done);
+        while (!this.done);
     }
 
     /**
@@ -187,7 +219,32 @@ abstract class Loop
      */
     void unloop() @safe pure nothrow @nogc
     {
-        done = true;
+        this.done = true;
+    }
+
+    private unittest
+    {
+        auto loop = defaultAllocator.make!TestLoop;
+        assert(loop.done);
+
+        loop.run();
+        assert(loop.done);
+
+        defaultAllocator.dispose(loop);
+    }
+
+    private unittest
+    {
+        auto loop = defaultAllocator.make!TestLoop;
+        auto watcher = defaultAllocator.make!DummyWatcher;
+        loop.pendings.enqueue(watcher);
+
+        assert(!watcher.invoked);
+        loop.run();
+        assert(watcher.invoked);
+
+        defaultAllocator.dispose(loop);
+        defaultAllocator.dispose(watcher);
     }
 
     /**
@@ -264,6 +321,17 @@ abstract class Loop
     body
     {
         blockTime_ = blockTime;
+    }
+
+    private unittest
+    {
+        auto loop = defaultAllocator.make!TestLoop;
+        assert(loop.blockTime == 1.dur!"minutes");
+
+        loop.blockTime = 2.dur!"minutes";
+        assert(loop.blockTime == 2.dur!"minutes");
+
+        defaultAllocator.dispose(loop);
     }
 
     /**
@@ -344,3 +412,16 @@ body
 }
 
 private Loop defaultLoop_;
+
+private unittest
+{
+    auto oldLoop = defaultLoop_;
+    auto loop = defaultAllocator.make!TestLoop;
+
+    defaultLoop = loop;
+    assert(defaultLoop_ is loop);
+    assert(defaultLoop is loop);
+
+    defaultLoop_ = oldLoop;
+    defaultAllocator.dispose(loop);
+}
