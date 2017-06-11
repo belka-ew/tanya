@@ -299,7 +299,7 @@ struct RefCounted(T)
 unittest
 {
     auto rc = RefCounted!int(defaultAllocator.make!int(5), defaultAllocator);
-    auto val = rc.get;
+    auto val = rc.get();
 
     *val = 8;
     assert(*rc.storage.payload == 8);
@@ -366,7 +366,14 @@ private unittest
     assert(rc.count == 1);
 }
 
-private unittest
+private @nogc unittest
+{
+    auto rc = RefCounted!int(defaultAllocator);
+    assert(!rc.isInitialized);
+    assert(rc.allocator is defaultAllocator);
+}
+
+private @nogc unittest
 {
     auto rc = defaultAllocator.refCounted!int(5);
     assert(rc.count == 1);
@@ -534,7 +541,7 @@ private @nogc unittest
     static assert(!is(typeof(defaultAllocator.refCounted!E(5))));
     {
         auto rc = defaultAllocator.refCounted!B(3);
-        assert(rc.get.prop == 3);
+        assert(rc.get().prop == 3);
     }
     {
         auto rc = defaultAllocator.refCounted!E();
@@ -546,6 +553,16 @@ private @nogc unittest
 {
     auto rc = defaultAllocator.refCounted!(int[])(5);
     assert(rc.length == 5);
+}
+
+private @nogc unittest
+{
+    auto p1 = defaultAllocator.make!int(5);
+    auto p2 = p1;
+    auto rc = RefCounted!int(p1, defaultAllocator);
+
+    assert(p1 is null);
+    assert(rc.get() is p2);
 }
 
 private @nogc unittest
@@ -566,12 +583,12 @@ private @nogc unittest
 }
 
 /**
- * $(D_PSYMBOL Scoped) stores an object that gets destroyed at the end of its scope.
+ * $(D_PSYMBOL Unique) stores an object that gets destroyed at the end of its scope.
  *
  * Params:
  *  T = Value type.
  */
-struct Scoped(T)
+struct Unique(T)
 {
     private Payload!T payload;
 
@@ -615,7 +632,7 @@ struct Scoped(T)
     }
 
     /**
-     * $(D_PSYMBOL Scoped) is noncopyable.
+     * $(D_PSYMBOL Unique) is noncopyable.
      */
     @disable this(this);
 
@@ -631,14 +648,14 @@ struct Scoped(T)
     }
 
     /**
-     * Initialized this $(D_PARAM Scoped) and takes ownership over
+     * Initialized this $(D_PARAM Unique) and takes ownership over
      * $(D_PARAM rhs).
      *
-     * To reset $(D_PSYMBOL Scoped) assign $(D_KEYWORD null).
+     * To reset $(D_PSYMBOL Unique) assign $(D_KEYWORD null).
      *
      * If the allocator wasn't set before, $(D_PSYMBOL defaultAllocator) will
      * be used. If you need a different allocator, create a new
-     * $(D_PSYMBOL Scoped) and assign it.
+     * $(D_PSYMBOL Unique) and assign it.
      *
      * Params:
      *  rhs = New object.
@@ -708,7 +725,7 @@ struct Scoped(T)
 @nogc unittest
 {
     auto p = defaultAllocator.make!int(5);
-    auto s = Scoped!int(p, defaultAllocator);
+    auto s = Unique!int(p, defaultAllocator);
     assert(p is null);
     assert(*s == 5);
 }
@@ -726,14 +743,14 @@ struct Scoped(T)
         }
     }
     {
-        auto s = Scoped!F(defaultAllocator.make!F(), defaultAllocator);
+        auto s = Unique!F(defaultAllocator.make!F(), defaultAllocator);
     }
     assert(destroyed);
 }
 
 /**
  * Constructs a new object of type $(D_PARAM T) and wraps it in a
- * $(D_PSYMBOL Scoped) using $(D_PARAM args) as the parameter list for
+ * $(D_PSYMBOL Unique) using $(D_PARAM args) as the parameter list for
  * the constructor of $(D_PARAM T).
  *
  * Params:
@@ -742,11 +759,11 @@ struct Scoped(T)
  *  allocator = Allocator.
  *  args      = Constructor arguments of $(D_PARAM T).
  * 
- * Returns: Newly created $(D_PSYMBOL Scoped!T).
+ * Returns: Newly created $(D_PSYMBOL Unique!T).
  *
  * Precondition: $(D_INLINECODE allocator !is null)
  */
-Scoped!T scoped(T, A...)(shared Allocator allocator, auto ref A args)
+Unique!T unique(T, A...)(shared Allocator allocator, auto ref A args)
     if (!is(T == interface) && !isAbstractClass!T
      && !isAssociativeArray!T && !isArray!T)
 in
@@ -756,24 +773,24 @@ in
 body
 {
     auto payload = allocator.make!(T, shared Allocator, A)(args);
-    return Scoped!T(payload, allocator);
+    return Unique!T(payload, allocator);
 }
 
 /**
  * Constructs a new array with $(D_PARAM size) elements and wraps it in a
- * $(D_PSYMBOL Scoped).
+ * $(D_PSYMBOL Unique).
  *
  * Params:
  *  T         = Array type.
  *  size      = Array size.
  *  allocator = Allocator.
  *
- * Returns: Newly created $(D_PSYMBOL Scoped!T).
+ * Returns: Newly created $(D_PSYMBOL Unique!T).
  *
  * Precondition: $(D_INLINECODE allocator !is null
  *                           && size <= size_t.max / ElementType!T.sizeof)
  */
-Scoped!T scoped(T)(shared Allocator allocator, const size_t size)
+Unique!T unique(T)(shared Allocator allocator, const size_t size)
 @trusted
     if (isArray!T)
 in
@@ -784,18 +801,18 @@ in
 body
 {
     auto payload = allocator.resize!(ElementType!T)(null, size);
-    return Scoped!T(payload, allocator);
+    return Unique!T(payload, allocator);
 }
 
 private unittest
 {
-    static assert(is(typeof(defaultAllocator.scoped!B(5))));
-    static assert(is(typeof(defaultAllocator.scoped!(int[])(5))));
+    static assert(is(typeof(defaultAllocator.unique!B(5))));
+    static assert(is(typeof(defaultAllocator.unique!(int[])(5))));
 }
 
 private unittest
 {
-    auto s = defaultAllocator.scoped!int(5);
+    auto s = defaultAllocator.unique!int(5);
     assert(*s == 5);
 
     s = null;
@@ -804,9 +821,36 @@ private unittest
 
 private unittest
 {
-    auto s = defaultAllocator.scoped!int(5);
+    auto s = defaultAllocator.unique!int(5);
     assert(*s == 5);
 
-    s = defaultAllocator.scoped!int(4);
+    s = defaultAllocator.unique!int(4);
     assert(*s == 4);
 }
+
+private @nogc unittest
+{
+    auto p1 = defaultAllocator.make!int(5);
+    auto p2 = p1;
+    auto rc = Unique!int(p1, defaultAllocator);
+
+    assert(p1 is null);
+    assert(rc.get() is p2);
+}
+
+private @nogc unittest
+{
+    auto rc = Unique!int(defaultAllocator);
+    assert(rc.allocator is defaultAllocator);
+}
+
+/**
+ * $(RED Deprecated. Use $(D_PSYMBOL Unique) and $(D_PSYMBOL unique) instead.
+ * These aliases will be removed in 0.8.0.)
+ */
+deprecated("Use Unique instead")
+alias Scoped = Unique;
+
+/// Ditto.
+deprecated("Use unique instead")
+alias scoped = unique;
