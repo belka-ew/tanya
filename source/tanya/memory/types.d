@@ -340,7 +340,7 @@ version (unittest)
     }
 }
 
-private unittest
+private @nogc unittest
 {
     uint destroyed;
     auto a = defaultAllocator.make!A(destroyed);
@@ -350,7 +350,7 @@ private unittest
         auto rc = RefCounted!A(a, defaultAllocator);
         assert(rc.count == 1);
 
-        void func(RefCounted!A rc)
+        void func(RefCounted!A rc) @nogc
         {
             assert(rc.count == 2);
         }
@@ -378,7 +378,7 @@ private @nogc unittest
     auto rc = defaultAllocator.refCounted!int(5);
     assert(rc.count == 1);
 
-    void func(RefCounted!int rc)
+    void func(RefCounted!int rc) @nogc
     {
         assert(rc.count == 2);
         rc = null;
@@ -400,7 +400,7 @@ private unittest
     auto rc = defaultAllocator.refCounted!int(5);
     assert(*rc == 5);
 
-    void func(RefCounted!int rc)
+    void func(RefCounted!int rc) @nogc
     {
         assert(rc.count == 2);
         rc = defaultAllocator.refCounted!int(4);
@@ -511,7 +511,7 @@ unittest
     auto rc = defaultAllocator.refCounted!int(5);
     assert(rc.count == 1);
 
-    void func(RefCounted!int param)
+    void func(RefCounted!int param) @nogc
     {
         if (param.count == 2)
         {
