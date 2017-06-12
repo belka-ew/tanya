@@ -15,9 +15,20 @@ d:
 env: 
  matrix:
   - ARCH=x86_64
+  - ARCH=x86
+
+addons:
+ apt:
+  packages:
+   - gcc-multilib
+
+before_script:
+ - if [ "$PS1" = '(dmd-2.074.1)' -a "$ARCH" = 'x86_64' ]; then
+    export UNITTEST="unittest-cov";
+   fi
 
 script:
- - dub test -b unittest-cov --arch=$ARCH
+ - dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC
 
 after_success:
- - bash <(curl -s https://codecov.io/bash)
+ - test "$UNITTEST" = "unittest-cov" && bash <(curl -s https://codecov.io/bash)
