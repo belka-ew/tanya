@@ -3,17 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Internet utilities.
- *
- * $(RED Deprecated. Use $(D_PSYMBOL tanya.net.inet) instead.
- * This module will be removed in 0.8.0.)
+ * Network programming.
  *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
-deprecated("Use tanya.net.inet instead")
-module tanya.network.inet;
+module tanya.net;
 
 public import tanya.net.inet;
