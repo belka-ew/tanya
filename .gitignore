@@ -1,5 +1,6 @@
 # Binary
 *.[oa]
+*.exe
 
 # D
 .dub
@@ -9,3 +10,5 @@ __test__*__.core
 
 /docs/
 /docs.json
+
+/*.lst
