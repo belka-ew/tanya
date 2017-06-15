@@ -37,7 +37,7 @@ class EntropyException : Exception
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
-         Throwable next = null) const pure nothrow @safe @nogc
+         Throwable next = null) pure @safe nothrow const @nogc
     {
         super(msg, file, line, next);
     }
@@ -54,17 +54,17 @@ abstract class EntropySource
     /**
      * Returns: Minimum bytes required from the entropy source.
      */
-    @property ubyte threshold() const pure nothrow @safe @nogc;
+    @property immutable(ubyte) threshold() const @safe pure nothrow;
 
     /**
      * Returns: Whether this entropy source is strong.
      */
-    @property bool strong() const pure nothrow @safe @nogc;
+    @property immutable(bool) strong() const @safe pure nothrow;
 
     /**
      * Returns: Amount of already generated entropy.
      */
-    @property ushort size() const pure nothrow @safe @nogc
+    @property ushort size() const @safe pure nothrow
     {
         return size_;
     }
@@ -74,7 +74,7 @@ abstract class EntropySource
      *  size = Amount of already generated entropy. Cannot be smaller than the
      *         already set value.
      */
-    @property void size(const ushort size) pure nothrow @nogc @safe
+    @property void size(ushort size) @safe pure nothrow
     {
         size_ = size;
     }
@@ -89,12 +89,12 @@ abstract class EntropySource
      * Returns: Number of bytes that were copied to the $(D_PARAM output)
      *          or $(D_PSYMBOL Nullable!ubyte.init) on error.
      */
-    Nullable!ubyte poll(out ubyte[maxGather] output) @nogc;
+    Nullable!ubyte poll(out ubyte[maxGather] output);
 }
 
 version (linux)
 {
-    extern (C) long syscall(long number, ...) nothrow @nogc;
+    extern (C) long syscall(long number, ...) nothrow;
 
     /**
      * Uses getrandom system call.
@@ -104,7 +104,7 @@ version (linux)
         /**
          * Returns: Minimum bytes required from the entropy source.
          */
-        override @property ubyte threshold() const pure nothrow @safe @nogc
+        override @property immutable(ubyte) threshold() const @safe pure nothrow
         {
             return 32;
         }
@@ -112,7 +112,7 @@ version (linux)
         /**
          * Returns: Whether this entropy source is strong.
          */
-        override @property bool strong() const pure nothrow @safe @nogc
+        override @property immutable(bool) strong() const @safe pure nothrow
         {
             return true;
         }
@@ -127,7 +127,7 @@ version (linux)
          * Returns: Number of bytes that were copied to the $(D_PARAM output)
          *          or $(D_PSYMBOL Nullable!ubyte.init) on error.
          */
-        override Nullable!ubyte poll(out ubyte[maxGather] output) nothrow @nogc
+        override Nullable!ubyte poll(out ubyte[maxGather] output) nothrow
         out (length)
         {
             assert(length <= maxGather);
@@ -144,20 +144,6 @@ version (linux)
             }
             return ret;
         }
-    }
-
-    private @nogc unittest
-    {
-        auto entropy = defaultAllocator.make!Entropy();
-
-        assert(entropy.sourceCount == 1);
-        assert(entropy.sources[0].strong);
-        assert(entropy.sources[0].threshold == 32);
-        assert(entropy.sources[0].size == 0);
-
-        auto random = entropy.random;
-
-        defaultAllocator.dispose(entropy);
     }
 }
 
@@ -191,8 +177,7 @@ class Entropy
      *  allocator  = Allocator to allocate entropy sources available on the
      *               system.
      */
-    this(const size_t maxSources = 20,
-         shared Allocator allocator = defaultAllocator) nothrow @nogc
+    this(size_t maxSources = 20, shared Allocator allocator = defaultAllocator)
     in
     {
         assert(maxSources > 0 && maxSources <= ubyte.max);
@@ -211,7 +196,7 @@ class Entropy
     /**
      * Returns: Amount of the registered entropy sources.
      */
-    @property ubyte sourceCount() const pure nothrow @safe @nogc
+    @property ubyte sourceCount() const @safe pure nothrow
     {
         return sourceCount_;
     }
@@ -227,8 +212,7 @@ class Entropy
      * See_Also:
      *  $(D_PSYMBOL EntropySource)
      */
-    Entropy opOpAssign(string Op)(EntropySource source)
-    pure nothrow @safe @nogc
+    Entropy opOpAssign(string Op)(EntropySource source) @safe pure nothrow
         if (Op == "~")
     in
     {
@@ -246,7 +230,7 @@ class Entropy
      * Throws: $(D_PSYMBOL EntropyException) if no strong entropy source was
      *         registered or it failed.
      */
-    @property ubyte[blockSize] random() @nogc
+    @property ubyte[blockSize] random()
     in
     {
         assert(sourceCount_ > 0, "No entropy sources defined.");
@@ -315,15 +299,15 @@ class Entropy
      *  data     = Data got from the entropy source.
      *  length   = Length of the received data.
      */
-    protected void update(const ubyte sourceId,
+    protected void update(in ubyte sourceId,
                           ref ubyte[maxGather] data,
-                          ubyte length) pure nothrow @safe @nogc
+                          ubyte length) @safe pure nothrow
     {
         ubyte[2] header;
 
         if (length > blockSize)
         {
-            data[0 .. 64] = sha512Of(data);
+            data[0..64] = sha512Of(data);
             length = blockSize;
         }
 
@@ -331,6 +315,6 @@ class Entropy
         header[1] = length;
 
         accumulator.put(header);
-        accumulator.put(data[0 .. length]);
+        accumulator.put(data[0..length]);
     }
 }
