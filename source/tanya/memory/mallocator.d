@@ -154,8 +154,11 @@ final class Mallocator : Allocator
     // Fails with false.
     private @nogc nothrow unittest
     {
-        void[] p;
+        void[] p = Mallocator.instance.allocate(20);
+        void[] oldP = p;
         assert(!Mallocator.instance.reallocate(p, size_t.max - Mallocator.psize * 2));
+        assert(oldP is p);
+        Mallocator.instance.deallocate(p);
     }
 
     /**
