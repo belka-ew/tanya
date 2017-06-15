@@ -73,13 +73,13 @@ final class MmapPool : Allocator
      *
      * Returns: Pointer to the new allocated memory.
      */
-    void[] allocate(in size_t size) shared nothrow @nogc
+    void[] allocate(const size_t size) shared nothrow @nogc
     {
         if (!size)
         {
             return null;
         }
-        immutable dataSize = addAlignment(size);
+        const dataSize = addAlignment(size);
 
         void* data = findBlock(dataSize);
         if (data is null)
@@ -94,13 +94,14 @@ final class MmapPool : Allocator
     nothrow unittest
     {
         auto p = MmapPool.instance.allocate(20);
-
         assert(p);
-
         MmapPool.instance.deallocate(p);
+
+        p = MmapPool.instance.allocate(0);
+        assert(p.length == 0);
     }
 
-    /**
+    /*
      * Search for a block large enough to keep $(D_PARAM size) and split it
      * into two blocks if the block is too large.
      *
@@ -109,7 +110,7 @@ final class MmapPool : Allocator
      *
      * Returns: Data the block points to or $(D_KEYWORD null).
      */
-    private void* findBlock(in ref size_t size) shared nothrow @nogc
+    private void* findBlock(const ref size_t size) shared nothrow @nogc
     {
         Block block1;
         RegionLoop: for (auto r = head; r !is null; r = r.next)
@@ -242,7 +243,8 @@ final class MmapPool : Allocator
      *
      * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
      */
-    bool reallocateInPlace(ref void[] p, in size_t size) shared nothrow @nogc
+    bool reallocateInPlace(ref void[] p, const size_t size)
+    shared nothrow @nogc
     {
         if (p is null || size == 0)
         {
@@ -262,8 +264,8 @@ final class MmapPool : Allocator
             p = p.ptr[0 .. size];
             return true;
         }
-        immutable dataSize = addAlignment(size);
-        immutable delta = dataSize - addAlignment(p.length);
+        const dataSize = addAlignment(size);
+        const delta = dataSize - addAlignment(p.length);
 
         if (block1.next is null
          || !block1.next.free
@@ -333,7 +335,7 @@ final class MmapPool : Allocator
      *
      * Returns: Whether the reallocation was successful.
      */
-    bool reallocate(ref void[] p, in size_t size) shared nothrow @nogc
+    bool reallocate(ref void[] p, const size_t size) shared nothrow @nogc
     {
         if (size == 0)
         {
@@ -419,7 +421,8 @@ final class MmapPool : Allocator
                 pageSize = si.dwPageSize;
             }
 
-            immutable instanceSize = addAlignment(__traits(classInstanceSize, MmapPool));
+            const instanceSize = addAlignment(__traits(classInstanceSize,
+                                              MmapPool));
 
             Region head; // Will become soon our region list head
             void* data = initializeRegion(instanceSize, head);
@@ -451,7 +454,7 @@ final class MmapPool : Allocator
     private static void* initializeRegion(size_t size, ref Region head)
     nothrow @nogc
     {
-        immutable regionSize = calculateRegionSize(size);
+        const regionSize = calculateRegionSize(size);
 
         version (Posix)
         {
@@ -524,8 +527,7 @@ final class MmapPool : Allocator
      *
      * Returns: Aligned size of $(D_PARAM x).
      */
-    private static immutable(size_t) addAlignment(size_t x)
-    pure nothrow @safe @nogc
+    private static size_t addAlignment(size_t x) pure nothrow @safe @nogc
     out (result)
     {
         assert(result > 0);
@@ -541,8 +543,7 @@ final class MmapPool : Allocator
      *
      * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
      */
-    private static immutable(size_t) calculateRegionSize(size_t x)
-    nothrow @safe @nogc
+    private static size_t calculateRegionSize(size_t x) nothrow @safe @nogc
     out (result)
     {
         assert(result > 0);
@@ -560,7 +561,13 @@ final class MmapPool : Allocator
     {
         return alignment_;
     }
-    private enum alignment_ = 8;
+
+    private nothrow @nogc unittest
+    {
+        assert(MmapPool.instance.alignment == MmapPool.alignment_);
+    }
+
+    private enum uint alignment_ = 8;
 
     private shared static MmapPool instance_;
     private shared static size_t pageSize;

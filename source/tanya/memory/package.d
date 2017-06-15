@@ -15,6 +15,7 @@ import std.algorithm.iteration;
 public import std.experimental.allocator : make;
 import std.traits;
 public import tanya.memory.allocator;
+import tanya.memory.mmappool;
 
 /**
  * The mixin generates common methods for classes and structs using
@@ -88,7 +89,6 @@ shared Allocator allocator;
 
 shared static this() nothrow @trusted @nogc
 {
-    import tanya.memory.mmappool;
     allocator = MmapPool.instance;
 }
 
@@ -110,6 +110,17 @@ in
 body
 {
     .allocator = allocator;
+}
+
+private nothrow @nogc unittest
+{
+    import tanya.memory.mallocator;
+
+    auto oldAllocator = defaultAllocator;
+    defaultAllocator = Mallocator.instance;
+    assert(defaultAllocator is Mallocator.instance);
+
+    defaultAllocator = oldAllocator;
 }
 
 /**
@@ -306,4 +317,20 @@ private unittest
     auto p = cast(S[]) defaultAllocator.allocate(S.sizeof);
 
     defaultAllocator.dispose(p);
+}
+
+// Works with interfaces.
+private unittest
+{
+    interface I
+    {
+    }
+    class C : I
+    {
+    }
+    auto c = defaultAllocator.make!C();
+    I i = c;
+
+    defaultAllocator.dispose(i);
+    defaultAllocator.dispose(i);
 }

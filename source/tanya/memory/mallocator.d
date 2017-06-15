@@ -11,7 +11,6 @@
 module tanya.memory.mallocator;
 
 import core.stdc.stdlib;
-import std.algorithm.comparison;
 import tanya.memory.allocator;
 
 /**
@@ -27,9 +26,9 @@ final class Mallocator : Allocator
      *
      * Returns: The pointer to the new allocated memory.
      */
-    void[] allocate(in size_t size) shared nothrow @nogc
+    void[] allocate(const size_t size) shared nothrow @nogc
     {
-        if (!size)
+        if (size == 0)
         {
             return null;
         }
@@ -42,10 +41,11 @@ final class Mallocator : Allocator
     @nogc nothrow unittest
     {
         auto p = Mallocator.instance.allocate(20);
-
         assert(p.length == 20);
-
         Mallocator.instance.deallocate(p);
+
+        p = Mallocator.instance.allocate(0);
+        assert(p.length == 0);
     }
 
     /**
@@ -87,6 +87,13 @@ final class Mallocator : Allocator
     bool reallocateInPlace(ref void[] p, const size_t size) shared nothrow @nogc
     {
         return false;
+    }
+
+    ///
+    @nogc nothrow unittest
+    {
+        void[] p;
+        assert(!Mallocator.instance.reallocateInPlace(p, 8));
     }
 
     /**
@@ -144,12 +151,24 @@ final class Mallocator : Allocator
         assert(p is null);
     }
 
+    // Fails with false.
+    private @nogc nothrow unittest
+    {
+        void[] p;
+        assert(!Mallocator.instance.reallocate(p, size_t.max - Mallocator.psize * 2));
+    }
+
     /**
      * Returns: The alignment offered.
      */
     @property uint alignment() shared const pure nothrow @safe @nogc
     {
-        return cast(uint) max(double.alignof, real.alignof);
+        return (void*).alignof;
+    }
+
+    private nothrow @nogc unittest
+    {
+        assert(Mallocator.instance.alignment == (void*).alignof);
     }
 
     /**
@@ -161,7 +180,7 @@ final class Mallocator : Allocator
     {
         if (instance_ is null)
         {
-            immutable size = __traits(classInstanceSize, Mallocator) + psize;
+            const size = __traits(classInstanceSize, Mallocator) + psize;
             void* p = malloc(size);
 
             if (p !is null)
@@ -179,7 +198,7 @@ final class Mallocator : Allocator
         assert(instance is instance);
     }
 
-    private enum psize = 8;
+    private enum ushort psize = 8;
 
     private shared static Mallocator instance_;
 }
