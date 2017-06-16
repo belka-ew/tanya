@@ -28,6 +28,7 @@ string, Hash set.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
 * `network`: URL-Parsing, sockets, utilities.
+* `os`: Platform-independent interfaces to operating system functionality.
 
 ### Supported compilers
 
