@@ -146,13 +146,16 @@ version (linux)
         }
     }
 
-    private unittest
+    version (X86_64)
     {
-        auto entropy = defaultAllocator.make!Entropy();
-        ubyte[blockSize] output;
-        output = entropy.random;
+        private unittest
+        {
+            auto entropy = defaultAllocator.make!Entropy();
+            ubyte[blockSize] output;
+            output = entropy.random;
 
-        defaultAllocator.dispose(entropy);
+            defaultAllocator.dispose(entropy);
+        }
     }
 }
 
