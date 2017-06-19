@@ -25,6 +25,7 @@ Tanya consists of the following packages:
 * `async`: Event loop (epoll, kqueue and IOCP).
 * `container`: Queue, Array, Singly and doubly linked lists, Buffers, UTF-8
 string, Hash set.
+* `format`: Formatting and conversion functions.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
 * `network`: URL-Parsing, sockets, utilities.
@@ -63,7 +64,3 @@ is being tested on Windows and FreeBSD as well.
 3-week release cycle.
 
 Deprecated features are removed after one release (in approximately 6 weeks after deprecating).
-
-## Contributing
-
-Feel free to contact me if you have any questions: info@caraus.de.
