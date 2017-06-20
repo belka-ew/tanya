@@ -56,7 +56,7 @@ template to(To)
     }
 
     To to(From)(From from)
-    if (is(To == From))
+    if (is(Unqual!To == Unqual!From))
     {
         return from;
     }
@@ -128,7 +128,7 @@ if (isIntegral!From && isIntegral!To && !is(To == From))
     }
     else static if (isSigned!To)
     {
-        return from & Signed!To.max;
+        return cast(To) from;
     }
     else
     {
@@ -136,7 +136,7 @@ if (isIntegral!From && isIntegral!To && !is(To == From))
     }
 }
 
-private /*pure nothrow @safe @nogc */unittest
+private pure nothrow @safe @nogc unittest
 {
     // ubyte -> ushort
     assert((cast(ubyte) 0).to!ushort == 0);
@@ -174,13 +174,13 @@ private unittest
     assert((short.max - 1).to!int == short.max - 1);
     assert(short.max.to!int == short.max);
 
-    assert((cast(int) short.min).to!int == short.min);
-    assert((cast(int) short.min + 1).to!int == short.min + 1);
-    assert((cast(int) -1).to!int == -1);
-    assert((cast(int) 0).to!int == 0);
-    assert((cast(int) 1).to!int == 1);
-    assert((cast(int) short.max - 1).to!int == short.max - 1);
-    assert((cast(int) short.max).to!int == short.max);
+    assert((cast(int) short.min).to!short == short.min);
+    assert((cast(int) short.min + 1).to!short == short.min + 1);
+    assert((cast(int) -1).to!short == -1);
+    assert((cast(int) 0).to!short == 0);
+    assert((cast(int) 1).to!short == 1);
+    assert((cast(int) short.max - 1).to!short == short.max - 1);
+    assert((cast(int) short.max).to!short == short.max);
 
     // uint <-> int
     assert((cast(uint) 0).to!int == 0);
@@ -206,6 +206,7 @@ private unittest
         exception = e;
     }
     assert(exception !is null);
+    defaultAllocator.dispose(exception);
 }
 
 private unittest
@@ -220,6 +221,7 @@ private unittest
         exception = e;
     }
     assert(exception !is null);
+    defaultAllocator.dispose(exception);
 }
 
 private unittest
@@ -234,6 +236,7 @@ private unittest
         exception = e;
     }
     assert(exception !is null);
+    defaultAllocator.dispose(exception);
 }
 
 private unittest
@@ -248,4 +251,120 @@ private unittest
         exception = e;
     }
     assert(exception !is null);
+    defaultAllocator.dispose(exception);
+}
+
+/**
+ * Converts a number to a boolean. If $(D_PARAM from) is greater than `1` or
+ * less than `0`, an exception is thrown, `0` results in $(D_KEYWORD false) and
+ * all other values result in $(D_KEYWORD true).
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE from > 0 && from <= 1),
+ *          otherwise $(D_KEYWORD false).
+ *
+ * Throws: $(D_PSYMBOL ConvException).
+ */
+To to(To, From)(From from)
+if (isNumeric!From && is(Unqual!To == bool) && !is(To == From))
+{
+    if (from == 0)
+    {
+        return false;
+    }
+    else if (from < 0)
+    {
+        throw make!ConvException(defaultAllocator,
+                                 "Negative number overflow");
+    }
+    else if (from <= 1)
+    {
+        return true;
+    }
+    throw make!ConvException(defaultAllocator,
+                             "Positive number overflow");
+}
+
+private unittest
+{
+    assert(0.0.to!bool == false);
+    assert(0.2.to!bool == true);
+    assert(0.5.to!bool == true);
+    assert(1.0.to!bool == true);
+
+    assert(0.to!bool == false);
+    assert(1.to!bool == true);
+}
+
+private unittest
+{
+    ConvException exception;
+    try
+    {
+        assert((-1).to!bool == true);
+    }
+    catch (ConvException e)
+    {
+        exception = e;
+    }
+    assert(exception !is null);
+    defaultAllocator.dispose(exception);
+}
+
+private unittest
+{
+    ConvException exception;
+    try
+    {
+        assert(2.to!bool == true);
+    }
+    catch (ConvException e)
+    {
+        exception = e;
+    }
+    assert(exception !is null);
+    defaultAllocator.dispose(exception);
+}
+
+/**
+ * Converts a boolean to a number. $(D_KEYWORD true) is `1`, $(D_KEYWORD false)
+ * is `0`.
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: `1` if $(D_PARAM from) is $(D_KEYWORD true), otherwise `0`.
+ */
+To to(To, From)(From from)
+if (is(Unqual!From == bool) && isNumeric!To && !is(To == From))
+{
+    return from;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    assert(true.to!float == 1.0);
+    assert(true.to!double == 1.0);
+    assert(true.to!ubyte == 1);
+    assert(true.to!byte == 1);
+    assert(true.to!ushort == 1);
+    assert(true.to!short == 1);
+    assert(true.to!uint == 1);
+    assert(true.to!int == 1);
+
+    assert(false.to!float == 0);
+    assert(false.to!double == 0);
+    assert(false.to!ubyte == 0);
+    assert(false.to!byte == 0);
+    assert(false.to!ushort == 0);
+    assert(false.to!short == 0);
+    assert(false.to!uint == 0);
+    assert(false.to!int == 0);
 }
