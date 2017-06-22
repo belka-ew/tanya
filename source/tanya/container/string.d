@@ -500,6 +500,12 @@ struct String
         }
     }
 
+    @safe @nogc unittest
+    {
+        auto s = String(0, 'K');
+        assert(s.length == 0);
+    }
+
     /**
      * Destroys the string.
      */
@@ -854,6 +860,9 @@ struct String
 
         s.shrink(18);
         assert(s.capacity == 21);
+
+        s.shrink(22);
+        assert(s.capacity == 21);
     }
 
     /**
@@ -948,25 +957,32 @@ struct String
         return this.data[0 .. this.length_];
     }
 
+    ///
+    nothrow @safe @nogc unittest
+    {
+        auto s = String("Char array.");
+        assert(s.get().length == 11);
+    }
+
     /**
      * Returns null-terminated string. The returned string is managed by this
      * object and shouldn't be freed.
      *
      * Returns: Null-terminated string.
      */
-    const(char)[] toStringz() nothrow @trusted @nogc
+    const(char)* toStringz() nothrow @nogc
     {
         reserve(length + 1);
         this.data[length] = '\0';
-        return this.data[0 .. length + 1];
+        return this.data;
     }
 
     ///
-    @safe @nogc unittest
+    @nogc unittest
     {
         auto s = String("C string.");
-        assert(s.toStringz().length == 10);
-        assert(s.toStringz()[$ - 1] == '\0');
+        assert(s.toStringz()[0] == 'C');
+        assert(s.toStringz()[9] == '\0');
     }
 
     /**
@@ -1090,6 +1106,16 @@ struct String
     @property bool empty() const pure nothrow @safe @nogc
     {
         return length == 0;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        String s;
+        assert(s.empty);
+
+        s.insertBack('K');
+        assert(!s.empty);
     }
 
     /**
@@ -1348,6 +1374,15 @@ struct String
     pure nothrow @safe @nogc
     {
         return opIndex(pos) = value;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto s = String("alea iacta est.");
+
+        s[0] = 'A';
+        assert(s[0] == 'A');
     }
 
     /**
