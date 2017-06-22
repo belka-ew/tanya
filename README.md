@@ -31,6 +31,102 @@ string, Hash set.
 * `network`: URL-Parsing, sockets, utilities.
 * `os`: Platform-independent interfaces to operating system functionality.
 
+## Basic usage
+
+### Allocators
+
+Memory management is done with allocators. Instead of using `new` to create an
+instance of a class, an allocator is used:
+
+```d
+import tanya.memory;
+
+class A
+{
+    this(int arg)
+    {
+    }
+}
+
+A a = defaultAllocator.make!A(5);
+
+defaultAllocator.dispose(a);
+```
+
+As you can see, the user is responsible for deallocation, therefore `dispose`
+is called at the end.
+
+If you want to change the `defaultAllocator` to something different, you
+probably want to do it at the program's beginning. Or you can invoke another
+allocator directly. It is important to ensure that the object is destroyed
+using the same allocator that was used to allocate it.
+
+What if I get an allocated object from some function? The generic rule is: If
+you haven't requested the memory yourself (with `make`), you don't need to free
+it.
+
+`tanya.memory.smartref` contains smart pointers, helpers that can take care of
+a proper deallocation in some cases for you.
+
+### Exceptions
+
+Since exceptions are normal classes in D, they are allocated and dellocated the
+same as described above. But there are two differences how they are used:
+
+1. The caller is *always* responsible for destroying a caught exception.
+2. Exceptions are *always* allocated and should be always allocated with the
+`defaultAllocator`.
+
+```d
+import tanya.memory;
+
+void functionThatThrows()
+{
+    throw defaultAlocator.make!Exception("An error occurred");
+}
+
+try
+{
+    functionThatThrows()
+}
+catch (Exception e)
+{
+    defaultAllocator.dispose(e);
+}
+```
+
+### Containers
+
+Arrays are commonly used in programming. D's built-in arrays often rely on the
+GC. It is inconvenient to change their size, reserve memory for future use and
+so on. Containers can help here. The following example demonstrates how
+`tanya.container.array.Array` can be used instead of `int[]`.
+
+```d
+import tanya.container.array;
+
+Array!int arr;
+
+// Reserve memory if I know that my container will contain approximately 15
+// elements.
+arr.reserve(15);
+
+arr.insertBack(5); // Add one element.
+arr.length = 10; // New elements are initialized to 0.
+
+// Iterate over the first five elements.
+foreach (el; arr[0 .. 5])
+{
+}
+
+int i = arr[7]; // Access 7th element.
+```
+
+There more containers in the `tanya.container` package.
+
+
+## Development
+
 ### Supported compilers
 
 | dmd     |
@@ -50,7 +146,13 @@ Following modules are under development:
 | TLS      | crypto    | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya) [![crypto](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/crypto?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/crypto)                |
 | File IO  | io        | [![io](https://travis-ci.org/caraus-ecms/tanya.svg?branch=io)](https://travis-ci.org/caraus-ecms/tanya) [![io](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/io?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/io)                                    |
 
-### Further characteristics
+### Release management
+
+3-week release cycle.
+
+Deprecated features are removed after one release (in approximately 6 weeks after deprecating).
+
+## Further characteristics
 
 * Tanya is a native D library without any external dependencies.
 
@@ -58,9 +160,3 @@ Following modules are under development:
 is being tested on Windows and FreeBSD as well.
 
 * The library isn't thread-safe yet.
-
-## Release management
-
-3-week release cycle.
-
-Deprecated features are removed after one release (in approximately 6 weeks after deprecating).
