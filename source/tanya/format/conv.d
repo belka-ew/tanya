@@ -38,7 +38,8 @@ final class ConvException : Exception
 
 /**
  * If the source type $(D_PARAM From) and the target type $(D_PARAM To) are
- * equal, does nothing.
+ * equal, does nothing. If $(D_PARAM From) can be implicitly converted to
+ * $(D_PARAM To), just returns $(D_PARAM from).
  *
  * Params:
  *  From = Source type.
@@ -56,7 +57,7 @@ template to(To)
     }
 
     To to(From)(From from)
-    if (is(Unqual!To == Unqual!From))
+    if (is(Unqual!To == Unqual!From) || isNumeric!From && isFloatingPoint!To)
     {
         return from;
     }
@@ -78,9 +79,7 @@ private pure nothrow @safe @nogc unittest
 
 /**
  * Performs checked conversion from an integral type $(D_PARAM From) to an
- * integral type $(D_PARAM To). If the conversion isn't possible (for example
- * because $(D_PARAM from) is too small or too large to be represented by
- * $(D_PARAM To)), an exception is thrown.
+ * integral type $(D_PARAM To).
  *
  * Params:
  *  From = Source type.
@@ -89,10 +88,14 @@ private pure nothrow @safe @nogc unittest
  *
  * Returns: $(D_PARAM from) converted to $(D_PARAM To).
  *
- * Throws: $(D_PSYMBOL ConvException).
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is too small or too
+ *         large to be represented by $(D_PARAM To).
  */
 To to(To, From)(From from)
-if (isIntegral!From && isIntegral!To && !is(To == From))
+if (isIntegral!From
+ && isIntegral!To
+ && !is(Unqual!To == Unqual!From)
+ && !is(To == enum))
 {
     static if ((isUnsigned!From && isSigned!To && From.sizeof == To.sizeof)
             || From.sizeof > To.sizeof)
@@ -254,10 +257,19 @@ private unittest
     defaultAllocator.dispose(exception);
 }
 
+private @nogc unittest
+{
+    enum Test : int
+    {
+        one,
+        two,
+    }
+    assert(Test.one.to!int == 0);
+    assert(Test.two.to!int == 1);
+}
+
 /**
- * Converts a number to a boolean. If $(D_PARAM from) is greater than `1` or
- * less than `0`, an exception is thrown, `0` results in $(D_KEYWORD false) and
- * all other values result in $(D_KEYWORD true).
+ * Converts a number to a boolean.
  *
  * Params:
  *  From = Source type.
@@ -267,10 +279,11 @@ private unittest
  * Returns: $(D_KEYWORD true) if $(D_INLINECODE from > 0 && from <= 1),
  *          otherwise $(D_KEYWORD false).
  *
- * Throws: $(D_PSYMBOL ConvException).
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is greater than `1` or
+ *         less than `0`.
  */
 To to(To, From)(From from)
-if (isNumeric!From && is(Unqual!To == bool) && !is(To == From))
+if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
 {
     if (from == 0)
     {
@@ -289,7 +302,7 @@ if (isNumeric!From && is(Unqual!To == bool) && !is(To == From))
                              "Positive number overflow");
 }
 
-private unittest
+private @nogc unittest
 {
     assert(0.0.to!bool == false);
     assert(0.2.to!bool == true);
@@ -300,7 +313,7 @@ private unittest
     assert(1.to!bool == true);
 }
 
-private unittest
+private @nogc unittest
 {
     ConvException exception;
     try
@@ -315,7 +328,7 @@ private unittest
     defaultAllocator.dispose(exception);
 }
 
-private unittest
+private @nogc unittest
 {
     ConvException exception;
     try
@@ -342,7 +355,7 @@ private unittest
  * Returns: `1` if $(D_PARAM from) is $(D_KEYWORD true), otherwise `0`.
  */
 To to(To, From)(From from)
-if (is(Unqual!From == bool) && isNumeric!To && !is(To == From))
+if (is(Unqual!From == bool) && isNumeric!To && !is(Unqual!To == Unqual!From))
 {
     return from;
 }
@@ -367,4 +380,154 @@ pure nothrow @safe @nogc unittest
     assert(false.to!short == 0);
     assert(false.to!uint == 0);
     assert(false.to!int == 0);
+}
+
+/**
+ * Converts a floating point number to an integral type.
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: Truncated $(D_PARAM from) (everything after the decimal point is
+ *          dropped.
+ *
+ * Throws: $(D_PSYMBOL ConvException) if
+ *         $(D_INLINECODE from < To.min || from > To.max).
+ */
+To to(To, From)(From from)
+if (isFloatingPoint!From
+ && isIntegral!To
+ && !is(Unqual!To == Unqual!From)
+ && !is(To == enum))
+{
+    if (from > To.max)
+    {
+        throw make!ConvException(defaultAllocator,
+                                 "Positive number overflow");
+    }
+    else if (from < To.min)
+    {
+        throw make!ConvException(defaultAllocator,
+                                 "Negative number overflow");
+    }
+    return cast(To) from;
+}
+
+///
+@nogc unittest
+{
+    assert(1.5.to!int == 1);
+    assert(2147483646.5.to!int == 2147483646);
+    assert((-2147483647.5).to!int == -2147483647);
+    assert(2147483646.5.to!uint == 2147483646);
+}
+
+private @nogc unittest
+{
+    ConvException exception;
+    try
+    {
+        assert(2147483647.5.to!int == 2147483647);
+    }
+    catch (ConvException e)
+    {
+        exception = e;
+    }
+    assert(exception !is null);
+    defaultAllocator.dispose(exception);
+}
+
+private @nogc unittest
+{
+    ConvException exception;
+    try
+    {
+        assert((-2147483648.5).to!int == -2147483648);
+    }
+    catch (ConvException e)
+    {
+        exception = e;
+    }
+    assert(exception !is null);
+    defaultAllocator.dispose(exception);
+}
+
+private @nogc unittest
+{
+    ConvException exception;
+    try
+    {
+        assert((-21474.5).to!uint == -21474);
+    }
+    catch (ConvException e)
+    {
+        exception = e;
+    }
+    assert(exception !is null);
+    defaultAllocator.dispose(exception);
+}
+
+/**
+ * Performs checked conversion from an integral type $(D_PARAM From) to an
+ * $(D_KEYWORD enum).
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_KEYWORD enum) value.
+ *
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is not a member of
+ *         $(D_PSYMBOL To).
+
+ */
+To to(To, From)(From from)
+if (isIntegral!From && is(To == enum))
+{
+    foreach (m; EnumMembers!To)
+    {
+        if (from == m)
+        {
+            return m;
+        }
+    }
+    throw make!ConvException(defaultAllocator,
+                             "Value not found in enum '" ~ To.stringof ~ "'");
+}
+
+///
+@nogc unittest
+{
+    enum Test : int
+    {
+        one,
+        two,
+    }
+    static assert(is(typeof(1.to!Test) == Test));
+    assert(0.to!Test == Test.one);
+    assert(1.to!Test == Test.two);
+}
+
+private @nogc unittest
+{
+    enum Test : uint
+    {
+        one,
+        two,
+    }
+
+    ConvException exception;
+    try
+    {
+        assert(5.to!Test == Test.one);
+    }
+    catch (ConvException e)
+    {
+        exception = e;
+    }
+    assert(exception !is null);
+    defaultAllocator.dispose(exception);
 }
