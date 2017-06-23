@@ -63,11 +63,6 @@ package final class RefCountedStore(T)
             return 0;
         }
     }
-
-    int opEquals(const size_t counter)
-    {
-        return this.counter == counter;
-    }
 }
 
 package void separateDeleter(T)(RefCountedStore!T storage,
@@ -207,6 +202,29 @@ struct RefCounted(T)
         return this;
     }
 
+    private unittest
+    {
+        auto rc = defaultAllocator.refCounted!int(5);
+        rc = defaultAllocator.make!int(7);
+        assert(*rc == 7);
+    }
+
+    private unittest
+    {
+        auto rc = defaultAllocator.refCounted!int(5);
+
+        void func(RefCounted!int param) @nogc
+        {
+            assert(rc.count == 2);
+            rc = defaultAllocator.make!int(7);
+            assert(rc.count == 1);
+            assert(*rc == 7);
+        }
+        func(rc);
+        assert(rc.count == 1);
+        assert(*rc == 7);
+    }
+
     /// Ditto.
     ref typeof(this) opAssign(typeof(null))
     {
@@ -227,6 +245,14 @@ struct RefCounted(T)
         return this;
     }
 
+    private unittest
+    {
+        RefCounted!int rc;
+        assert(!rc.isInitialized);
+        rc = null;
+        assert(!rc.isInitialized);
+    }
+
     /// Ditto.
     ref typeof(this) opAssign(typeof(this) rhs)
     {
@@ -241,24 +267,24 @@ struct RefCounted(T)
      *
      * Precondition: $(D_INLINECODE cound > 0).
      */
-    inout(Payload!T) get() inout pure nothrow @safe @nogc
+    inout(Payload!T) get() inout
     in
     {
-        assert(count > 0, "Attempted to access an uninitialized reference.");
+        assert(count > 0, "Attempted to access an uninitialized reference");
     }
     body
     {
-        return storage.payload;
+        return this.storage.payload;
     }
 
     version (D_Ddoc)
     {
         /**
-         * Params:
-         *  op = Operation. 
-         *
          * Dereferences the pointer. It is defined only for pointers, not for
          * reference types like classes, that can be accessed directly.
+         *
+         * Params:
+         *  op = Operation. 
          *
          * Returns: Reference to the pointed value.
          */
@@ -270,7 +296,7 @@ struct RefCounted(T)
         ref inout(T) opUnary(string op)() inout
             if (op == "*")
         {
-            return *storage.payload;
+            return *this.storage.payload;
         }
     }
 
@@ -280,7 +306,7 @@ struct RefCounted(T)
      */
     @property bool isInitialized() const
     {
-        return storage !is null;
+        return this.storage !is null;
     }
 
     /**
@@ -290,7 +316,7 @@ struct RefCounted(T)
      */
     @property size_t count() const
     {
-        return storage is null ? 0 : storage.counter;
+        return this.storage is null ? 0 : this.storage.counter;
     }
 
     mixin DefaultAllocator;
@@ -691,19 +717,19 @@ struct Unique(T)
     /**
      * Returns: Reference to the owned object.
      */
-    inout(Payload!T) get() inout pure nothrow @safe @nogc
+    inout(Payload!T) get() inout
     {
-        return payload;
+        return this.payload;
     }
 
     version (D_Ddoc)
     {
         /**
-         * Params:
-         *  op = Operation. 
-         *
          * Dereferences the pointer. It is defined only for pointers, not for
          * reference types like classes, that can be accessed directly.
+         *
+         * Params:
+         *  op = Operation. 
          *
          * Returns: Reference to the pointed value.
          */
@@ -715,8 +741,46 @@ struct Unique(T)
         ref inout(T) opUnary(string op)() inout
             if (op == "*")
         {
-            return *payload;
+            return *this.payload;
         }
+    }
+
+    /**
+     * Returns: Whether this $(D_PSYMBOL Unique) holds some value.
+     */
+    @property bool isInitialized() const
+    {
+        return this.payload !is null;
+    }
+
+    ///
+    @nogc unittest
+    {
+        Unique!int u;
+        assert(!u.isInitialized);
+    }
+
+    /**
+     * Resets this $(D_PARAM Unique) to its initial state.
+     *
+     * Returns: Reference to the owned object.
+     */
+    Payload!T release()
+    {
+        auto payload = this.payload;
+        this.payload = null;
+        return payload;
+    }
+
+    ///
+    @nogc unittest
+    {
+        auto u = defaultAllocator.unique!int(5);
+        assert(u.isInitialized);
+
+        auto i = u.release();
+        assert(*i == 5);
+        assert(!u.isInitialized);
     }
 
     mixin DefaultAllocator;
