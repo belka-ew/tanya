@@ -38,7 +38,7 @@ package final class RefCountedStore(T)
     size_t counter = 1;
 
     size_t opUnary(string op)()
-        if (op == "--" || op == "++")
+    if (op == "--" || op == "++")
     in
     {
         assert(counter > 0);
@@ -62,6 +62,15 @@ package final class RefCountedStore(T)
         {
             return 0;
         }
+    }
+
+    private unittest
+    {
+        auto rcs = defaultAllocator.make!(RefCountedStore!int);
+        assert(rcs >= 1);
+        assert(rcs > 0);
+        assert(!(rcs > 2));
+        defaultAllocator.dispose(rcs);
     }
 }
 
@@ -180,7 +189,7 @@ struct RefCounted(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign()(auto ref Payload!T rhs)
+    ref typeof(this) opAssign(Payload!T rhs)
     {
         if (this.storage is null)
         {
@@ -198,18 +207,18 @@ struct RefCounted(T)
             finalize(this.storage.payload);
             this.storage.payload = Payload!T.init;
         }
-        move(rhs, this.storage.payload);
+        this.storage.payload = rhs;
         return this;
     }
 
-    private unittest
+    private @nogc unittest
     {
         auto rc = defaultAllocator.refCounted!int(5);
         rc = defaultAllocator.make!int(7);
         assert(*rc == 7);
     }
 
-    private unittest
+    private @nogc unittest
     {
         auto rc = defaultAllocator.refCounted!int(5);
 
@@ -289,12 +298,12 @@ struct RefCounted(T)
          * Returns: Reference to the pointed value.
          */
         ref inout(T) opUnary(string op)() inout
-            if (op == "*");
+        if (op == "*");
     }
     else static if (isPointer!(Payload!T))
     {
         ref inout(T) opUnary(string op)() inout
-            if (op == "*")
+        if (op == "*")
         {
             return *this.storage.payload;
         }
@@ -338,6 +347,12 @@ unittest
 
     *rc = 9;
     assert(*rc.storage.payload == 9);
+}
+
+private unittest
+{
+    RefCounted!int rc1, rc2;
+    static assert(is(typeof(rc1 = rc2)));
 }
 
 version (unittest)
@@ -468,8 +483,8 @@ private unittest
  * Precondition: $(D_INLINECODE allocator !is null)
  */
 RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
-    if (!is(T == interface) && !isAbstractClass!T
-     && !isAssociativeArray!T && !isArray!T)
+if (!is(T == interface) && !isAbstractClass!T
+ && !isAssociativeArray!T && !isArray!T)
 in
 {
     assert(allocator !is null);
@@ -521,7 +536,7 @@ body
  */
 RefCounted!T refCounted(T)(shared Allocator allocator, const size_t size)
 @trusted
-    if (isArray!T)
+if (isArray!T)
 in
 {
     assert(allocator !is null);
@@ -690,11 +705,10 @@ struct Unique(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign()(auto ref Payload!T rhs)
+    ref typeof(this) opAssign(Payload!T rhs)
     {
         allocator.dispose(this.payload);
-        move(rhs, this.payload);
-
+        this.payload = rhs;
         return this;
     }
 
@@ -734,12 +748,12 @@ struct Unique(T)
          * Returns: Reference to the pointed value.
          */
         ref inout(T) opUnary(string op)() inout
-            if (op == "*");
+        if (op == "*");
     }
     else static if (isPointer!(Payload!T))
     {
         ref inout(T) opUnary(string op)() inout
-            if (op == "*")
+        if (op == "*")
         {
             return *this.payload;
         }
@@ -761,7 +775,7 @@ struct Unique(T)
     }
 
     /**
-     * Resets this $(D_PARAM Unique) to its initial state.
+     * Sets the internal pointer to $(D_KEYWORD). The allocator isn't changed.
      *
      * Returns: Reference to the owned object.
      */
@@ -830,8 +844,8 @@ struct Unique(T)
  * Precondition: $(D_INLINECODE allocator !is null)
  */
 Unique!T unique(T, A...)(shared Allocator allocator, auto ref A args)
-    if (!is(T == interface) && !isAbstractClass!T
-     && !isAssociativeArray!T && !isArray!T)
+if (!is(T == interface) && !isAbstractClass!T
+ && !isAssociativeArray!T && !isArray!T)
 in
 {
     assert(allocator !is null);
@@ -858,7 +872,7 @@ body
  */
 Unique!T unique(T)(shared Allocator allocator, const size_t size)
 @trusted
-    if (isArray!T)
+if (isArray!T)
 in
 {
     assert(allocator !is null);
