@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * Allocator based on $(D_PSYMBOL malloc), $(D_PSYMBOL realloc) and $(D_PSYMBOL free).
+ *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -14,7 +16,8 @@ import core.stdc.stdlib;
 import tanya.memory.allocator;
 
 /**
- * Wrapper for malloc/realloc/free from the C standard library.
+ * Wrapper for $(D_PSYMBOL malloc)/$(D_PSYMBOL realloc)/$(D_PSYMBOL free) from
+ * the C standard library.
  */
 final class Mallocator : Allocator
 {

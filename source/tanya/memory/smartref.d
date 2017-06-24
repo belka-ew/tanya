@@ -5,6 +5,9 @@
 /**
  * Smart pointers.
  *
+ * A smart pointer is an object that wraps a raw pointer or a reference
+ * (class, array) to manage its lifetime.
+ *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -41,7 +44,7 @@ package final class RefCountedStore(T)
     if (op == "--" || op == "++")
     in
     {
-        assert(counter > 0);
+        assert(this.counter > 0);
     }
     body
     {
@@ -62,15 +65,6 @@ package final class RefCountedStore(T)
         {
             return 0;
         }
-    }
-
-    private unittest
-    {
-        auto rcs = defaultAllocator.make!(RefCountedStore!int);
-        assert(rcs >= 1);
-        assert(rcs > 0);
-        assert(!(rcs > 2));
-        defaultAllocator.dispose(rcs);
     }
 }
 
@@ -107,8 +101,8 @@ struct RefCounted(T)
 
     invariant
     {
-        assert(storage is null || allocator_ !is null);
-        assert(storage is null || deleter !is null);
+        assert(this.storage is null || this.allocator_ !is null);
+        assert(this.storage is null || this.deleter !is null);
     }
 
     /**
@@ -122,18 +116,13 @@ struct RefCounted(T)
      *
      * Precondition: $(D_INLINECODE allocator !is null)
      */
-    this()(auto ref Payload!T value,
-           shared Allocator allocator = defaultAllocator)
+    this(Payload!T value, shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         this.storage = allocator.make!Storage();
         this.deleter = &separateDeleter!(Payload!T);
 
-        move(value, this.storage.payload);
-        static if (__traits(isRef, value))
-        {
-            value = null;
-        }
+        this.storage.payload = value;
     }
 
     /// Ditto.
@@ -165,7 +154,7 @@ struct RefCounted(T)
      */
     ~this()
     {
-        if (this.storage !is null && !(this.storage.counter && --this.storage))
+        if (this.storage !is null && !(this.storage > 0 && --this.storage))
         {
             deleter(this.storage, allocator);
         }
@@ -218,22 +207,6 @@ struct RefCounted(T)
         assert(*rc == 7);
     }
 
-    private @nogc unittest
-    {
-        auto rc = defaultAllocator.refCounted!int(5);
-
-        void func(RefCounted!int param) @nogc
-        {
-            assert(rc.count == 2);
-            rc = defaultAllocator.make!int(7);
-            assert(rc.count == 1);
-            assert(*rc == 7);
-        }
-        func(rc);
-        assert(rc.count == 1);
-        assert(*rc == 7);
-    }
-
     /// Ditto.
     ref typeof(this) opAssign(typeof(null))
     {
@@ -254,7 +227,7 @@ struct RefCounted(T)
         return this;
     }
 
-    private unittest
+    private @nogc unittest
     {
         RefCounted!int rc;
         assert(!rc.isInitialized);
@@ -347,6 +320,37 @@ unittest
 
     *rc = 9;
     assert(*rc.storage.payload == 9);
+}
+
+private @nogc unittest
+{
+    auto rc = defaultAllocator.refCounted!int(5);
+
+    void func(RefCounted!int param) @nogc
+    {
+        assert(param.count == 2);
+        param = defaultAllocator.make!int(7);
+        assert(param.count == 1);
+        assert(*param == 7);
+    }
+    func(rc);
+    assert(rc.count == 1);
+    assert(*rc == 5);
+}
+
+private @nogc unittest
+{
+    RefCounted!int rc;
+
+    void func(RefCounted!int param) @nogc
+    {
+        assert(param.count == 0);
+        param = defaultAllocator.make!int(7);
+        assert(param.count == 1);
+        assert(*param == 7);
+    }
+    func(rc);
+    assert(rc.count == 0);
 }
 
 private unittest
@@ -603,8 +607,6 @@ private @nogc unittest
     auto p1 = defaultAllocator.make!int(5);
     auto p2 = p1;
     auto rc = RefCounted!int(p1, defaultAllocator);
-
-    assert(p1 is null);
     assert(rc.get() is p2);
 }
 
@@ -651,16 +653,10 @@ struct Unique(T)
      *
      * Precondition: $(D_INLINECODE allocator !is null)
      */
-    this()(auto ref Payload!T value,
-           shared Allocator allocator = defaultAllocator)
+    this(Payload!T value, shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
-
-        move(value, this.payload);
-        static if (__traits(isRef, value))
-        {
-            value = null;
-        }
+        this.payload = value;
     }
 
     /// Ditto.
@@ -684,10 +680,7 @@ struct Unique(T)
      */
     ~this()
     {
-        if (this.payload !is null)
-        {
-            allocator.dispose(this.payload);
-        }
+        allocator.dispose(this.payload);
     }
 
     /**
@@ -726,6 +719,14 @@ struct Unique(T)
         swap(this.payload, rhs.payload);
 
         return this;
+    }
+
+    ///
+    @nogc unittest
+    {
+        auto rc = defaultAllocator.unique!int(5);
+        rc = defaultAllocator.make!int(7);
+        assert(*rc == 7);
     }
 
     /**
@@ -806,7 +807,6 @@ struct Unique(T)
 {
     auto p = defaultAllocator.make!int(5);
     auto s = Unique!int(p, defaultAllocator);
-    assert(p is null);
     assert(*s == 5);
 }
 
@@ -912,9 +912,8 @@ private @nogc unittest
 {
     auto p1 = defaultAllocator.make!int(5);
     auto p2 = p1;
-    auto rc = Unique!int(p1, defaultAllocator);
 
-    assert(p1 is null);
+    auto rc = Unique!int(p1, defaultAllocator);
     assert(rc.get() is p2);
 }
 

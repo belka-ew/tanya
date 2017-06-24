@@ -3,6 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * This module contains the interface for implementing custom allocators.
+ *
+ * Allocators are classes encapsulating memory allocation strategy. This allows
+ * to decouple memory management from the algorithms and the data. 
+ *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
