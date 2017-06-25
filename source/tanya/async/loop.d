@@ -3,10 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Copyright: Eugene Wissner 2016-2017.
- * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
- *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
+ * Interface for the event loop implementations and the default event loop
+ * chooser.
  *
  * ---
  * import tanya.async;
@@ -61,6 +59,11 @@
  *  defaultAllocator.dispose(address);
  * }
  * ---
+ *
+ * Copyright: Eugene Wissner 2016-2017.
+ * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
+ *                  Mozilla Public License, v. 2.0).
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
 module tanya.async.loop;
 
@@ -77,6 +80,9 @@ import tanya.memory.mmappool;
 import tanya.network.socket;
 
 version (DisableBackends)
+{
+}
+else version (D_Ddoc)
 {
 }
 else version (linux)

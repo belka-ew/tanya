@@ -2,7 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/**
+/*
+ * Event loop implementation for Windows.
+ *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -10,7 +12,10 @@
  */
 module tanya.async.event.iocp;
 
-version (Windows):
+version (D_Ddoc)
+{
+}
+else version (Windows):
 
 import tanya.container.buffer;
 import tanya.async.loop;

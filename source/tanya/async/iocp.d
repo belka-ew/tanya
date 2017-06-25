@@ -3,6 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * This module provides API for Windows I/O Completion Ports.
+ *
+ * Note: Available only on Windows.
+ *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -10,7 +14,26 @@
  */
 module tanya.async.iocp;
 
-version (Windows):
+version (Windows)
+{
+    version = WindowsDoc;
+}
+else version (D_Ddoc)
+{
+    version = WindowsDoc;
+    version (Windows)
+    {
+    }
+    else
+    {
+        private struct OVERLAPPED
+        {
+        }
+        private alias HANDLE = void*;
+    }
+}
+
+version (WindowsDoc):
 
 import core.sys.windows.winbase;
 import core.sys.windows.windef;

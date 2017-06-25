@@ -42,20 +42,24 @@ final class ConvException : Exception
  * $(D_PARAM To), just returns $(D_PARAM from).
  *
  * Params:
- *  From = Source type.
- *  To   = Target type.
- *  from = Source value.
+ *  To = Target type.
  *
  * Returns: $(D_PARAM from).
  */
 template to(To)
 {
+    /**
+     * Params:
+     *  From = Source type.
+     *  from = Source value.
+     */
     ref To to(From)(ref From from)
     if (is(To == From))
     {
         return from;
     }
 
+    /// Ditto.
     To to(From)(From from)
     if (is(Unqual!To == Unqual!From) || isNumeric!From && isFloatingPoint!To)
     {
@@ -391,7 +395,7 @@ pure nothrow @safe @nogc unittest
  *  from = Source value.
  *
  * Returns: Truncated $(D_PARAM from) (everything after the decimal point is
- *          dropped.
+ *          dropped).
  *
  * Throws: $(D_PSYMBOL ConvException) if
  *         $(D_INLINECODE from < To.min || from > To.max).
