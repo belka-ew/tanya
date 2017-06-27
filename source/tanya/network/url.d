@@ -10,6 +10,7 @@
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  */
+deprecated("Use tanya.net.uri instead")
 module tanya.network.url;
 
 import std.ascii : isAlphaNum, isDigit;

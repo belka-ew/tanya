@@ -13,3 +13,4 @@
 module tanya.net;
 
 public import tanya.net.inet;
+public import tanya.net.uri;
