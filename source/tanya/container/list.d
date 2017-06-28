@@ -134,9 +134,9 @@ struct SList(T)
      *  allocator = Allocator.
      */
     this(R)(R init, shared Allocator allocator = defaultAllocator)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         this(allocator);
         insertFront(init);
@@ -172,6 +172,12 @@ struct SList(T)
         auto l = SList!int(2, 3);
         assert(l.length == 2);
         assert(l.front == 3);
+    }
+
+    private @safe @nogc unittest
+    {
+        auto l = SList!int(0, 0);
+        assert(l.empty);
     }
 
     /// Ditto.
@@ -217,14 +223,14 @@ struct SList(T)
      *  allocator = Allocator.
      */
     this(R)(ref R init, shared Allocator allocator = defaultAllocator)
-        if (is(Unqual!R == SList))
+    if (is(Unqual!R == SList))
     {
         this(init[], allocator);
     }
 
     /// Ditto.
     this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
-        if (is(R == SList))
+    if (is(R == SList))
     {
         this(allocator);
         if (allocator is init.allocator)
@@ -320,7 +326,7 @@ struct SList(T)
     }
 
     private size_t moveEntry(R)(ref Entry* head, ref R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
 
@@ -341,14 +347,14 @@ struct SList(T)
      * Returns: The number of elements inserted.
      */
     size_t insertFront(R)(R el)
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         return moveEntry(this.head, el);
     }
 
     /// Ditto.
     size_t insertFront(R)(ref R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         this.head = allocator.make!Entry(el, this.head);
         return 1;
@@ -370,9 +376,9 @@ struct SList(T)
 
     /// Ditto.
     size_t insertFront(R)(R el) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         size_t retLength;
         Entry* next, newHead;
@@ -451,7 +457,7 @@ struct SList(T)
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
     size_t insertBefore(R)(SRange!T r, R el)
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     in
     {
         assert(checkRangeBelonging(r));
@@ -472,9 +478,9 @@ struct SList(T)
 
     /// Ditto.
     size_t insertBefore(R)(SRange!T r, R el)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
         assert(checkRangeBelonging(r));
@@ -610,9 +616,7 @@ struct SList(T)
     }
 
     /**
-     * Returns the first element and moves to the next one.
-     *
-     * Returns: The first element.
+     * Removes the front element.
      *
      * Precondition: $(D_INLINECODE !empty)
      */
@@ -749,33 +753,50 @@ struct SList(T)
      * Returns: $(D_KEYWORD this).
      */
     ref typeof(this) opAssign(R)(ref R that)
-        if (is(Unqual!R == SList))
+    if (is(Unqual!R == SList))
     {
         return this = that[];
     }
 
     /// Ditto.
     ref typeof(this) opAssign(R)(R that)
-        if (is(R == SList))
+    if (is(R == SList))
     {
         swap(this.head, that.head);
         swap(this.allocator_, that.allocator_);
         return this;
     }
 
+    ///
+    @safe @nogc unittest
+    {
+        {
+            auto l1 = SList!int([5, 4, 9]);
+            auto l2 = SList!int([9, 4]);
+            l1 = l2;
+            assert(l1 == l2);
+        }
+        {
+            auto l1 = SList!int([5, 4, 9]);
+            auto l2 = SList!int([9, 4]);
+            l1 = SList!int([9, 4]);
+            assert(l1 == l2);
+        }
+    }
+
     /**
      * Assigns an input range.
      *
      * Params:
-     *  R         = Type of the initial range.
-     *  that      = Values to initialize the list with.
+     *  R    = Type of the initial range.
+     *  that = Values to initialize the list with.
      *
      * Returns: $(D_KEYWORD this).
      */
     ref typeof(this) opAssign(R)(R that) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         Entry** next = &this.head;
 
@@ -805,12 +826,20 @@ struct SList(T)
         assert(l1 == l2);
     }
 
+    private @safe @nogc unittest
+    {
+        auto l1 = SList!int();
+        auto l2 = SList!int([9, 4]);
+        l1 = l2[];
+        assert(l1 == l2);
+    }
+
     /**
      * Assigns a static array.
      *
      * Params:
      *  R    = Static array size.
-     *  that = Values to initialize the vector with.
+     *  that = Values to initialize the list with.
      *
      * Returns: $(D_KEYWORD this).
      */
@@ -1020,9 +1049,9 @@ struct DList(T)
      *  allocator = Allocator.
      */
     this(R)(R init, shared Allocator allocator = defaultAllocator)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         this(allocator);
         insertFront(init);
@@ -1061,6 +1090,12 @@ struct DList(T)
         assert(l.length == 2);
         assert(l.front == 3);
         assert(l.back == 3);
+    }
+
+    private @safe @nogc unittest
+    {
+        auto l = DList!int(0, 0);
+        assert(l.empty);
     }
 
     /// Ditto.
@@ -1106,14 +1141,14 @@ struct DList(T)
      *  allocator = Allocator.
      */
     this(R)(ref R init, shared Allocator allocator = defaultAllocator)
-        if (is(Unqual!R == DList))
+    if (is(Unqual!R == DList))
     {
         this(init[], allocator);
     }
 
     /// Ditto.
     this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
-        if (is(R == DList))
+    if (is(R == DList))
     {
         this(allocator);
         if (allocator is init.allocator)
@@ -1238,7 +1273,7 @@ struct DList(T)
     }
 
     private size_t moveEntry(R)(ref Entry* head, ref R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
 
@@ -1268,14 +1303,14 @@ struct DList(T)
      * Returns: The number of elements inserted.
      */
     size_t insertFront(R)(R el)
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         return moveEntry(this.head, el);
     }
 
     /// Ditto.
     size_t insertFront(R)(ref R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         if (this.tail is null)
         {
@@ -1307,9 +1342,9 @@ struct DList(T)
 
     /// Ditto.
     size_t insertFront(R)(R el) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         size_t retLength;
         Entry* next, newHead;
@@ -1356,16 +1391,20 @@ struct DList(T)
 
         assert(l1.insertFront(8) == 1);
         assert(l1.front == 8);
+        assert(l1.back == 8);
         assert(l1.insertFront(9) == 1);
         assert(l1.front == 9);
+        assert(l1.back == 8);
 
         DList!int l2;
         assert(l2.insertFront([25, 30, 15]) == 3);
         assert(l2.front == 25);
+        assert(l2.back == 15);
 
         l2.insertFront(l1[]);
         assert(l2.length == 5);
         assert(l2.front == 9);
+        assert(l2.back == 15);
     }
 
     /**
@@ -1378,7 +1417,7 @@ struct DList(T)
      * Returns: The number of elements inserted.
      */
     size_t insertBack(R)(R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
 
@@ -1400,7 +1439,7 @@ struct DList(T)
 
     /// Ditto.
     size_t insertBack(R)(ref R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         if (this.tail is null)
         {
@@ -1432,9 +1471,9 @@ struct DList(T)
 
     /// Ditto.
     size_t insertBack(R)(R el) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         size_t inserted;
 
@@ -1496,7 +1535,7 @@ struct DList(T)
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
     size_t insertBefore(R)(DRange!T r, R el)
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     in
     {
         assert(checkRangeBelonging(r));
@@ -1517,9 +1556,9 @@ struct DList(T)
 
     /// Ditto.
     size_t insertBefore(R)(DRange!T r, R el)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
         assert(checkRangeBelonging(r));
@@ -1655,9 +1694,7 @@ struct DList(T)
     }
 
     /**
-     * Returns the first element and moves to the next one.
-     *
-     * Returns: The first element.
+     * Removes the front element.
      *
      * Precondition: $(D_INLINECODE !empty)
      */
@@ -1807,14 +1844,14 @@ struct DList(T)
      * Returns: $(D_KEYWORD this).
      */
     ref typeof(this) opAssign(R)(ref R that)
-        if (is(Unqual!R == DList))
+    if (is(Unqual!R == DList))
     {
         return this = that[];
     }
 
     /// Ditto.
     ref typeof(this) opAssign(R)(R that)
-        if (is(R == DList))
+    if (is(R == DList))
     {
         swap(this.head, that.head);
         swap(this.tail, that.tail);
@@ -1826,32 +1863,32 @@ struct DList(T)
      * Assigns an input range.
      *
      * Params:
-     *  R         = Type of the initial range.
-     *  that      = Values to initialize the list with.
+     *  R    = Type of the initial range.
+     *  that = Values to initialize the list with.
      *
      * Returns: $(D_KEYWORD this).
      */
     ref typeof(this) opAssign(R)(R that) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         Entry** next = &this.head;
 
-        foreach (ref e; that)
+        while (!that.empty && *next !is null)
         {
-            if (*next is null)
-            {
-                *next = allocator.make!Entry(e);
-            }
-            else
-            {
-                (*next).content = e;
-            }
+            (*next).content = that.front;
             next = &(*next).next;
+            that.popFront();
         }
-        remove(DRange!T(*next, this.tail));
-
+        if (that.empty)
+        {
+            remove(DRange!T(*next, this.tail));
+        }
+        else
+        {
+            insertBack(that);
+        }
         return this;
     }
 
@@ -1864,12 +1901,20 @@ struct DList(T)
         assert(l1 == l2);
     }
 
+    private @safe @nogc unittest
+    {
+        auto l1 = DList!int();
+        auto l2 = DList!int([9, 4]);
+        l1 = l2[];
+        assert(l1 == l2);
+    }
+
     /**
      * Assigns a static array.
      *
      * Params:
      *  R    = Static array size.
-     *  that = Values to initialize the vector with.
+     *  that = Values to initialize the list with.
      *
      * Returns: $(D_KEYWORD this).
      */
