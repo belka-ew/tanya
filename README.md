@@ -17,6 +17,7 @@ data structures and utilities that depend on the Garbage Collector in Phobos.
 
 * [Bug tracker](https://issues.caraus.io/projects/tanya/issues)
 * [Documentation](https://docs.caraus.io/tanya)
+* [Contribution guidelines](CONTRIBUTING.md)
 
 ## Overview
 
@@ -71,10 +72,10 @@ a proper deallocation in some cases for you.
 ### Exceptions
 
 Since exceptions are normal classes in D, they are allocated and dellocated the
-same as described above. But there are two differences how they are used:
+same as described above, but:
 
-1. The caller is *always* responsible for destroying a caught exception.
-2. Exceptions are *always* allocated and should be always allocated with the
+1. The caller is **always** responsible for destroying a caught exception.
+2. Exceptions are **always** allocated and should be always allocated with the
 `defaultAllocator`.
 
 ```d
@@ -122,8 +123,7 @@ foreach (el; arr[0 .. 5])
 int i = arr[7]; // Access 7th element.
 ```
 
-There more containers in the `tanya.container` package.
-
+There are more containers in the `tanya.container` package.
 
 ## Development
 
