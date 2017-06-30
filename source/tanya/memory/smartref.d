@@ -23,7 +23,7 @@ import std.range;
 import std.traits;
 import tanya.memory;
 
-package template Payload(T)
+private template Payload(T)
 {
     static if (is(T == class) || is(T == interface) || isArray!T)
     {
@@ -35,7 +35,7 @@ package template Payload(T)
     }
 }
 
-package final class RefCountedStore(T)
+private final class RefCountedStore(T)
 {
     T payload;
     size_t counter = 1;
@@ -68,14 +68,14 @@ package final class RefCountedStore(T)
     }
 }
 
-package void separateDeleter(T)(RefCountedStore!T storage,
+private void separateDeleter(T)(RefCountedStore!T storage,
                                 shared Allocator allocator)
 {
     allocator.dispose(storage.payload);
     allocator.dispose(storage);
 }
 
-package void unifiedDeleter(T)(RefCountedStore!T storage,
+private void unifiedDeleter(T)(RefCountedStore!T storage,
                                shared Allocator allocator)
 {
     auto ptr1 = finalize(storage);

@@ -12,6 +12,4 @@
  */
 module tanya.network;
 
-public import tanya.network.inet;
 public import tanya.network.socket;
-public import tanya.network.url;

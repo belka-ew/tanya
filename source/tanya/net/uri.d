@@ -13,7 +13,6 @@
 module tanya.net.uri;
 
 import std.ascii : isAlphaNum, isDigit;
-import std.traits : isSomeString;
 import std.uni : isAlpha, isNumber;
 import tanya.memory;
 
@@ -151,9 +150,10 @@ struct URL
                     goto ParsePath;
                 }
             }
-            else // certain schemas like mailto: and zlib: may not have any / after them
+            else
             {
-                
+                // Schemas like mailto: and zlib: may not have any slash after
+                // them.
                 if (!parsePort(value[pos .. $]))
                 {
                     this.scheme = value[0 .. pos];
@@ -384,7 +384,7 @@ struct URL
     assert(u.fragment == "fragment");
 }
 
-private unittest
+private @nogc unittest
 {
     auto u = URL("127.0.0.1");
     assert(u.path == "127.0.0.1");
@@ -540,17 +540,11 @@ private @nogc unittest
  *
  * Params:
  *  T      = "scheme", "host", "port", "user", "pass", "path", "query",
- *           "fragment" or $(D_KEYWORD null) for a struct with all components.
+ *           "fragment".
  *  source = The string containing the URL.
  *
  * Returns: Requested URL component.
  */
-URL parseURL(const char[] source) @nogc
-{
-    return URL(source);
-}
-
-/// Ditto.
 auto parseURL(string T)(const char[] source)
 if (T == "scheme"
  || T == "host"
@@ -563,6 +557,12 @@ if (T == "scheme"
 {
     auto ret = URL(source);
     return mixin("ret." ~ T);
+}
+
+/// Ditto.
+URL parseURL(const char[] source) @nogc
+{
+    return URL(source);
 }
 
 ///
