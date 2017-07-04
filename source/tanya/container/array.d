@@ -26,13 +26,13 @@ import tanya.memory;
  * Random-access range for the $(D_PSYMBOL Array).
  *
  * Params:
- *  E = Element type.
+ *  A = Array type.
  */
-struct Range(E)
+struct Range(A)
 {
+    private alias E = PointerTarget!(typeof(A.data));
     private E* begin, end;
-    private alias ContainerType = CopyConstness!(E, Array!(Unqual!E));
-    private ContainerType* container;
+    private A* container;
 
     invariant
     {
@@ -42,7 +42,7 @@ struct Range(E)
         assert(this.end <= this.container.data + this.container.length);
     }
 
-    private this(ref ContainerType container, E* begin, E* end) @trusted
+    private this(ref A container, E* begin, E* end) @trusted
     in
     {
         assert(begin <= end);
@@ -130,7 +130,7 @@ struct Range(E)
         return typeof(return)(*this.container, this.begin, this.end);
     }
 
-    Range!(const E) opIndex() const
+    Range!(const A) opIndex() const
     {
         return typeof(return)(*this.container, this.begin, this.end);
     }
@@ -146,7 +146,7 @@ struct Range(E)
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
-    Range!(const E) opSlice(const size_t i, const size_t j) const @trusted
+    Range!(const A) opSlice(const size_t i, const size_t j) const @trusted
     in
     {
         assert(i <= j);
@@ -172,10 +172,10 @@ struct Range(E)
 struct Array(T)
 {
     /// The range types for $(D_PSYMBOL Array).
-    alias Range = .Range!T;
+    alias Range = .Range!Array;
 
     /// Ditto.
-    alias ConstRange = .Range!(const T);
+    alias ConstRange = .Range!(const Array);
 
     private size_t length_;
     private T* data;
@@ -651,9 +651,9 @@ struct Array(T)
     body
     {
         auto end = this.data + this.length;
-        moveAll(.Range!T(this, r.end, end), .Range!T(this, r.begin, end));
+        moveAll(Range(this, r.end, end), Range(this, r.begin, end));
         length = length - r.length;
-        return .Range!T(this, r.begin, this.data + length);
+        return Range(this, r.begin, this.data + length);
     }
 
     ///
@@ -863,7 +863,7 @@ struct Array(T)
     }
     body
     {
-        return insertAfter(.Range!T(this, this.data, r.begin), el);
+        return insertAfter(Range(this, this.data, r.begin), el);
     }
 
     /// Ditto.
@@ -1617,6 +1617,9 @@ private unittest
     }
     A a1, a2;
     auto v1 = Array!A([a1, a2]);
+
+    // Issue 232: https://issues.caraus.io/issues/232.
+    static assert(is(Array!(A*)));
 }
 
 private @safe @nogc unittest
