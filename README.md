@@ -29,7 +29,7 @@ string, Hash set.
 * `format`: Formatting and conversion functions.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
-* `network`: URL-Parsing, sockets, utilities.
+* `net`: URL-Parsing, sockets, utilities.
 * `os`: Platform-independent interfaces to operating system functionality.
 
 ## Basic usage
