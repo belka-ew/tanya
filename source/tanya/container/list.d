@@ -24,11 +24,12 @@ import tanya.memory;
  * Forward range for the $(D_PSYMBOL SList).
  *
  * Params:
- *  E = Element type.
+ *  L = List type.
  */
-struct SRange(E)
+struct SRange(L)
 {
-    private alias EntryPointer = CopyConstness!(E, SEntry!(Unqual!E)*);
+    private alias EntryPointer = typeof(L.head);
+    private alias E = typeof(EntryPointer.content);
 
     private EntryPointer* head;
 
@@ -79,7 +80,7 @@ struct SRange(E)
         return typeof(return)(*this.head);
     }
 
-    SRange!(const E) opIndex() const
+    L.ConstRange opIndex() const
     {
         return typeof(return)(*this.head);
     }
@@ -94,10 +95,10 @@ struct SRange(E)
 struct SList(T)
 {
     /// The range types for $(D_PSYMBOL SList).
-    alias Range = SRange!T;
+    alias Range = SRange!SList;
 
     /// Ditto.
-    alias ConstRange = SRange!(const T);
+    alias ConstRange = SRange!(const SList);
 
     private alias Entry = SEntry!T;
 
@@ -434,7 +435,7 @@ struct SList(T)
 
     version (assert)
     {
-        private bool checkRangeBelonging(ref SRange!T r) const
+        private bool checkRangeBelonging(ref Range r) const
         {
             const(Entry*)* pos = &this.head;
             for (; pos != r.head && *pos !is null; pos = &(*pos).next)
@@ -456,7 +457,7 @@ struct SList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    size_t insertBefore(R)(SRange!T r, R el)
+    size_t insertBefore(R)(Range r, R el)
     if (isImplicitlyConvertible!(R, T))
     in
     {
@@ -477,7 +478,7 @@ struct SList(T)
     }
 
     /// Ditto.
-    size_t insertBefore(R)(SRange!T r, R el)
+    size_t insertBefore(R)(Range r, R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -812,7 +813,7 @@ struct SList(T)
             }
             next = &(*next).next;
         }
-        remove(SRange!T(*next));
+        remove(Range(*next));
 
         return this;
     }
@@ -906,15 +907,16 @@ private @nogc @safe unittest
 }
 
 /**
- * Forward range for the $(D_PSYMBOL SList).
+ * Forward range for the $(D_PSYMBOL DList).
  *
  * Params:
- *  E = Element type.
+ *  L = List type.
  */
-struct DRange(E)
+struct DRange(L)
 {
-    private alias EntryPointer = CopyConstness!(E, DEntry!(Unqual!E)*);
-    private alias TailPointer = CopyConstness!(E, DEntry!(Unqual!E))*;
+    private alias E = typeof(L.head.content);
+    private alias EntryPointer = typeof(L.head);
+    private alias TailPointer = Unqual!EntryPointer;
 
     private EntryPointer* head;
     private TailPointer tail;
@@ -987,7 +989,7 @@ struct DRange(E)
         return typeof(return)(*this.head, this.tail);
     }
 
-    DRange!(const E) opIndex() const
+    L.ConstRange opIndex() const
     {
         return typeof(return)(*this.head, this.tail);
     }
@@ -1002,10 +1004,10 @@ struct DRange(E)
 struct DList(T)
 {
     /// The range types for $(D_PSYMBOL DList).
-    alias Range = DRange!T;
+    alias Range = DRange!DList;
 
     /// Ditto.
-    alias ConstRange = DRange!(const T);
+    alias ConstRange = DRange!(const DList);
 
     private alias Entry = DEntry!T;
 
@@ -1512,7 +1514,7 @@ struct DList(T)
 
     version (assert)
     {
-        private bool checkRangeBelonging(ref DRange!T r) const
+        private bool checkRangeBelonging(ref Range r) const
         {
             const(Entry*)* pos = &this.head;
             for (; pos != r.head && *pos !is null; pos = &(*pos).next)
@@ -1534,7 +1536,7 @@ struct DList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    size_t insertBefore(R)(DRange!T r, R el)
+    size_t insertBefore(R)(Range r, R el)
     if (isImplicitlyConvertible!(R, T))
     in
     {
@@ -1555,7 +1557,7 @@ struct DList(T)
     }
 
     /// Ditto.
-    size_t insertBefore(R)(DRange!T r, R el)
+    size_t insertBefore(R)(Range r, R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -1883,7 +1885,7 @@ struct DList(T)
         }
         if (that.empty)
         {
-            remove(DRange!T(*next, this.tail));
+            remove(Range(*next, this.tail));
         }
         else
         {
@@ -1952,4 +1954,14 @@ struct DList(T)
         ++i;
     }
     assert(i == 3);
+}
+
+// Issue 232: https://issues.caraus.io/issues/232.
+private @nogc unittest
+{
+    class A
+    {
+    }
+    static assert(is(SList!(A*)));
+    static assert(is(DList!(A*)));
 }

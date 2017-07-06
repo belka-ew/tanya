@@ -130,7 +130,7 @@ struct Range(A)
         return typeof(return)(*this.container, this.begin, this.end);
     }
 
-    Range!(const A) opIndex() const
+    A.ConstRange opIndex() const
     {
         return typeof(return)(*this.container, this.begin, this.end);
     }
@@ -146,7 +146,7 @@ struct Range(A)
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
-    Range!(const A) opSlice(const size_t i, const size_t j) const @trusted
+    A.ConstRange opSlice(const size_t i, const size_t j) const @trusted
     in
     {
         assert(i <= j);
