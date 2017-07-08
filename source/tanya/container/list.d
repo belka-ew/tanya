@@ -1307,6 +1307,34 @@ struct DList(T)
         return 1;
     }
 
+	// Creates a lsit of linked entries from a range.
+	// Returns count of the elements in the list.
+	private size_t makeList(R)(ref R el, out Entry* head, out Entry* tail) @trusted
+	out (retLength)
+	{
+		assert(retLength == 0 && head is null && tail is null
+		    || retLength > 0 && head !is null && tail !is null);
+	}
+	body
+	{
+		size_t retLength;
+
+        if (!el.empty)
+        {
+            head = tail = allocator.make!Entry(el.front);
+            el.popFront();
+            retLength = 1;
+        }
+        foreach (ref e; el)
+        {
+            tail.next = allocator.make!Entry(e);
+            tail.next.prev = tail;
+            tail = tail.next;
+            ++retLength;
+        }
+		return retLength;
+	}
+
     /**
      * Inserts a new element at the beginning.
      *
@@ -1355,39 +1383,25 @@ struct DList(T)
     }
 
     /// Ditto.
-    size_t insertFront(R)(R el) @trusted
+    size_t insertFront(R)(R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
     {
-        size_t retLength;
-        Entry* next, newHead;
+        Entry* begin, end;
+        const inserted = makeList(el, begin, end);
 
-        if (!el.empty)
-        {
-            next = allocator.make!Entry(el.front);
-            newHead = next;
-            el.popFront();
-            retLength = 1;
-        }
-        foreach (ref e; el)
-        {
-            next.next = allocator.make!Entry(e);
-            next.next.prev = next;
-            next = next.next;
-            ++retLength;
-        }
         if (this.head is null)
         {
-            this.tail = next;
+            this.tail = end;
         }
-        if (newHead !is null)
+        if (begin !is null)
         {
-            next.next = this.head;
-            this.head = newHead;
+            end.next = this.head;
+            this.head = begin;
         }
 
-        return retLength;
+        return inserted;
     }
 
     private @safe @nogc unittest
@@ -1500,11 +1514,20 @@ struct DList(T)
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
     {
-        size_t inserted;
+        Entry* begin, end;
+        const inserted = makeList(el, begin, end);
 
-        foreach (ref e; el)
+        if (this.tail is null)
         {
-            inserted += insertBack(e);
+            this.head = begin;
+        }
+		else
+		{
+            this.tail.next = begin;
+		}
+        if (begin !is null)
+        {
+            this.tail = end;
         }
 
         return inserted;
