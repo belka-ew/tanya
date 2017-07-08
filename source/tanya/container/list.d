@@ -1361,6 +1361,7 @@ struct DList(T)
         foreach (ref e; el)
         {
             next.next = allocator.make!Entry(e);
+            next.next.prev = next;
             next = next.next;
             ++retLength;
         }
@@ -1375,6 +1376,12 @@ struct DList(T)
         }
 
         return retLength;
+    }
+
+    private @safe @nogc unittest
+    {
+        auto l1 = DList!int([5, 234]);
+        assert(l1.head is l1.head.next.prev);
     }
 
     /// Ditto.
@@ -1709,7 +1716,7 @@ struct DList(T)
     {
         auto n = this.head.next;
 
-        this.allocator.dispose(this.head);
+        allocator.dispose(this.head);
         this.head = n;
         if (this.head is null)
         {
@@ -1775,7 +1782,7 @@ struct DList(T)
      * Params:
      *  r = The range to remove.
      *
-     * Returns: An empty range.
+     * Returns: Range spanning the elements just after $(D_PARAM r).
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
@@ -1786,19 +1793,34 @@ struct DList(T)
     }
     body
     {
-        auto outOfScopeList = typeof(this)(allocator);
-        outOfScopeList.head = *r.head;
-        outOfScopeList.tail = r.tail;
-        if (r.tail is null)
+        // Save references to the elements before and after the range.
+        Entry* tailNext, headPrev;
+        if (r.tail !is null && r.tail.next !is null)
         {
-            *r.head = null;
+            tailNext = r.tail.next;
         }
-        else
+        if (*r.head !is null)
         {
-            outOfScopeList.tail.next = null;
-            *r.head = r.tail.next;
+            headPrev = (*r.head).prev;
         }
-    
+
+        // Remove the elements.
+        Entry* e = *r.head;
+        while (e !is tailNext)
+        {
+            auto next = e.next;
+            allocator.dispose(e);
+            e = next;
+        }
+
+        // Connect the elements before and after the removed range.
+        if (tailNext !is null)
+        {
+            tailNext.prev = headPrev;
+        }
+        *r.head = tailNext;
+        r.tail = tail;
+
         return r;
     }
 
@@ -1812,6 +1834,22 @@ struct DList(T)
         r.popFront();
 
         assert(l1.remove(r).empty);
+        assert(l1 == l2);
+    }
+
+    // Issue 260: https://issues.caraus.io/issues/260.
+    private @safe @nogc unittest
+    {
+        auto l1 = DList!int([5, 234, 30, 1]);
+        auto l2 = DList!int([5, 1]);
+        auto r = l1[];
+
+        r.popFront();
+        r.popBack();
+        assert(r.front == 234);
+        assert(r.back == 30);
+
+        assert(!l1.remove(r).empty);
         assert(l1 == l2);
     }
 
