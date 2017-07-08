@@ -545,7 +545,18 @@ struct SList(T)
      */
     size_t insertBefore(size_t R)(Range r, T[R] el)
     {
-        return insertFront!(T[])(el[]);
+        return insertBefore!(T[])(r, el[]);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = SList!int([5, 234, 30, 1]);
+        auto l2 = SList!int([5, 1]);
+        auto r = l2[];
+        r.popFront();
+        l2.insertBefore(r, [234, 30]);
+        assert(l1 == l2);
     }
 
     /**
@@ -916,20 +927,19 @@ struct DRange(L)
 {
     private alias E = typeof(L.head.content);
     private alias EntryPointer = typeof(L.head);
-    private alias TailPointer = Unqual!EntryPointer;
 
     private EntryPointer* head;
-    private TailPointer tail;
+    private EntryPointer* tail;
 
     invariant
     {
         assert(this.head !is null);
     }
 
-    private this(ref EntryPointer head, TailPointer tail) @trusted
+    private this(ref EntryPointer head, ref EntryPointer tail) @trusted
     {
         this.head = &head;
-        this.tail = tail;
+        this.tail = &tail;
     }
 
     @disable this();
@@ -941,7 +951,7 @@ struct DRange(L)
 
     @property bool empty() const
     {
-        return *this.head is null || *this.head is this.tail.next;
+        return *this.head is null || *this.head is (*this.tail).next;
     }
 
     @property ref inout(E) front() inout
@@ -961,7 +971,7 @@ struct DRange(L)
     }
     body
     {
-        return this.tail.content;
+        return (*this.tail).content;
     }
 
     void popFront() @trusted
@@ -981,17 +991,17 @@ struct DRange(L)
     }
     body
     {
-        this.tail = this.tail.prev;
+        this.tail = &(*this.tail).prev;
     }
 
     DRange opIndex()
     {
-        return typeof(return)(*this.head, this.tail);
+        return typeof(return)(*this.head, *this.tail);
     }
 
     L.ConstRange opIndex() const
     {
-        return typeof(return)(*this.head, this.tail);
+        return typeof(return)(*this.head, *this.tail);
     }
 }
 
@@ -1019,6 +1029,7 @@ struct DList(T)
         assert((this.tail is null && this.head is null)
             || (this.tail !is null && this.head !is null));
         assert(this.tail is null || this.tail.next is null);
+        assert(this.head is null || this.head.prev is null);
     }
 
     /**
@@ -1274,20 +1285,21 @@ struct DList(T)
         assert(l.back == 25);
     }
 
-    private size_t moveEntry(R)(ref Entry* head, ref R el) @trusted
+    private size_t moveFront(R)(ref Entry* head, ref R el) @trusted
     if (isImplicitlyConvertible!(R, T))
     {
         auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
 
         el.moveEmplace(temp.content);
         temp.next = head;
-        temp.prev = null;
         if (this.tail is null)
         {
+            temp.prev = null;
             this.tail = temp;
         }
         else
         {
+            temp.prev = head.prev;
             head.prev = temp;
         }
 
@@ -1307,7 +1319,7 @@ struct DList(T)
     size_t insertFront(R)(R el)
     if (isImplicitlyConvertible!(R, T))
     {
-        return moveEntry(this.head, el);
+        return moveFront(this.head, el);
     }
 
     /// Ditto.
@@ -1390,9 +1402,6 @@ struct DList(T)
         return insertFront!(T[])(el[]);
     }
 
-    /// Ditto.
-    alias insert = insertBack;
-
     ///
     @safe @nogc unittest
     {
@@ -1416,6 +1425,28 @@ struct DList(T)
         assert(l2.back == 15);
     }
 
+    private size_t moveBack(R)(ref Entry* tail, ref R el) @trusted
+    if (isImplicitlyConvertible!(R, T))
+    {
+        auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
+
+        el.moveEmplace(temp.content);
+        temp.prev = tail;
+        if (this.head is null)
+        {
+            temp.next = null;
+            this.head = this.tail = temp;
+        }
+        else
+        {
+            temp.next = tail.next;
+            tail.next = temp;
+        }
+
+        tail = temp;
+        return 1;
+    }
+
     /**
      * Inserts a new element at the end.
      *
@@ -1428,22 +1459,7 @@ struct DList(T)
     size_t insertBack(R)(R el) @trusted
     if (isImplicitlyConvertible!(R, T))
     {
-        auto temp = cast(Entry*) allocator.allocate(Entry.sizeof);
-
-        el.moveEmplace(temp.content);
-        temp.next = null;
-        temp.prev = tail;
-        if (this.head is null)
-        {
-            this.head = temp;
-        }
-        else
-        {
-            this.tail.next = temp;
-        }
-
-        this.tail = temp;
-        return 1;
+        return moveBack(this.tail, el);
     }
 
     /// Ditto.
@@ -1519,6 +1535,9 @@ struct DList(T)
         assert(l2.back == 9);
     }
 
+    /// Ditto.
+    alias insert = insertBack;
+
     version (assert)
     {
         private bool checkRangeBelonging(ref Range r) const
@@ -1551,7 +1570,7 @@ struct DList(T)
     }
     body
     {
-        return moveEntry(*r.head, el);
+        return moveFront(*r.head, el);
     }
 
     ///
@@ -1560,6 +1579,41 @@ struct DList(T)
         auto l1 = DList!int([234, 5, 1]);
         auto l2 = DList!int([5, 1]);
         l2.insertBefore(l2[], 234);
+        assert(l1 == l2);
+    }
+
+    /// Ditto.
+    size_t insertBefore(Range r, ref T el) @trusted
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        auto temp = allocator.make!Entry(el, *r.head);
+
+        if (this.tail is null)
+        {
+            this.tail = temp;
+        }
+        else
+        {
+            temp.prev = (*r.head).prev;
+            (*r.head).prev = temp;
+        }
+
+        *r.head = temp;
+        return 1;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = DList!int([234, 5, 1]);
+        auto l2 = DList!int([5, 1]);
+        int var = 234;
+
+        l2.insertBefore(l2[], var);
         assert(l1 == l2);
     }
 
@@ -1588,32 +1642,9 @@ struct DList(T)
     {
         auto l1 = DList!int([5, 234, 30, 1]);
         auto l2 = DList!int([5, 1]);
-        auto l3 = DList!int([234, 30]);
         auto r = l2[];
         r.popFront();
-        l2.insertBefore(r, l3[]);
-        assert(l1 == l2);
-    }
-
-    /// Ditto.
-    size_t insertBefore(Range r, ref T el) @trusted
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    body
-    {
-        *r.head = allocator.make!Entry(el, *r.head);
-        return 1;
-    }
-
-    ///
-    @safe @nogc unittest
-    {
-        auto l1 = DList!int([234, 5, 1]);
-        auto l2 = DList!int([5, 1]);
-        int var = 234;
-        l2.insertBefore(l2[], var);
+        l2.insertBefore(r, [234, 30]);
         assert(l1 == l2);
     }
 
@@ -1631,7 +1662,133 @@ struct DList(T)
      */
     size_t insertBefore(size_t R)(Range r, T[R] el)
     {
-        return insertFront!(T[])(el[]);
+        return insertBefore!(T[])(r, el[]);
+    }
+
+    /**
+     * Inserts new elements after $(D_PARAM r).
+     *
+     * Params:
+     *  R  = Type of the inserted value(s).
+     *  r  = Range extracted from this list.
+     *  el = New element(s).
+     *
+     * Returns: The number of elements inserted.
+     *
+     * Precondition: $(D_PARAM r) is extracted from this list.
+     */
+    size_t insertAfter(R)(Range r, R el) @trusted
+    if (isImplicitlyConvertible!(R, T))
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        return moveBack(*r.tail, el);
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = DList!int([5, 234, 1]);
+        auto l2 = DList!int([5, 1]);
+        auto r = l2[];
+        r.popBack();
+        l2.insertAfter(r, 234);
+        assert(l1 == l2);
+    }
+
+    private @safe @nogc unittest
+    {
+        DList!int l;
+        l.insertAfter(l[], 234);
+        assert(l.front == 234);
+        assert(l.back == 234);
+        assert(l.length == 1);
+    }
+
+    /// Ditto.
+    size_t insertAfter(Range r, ref T el) @trusted
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        auto temp = allocator.make!Entry(el, null, *r.tail);
+
+        if (this.head is null)
+        {
+            this.head = temp;
+        }
+        else
+        {
+            temp.next = (*r.tail).next;
+            (*r.tail).next = temp;
+        }
+
+        *r.tail = temp;
+        return 1;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = DList!int([5, 1, 234]);
+        auto l2 = DList!int([5, 1]);
+        int var = 234;
+
+        l2.insertAfter(l2[], var);
+        assert(l1 == l2);
+    }
+
+    /// Ditto.
+    size_t insertAfter(R)(Range r, R el)
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
+    in
+    {
+        assert(checkRangeBelonging(r));
+    }
+    body
+    {
+        size_t inserted;
+        foreach (e; el)
+        {
+            inserted += insertAfter(r, e);
+        }
+        return inserted;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l1 = DList!int([5, 234, 30, 1]);
+        auto l2 = DList!int([5, 1]);
+        auto r = l2[];
+
+        r.popBack();
+        l2.insertAfter(r, [234, 30]);
+        assert(l1 == l2);
+    }
+
+    /**
+     * Inserts elements from a static array after $(D_PARAM r).
+     *
+     * Params:
+     *  R  = Static array size.
+     *  r  = Range extracted from this list.
+     *  el = New elements.
+     *
+     * Returns: The number of elements inserted.
+     *
+     * Precondition: $(D_PARAM r) is extracted from this list.
+     */
+    size_t insertAfter(size_t R)(Range r, T[R] el)
+    {
+        return insertAfter!(T[])(r, el[]);
     }
 
     /**
@@ -1703,7 +1860,7 @@ struct DList(T)
     }
 
     /**
-     * Removes the front element.
+     * Removes the front or back element.
      *
      * Precondition: $(D_INLINECODE !empty)
      */
@@ -1722,6 +1879,10 @@ struct DList(T)
         {
             this.tail = null;
         }
+        else
+        {
+            this.head.prev = null;
+        }
     }
 
     ///
@@ -1738,12 +1899,47 @@ struct DList(T)
         assert(l.empty);
     }
 
+    /// Ditto.
+    void removeBack()
+    in
+    {
+        assert(!empty);
+    }
+    body
+    {
+        auto n = this.tail.prev;
+
+        allocator.dispose(this.tail);
+        this.tail = n;
+        if (this.tail is null)
+        {
+            this.head = null;
+        }
+        else
+        {
+            this.tail.next = null;
+        }
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        auto l = DList!int([9, 8]);
+
+        assert(l.back == 8);
+        l.removeBack();
+        assert(l.back == 9);
+        l.removeFront();
+        assert(l.empty);
+    }
+
     /**
      * Removes $(D_PARAM howMany) elements from the list.
      *
-     * Unlike $(D_PSYMBOL removeFront()), this method doesn't fail, if it could not
-     * remove $(D_PARAM howMany) elements. Instead, if $(D_PARAM howMany) is
-     * greater than the list length, all elements are removed.
+     * Unlike $(D_PSYMBOL removeFront()) and $(D_PSYMBOL removeBack()), this
+     * method doesn't fail, if it could not remove $(D_PARAM howMany) elements.
+     * Instead, if $(D_PARAM howMany) is greater than the list length, all
+     * elements are removed.
      *
      * Params:
      *  howMany = How many elements should be removed.
@@ -1776,6 +1972,33 @@ struct DList(T)
         assert(l.removeFront(3) == 0);
     }
 
+    /// Ditto.
+    size_t removeBack(const size_t howMany)
+    out (removed)
+    {
+        assert(removed <= howMany);
+    }
+    body
+    {
+        size_t i;
+        for (; i < howMany && !empty; ++i)
+        {
+            removeBack();
+        }
+        return i;
+    }
+
+    ///
+    @safe @nogc unittest
+    {
+        DList!int l = DList!int([8, 5, 4]);
+
+        assert(l.removeBack(0) == 0);
+        assert(l.removeBack(2) == 2);
+        assert(l.removeBack(3) == 1);
+        assert(l.removeBack(3) == 0);
+    }
+
     /**
      * Removes $(D_PARAM r) from the list.
      *
@@ -1795,9 +2018,9 @@ struct DList(T)
     {
         // Save references to the elements before and after the range.
         Entry* tailNext, headPrev;
-        if (r.tail !is null && r.tail.next !is null)
+        if (*r.tail !is null && (*r.tail).next !is null)
         {
-            tailNext = r.tail.next;
+            tailNext = (*r.tail).next;
         }
         if (*r.head !is null)
         {
@@ -1819,7 +2042,7 @@ struct DList(T)
             tailNext.prev = headPrev;
         }
         *r.head = tailNext;
-        r.tail = tail;
+        *r.tail = tail;
 
         return r;
     }
