@@ -3,7 +3,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * UTF-8 string.
+ * UTF-8 encoded string.
+ *
+ * You can create a $(D_PSYMBOL String) from a literal string, single character
+ * or character range. Characters can be of the type $(D_KEYWORD char),
+ * $(D_KEYWORD wchar) or $(D_KEYWORD dchar). Literal strings, characters and
+ * character ranges can be also inserted into an existing string.
+ *
+ * $(D_PSYMBOL String) is always valid UTF-8. Inserting an invalid sequence
+ * or working on a corrupted $(D_PSYMBOL String) causes
+ * $(D_PSYMBOL UTFException) to be thrown.
+ *
+ * Internally $(D_PSYMBOL String) is represented by a sequence of
+ * $(D_KEYWORD char)s.
  *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
@@ -70,7 +82,7 @@ class UTFException : Exception
  *  E = Element type ($(D_KEYWORD char) or $(D_INLINECODE const(char))).
  */
 struct ByCodeUnit(E)
-    if (is(Unqual!E == char))
+if (is(Unqual!E == char))
 {
     private E* begin, end;
     private alias ContainerType = CopyConstness!(E, String);
@@ -212,7 +224,7 @@ struct ByCodeUnit(E)
  *  E = Element type ($(D_KEYWORD char) or $(D_INLINECODE const(char))).
  */
 struct ByCodePoint(E)
-    if (is(Unqual!E == char))
+if (is(Unqual!E == char))
 {
     private E* begin, end;
     private alias ContainerType = CopyConstness!(E, String);
@@ -358,9 +370,9 @@ struct String
      * Precondition: $(D_INLINECODE allocator is null).
      */
     this(S)(const S str, shared Allocator allocator = defaultAllocator)
-        if (!isInfinite!S
-         && isInputRange!S
-         && isSomeChar!(ElementEncodingType!S))
+    if (!isInfinite!S
+     && isInputRange!S
+     && isSomeChar!(ElementEncodingType!S))
     {
         this(allocator);
         insertBack(str);
@@ -400,7 +412,7 @@ struct String
      */
     this(S)(S init, shared Allocator allocator = defaultAllocator)
     nothrow @trusted @nogc
-        if (is(S == String))
+    if (is(S == String))
     {
         this(allocator);
         if (allocator !is init.allocator)
@@ -425,7 +437,7 @@ struct String
     /// Ditto.
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     nothrow @trusted @nogc
-        if (is(Unqual!S == String))
+    if (is(Unqual!S == String))
     {
         this(allocator);
         reserve(init.length);
@@ -456,7 +468,7 @@ struct String
     this(C)(const size_t n,
             const C chr,
             shared Allocator allocator = defaultAllocator) @trusted
-        if (isSomeChar!C)
+    if (isSomeChar!C)
     {
         this(allocator);
         if (n == 0)
@@ -534,10 +546,10 @@ struct String
     }
 
     private size_t insertWideChar(C)(auto ref const C chr) @trusted
-        if (is(C == wchar) || is(C == dchar))
+    if (is(C == wchar) || is(C == dchar))
     in
     {
-        assert(capacity - length >= C.sizeof);
+        assert(capacity - length >= 3);
     }
     body
     {
@@ -555,7 +567,7 @@ struct String
             this.length_ += 2;
             return 2;
         }
-        else if (chr < 0xd800 || chr - 0xe000 < 0x2000)
+        else if (chr < 0xd800 || (chr >= 0xe000 && chr <= 0xffff))
         {
             *dst++ = 0xe0 | (chr >> 12) & 0xff;
             *dst++ = 0x80 | ((chr >> 6) & 0x3f);
@@ -593,9 +605,9 @@ struct String
     /// Ditto.
     size_t insertBack(const wchar chr) @trusted @nogc
     {
-        reserve(length + wchar.sizeof);
+        reserve(length + 3);
 
-        auto ret = insertWideChar(chr);
+        const ret = insertWideChar(chr);
         if (ret == 0)
         {
             throw defaultAllocator.make!UTFException("Invalid UTF-16 sequeunce");
@@ -603,12 +615,34 @@ struct String
         return ret;
     }
 
+    // Allocates enough space for 3-byte character.
+    private @safe @nogc unittest
+    {
+        String s;
+        s.insertBack('\u8100');
+    }
+
+    private @safe @nogc unittest
+    {
+        UTFException exception;
+        try
+        {
+            auto s = String(1, cast(wchar) 0xd900);
+        }
+        catch (UTFException e)
+        {
+            exception = e;
+        }
+        assert(exception !is null);
+        defaultAllocator.dispose(exception);
+    }
+
     /// Ditto.
     size_t insertBack(const dchar chr) @trusted @nogc
     {
         reserve(length + dchar.sizeof);
 
-        auto ret = insertWideChar(chr);
+        const ret = insertWideChar(chr);
         if (ret > 0)
         {
             return ret;
@@ -624,6 +658,21 @@ struct String
         }
     }
 
+    private @safe @nogc unittest
+    {
+        UTFException exception;
+        try
+        {
+            auto s = String(1, cast(dchar) 0xd900);
+        }
+        catch (UTFException e)
+        {
+            exception = e;
+        }
+        assert(exception !is null);
+        defaultAllocator.dispose(exception);
+    }
+
     /**
      * Inserts a stringish range at the end of the string.
      *
@@ -636,9 +685,9 @@ struct String
      * Throws: $(D_PSYMBOL UTFException).
      */
     size_t insertBack(R)(R str) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && is(Unqual!(ElementEncodingType!R) == char))
+    if (!isInfinite!R
+     && isInputRange!R
+     && is(Unqual!(ElementEncodingType!R) == char))
     {
         size_t size;
         static if (hasLength!R || isNarrowString!R)
@@ -700,9 +749,9 @@ struct String
 
     /// Ditto.
     size_t insertBack(R)(R str) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && is(Unqual!(ElementEncodingType!R) == wchar))
+    if (!isInfinite!R
+     && isInputRange!R
+     && is(Unqual!(ElementEncodingType!R) == wchar))
     {
         static if (hasLength!R || isNarrowString!R)
         {
@@ -766,9 +815,9 @@ struct String
 
     /// Ditto.
     size_t insertBack(R)(R str) @trusted
-        if (!isInfinite!R
-         && isInputRange!R
-         && is(Unqual!(ElementEncodingType!R) == dchar))
+    if (!isInfinite!R
+     && isInputRange!R
+     && is(Unqual!(ElementEncodingType!R) == dchar))
     {
         static if (hasLength!R || isSomeString!R)
         {
@@ -897,7 +946,7 @@ struct String
     ByCodeUnit!char opSliceAssign(R)(ByCodeUnit!R value,
                                      const size_t i,
                                      const size_t j) @trusted
-        if (is(Unqual!R == char))
+    if (is(Unqual!R == char))
     in
     {
         assert(i <= j);
@@ -1198,7 +1247,7 @@ struct String
      * Returns: $(D_KEYWORD this).
      */
     ref String opAssign(S)(S that)
-        if (is(S == String))
+    if (is(S == String))
     {
         swap(this.data, that.data);
         swap(this.length_, that.length_);
@@ -1209,7 +1258,7 @@ struct String
 
     /// Ditto.
     ref String opAssign(S)(ref S that) @trusted
-        if (is(Unqual!S == String))
+    if (is(Unqual!S == String))
     {
         reserve(that.length);
         that.data[0 .. that.length].copy(this.data[0 .. that.length]);
@@ -1236,9 +1285,9 @@ struct String
      * Throws: $(D_PSYMBOL UTFException).
      */
     ref String opAssign(S)(S that) nothrow
-        if (!isInfinite!S
-         && isInputRange!S
-         && isSomeChar!(ElementEncodingType!S))
+    if (!isInfinite!S
+     && isInputRange!S
+     && isSomeChar!(ElementEncodingType!S))
     {
         this.length_ = 0;
         insertBack(that);
@@ -1263,14 +1312,14 @@ struct String
      *          greater than $(D_PARAM that), if equal `0`, else `-1`.
      */
     int opCmp(S)(auto ref S that) const @trusted
-        if (is(Unqual!S == String))
+    if (is(Unqual!S == String))
     {
         return cmp(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
     /// Ditto.
     int opCmp(S)(ByCodeUnit!S that) const @trusted
-        if (is(Unqual!S == char))
+    if (is(Unqual!S == char))
     {
         return cmp(this.data[0 .. length],
                    that.begin[0 .. that.end - that.begin]);
@@ -1278,7 +1327,7 @@ struct String
 
     /// Ditto.
     int opCmp(S)(ByCodePoint!S that) const @trusted
-        if (is(Unqual!S == char))
+    if (is(Unqual!S == char))
     {
         return cmp(this.data[0 .. length],
                    that.begin[0 .. that.end - that.begin]);
@@ -1308,7 +1357,7 @@ struct String
      *          otherwise.
      */
     bool opEquals(S)(auto ref S that) const @trusted
-        if (is(Unqual!S == String))
+    if (is(Unqual!S == String))
     {
         return equal(this.data[0 .. length], that.data[0 .. that.length]);
     }
@@ -1323,7 +1372,7 @@ struct String
      *          $(D_KEYWORD false) otherwise.
      */
     bool opEquals(S)(ByCodeUnit!S that) const @trusted
-        if (is(Unqual!S == char))
+    if (is(Unqual!S == char))
     {
         return equal(this.data[0 .. length],
                      that.begin[0 .. that.end - that.begin]);
@@ -1331,7 +1380,7 @@ struct String
 
     /// Ditto.
     bool opEquals(S)(ByCodePoint!S that) const @trusted
-        if (is(Unqual!S == char))
+    if (is(Unqual!S == char))
     {
         return equal(this.data[0 .. length],
                      that.begin[0 .. that.end - that.begin]);
@@ -1397,7 +1446,7 @@ struct String
      * Precondition: $(D_INLINECODE length == value.length).
      */
     ByCodeUnit!char opIndexAssign(R)(ByCodeUnit!R value)
-        if (is(Unqual!R == char))
+    if (is(Unqual!R == char))
     {
         return opSliceAssign(value, 0, length);
     }
@@ -1427,7 +1476,7 @@ struct String
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     R remove(R)(R r) @trusted
-        if (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char))
+    if (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char))
     in
     {
         assert(r.container is &this);
@@ -1477,10 +1526,10 @@ struct String
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     size_t insertAfter(T, R)(R r, T el) @trusted
-        if ((isSomeChar!T || (!isInfinite!T
-         && isInputRange!T
-         && isSomeChar!(ElementEncodingType!T)))
-         && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
+    if ((isSomeChar!T || (!isInfinite!T
+     && isInputRange!T
+     && isSomeChar!(ElementEncodingType!T)))
+     && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
     in
     {
         assert(r.container is &this);
@@ -1510,10 +1559,10 @@ struct String
 
     ///
     size_t insertBefore(T, R)(R r, T el) @trusted
-        if ((isSomeChar!T || (!isInfinite!T
-         && isInputRange!T
-         && isSomeChar!(ElementEncodingType!T)))
-         && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
+    if ((isSomeChar!T || (!isInfinite!T
+     && isInputRange!T
+     && isSomeChar!(ElementEncodingType!T)))
+     && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
     in
     {
         assert(r.container is &this);
