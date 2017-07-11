@@ -52,18 +52,21 @@ else version (Windows)
  */
 final class MmapPool : Allocator
 {
-    invariant
+    version (none)
     {
-        for (auto r = &head; *r !is null; r = &((*r).next))
+        pure nothrow @nogc invariant
         {
-            auto block = cast(Block) (cast(void*) *r + RegionEntry.sizeof);
-            do
+            for (auto r = &head; *r !is null; r = &((*r).next))
             {
-                assert(block.prev is null || block.prev.next is block);
-                assert(block.next is null || block.next.prev is block);
-                assert(block.region is *r);
+                auto block = cast(Block) (cast(void*) *r + RegionEntry.sizeof);
+                do
+                {
+                    assert(block.prev is null || block.prev.next is block);
+                    assert(block.next is null || block.next.prev is block);
+                    assert(block.region is *r);
+                }
+                while ((block = block.next) !is null);
             }
-            while ((block = block.next) !is null);
         }
     }
 
@@ -77,11 +80,15 @@ final class MmapPool : Allocator
      */
     void[] allocate(const size_t size) shared nothrow @nogc
     {
-        if (!size)
+        if (size == 0)
         {
             return null;
         }
         const dataSize = addAlignment(size);
+        if (dataSize < size)
+        {
+            return null;
+        }
 
         void* data = findBlock(dataSize);
         if (data is null)
@@ -101,6 +108,24 @@ final class MmapPool : Allocator
 
         p = MmapPool.instance.allocate(0);
         assert(p.length == 0);
+    }
+
+    // Issue 245: https://issues.caraus.io/issues/245.
+    private @nogc unittest
+    {
+        // allocate() check.
+        size_t tooMuchMemory = size_t.max
+                             - MmapPool.alignment_
+                             - BlockEntry.sizeof * 2
+                             - RegionEntry.sizeof
+                             - pageSize;
+        assert(MmapPool.instance.allocate(tooMuchMemory) is null);
+
+        assert(MmapPool.instance.allocate(size_t.max) is null);
+
+        // initializeRegion() check.
+        tooMuchMemory = size_t.max - MmapPool.alignment_;
+        assert(MmapPool.instance.allocate(tooMuchMemory) is null);
     }
 
     /*
@@ -262,19 +287,25 @@ final class MmapPool : Allocator
 
         if (block1.size >= size)
         {
-            // Enough space in the current block. Can happen because of the alignment.
+            // Enough space in the current block.
             p = p.ptr[0 .. size];
             return true;
         }
         const dataSize = addAlignment(size);
-        const delta = dataSize - addAlignment(p.length);
+        const pAlignment = addAlignment(p.length);
+        assert(pAlignment >= p.length, "Invalid memory chunk length");
+        const delta = dataSize - pAlignment;
 
         if (block1.next is null
          || !block1.next.free
+         || dataSize < size
          || block1.next.size + BlockEntry.sizeof < delta)
         {
-            // It is the last block in the region or the next block is too small or not
-            // free.
+            /* * It is the last block in the region
+             * * The next block is too small
+             * * The next block isn't free
+             * * Requested size is too large
+             */
             return false;
         }
         if (block1.next.size >= delta + alignment_)
@@ -453,11 +484,14 @@ final class MmapPool : Allocator
      *
      * Returns: A pointer to the data.
      */
-    private static void* initializeRegion(size_t size, ref Region head)
+    private static void* initializeRegion(const size_t size, ref Region head)
     nothrow @nogc
     {
         const regionSize = calculateRegionSize(size);
-
+        if (regionSize < size)
+        {
+            return null;
+        }
         version (Posix)
         {
             void* p = mmap(null,
@@ -518,7 +552,7 @@ final class MmapPool : Allocator
         return data;
     }
 
-    private void* initializeRegion(size_t size) shared nothrow @nogc
+    private void* initializeRegion(const size_t size) shared nothrow @nogc
     {
         return initializeRegion(size, head);
     }
@@ -529,12 +563,7 @@ final class MmapPool : Allocator
      *
      * Returns: Aligned size of $(D_PARAM x).
      */
-    private static size_t addAlignment(size_t x) pure nothrow @safe @nogc
-    out (result)
-    {
-        assert(result > 0);
-    }
-    body
+    private static size_t addAlignment(const size_t x) pure nothrow @safe @nogc
     {
         return (x - 1) / alignment_ * alignment_ + alignment_;
     }
@@ -545,15 +574,11 @@ final class MmapPool : Allocator
      *
      * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
      */
-    private static size_t calculateRegionSize(size_t x) nothrow @safe @nogc
-    out (result)
+    private static size_t calculateRegionSize(const size_t x)
+    nothrow @safe @nogc
     {
-        assert(result > 0);
-    }
-    body
-    {
-        x += RegionEntry.sizeof + BlockEntry.sizeof * 2;
-        return x / pageSize * pageSize + pageSize;
+        return (x + RegionEntry.sizeof + BlockEntry.sizeof * 2)
+             / pageSize * pageSize + pageSize;
     }
 
     /**
@@ -597,7 +622,7 @@ final class MmapPool : Allocator
 
 // A lot of allocations/deallocations, but it is the minimum caused a
 // segmentation fault because MmapPool reallocateInPlace moves a block wrong.
-unittest
+private @nogc unittest
 {
     auto a = MmapPool.instance.allocate(16);
     auto d = MmapPool.instance.allocate(16);
