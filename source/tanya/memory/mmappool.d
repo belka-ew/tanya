@@ -18,6 +18,8 @@ import tanya.memory.allocator;
 
 version (Posix)
 {
+    import core.sys.posix.sys.mman : PROT_READ, PROT_WRITE, MAP_PRIVATE,
+                                     MAP_ANON, MAP_FAILED;
     import core.sys.posix.unistd;
 
     extern (C)
@@ -35,11 +37,11 @@ version (Posix)
     {
         void* p = mmap(null,
                        len,
-                       0x01 | 0x02, // PROT_READ | PROT_WRITE
-                       0x0002 | 0x1000, // MAP_PRIVATE | MAP_ANON
+                       PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANON,
                        -1,
                        0);
-        return p is (cast(void*) -1) ? null : p;
+        return p is MAP_FAILED ? null : p;
     }
 
     private bool unmapMemory(shared void* addr, const size_t len)
@@ -311,7 +313,7 @@ final class MmapPool : Allocator
      * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
      */
     bool reallocateInPlace(ref void[] p, const size_t size)
-    pure shared nothrow @nogc
+    shared pure nothrow @nogc
     {
         if (p is null || size == 0)
         {
