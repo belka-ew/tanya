@@ -18,14 +18,61 @@ import tanya.memory.allocator;
 
 version (Posix)
 {
-    import core.stdc.errno;
-    import core.sys.posix.sys.mman;
     import core.sys.posix.unistd;
+
+    extern (C)
+    private void* mmap(void* addr,
+                       size_t len,
+                       int prot,
+                       int flags,
+                       int fd,
+                       off_t offset) pure nothrow @system @nogc;
+
+    extern (C)
+    private int munmap(void* addr, size_t len) pure nothrow @system @nogc;
+
+    private void* mapMemory(const size_t len) pure nothrow @system @nogc
+    {
+        void* p = mmap(null,
+                       len,
+                       0x01 | 0x02, // PROT_READ | PROT_WRITE
+                       0x0002 | 0x1000, // MAP_PRIVATE | MAP_ANON
+                       -1,
+                       0);
+        return p is (cast(void*) -1) ? null : p;
+    }
+
+    private bool unmapMemory(shared void* addr, const size_t len)
+    pure nothrow @system @nogc
+    {
+        return munmap(cast(void*) addr, len) == 0;
+    }
 }
 else version (Windows)
 {
-    import core.sys.windows.winbase;
-    import core.sys.windows.windows;
+    import core.sys.windows.winbase : GetSystemInfo, SYSTEM_INFO;
+
+    extern (Windows)
+    private void* VirtualAlloc(void*, size_t, uint, uint)
+    pure nothrow @system @nogc;
+
+    extern (Windows)
+    private int VirtualFree(void* addr, size_t len, uint)
+    pure nothrow @system @nogc;
+
+    private void* mapMemory(const size_t len) pure nothrow @system @nogc
+    {
+        return VirtualAlloc(null,
+                            len,
+                            0x00001000, // MEM_COMMIT
+                            0x04); // PAGE_READWRITE
+    }
+
+    private bool unmapMemory(shared void* addr, const size_t len)
+    pure nothrow @system @nogc
+    {
+        return VirtualFree(cast(void*) addr, 0, 0x8000) == 0;
+    }
 }
 
 /**
@@ -78,7 +125,7 @@ final class MmapPool : Allocator
      *
      * Returns: Pointer to the new allocated memory.
      */
-    void[] allocate(const size_t size) shared nothrow @nogc
+    void[] allocate(const size_t size) shared pure nothrow @nogc
     {
         if (size == 0)
         {
@@ -137,7 +184,7 @@ final class MmapPool : Allocator
      *
      * Returns: Data the block points to or $(D_KEYWORD null).
      */
-    private void* findBlock(const ref size_t size) shared nothrow @nogc
+    private void* findBlock(const ref size_t size) shared pure nothrow @nogc
     {
         Block block1;
         RegionLoop: for (auto r = head; r !is null; r = r.next)
@@ -197,7 +244,7 @@ final class MmapPool : Allocator
      *
      * Returns: Whether the deallocation was successful.
      */
-    bool deallocate(void[] p) shared nothrow @nogc
+    bool deallocate(void[] p) shared pure nothrow @nogc
     {
         if (p.ptr is null)
         {
@@ -219,14 +266,7 @@ final class MmapPool : Allocator
             {
                 block.region.next.prev = block.region.prev;
             }
-            version (Posix)
-            {
-                return munmap(cast(void*) block.region, block.region.size) == 0;
-            }
-            version (Windows)
-            {
-                return VirtualFree(cast(void*) block.region, 0, MEM_RELEASE) == 0;
-            }
+            return unmapMemory(block.region, block.region.size);
         }
         // Merge blocks if neigbours are free.
         if (block.next !is null && block.next.free)
@@ -271,7 +311,7 @@ final class MmapPool : Allocator
      * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
      */
     bool reallocateInPlace(ref void[] p, const size_t size)
-    shared nothrow @nogc
+    pure shared nothrow @nogc
     {
         if (p is null || size == 0)
         {
@@ -368,7 +408,7 @@ final class MmapPool : Allocator
      *
      * Returns: Whether the reallocation was successful.
      */
-    bool reallocate(ref void[] p, const size_t size) shared nothrow @nogc
+    bool reallocate(ref void[] p, const size_t size) shared pure nothrow @nogc
     {
         if (size == 0)
         {
@@ -441,17 +481,17 @@ final class MmapPool : Allocator
             // Get system dependend page size.
             version (Posix)
             {
-                pageSize = sysconf(_SC_PAGE_SIZE);
-                if (pageSize < 65536)
+                pageSize_ = sysconf(_SC_PAGE_SIZE);
+                if (pageSize_ < 65536)
                 {
-                    pageSize = pageSize * 65536 / pageSize;
+                    pageSize_ = pageSize_ * 65536 / pageSize_;
                 }
             }
             else version (Windows)
             {
                 SYSTEM_INFO si;
                 GetSystemInfo(&si);
-                pageSize = si.dwPageSize;
+                pageSize_ = si.dwPageSize;
             }
 
             const instanceSize = addAlignment(__traits(classInstanceSize,
@@ -485,36 +525,18 @@ final class MmapPool : Allocator
      * Returns: A pointer to the data.
      */
     private static void* initializeRegion(const size_t size, ref Region head)
-    nothrow @nogc
+    pure nothrow @nogc
     {
         const regionSize = calculateRegionSize(size);
         if (regionSize < size)
         {
             return null;
         }
-        version (Posix)
+
+        void* p = mapMemory(regionSize);
+        if (p is null)
         {
-            void* p = mmap(null,
-                           regionSize,
-                           PROT_READ | PROT_WRITE,
-                           MAP_PRIVATE | MAP_ANON,
-                           -1,
-                           0);
-            if (p is MAP_FAILED)
-            {
-                return null;
-            }
-        }
-        else version (Windows)
-        {
-            void* p = VirtualAlloc(null,
-                                   regionSize,
-                                   MEM_COMMIT,
-                                   PAGE_READWRITE);
-            if (p is null)
-            {
-                return null;
-            }
+            return null;
         }
 
         Region region = cast(Region) p;
@@ -552,7 +574,7 @@ final class MmapPool : Allocator
         return data;
     }
 
-    private void* initializeRegion(const size_t size) shared nothrow @nogc
+    private void* initializeRegion(const size_t size) shared pure nothrow @nogc
     {
         return initializeRegion(size, head);
     }
@@ -575,7 +597,7 @@ final class MmapPool : Allocator
      * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
      */
     private static size_t calculateRegionSize(const size_t x)
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     {
         return (x + RegionEntry.sizeof + BlockEntry.sizeof * 2)
              / pageSize * pageSize + pageSize;
@@ -594,10 +616,18 @@ final class MmapPool : Allocator
         assert(MmapPool.instance.alignment == MmapPool.alignment_);
     }
 
+    private static @property size_t pageSize() pure nothrow @trusted @nogc
+    {
+        const pageSize = function size_t() nothrow @safe @nogc {
+            return pageSize_;
+        };
+        return (cast(size_t function() pure nothrow @safe @nogc) pageSize)();
+    }
+
     private enum uint alignment_ = 8;
 
     private shared static MmapPool instance_;
-    private shared static size_t pageSize;
+    private shared static size_t pageSize_;
 
     private shared struct RegionEntry
     {
