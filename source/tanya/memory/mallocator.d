@@ -21,6 +21,13 @@ import tanya.memory.allocator;
  */
 final class Mallocator : Allocator
 {
+    private alias MallocType = extern (C) void* function(size_t)
+                               pure nothrow @system @nogc;
+    private alias FreeType = extern (C) void function(void*)
+                             pure nothrow @system @nogc;
+    private alias ReallocType = extern (C) void* function(void*, size_t)
+                                pure nothrow @system @nogc;
+
     /**
      * Allocates $(D_PARAM size) bytes of memory.
      *
@@ -29,13 +36,13 @@ final class Mallocator : Allocator
      *
      * Returns: The pointer to the new allocated memory.
      */
-    void[] allocate(const size_t size) shared nothrow @nogc
+    void[] allocate(const size_t size) shared pure nothrow @nogc
     {
         if (size == 0)
         {
             return null;
         }
-        auto p = malloc(size + psize);
+        auto p = (cast(MallocType) &malloc)(size + psize);
 
         return p is null ? null : p[psize .. psize + size];
     }
@@ -59,11 +66,11 @@ final class Mallocator : Allocator
      *
      * Returns: Whether the deallocation was successful.
      */
-    bool deallocate(void[] p) shared nothrow @nogc
+    bool deallocate(void[] p) shared pure nothrow @nogc
     {
         if (p !is null)
         {
-            free(p.ptr - psize);
+            (cast(FreeType) &free)(p.ptr - psize);
         }
         return true;
     }
@@ -87,7 +94,8 @@ final class Mallocator : Allocator
      *
      * Returns: $(D_KEYWORD false).
      */
-    bool reallocateInPlace(ref void[] p, const size_t size) shared nothrow @nogc
+    bool reallocateInPlace(ref void[] p, const size_t size)
+    shared pure nothrow @nogc
     {
         return false;
     }
@@ -108,7 +116,7 @@ final class Mallocator : Allocator
      *
      * Returns: Whether the reallocation was successful.
      */
-    bool reallocate(ref void[] p, const size_t size) shared nothrow @nogc
+    bool reallocate(ref void[] p, const size_t size) shared pure nothrow @nogc
     {
         if (size == 0)
         {
@@ -125,7 +133,7 @@ final class Mallocator : Allocator
         }
         else
         {
-            auto r = realloc(p.ptr - psize, size + psize);
+            auto r = (cast(ReallocType) &realloc)(p.ptr - psize, size + psize);
 
             if (r !is null)
             {
@@ -177,12 +185,7 @@ final class Mallocator : Allocator
         assert(Mallocator.instance.alignment == (void*).alignof);
     }
 
-    /**
-     * Static allocator instance and initializer.
-     *
-     * Returns: The global $(D_PSYMBOL Allocator) instance.
-     */
-    static @property ref shared(Mallocator) instance() @nogc nothrow
+    static private shared(Mallocator) instantiate() nothrow @nogc
     {
         if (instance_ is null)
         {
@@ -196,6 +199,16 @@ final class Mallocator : Allocator
             }
         }
         return instance_;
+    }
+
+    /**
+     * Static allocator instance and initializer.
+     *
+     * Returns: The global $(D_PSYMBOL Allocator) instance.
+     */
+    static @property shared(Mallocator) instance() pure nothrow @nogc
+    {
+        return (cast(GetPureInstance!Mallocator) &instantiate)();
     }
 
     ///

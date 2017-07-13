@@ -167,7 +167,7 @@ final class MmapPool : Allocator
                              - MmapPool.alignment_
                              - BlockEntry.sizeof * 2
                              - RegionEntry.sizeof
-                             - pageSize;
+                             - MmapPool.instance.pageSize;
         assert(MmapPool.instance.allocate(tooMuchMemory) is null);
 
         assert(MmapPool.instance.allocate(size_t.max) is null);
@@ -471,44 +471,50 @@ final class MmapPool : Allocator
         MmapPool.instance.deallocate(p);
     }
 
-    /**
-     * Static allocator instance and initializer.
-     *
-     * Returns: Global $(D_PSYMBOL MmapPool) instance.
-     */
-    static @property ref shared(MmapPool) instance() nothrow @nogc
+    static private shared(MmapPool) instantiate() nothrow @nogc
     {
         if (instance_ is null)
         {
             // Get system dependend page size.
             version (Posix)
             {
-                pageSize_ = sysconf(_SC_PAGE_SIZE);
-                if (pageSize_ < 65536)
+                size_t pageSize = sysconf(_SC_PAGE_SIZE);
+                if (pageSize < 65536)
                 {
-                    pageSize_ = pageSize_ * 65536 / pageSize_;
+                    pageSize = pageSize * 65536 / pageSize;
                 }
             }
             else version (Windows)
             {
                 SYSTEM_INFO si;
                 GetSystemInfo(&si);
-                pageSize_ = si.dwPageSize;
+                size_t pageSize = si.dwPageSize;
             }
 
             const instanceSize = addAlignment(__traits(classInstanceSize,
                                               MmapPool));
 
             Region head; // Will become soon our region list head
-            void* data = initializeRegion(instanceSize, head);
+            void* data = initializeRegion(instanceSize, head, pageSize);
             if (data !is null)
             {
                 memcpy(data, typeid(MmapPool).initializer.ptr, instanceSize);
                 instance_ = cast(shared MmapPool) data;
                 instance_.head = head;
+                instance_.pageSize = pageSize;
             }
         }
         return instance_;
+    }
+
+    /**
+     * Static allocator instance and initializer.
+     *
+     * Returns: Global $(D_PSYMBOL MmapPool) instance.
+     */
+    static @property shared(MmapPool) instance() pure nothrow @nogc
+    {
+        return (cast(GetPureInstance!MmapPool) &instantiate)();
     }
 
     ///
@@ -526,10 +532,12 @@ final class MmapPool : Allocator
      *
      * Returns: A pointer to the data.
      */
-    private static void* initializeRegion(const size_t size, ref Region head)
+    private static void* initializeRegion(const size_t size,
+                                          ref Region head,
+                                          const size_t pageSize)
     pure nothrow @nogc
     {
-        const regionSize = calculateRegionSize(size);
+        const regionSize = calculateRegionSize(size, pageSize);
         if (regionSize < size)
         {
             return null;
@@ -578,7 +586,7 @@ final class MmapPool : Allocator
 
     private void* initializeRegion(const size_t size) shared pure nothrow @nogc
     {
-        return initializeRegion(size, head);
+        return initializeRegion(size, this.head, this.pageSize);
     }
 
     /*
@@ -594,11 +602,13 @@ final class MmapPool : Allocator
 
     /*
      * Params:
-     *  x = Required space.
+     *  x        = Required space.
+     *  pageSize = Page size.
      *
      * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
      */
-    private static size_t calculateRegionSize(const size_t x)
+    private static size_t calculateRegionSize(ref const size_t x,
+                                              ref const size_t pageSize)
     pure nothrow @safe @nogc
     {
         return (x + RegionEntry.sizeof + BlockEntry.sizeof * 2)
@@ -618,18 +628,10 @@ final class MmapPool : Allocator
         assert(MmapPool.instance.alignment == MmapPool.alignment_);
     }
 
-    private static @property size_t pageSize() pure nothrow @trusted @nogc
-    {
-        const pageSize = function size_t() nothrow @safe @nogc {
-            return pageSize_;
-        };
-        return (cast(size_t function() pure nothrow @safe @nogc) pageSize)();
-    }
-
     private enum uint alignment_ = 8;
 
     private shared static MmapPool instance_;
-    private shared static size_t pageSize_;
+    private shared size_t pageSize;
 
     private shared struct RegionEntry
     {

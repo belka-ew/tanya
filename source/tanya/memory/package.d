@@ -36,7 +36,7 @@ mixin template DefaultAllocator()
      *
      * Precondition: $(D_INLINECODE allocator_ !is null)
      */
-    this(shared Allocator allocator)
+    this(shared Allocator allocator) pure nothrow @safe @nogc
     in
     {
         assert(allocator !is null);
@@ -54,7 +54,7 @@ mixin template DefaultAllocator()
      *
      * Postcondition: $(D_INLINECODE allocator !is null)
      */
-    protected @property shared(Allocator) allocator() nothrow @safe @nogc
+    protected @property shared(Allocator) allocator() pure nothrow @safe @nogc
     out (allocator)
     {
         assert(allocator !is null);
@@ -69,7 +69,7 @@ mixin template DefaultAllocator()
     }
 
     /// Ditto.
-    @property shared(Allocator) allocator() const nothrow @trusted @nogc
+    @property shared(Allocator) allocator() const pure nothrow @trusted @nogc
     out (allocator)
     {
         assert(allocator !is null);
@@ -85,25 +85,44 @@ mixin template DefaultAllocator()
 }
 
 // From druntime
-private extern (C) void _d_monitordelete(Object h, bool det) nothrow @nogc;
+extern (C)
+private void _d_monitordelete(Object h, bool det) pure nothrow @nogc;
 
 shared Allocator allocator;
 
-shared static this() nothrow @trusted @nogc
+shared static this() nothrow @nogc
 {
     allocator = MmapPool.instance;
 }
 
-@property ref shared(Allocator) defaultAllocator() nothrow @safe @nogc
+private shared(Allocator) getAllocatorInstance() nothrow @nogc
+{
+    return allocator;
+}
+
+/**
+ * Returns: Default allocator.
+ *
+ * Postcondition: $(D_INLINECODE allocator !is null).
+ */
+@property shared(Allocator) defaultAllocator() pure nothrow @trusted @nogc
 out (allocator)
 {
     assert(allocator !is null);
 }
 body
 {
-    return allocator;
+    return (cast(GetPureInstance!Allocator) &getAllocatorInstance)();
 }
 
+/**
+ * Sets the default allocator.
+ *
+ * Params:
+ *  allocator = $(D_PSYMBOL Allocator) instance.
+ *
+ * Precondition: $(D_INLINECODE allocator !is null).
+ */
 @property void defaultAllocator(shared(Allocator) allocator) nothrow @safe @nogc
 in
 {
@@ -271,7 +290,8 @@ package(tanya) void[] finalize(T)(ref T p)
         // shouldn't throw and if it does, it is an error anyway.
         if (c.destructor)
         {
-            (cast(void function (Object) nothrow @safe @nogc) c.destructor)(ob);
+            alias DtorType = void function(Object) pure nothrow @safe @nogc;
+            (cast(DtorType) c.destructor)(ob);
         }
     }
     while ((c = c.base) !is null);
@@ -322,7 +342,7 @@ private unittest
 }
 
 // Works with interfaces.
-private unittest
+private pure unittest
 {
     interface I
     {
