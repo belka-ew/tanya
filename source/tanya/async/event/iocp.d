@@ -231,8 +231,8 @@ final class IOCPLoop : Loop
                 return false;
             }
         }
-        if (!(oldEvents & Event.read) && (events & Event.read)
-            || !(oldEvents & Event.write) && (events & Event.write))
+        if ((!(oldEvents & Event.read) && (events & Event.read))
+            || (!(oldEvents & Event.write) && (events & Event.write)))
         {
             auto transport = cast(StreamTransport) watcher;
             assert(transport !is null);

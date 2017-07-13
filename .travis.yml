@@ -29,6 +29,9 @@ before_script:
 
 script:
   - dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC
+  - if [ "$UNITTEST" = "unittest-cov" -a "$ARCH" = "x86_64" -a "$TRAVIS_OS_NAME" = "linux" ]; then
+      dub fetch dscanner && dub run dscanner -- -Isource --styleCheck;
+    fi
 
 after_success:
   - test "$UNITTEST" = "unittest-cov" && bash <(curl -s https://codecov.io/bash)

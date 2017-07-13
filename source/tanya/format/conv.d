@@ -61,7 +61,7 @@ template to(To)
 
     /// Ditto.
     To to(From)(From from)
-    if (is(Unqual!To == Unqual!From) || isNumeric!From && isFloatingPoint!To)
+    if (is(Unqual!To == Unqual!From) || (isNumeric!From && isFloatingPoint!To))
     {
         return from;
     }

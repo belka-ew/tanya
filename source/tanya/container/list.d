@@ -1312,8 +1312,8 @@ struct DList(T)
 	private size_t makeList(R)(ref R el, out Entry* head, out Entry* tail) @trusted
 	out (retLength)
 	{
-		assert(retLength == 0 && head is null && tail is null
-		    || retLength > 0 && head !is null && tail !is null);
+		assert((retLength == 0 && head is null && tail is null)
+		    || (retLength > 0 && head !is null && tail !is null));
 	}
 	body
 	{
