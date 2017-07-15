@@ -14,7 +14,9 @@ module tanya.memory;
 
 import core.exception;
 import std.algorithm.iteration;
-public import std.experimental.allocator : make;
+import std.algorithm.mutation;
+import std.conv;
+import std.range;
 import std.traits;
 public import tanya.memory.allocator;
 import tanya.memory.mmappool;
@@ -354,5 +356,134 @@ private pure unittest
     I i = c;
 
     defaultAllocator.dispose(i);
+    defaultAllocator.dispose(i);
+}
+
+/**
+ * Constructs a new class instance of type $(D_PARAM T) using $(D_PARAM args)
+ * as the parameter list for the constructor of $(D_PARAM T).
+ *
+ * Params:
+ *  T         = Class type.
+ *  A         = Types of the arguments to the constructor of $(D_PARAM T).
+ *  allocator = Allocator.
+ *  args      = Constructor arguments of $(D_PARAM T).
+ * 
+ * Returns: Newly created $(D_PSYMBOL T).
+ *
+ * Precondition: $(D_INLINECODE allocator !is null)
+ */
+T make(T, A...)(shared Allocator allocator, auto ref A args)
+if (is(T == class))
+in
+{
+    assert(allocator !is null);
+}
+body
+{
+    T ret;
+    const size = stateSize!T;
+
+    auto mem = (() @trusted => allocator.allocate(size))();
+    if (mem is null)
+    {
+        onOutOfMemoryError();
+    }
+    scope (failure)
+    {
+        () @trusted { allocator.deallocate(mem); }();
+    }
+
+    ret = emplace!T(mem[0 .. size], args);
+
+    return ret;
+}
+
+/**
+ * Constructs a value object of type $(D_PARAM T) using $(D_PARAM args)
+ * as the parameter list for the constructor of $(D_PARAM T) and returns a
+ * pointer to the new object.
+ *
+ * Params:
+ *  T         = Object type.
+ *  A         = Types of the arguments to the constructor of $(D_PARAM T).
+ *  allocator = Allocator.
+ *  args      = Constructor arguments of $(D_PARAM T).
+ * 
+ * Returns: Pointer to the created object.
+ *
+ * Precondition: $(D_INLINECODE allocator !is null)
+ */
+T* make(T, A...)(shared Allocator allocator, auto ref A args)
+if (!is(T == interface)
+ && !is(T == class)
+ && !isAssociativeArray!T
+ && !isArray!T)
+in
+{
+    assert(allocator !is null);
+}
+body
+{
+    typeof(return) ret;
+    const size = stateSize!T;
+
+    auto mem = (() @trusted => allocator.allocate(size))();
+    if (mem is null)
+    {
+        onOutOfMemoryError();
+    }
+    scope (failure)
+    {
+        () @trusted { allocator.deallocate(mem); }();
+    }
+
+    auto ptr = (() @trusted => (cast(T*) mem[0 .. size].ptr))();
+    ret = emplace!T(ptr, args);
+
+    return ret;
+}
+
+///
+unittest
+{
+    int* i = defaultAllocator.make!int(5);
+    assert(*i == 5);
+    defaultAllocator.dispose(i);
+}
+
+/**
+ * Constructs a new array with $(D_PARAM size) elements.
+ *
+ * Params:
+ *  T         = Array type.
+ *  allocator = Allocator.
+ *  size      = Array size.
+ *
+ * Returns: Newly created array.
+ *
+ * Precondition: $(D_INLINECODE allocator !is null
+ *                           && n <= size_t.max / ElementType!T.sizeof)
+ */
+T make(T)(shared Allocator allocator, const size_t n)
+if (isArray!T)
+in
+{
+    assert(allocator !is null);
+    assert(n <= size_t.max / ElementType!T.sizeof);
+}
+body
+{
+    auto ret = allocator.resize!(ElementType!T)(null, n);
+    ret.uninitializedFill(ElementType!T.init);
+    return ret;
+}
+
+///
+unittest
+{
+    int[] i = defaultAllocator.make!(int[])(2);
+    assert(i.length == 2);
+    assert(i[0] == int.init && i[1] == int.init);
     defaultAllocator.dispose(i);
 }

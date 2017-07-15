@@ -548,8 +548,7 @@ in
 }
 body
 {
-    auto payload = allocator.resize!(ElementType!T)(null, size);
-    return RefCounted!T(payload, allocator);
+    return RefCounted!T(allocator.make!T(size), allocator);
 }
 
 ///
@@ -852,7 +851,7 @@ in
 }
 body
 {
-    auto payload = allocator.make!(T, shared Allocator, A)(args);
+    auto payload = allocator.make!(T, A)(args);
     return Unique!T(payload, allocator);
 }
 
