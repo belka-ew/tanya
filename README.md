@@ -19,9 +19,10 @@ data structures and utilities that depend on the Garbage Collector in Phobos.
 * [Documentation](https://docs.caraus.io/tanya)
 * [Contribution guidelines](CONTRIBUTING.md)
 
+
 ## Overview
 
-Tanya consists of the following packages:
+Tanya consists of the following packages and (top-level) modules:
 
 * `async`: Event loop (epoll, kqueue and IOCP).
 * `container`: Queue, Array, Singly and doubly linked lists, Buffers, UTF-8
@@ -29,8 +30,14 @@ string, Hash set.
 * `format`: Formatting and conversion functions.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
-* `net`: URL-Parsing, sockets, utilities.
+* `net`: URL-Parsing, network programming.
+* `network`: Socket implementation. `network` is currently under rework.
+After finishing the new socket implementation will land in the `net` package and
+`network` will be deprecated.
 * `os`: Platform-independent interfaces to operating system functionality.
+* `typecons`: Templates that allow to build new types based on the available
+ones.
+
 
 ## Basic usage
 
@@ -125,6 +132,7 @@ int i = arr[7]; // Access 7th element.
 
 There are more containers in the `tanya.container` package.
 
+
 ## Development
 
 ### Supported compilers
@@ -160,3 +168,9 @@ Deprecated features are removed after one release (in approximately 6 weeks afte
 is being tested on Windows and FreeBSD as well.
 
 * The library isn't thread-safe yet.
+
+
+## Feedback
+
+Any feedback about your experience with tanya would be greatly appreciated. Feel free to
+[contact me](mailto:info@caraus.de).

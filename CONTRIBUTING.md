@@ -15,18 +15,21 @@ can work on.
 writing new ones, or providing usage examples.
 * **Testing**: Test coverage is important for a library. Writing tests is not only helpful, but is also a great way
 to get a feel for how tanya works.
+* **Adding new features**: Tanya is a growing library. If you think some feature is missing, you can suggest
+and implement this.
 
 
 ## Opening an issue
 
-If you have found a bug, an error, have some question, or suggestion, open in issue. Tanya uses an external
+If you have found a bug, an error, have some question, or suggestion, open in issue. I'll try to answer as soon
+as I can. Tanya uses an external
 [bug tracker](https://issues.caraus.io/projects/tanya/issues). You should
 [register](https://issues.caraus.io/account/register) before you can report your issue. There is also a list
 of open issues that mirror the current development process and progress. If you're looking for a challenge, just
 pick an issue you are interested in and start working on it. Fill free to comment on the issue to get more
 information.
 
-Some issues have a category assigned to it. Such issues belongs mostly to a larger part of the library that is
+Some issues have a category assigned to them. Such issues belong mostly to a larger part of the library that is
 currently in development. The category specifies then the git branch development happens on. The remaining issues
 can be fixed directly in master.
 
@@ -35,9 +38,11 @@ to be fixed till a specific release. Version numbers refer to the versions in th
 [git repository](https://github.com/caraus-ecms/tanya/releases).
 
 
-## Creating a pull request
+## Contribution process
 
-I accept GitHub pull requests. Creating a pull request is like sending a patch with a suggested change.
+### Creating a pull request
+
+I accept GitHub pull requests. Creating a pull request is like sending a patch with the suggested change.
 First you have to [fork](https://guides.github.com/activities/forking/) the repository. Clone your fork locally
 with `git clone` and create a new branch where you want to work, for example:
 
@@ -47,15 +52,38 @@ git checkout -b bugfix-x
 Commit your changes to your fork:
 
 ```shell
-git commit -m "Fix Bug X"
+git commit -m "Fix X"
 git push -u origin bugfix-x
 ```
+
 After that if you visit your fork on GitHub, GitHub will suggest to create pull request. Just follow the steps
-described on GitHub to finish the process.
+described on GitHub to finish the process. See
+[Using Pull Requests](https://help.github.com/articles/about-pull-requests/) for more information.
 
 Please ensure that you fork is even with the upstream (original) repository. If not, you have to rebase your branch
-on upstream master before submitting a pull request. See https://help.github.com/articles/syncing-a-fork/ for a
+on upstream/master before submitting a pull request. See https://help.github.com/articles/syncing-a-fork/ for a
 step-by-step guide.
+
+### Fixing a bug
+
+Add a unittest that demonstrates the bug along with a short description:
+
+```d
+// Issue ###: https://issues.caraus.io/issues/###.
+private unittest
+{
+}
+```
+
+### Adding new features
+
+* Use Ddoc to document the feature.
+* Add some unittests that demonstrate how the feature is supposed to work and prevent new bugs.
+
+### Style guide
+
+Make sure your changes follow [The D Style](https://dlang.org/dstyle.html) (including
+[Additional Requirements for Phobos](https://dlang.org/dstyle.html#phobos).
 
 
 ## Questions and suggestions
