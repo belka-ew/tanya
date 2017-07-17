@@ -69,14 +69,14 @@ struct URL
     /**
      * Attempts to parse an URL from a string.
      * Output string data (scheme, user, etc.) are just slices of input string
-     * (e.g., no memory allocation and copying).
+     * (i.e., no memory allocation and copying).
      *
      * Params:
      *  source = The string containing the URL.
      *
      * Throws: $(D_PSYMBOL URIException) if the URL is malformed.
      */
-    this(const char[] source) @nogc
+    this(const char[] source) pure @nogc
     {
         auto value = source;
         ptrdiff_t pos = -1, endPos = value.length, start;
@@ -94,15 +94,15 @@ struct URL
         }
 
         // Check if the colon is a part of the scheme or the port and parse
-        // the appropriate part
+        // the appropriate part.
         if (value.length > 1 && value[0] == '/' && value[1] == '/')
         {
-            // Relative scheme
+            // Relative scheme.
             start = 2;
         }
         else if (pos > 0)
         {
-            // Validate scheme
+            // Validate scheme:
             // [ toLower(alpha) | digit | "+" | "-" | "." ]
             foreach (ref c; value[0 .. pos])
             {
@@ -120,7 +120,7 @@ struct URL
                 }
             }
 
-            if (value.length == pos + 1) // only scheme is available
+            if (value.length == pos + 1) // only "scheme:" is available.
             {
                 this.scheme = value[0 .. $ - 1];
                 return;
@@ -132,11 +132,15 @@ struct URL
                 if (value.length > pos + 2 && value[pos + 2] == '/')
                 {
                     start = pos + 3;
-                    if (this.scheme == "file"
-                     && value.length > start
-                     && value[start] == '/')
+
+                    if (value.length <= start)
                     {
-                        // Windows drive letters
+                        // Only "scheme://" is available.
+                        return;
+                    }
+                    if (this.scheme == "file" && value[start] == '/')
+                    {
+                        // Windows drive letters.
                         if (value.length - start > 2 && value[start + 2] == ':')
                         {
                             ++start;
@@ -164,7 +168,7 @@ struct URL
         }
         else if (pos == 0 && parsePort(value[pos .. $]))
         {
-            // An URL shouldn't begin with a port number
+            // An URL shouldn't begin with a port number.
             throw defaultAllocator.make!URIException("URL begins with port");
         }
         else
@@ -172,7 +176,7 @@ struct URL
             goto ParsePath;
         }
 
-        // Parse host
+        // Parse host.
         pos = -1;
         for (ptrdiff_t i = start; i < value.length; ++i)
         {
@@ -187,7 +191,7 @@ struct URL
             }
         }
 
-        // Check for login and password
+        // Check for login and password.
         if (pos != -1)
         {
             // *( unreserved / pct-encoded / sub-delims / ":" )
@@ -226,8 +230,8 @@ struct URL
         pos = endPos;
         if (endPos <= 1 || value[start] != '[' || value[endPos - 1] != ']')
         {
-            // Short circuit portscan
-            // IPv6 embedded address
+            // Short circuit portscan.
+            // IPv6 embedded address.
             for (ptrdiff_t i = endPos - 1; i >= start; --i)
             {
                 if (value[i] == ':')
@@ -243,7 +247,7 @@ struct URL
             }
         }
 
-        // Check if we have a valid host, if we don't reject the string as url
+        // Check if we have a valid host, if we don't reject the string as URL.
         if (pos <= start)
         {
             this.scheme = this.user = this.pass = null;
@@ -532,6 +536,13 @@ private @nogc unittest
     }
     assert(exception !is null);
     defaultAllocator.dispose(exception);
+}
+
+// Issue 254: https://issues.caraus.io/issues/254.
+private @system @nogc unittest
+{
+    auto u = URL("ftp://");
+    assert(u.scheme == "ftp");
 }
 
 /**
