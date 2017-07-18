@@ -78,8 +78,7 @@ struct URL
      */
     this(const char[] source) pure @nogc
     {
-        auto value = source;
-        ptrdiff_t pos = -1, endPos = value.length, start;
+        ptrdiff_t pos = -1, endPos = source.length, start;
 
         foreach (i, ref c; source)
         {
@@ -87,7 +86,7 @@ struct URL
             {
                 pos = i;
             }
-            if (endPos == value.length && (c == '?' || c == '#'))
+            if (endPos == source.length && (c == '?' || c == '#'))
             {
                 endPos = i;
             }
@@ -95,7 +94,7 @@ struct URL
 
         // Check if the colon is a part of the scheme or the port and parse
         // the appropriate part.
-        if (value.length > 1 && value[0] == '/' && value[1] == '/')
+        if (source.length > 1 && source[0] == '/' && source[1] == '/')
         {
             // Relative scheme.
             start = 2;
@@ -104,44 +103,37 @@ struct URL
         {
             // Validate scheme:
             // [ toLower(alpha) | digit | "+" | "-" | "." ]
-            foreach (ref c; value[0 .. pos])
+            foreach (ref c; source[0 .. pos])
             {
                 if (!c.isAlphaNum && c != '+' && c != '-' && c != '.')
                 {
-                    if (endPos > pos)
-                    {
-                        if (!parsePort(value[pos .. $]))
-                        {
-                            throw make!URIException(defaultAllocator,
-                                                    "Failed to parse port");
-                        }
-                    }
                     goto ParsePath;
                 }
             }
 
-            if (value.length == pos + 1) // only "scheme:" is available.
+            if (source.length == pos + 1) // only "scheme:" is available.
             {
-                this.scheme = value[0 .. $ - 1];
+                this.scheme = source[0 .. $ - 1];
                 return;
             }
-            else if (value.length > pos + 1 && value[pos + 1] == '/')
+            else if (source.length > pos + 1 && source[pos + 1] == '/')
             {
-                this.scheme = value[0 .. pos];
+                this.scheme = source[0 .. pos];
 
-                if (value.length > pos + 2 && value[pos + 2] == '/')
+                if (source.length > pos + 2 && source[pos + 2] == '/')
                 {
                     start = pos + 3;
 
-                    if (value.length <= start)
+                    if (source.length <= start)
                     {
                         // Only "scheme://" is available.
                         return;
                     }
-                    if (this.scheme == "file" && value[start] == '/')
+                    if (this.scheme == "file" && source[start] == '/')
                     {
                         // Windows drive letters.
-                        if (value.length - start > 2 && value[start + 2] == ':')
+                        if (source.length - start > 2
+                         && source[start + 2] == ':')
                         {
                             ++start;
                         }
@@ -158,15 +150,15 @@ struct URL
             {
                 // Schemas like mailto: and zlib: may not have any slash after
                 // them.
-                if (!parsePort(value[pos .. $]))
+                if (!parsePort(source[pos .. $]))
                 {
-                    this.scheme = value[0 .. pos];
+                    this.scheme = source[0 .. pos];
                     start = pos + 1;
                     goto ParsePath;
                 }
             }
         }
-        else if (pos == 0 && parsePort(value[pos .. $]))
+        else if (pos == 0 && parsePort(source[pos .. $]))
         {
             // An URL shouldn't begin with a port number.
             throw defaultAllocator.make!URIException("URL begins with port");
@@ -178,13 +170,13 @@ struct URL
 
         // Parse host.
         pos = -1;
-        for (ptrdiff_t i = start; i < value.length; ++i)
+        for (ptrdiff_t i = start; i < source.length; ++i)
         {
-            if (value[i] == '@')
+            if (source[i] == '@')
             {
                 pos = i;
             }
-            else if (value[i] == '/')
+            else if (source[i] == '/')
             {
                 endPos = i;
                 break;
@@ -195,14 +187,14 @@ struct URL
         if (pos != -1)
         {
             // *( unreserved / pct-encoded / sub-delims / ":" )
-            foreach (i, c; value[start .. pos])
+            foreach (i, c; source[start .. pos])
             {
                 if (c == ':')
                 {
                     if (this.user is null)
                     {
-                        this.user = value[start .. start + i];
-                        this.pass = value[start + i + 1 .. pos]; 
+                        this.user = source[start .. start + i];
+                        this.pass = source[start + i + 1 .. pos]; 
                     }
                 }
                 else if (!c.isAlpha &&
@@ -221,23 +213,23 @@ struct URL
             }
             if (this.user is null)
             {
-                this.user = value[start .. pos];
+                this.user = source[start .. pos];
             }
 
             start = ++pos;
         }
 
         pos = endPos;
-        if (endPos <= 1 || value[start] != '[' || value[endPos - 1] != ']')
+        if (endPos <= 1 || source[start] != '[' || source[endPos - 1] != ']')
         {
             // Short circuit portscan.
             // IPv6 embedded address.
             for (ptrdiff_t i = endPos - 1; i >= start; --i)
             {
-                if (value[i] == ':')
+                if (source[i] == ':')
                 {
                     pos = i;
-                    if  (this.port == 0 && !parsePort(value[i .. endPos]))
+                    if  (this.port == 0 && !parsePort(source[i .. endPos]))
                     {
                         this.scheme = this.user = this.pass = null;
                         throw defaultAllocator.make!URIException("Invalid port");
@@ -254,9 +246,9 @@ struct URL
             throw defaultAllocator.make!URIException("Invalid host");
         }
 
-        this.host = value[start .. pos];
+        this.host = source[start .. pos];
 
-        if (endPos == value.length)
+        if (endPos == source.length)
         {
             return;
         }
@@ -264,9 +256,9 @@ struct URL
         start = endPos;
 
     ParsePath:
-        endPos = value.length;
+        endPos = source.length;
         pos = -1;
-        foreach (i, ref c; value[start .. $])
+        foreach (i, ref c; source[start .. $])
         {
             if (c == '?' && pos == -1)
             {
@@ -285,15 +277,15 @@ struct URL
 
         if (pos > start)
         {
-            this.path = value[start .. pos];
+            this.path = source[start .. pos];
         }
         if (endPos >= ++pos)
         {
-            this.query = value[pos .. endPos];
+            this.query = source[pos .. endPos];
         }
-        if (++endPos <= value.length)
+        if (++endPos <= source.length)
         {
-            this.fragment = value[endPos .. $];
+            this.fragment = source[endPos .. $];
         }
     }
 
@@ -314,13 +306,9 @@ struct URL
 
         for (; i < port.length && port[i].isDigit() && i <= 6; ++i)
         {
-            lPort += (port[i] - '0') / cast(float)(10 ^^ (i - 1));
+            lPort += (port[i] - '0') / cast(float) (10 ^^ (i - 1));
         }
-        if (i == 1 && (i == port.length || port[i] == '/'))
-        {
-            return true;
-        }
-        else if (i == port.length || port[i] == '/')
+        if (i != 1 && (i == port.length || port[i] == '/'))
         {
             lPort *= 10 ^^ (i - 2);
             if (lPort > ushort.max)
@@ -402,6 +390,11 @@ private @nogc unittest
     assert(u.host == "127.0.0.1");
     assert(u.port == 9000);
 
+    u = URL("127.0.0.1:80");
+    assert(u.host == "127.0.0.1");
+    assert(u.port == 80);
+    assert(u.path is null);
+
     u = URL("//example.net");
     assert(u.host == "example.net");
     assert(u.scheme is null);
@@ -413,6 +406,7 @@ private @nogc unittest
     u = URL("localhost:8080");
     assert(u.host == "localhost");
     assert(u.port == 8080);
+    assert(u.path is null);
 
     u = URL("ftp:");
     assert(u.scheme == "ftp");
@@ -446,21 +440,9 @@ private @nogc unittest
     u = URL("zlib:/home/user/file.gz");
     assert(u.scheme == "zlib");
     assert(u.path == "/home/user/file.gz");
-}
 
-private @nogc unittest
-{
-    URIException exception;
-    try
-    {
-        auto u = URL("h_tp:asdf");
-    }
-    catch (URIException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
+    u = URL("h_tp:asdf");
+    assert(u.path == "h_tp:asdf");
 }
 
 private @nogc unittest
@@ -528,7 +510,7 @@ private @nogc unittest
     URIException exception;
     try
     {
-        auto u = URL(":/");
+        auto u = URL("http://blah.com:66000");
     }
     catch (URIException e)
     {
