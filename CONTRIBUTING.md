@@ -60,13 +60,13 @@ After that if you visit your fork on GitHub, GitHub will suggest to create pull 
 described on GitHub to finish the process. See
 [Using Pull Requests](https://help.github.com/articles/about-pull-requests/) for more information.
 
-Please ensure that you fork is even with the upstream (original) repository. If not, you have to rebase your branch
+Please ensure that your fork is even with the upstream (original) repository. If not, you have to rebase your branch
 on upstream/master before submitting a pull request. See https://help.github.com/articles/syncing-a-fork/ for a
 step-by-step guide.
 
 ### Fixing a bug
 
-Add a unittest that demonstrates the bug along with a short description:
+Add an unittest that demonstrates the bug along with a short description:
 
 ```d
 // Issue ###: https://issues.caraus.io/issues/###.
@@ -78,7 +78,7 @@ private unittest
 ### Adding new features
 
 * Use Ddoc to document the feature.
-* Add some unittests that demonstrate how the feature is supposed to work and prevent new bugs.
+* Add some unittests that prevent new bugs and demonstrate how the feature is supposed to work.
 
 ### Style guide
 
