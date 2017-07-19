@@ -933,8 +933,8 @@ struct String
      * Slicing assignment.
      *
      * Params:
-     *  R     = Type of the assigned slice.
-     *  value = New value (single value, range or string).
+     *  R     = $(D_KEYWORD char).
+     *  value = Assigned character, range or string.
      *  i     = Slice start.
      *  j     = Slice end.
      *
@@ -955,8 +955,9 @@ struct String
     }
     body
     {
-        copy(value, this.data[i .. j]);
-        return opSlice(i, j);
+        auto target = opSlice(i, j);
+        copy(value, target);
+        return target;
     }
 
     /// Ditto.
@@ -1435,13 +1436,13 @@ struct String
     }
 
     /**
-     * Assigns a range or a string.
+     * Slicing assignment.
      *
      * Params:
-     *  R     = Value type.
-     *  value = Value.
+     *  R     = $(D_KEYWORD char).
+     *  value = Assigned character, range or string.
      *
-     * Returns: Assigned value.
+     * Returns: Range over the string.
      *
      * Precondition: $(D_INLINECODE length == value.length).
      */
@@ -1451,16 +1452,38 @@ struct String
         return opSliceAssign(value, 0, length);
     }
 
+    private unittest
+    {
+        auto s1 = String("Buttercup");
+        auto s2 = String("Cap");
+        s2[] = s1[6 .. $];
+        assert(s2 == "cup");
+    }
+
     /// Ditto.
     ByCodeUnit!char opIndexAssign(const char value) pure nothrow @safe @nogc
     {
         return opSliceAssign(value, 0, length);
     }
 
+    private unittest
+    {
+        auto s1 = String("Wow");
+        s1[] = 'a';
+        assert(s1 == "aaa");
+    }
+
     /// Ditto.
     ByCodeUnit!char opIndexAssign(const char[] value) pure nothrow @safe @nogc
     {
         return opSliceAssign(value, 0, length);
+    }
+
+    private unittest
+    {
+        auto s1 = String("ö");
+        s1[] = "oe";
+        assert(s1 == "oe");
     }
 
     /**
