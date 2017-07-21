@@ -7,6 +7,7 @@ os:
 language: d
 
 d:
+  - dmd-2.075.0
   - dmd-2.074.1
   - dmd-2.073.2
   - dmd-2.072.2
@@ -23,7 +24,7 @@ addons:
       - gcc-multilib
 
 before_script:
-  - if [ "$PS1" = '(dmd-2.074.1)' ]; then
+  - if [ "$PS1" = '(dmd-2.075.0)' ]; then
       export UNITTEST="unittest-cov";
     fi
 
