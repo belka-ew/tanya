@@ -349,7 +349,8 @@ struct Set(T)
     /// The maximum number of buckets the container can have.
     enum size_t maxBucketCount = primes[$ - 1];
 
-    static private size_t calculateHash(ref T value)
+    static private size_t calculateHash(U)(ref const U value)
+    if (is(U == Unqual!T))
     {
         static if (isIntegral!T || isSomeChar!T || is(T == bool))
         {
@@ -361,9 +362,24 @@ struct Set(T)
         }
     }
 
-    static private size_t locateBucket(ref const DataType buckets, size_t hash)
+    static private size_t locateBucket(ref const DataType buckets,
+                                       const size_t hash)
+    in
+    {
+        assert(buckets.length > 0);
+    }
+    body
     {
         return hash % buckets.length;
+    }
+
+    /*
+     * Returns bucket position for `hash`. `0` may mean the 0th position or an
+     * empty `buckets` array.
+     */
+    private size_t locateBucket(const size_t hash) const
+    {
+        return this.data.length == 0 ? 0 : locateBucket(this.data, hash);
     }
 
     private enum InsertStatus : byte
@@ -376,7 +392,8 @@ struct Set(T)
     /*
      * Inserts the value in an empty or deleted bucket. If the value is
      * already in there, does nothing and returns InsertStatus.found. If the
-     * hash array is full returns InsertStatus.failed.
+     * hash array is full returns InsertStatus.failed. Otherwise,
+     * InsertStatus.added is returned.
      */
     private InsertStatus insertInUnusedBucket(ref T value)
     {
@@ -456,12 +473,7 @@ struct Set(T)
      */
     size_t remove(T value)
     {
-        if (this.data.length == 0)
-        {
-            return 0;
-        }
-
-        auto bucketPosition = locateBucket(this.data, calculateHash(value));
+        auto bucketPosition = locateBucket(calculateHash(value));
         foreach (ref e; this.data[bucketPosition .. $])
         {
             if (e == value) // Found.
@@ -478,7 +490,7 @@ struct Set(T)
     }
 
     ///
-    unittest
+    @nogc unittest
     {
         Set!int set;
         assert(8 !in set);
@@ -500,14 +512,9 @@ struct Set(T)
      * Returns: $(D_KEYWORD true) if the given element exists in the container,
      *          $(D_KEYWORD false) otherwise.
      */
-    bool opBinaryRight(string op : "in")(auto ref T value)
+    bool opBinaryRight(string op : "in")(auto ref const T value) const
     {
-        if (this.data.length == 0)
-        {
-            return 0;
-        }
-
-        auto bucketPosition = locateBucket(this.data, calculateHash(value));
+        auto bucketPosition = locateBucket(calculateHash(value));
         foreach (ref e; this.data[bucketPosition .. $])
         {
             if (e == value) // Found.
@@ -522,37 +529,15 @@ struct Set(T)
         return false;
     }
 
-    /// Ditto.
-    bool opBinaryRight(string op : "in")(auto ref const T value) const
-    {
-        if (this.data.length == 0)
-        {
-            return 0;
-        }
-
-        auto bucketPosition = locateBucket(this.data, calculateHash(value));
-        foreach (ref e; this.data[bucketPosition .. $])
-        {
-            if (e.status == BucketStatus.used && e.content == value) // Found.
-            {
-                return true;
-            }
-            else if (e.status == BucketStatus.empty)
-            {
-                break;
-            }
-        }
-        return false;
-    }
-
     ///
-    unittest
+    @nogc unittest
     {
         Set!int set;
 
         assert(5 !in set);
         set.insert(5);
         assert(5 in set);
+        assert(8 !in set);
     }
 
     /**
@@ -633,7 +618,7 @@ struct Set(T)
     }
 
     ///
-    unittest
+    @nogc unittest
     {
         Set!int set;
         assert(set[].empty);
@@ -647,13 +632,34 @@ struct Set(T)
         assert(set[].empty);
     }
 
+    private @nogc unittest
+    {
+        const Set!int set;
+        assert(set[].empty);
+    }
+
+    private @nogc unittest
+    {
+        Set!int set;
+        set.insert(8);
+
+        auto r1 = set[];
+        auto r2 = r1.save();
+
+        r1.popFront();
+        assert(r1.empty);
+
+        r2.popBack();
+        assert(r2.empty);
+    }
+
     private alias DataType = Array!(Bucket!T);
     private DataType data;
     private size_t lengthIndex;
 }
 
 // Basic insertion logic.
-private unittest
+private @nogc unittest
 {
     Set!int set;
 

@@ -53,11 +53,6 @@ package enum BucketStatus : byte
 
 package struct Bucket(T)
 {
-    this(ref T content)
-    {
-        this.content = content;
-    }
-
     @property void content(ref T content)
     {
         this.content_ = content;
@@ -78,7 +73,7 @@ package struct Bucket(T)
         return false;
     }
 
-    bool opEquals(ref T content) const
+    bool opEquals(ref const T content) const
     {
         if (this.status == BucketStatus.used && this.content == content)
         {
