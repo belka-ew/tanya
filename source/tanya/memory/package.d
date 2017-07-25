@@ -178,7 +178,7 @@ pure nothrow @safe @nogc
     return (size - 1) / alignment * alignment + alignment;
 }
 
-/**
+/*
  * Internal function used to create, resize or destroy a dynamic array. It
  * may throw $(D_PSYMBOL OutOfMemoryError). The new
  * allocated part of the array isn't initialized. This function can be trusted
@@ -381,10 +381,7 @@ in
 }
 body
 {
-    T ret;
-    const size = stateSize!T;
-
-    auto mem = (() @trusted => allocator.allocate(size))();
+    auto mem = (() @trusted => allocator.allocate(stateSize!T))();
     if (mem is null)
     {
         onOutOfMemoryError();
@@ -394,9 +391,7 @@ body
         () @trusted { allocator.deallocate(mem); }();
     }
 
-    ret = emplace!T(mem[0 .. size], args);
-
-    return ret;
+    return emplace!T(mem[0 .. stateSize!T], args);
 }
 
 /**
@@ -425,10 +420,7 @@ in
 }
 body
 {
-    typeof(return) ret;
-    const size = stateSize!T;
-
-    auto mem = (() @trusted => allocator.allocate(size))();
+    auto mem = (() @trusted => allocator.allocate(stateSize!T))();
     if (mem is null)
     {
         onOutOfMemoryError();
@@ -438,10 +430,8 @@ body
         () @trusted { allocator.deallocate(mem); }();
     }
 
-    auto ptr = (() @trusted => (cast(T*) mem[0 .. size].ptr))();
-    ret = emplace!T(ptr, args);
-
-    return ret;
+    auto ptr = (() @trusted => (cast(T*) mem[0 .. stateSize!T].ptr))();
+    return emplace!T(ptr, args);
 }
 
 ///
@@ -453,12 +443,12 @@ unittest
 }
 
 /**
- * Constructs a new array with $(D_PARAM size) elements.
+ * Constructs a new array with $(D_PARAM n) elements.
  *
  * Params:
  *  T         = Array type.
  *  allocator = Allocator.
- *  size      = Array size.
+ *  n         = Array size.
  *
  * Returns: Newly created array.
  *
