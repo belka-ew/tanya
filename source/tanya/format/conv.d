@@ -13,6 +13,7 @@
 module tanya.format.conv;
 
 import std.traits;
+import tanya.container.string;
 import tanya.memory;
 
 /**
@@ -348,17 +349,22 @@ private @nogc unittest
 }
 
 /**
- * Converts a boolean to a number. $(D_KEYWORD true) is `1`, $(D_KEYWORD false)
- * is `0`.
+ * Converts a boolean to $(D_PARAM To).
+ *
+ * If $(D_PARAM To) is a numeric type, then $(D_KEYWORD true) becomes `1`,
+ * $(D_KEYWORD false) `0`.
+ *
+ * If $(D_PARAM To) is a $(D_PSYMBOL String), then `"true"` or `"false"`
+ * is returned.
  *
  * Params:
  *  From = Source type.
  *  To   = Target type.
  *  from = Source value.
  *
- * Returns: `1` if $(D_PARAM from) is $(D_KEYWORD true), otherwise `0`.
+ * Returns: $(D_PARAM from) converted to $(D_PARAM To).
  */
-To to(To, From)(From from)
+To to(To, From)(const From from)
 if (is(Unqual!From == bool) && isNumeric!To && !is(Unqual!To == Unqual!From))
 {
     return from;
@@ -384,6 +390,20 @@ pure nothrow @safe @nogc unittest
     assert(false.to!short == 0);
     assert(false.to!uint == 0);
     assert(false.to!int == 0);
+}
+
+/// Ditto.
+To to(To, From)(const From from)
+if (is(Unqual!From == bool) && is(To == String))
+{
+    return String(from ? "true" : "false");
+}
+
+///
+@nogc unittest
+{
+    assert(true.to!String == "true");
+    assert(false.to!String == "false");
 }
 
 /**
@@ -486,7 +506,6 @@ private @nogc unittest
  *
  * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is not a member of
  *         $(D_PSYMBOL To).
-
  */
 To to(To, From)(From from)
 if (isIntegral!From && is(To == enum))
