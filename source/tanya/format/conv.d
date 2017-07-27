@@ -274,18 +274,23 @@ private @nogc unittest
 }
 
 /**
- * Converts a number to a boolean.
+ * Converts $(D_PARAM from) to a boolean.
+ *
+ * If $(D_PARAM From) is a numeric type, then `1` becomes $(D_KEYWORD true),
+ * `0` $(D_KEYWORD false). Otherwise $(D_PSYMBOL ConvException) is thrown.
+ *
+ * If $(D_PARAM To) is a string (built-in string or $(D_PSYMBOL String)),
+ * then `"true"` or `"false"` are converted to the appropriate boolean value.
+ * Otherwise $(D_PSYMBOL ConvException) is thrown.
  *
  * Params:
  *  From = Source type.
  *  To   = Target type.
  *  from = Source value.
  *
- * Returns: $(D_KEYWORD true) if $(D_INLINECODE from > 0 && from <= 1),
- *          otherwise $(D_KEYWORD false).
+ * Returns: $(D_KEYWORD from) converted to a boolean.
  *
- * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is greater than `1` or
- *         less than `0`.
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) isn't convertible. 
  */
 To to(To, From)(From from)
 if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
@@ -307,15 +312,16 @@ if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
                              "Positive number overflow");
 }
 
-private @nogc unittest
+///
+@nogc unittest
 {
-    assert(0.0.to!bool == false);
-    assert(0.2.to!bool == true);
-    assert(0.5.to!bool == true);
-    assert(1.0.to!bool == true);
+    assert(!0.0.to!bool);
+    assert(0.2.to!bool);
+    assert(0.5.to!bool);
+    assert(1.0.to!bool);
 
-    assert(0.to!bool == false);
-    assert(1.to!bool == true);
+    assert(!0.to!bool);
+    assert(1.to!bool);
 }
 
 private @nogc unittest
@@ -323,7 +329,7 @@ private @nogc unittest
     ConvException exception;
     try
     {
-        assert((-1).to!bool == true);
+        assert((-1).to!bool);
     }
     catch (ConvException e)
     {
@@ -338,7 +344,48 @@ private @nogc unittest
     ConvException exception;
     try
     {
-        assert(2.to!bool == true);
+        assert(2.to!bool);
+    }
+    catch (ConvException e)
+    {
+        exception = e;
+    }
+    assert(exception !is null);
+    defaultAllocator.dispose(exception);
+}
+
+/// Ditto.
+To to(To, From)(auto ref const From from)
+if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
+{
+    if (from == "true")
+    {
+        return true;
+    }
+    else if (from == "false")
+    {
+        return false;
+    }
+    throw make!ConvException(defaultAllocator,
+                             "String doesn't contain a boolean value");
+}
+
+///
+@nogc unittest
+{
+    assert("true".to!bool);
+    assert(!"false".to!bool);
+    assert(String("true").to!bool);
+    assert(!String("false").to!bool);
+
+}
+
+private @nogc unittest
+{
+    ConvException exception;
+    try
+    {
+        assert("1".to!bool);
     }
     catch (ConvException e)
     {
@@ -394,7 +441,7 @@ pure nothrow @safe @nogc unittest
 
 /// Ditto.
 To to(To, From)(const From from)
-if (is(Unqual!From == bool) && is(To == String))
+if (is(Unqual!From == bool) && is(Unqual!To == String))
 {
     return String(from ? "true" : "false");
 }
@@ -404,6 +451,12 @@ if (is(Unqual!From == bool) && is(To == String))
 {
     assert(true.to!String == "true");
     assert(false.to!String == "false");
+}
+
+private @nogc unittest
+{
+    static assert(is(typeof((const String("true")).to!bool)));
+    static assert(is(typeof(false.to!(const String) == "false")));
 }
 
 /**
