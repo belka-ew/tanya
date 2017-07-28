@@ -290,7 +290,7 @@ private @nogc unittest
  *
  * Returns: $(D_KEYWORD from) converted to a boolean.
  *
- * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) isn't convertible. 
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) isn't convertible.
  */
 To to(To, From)(From from)
 if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
@@ -606,4 +606,103 @@ private @nogc unittest
     }
     assert(exception !is null);
     defaultAllocator.dispose(exception);
+}
+
+package char[] number2String(T)(const T number, char[] buffer)
+{
+    // abs the integer.
+    ulong n64 = number < 0 ? -cast(long) number : number;
+
+    char[20] rightAligned;
+    char* start = rightAligned.ptr + rightAligned.sizeof;
+
+    while (true)
+    {
+        // Do in 32-bit chunks (avoid lots of 64-bit divides even with constant
+        // denominators).
+        char* o = start - 8;
+        uint n;
+        if (n64 >= 100000000)
+        {
+            n = n64 % 100000000;
+            n64 /= 100000000;
+        }
+        else
+        {
+            n = cast(uint) n64;
+            n64 = 0;
+        }
+
+        while (n)
+        {
+            *--start = cast(char) (n % 10) + '0';
+            n /= 10;
+        }
+        // Ignore the leading zero if it was the last part of the integer.
+        if (n64 == 0)
+        {
+            if ((start[0] == '0')
+             && (start != (rightAligned.ptr + rightAligned.sizeof)))
+            {
+                ++start;
+            }
+            break;
+        }
+        // Copy leading zeros if it wasn't the most significant part of the
+        // integer.
+        while (start != o)
+        {
+            *--start = '0';
+        }
+    }
+
+    // Get the length that we copied.
+    auto l = cast(uint) ((rightAligned.ptr + rightAligned.sizeof) - start);
+    if (l == 0)
+    {
+        *--start = '0';
+        l = 1;
+    }
+
+    // Write the string.
+    char* bp = buffer.ptr;
+
+    // Set sign.
+    if (number < 0)
+    {
+        *bp++ = '-';
+    }
+
+    // Copy the string into the target buffer.
+    uint n = l;
+    while (n)
+    {
+        int i = n;
+        n -= i;
+
+        while (i >= 4)
+        {
+            *cast(uint*) bp = *cast(uint*) start;
+            bp += 4;
+            start += 4;
+            i -= 4;
+        }
+        while (i)
+        {
+            *bp++ = *start++;
+            --i;
+        }
+    }
+    return buffer[0 .. bp - buffer.ptr];
+}
+
+private @nogc unittest
+{
+    char[21] buf;
+
+    assert(number2String(80, buf) == "80");
+    assert(number2String(-80, buf) == "-80");
+    assert(number2String(0, buf) == "0");
+    assert(number2String(uint.max, buf) == "4294967295");
+    assert(number2String(int.min, buf) == "-2147483648");
 }
