@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /*
+ * Implementions of functions found in $(D_PSYMBOL tanya.memory.op) for X86-64.
+ *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -12,17 +14,18 @@ module tanya.memory.arch.x86_64;
 
 version (D_InlineAsm_X86_64):
 
-package void copy(const void[] src, void[] dst)
+pragma(inline, true)
+package (tanya.memory) void copy(const void[] source, void[] target)
 pure nothrow @system @nogc
 {
     asm pure nothrow @nogc
     {
         naked;
 
-        // RDX - src length.
-        // RCX - src data.
-        // RDI - dst length.
-        // RSI - dst data.
+        // RDX - source length.
+        // RCX - source data.
+        // RDI - target length.
+        // RSI - target data.
 
         // RDI and RSI should be preserved.
         mov RAX, RDI;
