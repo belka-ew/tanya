@@ -22,19 +22,32 @@ pure nothrow @system @nogc
     {
         naked;
 
-        // RDX - source length.
-        // RCX - source data.
-        // RDI - target length.
-        // RSI - target data.
-
         // RDI and RSI should be preserved.
         mov RAX, RDI;
         mov R8, RSI;
+    }
+    // Set the registers for movsb/movsq.
+    version (Windows) asm pure nothrow @nogc
+    {
+        // RDX - source.
+        // RCX - target.
 
-        // Set the registers for movsb/movsq.
+        mov RDI, [ RCX + 8 ];
+        mov RSI, [ RDX + 8 ];
+        mov RDX, [ RDX ];
+    }
+    else asm pure nothrow @nogc
+    {
+        // RDX - source length.
+        // RCX - source data.
+        // RDI - target length
+        // RSI - target data.
+
         mov RDI, RSI;
         mov RSI, RCX;
-
+    }
+    asm pure nothrow @nogc
+    {
         cmp RDX, 0x08;
         jc aligned_8;
         test EDI, 0x07;
@@ -54,7 +67,7 @@ pure nothrow @system @nogc
         and EDX, 0x07;
         jz end;
 
-        // Write remaining bytes.
+        // Write the remaining bytes.
         mov RCX, RDX;
         rep;
         movsb;
