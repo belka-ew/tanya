@@ -79,3 +79,192 @@ pure nothrow @system @nogc
         ret;
     }
 }
+
+pragma(inline, true)
+package (tanya.memory) void zero(void[] memory)
+pure nothrow @system @nogc
+{
+    asm pure nothrow @nogc
+    {
+        naked;
+    }
+    version (Windows) asm pure nothrow @nogc
+    {
+        /*
+         * RCX - array.
+         */
+        mov       R8,           [ RCX ];
+        mov       R9,           [ RCX + 8 ];
+    }
+    else asm pure nothrow @nogc
+    {
+        /*
+         * RSI - pointer.
+         * RDI - length.
+         */
+        mov       R8,           RDI;
+        mov       R9,           RSI;
+    }
+    asm pure nothrow @nogc
+    {
+        // Check for zero length.
+        test      R8,           R8;
+        jz        end;
+
+        // Set to 0.
+        pxor      XMM0,         XMM0;
+
+        // Check if the pointer is aligned to a 16-byte boundary.
+        and       R9,           -0x10;
+    }
+    // Compute the number of misaligned bytes.
+    version (Windows) asm pure nothrow @nogc
+    {
+        mov       RAX,          [ RCX + 8 ];
+    }
+    else asm pure nothrow @nogc
+    {
+        mov       RAX,          RSI;
+    }
+    asm pure nothrow @nogc
+    {
+        sub       RAX,          R9;
+
+        test      RAX,          RAX;
+        jz aligned;
+
+        // Get the number of bytes to be written until we are aligned.
+        mov       RDX,          0x10;
+        sub       RDX,          RAX;
+    }
+    version (Windows) asm pure nothrow @nogc
+    {
+        mov       R9,           [ RCX + 8 ];
+    }
+    else asm pure nothrow @nogc
+    {
+        mov       R9,           RSI;
+    }
+    asm pure nothrow @nogc
+    {
+        // Set RAX to zero, so we can set bytes and dwords.
+        xor       RAX,          RAX;
+
+    naligned:
+        mov       [ R9 ],       AL; // Write a byte.
+
+        // Advance the pointer. Decrease the total number of bytes
+        // and the misaligned ones.
+        inc       R9;
+        dec       RDX;
+        dec       R8;
+
+        // Checks if we are aligned.
+        test      RDX,          RDX;
+        jnz naligned;
+
+    aligned:
+        // Checks if we're done writing bytes.
+        test      R8,           R8;
+        jz end;
+
+        // Write 1 byte at a time.
+        cmp       R8,           8;
+        jl aligned_1;
+
+        // Write 8 bytes at a time.
+        cmp       R8,           16;
+        jl aligned_8;
+
+        // Write 16 bytes at a time.
+        cmp       R8,           32;
+        jl aligned_16;
+
+        // Write 32 bytes at a time.
+        cmp       R8,           64;
+        jl aligned_32;
+
+    aligned_64:
+        movdqa    [ R9 ],        XMM0;
+        movdqa    [ R9 + 16 ],   XMM0;
+        movdqa    [ R9 + 32 ],   XMM0;
+        movdqa    [ R9 + 48 ],   XMM0;
+
+        add       R9,            64;
+        sub       R8,            64;
+
+        cmp       R8,            64;
+        jge aligned_64;
+
+        // Checks if we're done writing bytes.
+        test      R8,            R8;
+        jz end;
+
+        // Write 1 byte at a time.
+        cmp       R8,            8;
+        jl aligned_1;
+
+        // Write 8 bytes at a time.
+        cmp       R8,            16;
+        jl aligned_8;
+
+        // Write 16 bytes at a time.
+        cmp       R8,            32;
+        jl aligned_16;
+
+    aligned_32:
+        movdqa    [ R9 ],        XMM0;
+        movdqa    [ R9 + 16 ],   XMM0;
+
+        add       R9,            32;
+        sub       R8,            32;
+
+        // Checks if we're done writing bytes.
+        test      R8,            R8;
+        jz end;
+
+        // Write 1 byte at a time.
+        cmp       R8,            8;
+        jl aligned_1;
+
+        // Write 8 bytes at a time.
+        cmp       R8,            16;
+        jl aligned_8;
+
+    aligned_16:
+        movdqa    [ R9 ],        XMM0;
+
+        add       R9,            16;
+        sub       R8,            16;
+
+        // Checks if we're done writing bytes.
+        test      R8,            R8;
+        jz end;
+
+        // Write 1 byte at a time.
+        cmp       R8,            8;
+        jl aligned_1;
+
+    aligned_8:
+        mov       [ R9 ],        RAX;
+
+        add       R9,            8;
+        sub       R8,            8;
+
+        // Checks if we're done writing bytes.
+        test      R8,            R8;
+        jz end;
+
+    aligned_1:
+        mov       [ R9 ],        AL;
+
+        inc       R9;
+        dec       R8;
+
+        test      R8,            R8;
+        jnz aligned_1;
+
+    end:
+        ret;
+    }
+}

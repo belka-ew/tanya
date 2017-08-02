@@ -1,4 +1,4 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
+﻿/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -17,6 +17,8 @@ version (D_InlineAsm_X86_64)
     static import tanya.memory.arch.x86_64;
 }
 
+private enum alignmentMask = size_t.sizeof - 1;
+
 /**
  * Copies $(D_PARAM source) into $(D_PARAM target).
  *
@@ -24,7 +26,7 @@ version (D_InlineAsm_X86_64)
  * of $(D_PARAM target) points to an element of $(D_PARAM source).
  *
  * $(D_PARAM target) shall have enough space $(D_INLINECODE source.length)
- * elements. 
+ * elements.
  *
  * Params:
  *  source = Memory to copy from.
@@ -48,7 +50,6 @@ body
         auto source1 = cast(const(ubyte)*) source;
         auto target1 = cast(ubyte*) target;
         auto count = source.length;
-        enum alignmentMask = size_t.sizeof - 1;
 
         // Check if the pointers are aligned or at least can be aligned
         // properly.
@@ -79,19 +80,17 @@ body
         while (count--)
         {
             *target1++ = *source1++;
-        } 
+        }
     }
 }
 
 ///
 pure nothrow @safe @nogc unittest
 {
-    {
-        ubyte[9] source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-        ubyte[9] target;
-        source.copy(target);
-        assert(source == target);
-    }
+    ubyte[9] source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    ubyte[9] target;
+    source.copy(target);
+    assert(source == target);
 }
 
 private pure nothrow @safe @nogc unittest
@@ -111,5 +110,78 @@ private pure nothrow @safe @nogc unittest
         ubyte[8] target;
         source.copy(target);
         assert(source == target);
+    }
+}
+
+/**
+ * Fills $(D_PARAM memory) with zero-valued bytes.
+ *
+ * Param:
+ *  memory = Memory block.
+ */
+void zero(void[] memory) pure nothrow @trusted @nogc
+{
+    version (D_InlineAsm_X86_64)
+    {
+        tanya.memory.arch.x86_64.zero(memory);
+    }
+    else // Naive implementation.
+    {
+        auto n = memory.length;
+        ubyte* vp = cast(ubyte*) memory.ptr;
+
+        // Align.
+        while (((cast(size_t) vp) & alignmentMask) != 0)
+        {
+            *vp++ = 0;
+            --n;
+        }
+
+        // Set size_t.sizeof bytes at ones.
+        auto sp = cast(size_t*) vp;
+        while (n / size_t.sizeof > 0)
+        {
+            *sp++ = 0;
+            n -= size_t.sizeof;
+        }
+
+        // Write the remaining bytes.
+        vp = cast(ubyte*) sp;
+        while (n--)
+        {
+            *vp = 0;
+            ++vp;
+        }
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    ubyte[9] memory = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    memory.zero();
+    foreach (ubyte v; memory)
+    {
+        assert(v == 0);
+    }
+}
+
+// Stress test. Checks that `zero` can handle unaligned pointers and different
+// lengths.
+pure nothrow @safe @nogc private unittest
+{
+    ubyte[192] memory;
+
+    foreach (j; 0 .. 192)
+    {
+        foreach (ubyte i, ref ubyte v; memory[j .. $])
+        {
+            v = i;
+        }
+        zero(memory[j .. $]);
+        foreach (ubyte v; memory[j .. $])
+        {
+            assert(v == 0);
+        }
     }
 }
