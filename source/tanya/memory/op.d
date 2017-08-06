@@ -113,17 +113,33 @@ private pure nothrow @safe @nogc unittest
     }
 }
 
+/*
+ * size_t value each of which bytes is set to `Byte`.
+ */
+package template FilledBytes(ubyte Byte, ubyte I = 0)
+{
+    static if (I == size_t.sizeof)
+    {
+        enum size_t FilledBytes = Byte;
+    }
+    else
+    {
+        enum size_t FilledBytes = (FilledBytes!(Byte, I + 1) << 8) | Byte;
+    }
+}
+
 /**
- * Fills $(D_PARAM memory) with zero-valued bytes.
+ * Fills $(D_PARAM memory) with single $(D_PARAM Byte)s.
  *
  * Param:
+ *  Byte   = The value to fill $(D_PARAM memory) with.
  *  memory = Memory block.
  */
-void zero(void[] memory) pure nothrow @trusted @nogc
+void fill(ubyte Byte = 0)(void[] memory) pure nothrow @trusted @nogc
 {
     version (D_InlineAsm_X86_64)
     {
-        tanya.memory.arch.x86_64.zero(memory);
+        tanya.memory.arch.x86_64.fill!Byte(memory);
     }
     else // Naive implementation.
     {
@@ -133,7 +149,7 @@ void zero(void[] memory) pure nothrow @trusted @nogc
         // Align.
         while (((cast(size_t) vp) & alignmentMask) != 0)
         {
-            *vp++ = 0;
+            *vp++ = Byte;
             --n;
         }
 
@@ -141,7 +157,7 @@ void zero(void[] memory) pure nothrow @trusted @nogc
         auto sp = cast(size_t*) vp;
         while (n / size_t.sizeof > 0)
         {
-            *sp++ = 0;
+            *sp++ = FilledBytes!Byte;
             n -= size_t.sizeof;
         }
 
@@ -149,7 +165,7 @@ void zero(void[] memory) pure nothrow @trusted @nogc
         vp = cast(ubyte*) sp;
         while (n--)
         {
-            *vp = 0;
+            *vp = Byte;
             ++vp;
         }
     }
@@ -159,14 +175,14 @@ void zero(void[] memory) pure nothrow @trusted @nogc
 pure nothrow @safe @nogc unittest
 {
     ubyte[9] memory = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    memory.zero();
+    memory.fill!0();
     foreach (ubyte v; memory)
     {
         assert(v == 0);
     }
 }
 
-// Stress test. Checks that `zero` can handle unaligned pointers and different
+// Stress test. Checks that `fill` can handle unaligned pointers and different
 // lengths.
 pure nothrow @safe @nogc private unittest
 {
@@ -178,10 +194,15 @@ pure nothrow @safe @nogc private unittest
         {
             v = i;
         }
-        zero(memory[j .. $]);
+        fill(memory[j .. $]);
         foreach (ubyte v; memory[j .. $])
         {
             assert(v == 0);
+        }
+        fill!1(memory[j .. $]);
+        foreach (ubyte v; memory[j .. $])
+        {
+            assert(v == 1);
         }
     }
 }

@@ -12,6 +12,8 @@
  */
 module tanya.memory.arch.x86_64;
 
+import tanya.memory.op;
+
 version (D_InlineAsm_X86_64):
 
 pragma(inline, true)
@@ -80,8 +82,22 @@ pure nothrow @system @nogc
     }
 }
 
+private enum const(char[]) MovArrayPointer(string Destination)()
+{
+    string asmCode = "asm pure nothrow @nogc { mov ";
+    version (Windows)
+    {
+        asmCode ~= Destination ~ ", [ RCX + 8 ];";
+    }
+    else
+    {
+        asmCode ~= Destination ~ ", RSI;";
+    }
+    return asmCode ~ "}";
+}
+
 pragma(inline, true)
-package (tanya.memory) void zero(void[] memory)
+package (tanya.memory) void fill(ubyte Byte)(void[] memory)
 pure nothrow @system @nogc
 {
     asm pure nothrow @nogc
@@ -94,7 +110,6 @@ pure nothrow @system @nogc
          * RCX - array.
          */
         mov       R8,           [ RCX ];
-        mov       R9,           [ RCX + 8 ];
     }
     else asm pure nothrow @nogc
     {
@@ -103,53 +118,55 @@ pure nothrow @system @nogc
          * RDI - length.
          */
         mov       R8,           RDI;
-        mov       R9,           RSI;
     }
+    mixin(MovArrayPointer!"R9");
+
     asm pure nothrow @nogc
     {
         // Check for zero length.
         test      R8,           R8;
         jz        end;
-
-        // Set to 0.
-        pxor      XMM0,         XMM0;
-
+    }
+    // Set 128- and 64-bit registers to values we want to fill with.
+    static if (Byte == 0)
+    {
+        asm pure nothrow @nogc
+        {
+            xor  RAX,  RAX;
+            pxor XMM0, XMM0;
+        }
+    }
+    else
+    {
+        enum ulong FilledBytes = FilledBytes!Byte;
+        asm pure nothrow @nogc
+        {
+            mov     RAX,  FilledBytes;
+            movq    XMM0, RAX;
+            movlhps XMM0, XMM0;
+        }
+    }
+    asm pure nothrow @nogc
+    {
         // Check if the pointer is aligned to a 16-byte boundary.
         and       R9,           -0x10;
     }
     // Compute the number of misaligned bytes.
-    version (Windows) asm pure nothrow @nogc
-    {
-        mov       RAX,          [ RCX + 8 ];
-    }
-    else asm pure nothrow @nogc
-    {
-        mov       RAX,          RSI;
-    }
+    mixin(MovArrayPointer!"R10");
     asm pure nothrow @nogc
     {
-        sub       RAX,          R9;
+        sub       R10,          R9;
 
-        test      RAX,          RAX;
+        test      R10,          R10;
         jz aligned;
 
         // Get the number of bytes to be written until we are aligned.
         mov       RDX,          0x10;
-        sub       RDX,          RAX;
+        sub       RDX,          R10;
     }
-    version (Windows) asm pure nothrow @nogc
-    {
-        mov       R9,           [ RCX + 8 ];
-    }
-    else asm pure nothrow @nogc
-    {
-        mov       R9,           RSI;
-    }
+    mixin(MovArrayPointer!"R9");
     asm pure nothrow @nogc
     {
-        // Set RAX to zero, so we can set bytes and dwords.
-        xor       RAX,          RAX;
-
     naligned:
         mov       [ R9 ],       AL; // Write a byte.
 
