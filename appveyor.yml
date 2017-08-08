@@ -21,12 +21,6 @@ environment:
     - DC: dmd
       DVersion: 2.073.2
       arch: x86
-    - DC: dmd
-      DVersion: 2.072.2
-      arch: x64
-    - DC: dmd
-      DVersion: 2.072.2
-      arch: x86
 
 skip_tags: true
 

@@ -127,7 +127,7 @@ foreach (el; arr[0 .. 5])
 {
 }
 
-int i = arr[7]; // Access 7th element.
+int i = arr[7]; // Access 8th element.
 ```
 
 There are more containers in the `tanya.container` package.
@@ -142,7 +142,6 @@ There are more containers in the `tanya.container` package.
 | 2.075.0 |
 | 2.074.1 |
 | 2.073.2 |
-| 2.072.2 |
 
 ### Current status
 
