@@ -82,206 +82,261 @@ pure nothrow @system @nogc
     }
 }
 
-private enum const(char[]) MovArrayPointer(string Destination)()
+package (tanya.memory) template fill(ubyte Byte)
 {
-    string asmCode = "asm pure nothrow @nogc { mov ";
-    version (Windows)
+    private enum const(char[]) MovArrayPointer(string Destination)()
     {
-        asmCode ~= Destination ~ ", [ RCX + 8 ];";
+        string asmCode = "asm pure nothrow @nogc { mov ";
+        version (Windows)
+        {
+            asmCode ~= Destination ~ ", [ RCX + 8 ];";
+        }
+        else
+        {
+            asmCode ~= Destination ~ ", RSI;";
+        }
+        return asmCode ~ "}";
     }
-    else
+
+    pragma(inline, true)
+    void fill(void[] memory)
     {
-        asmCode ~= Destination ~ ", RSI;";
+        asm pure nothrow @nogc
+        {
+            naked;
+        }
+        version (Windows) asm pure nothrow @nogc
+        {
+            /*
+             * RCX - array.
+             */
+            mov       R8,           [ RCX ];
+        }
+        else asm pure nothrow @nogc
+        {
+            /*
+             * RSI - pointer.
+             * RDI - length.
+             */
+            mov       R8,           RDI;
+        }
+        mixin(MovArrayPointer!"R9");
+
+        asm pure nothrow @nogc
+        {
+            // Check for zero length.
+            test      R8,           R8;
+            jz        end;
+        }
+        // Set 128- and 64-bit registers to values we want to fill with.
+        static if (Byte == 0)
+        {
+            asm pure nothrow @nogc
+            {
+                xor  RAX,  RAX;
+                pxor XMM0, XMM0;
+            }
+        }
+        else
+        {
+            enum ulong FilledBytes = FilledBytes!Byte;
+            asm pure nothrow @nogc
+            {
+                mov     RAX,  FilledBytes;
+                movq    XMM0, RAX;
+                movlhps XMM0, XMM0;
+            }
+        }
+        asm pure nothrow @nogc
+        {
+            // Check if the pointer is aligned to a 16-byte boundary.
+            and       R9,           -0x10;
+        }
+        // Compute the number of misaligned bytes.
+        mixin(MovArrayPointer!"R10");
+        asm pure nothrow @nogc
+        {
+            sub       R10,          R9;
+
+            test      R10,          R10;
+            jz aligned;
+
+            // Get the number of bytes to be written until we are aligned.
+            mov       RDX,          0x10;
+            sub       RDX,          R10;
+        }
+        mixin(MovArrayPointer!"R9");
+        asm pure nothrow @nogc
+        {
+        naligned:
+            mov       [ R9 ],       AL; // Write a byte.
+
+            // Advance the pointer. Decrease the total number of bytes
+            // and the misaligned ones.
+            inc       R9;
+            dec       RDX;
+            dec       R8;
+
+            // Checks if we are aligned.
+            test      RDX,          RDX;
+            jnz naligned;
+
+        aligned:
+            // Checks if we're done writing bytes.
+            test      R8,           R8;
+            jz end;
+
+            // Write 1 byte at a time.
+            cmp       R8,           8;
+            jl aligned_1;
+
+            // Write 8 bytes at a time.
+            cmp       R8,           16;
+            jl aligned_8;
+
+            // Write 16 bytes at a time.
+            cmp       R8,           32;
+            jl aligned_16;
+
+            // Write 32 bytes at a time.
+            cmp       R8,           64;
+            jl aligned_32;
+
+        aligned_64:
+            movdqa    [ R9 ],        XMM0;
+            movdqa    [ R9 + 16 ],   XMM0;
+            movdqa    [ R9 + 32 ],   XMM0;
+            movdqa    [ R9 + 48 ],   XMM0;
+
+            add       R9,            64;
+            sub       R8,            64;
+
+            cmp       R8,            64;
+            jge aligned_64;
+
+            // Checks if we're done writing bytes.
+            test      R8,            R8;
+            jz end;
+
+            // Write 1 byte at a time.
+            cmp       R8,            8;
+            jl aligned_1;
+
+            // Write 8 bytes at a time.
+            cmp       R8,            16;
+            jl aligned_8;
+
+            // Write 16 bytes at a time.
+            cmp       R8,            32;
+            jl aligned_16;
+
+        aligned_32:
+            movdqa    [ R9 ],        XMM0;
+            movdqa    [ R9 + 16 ],   XMM0;
+
+            add       R9,            32;
+            sub       R8,            32;
+
+            // Checks if we're done writing bytes.
+            test      R8,            R8;
+            jz end;
+
+            // Write 1 byte at a time.
+            cmp       R8,            8;
+            jl aligned_1;
+
+            // Write 8 bytes at a time.
+            cmp       R8,            16;
+            jl aligned_8;
+
+        aligned_16:
+            movdqa    [ R9 ],        XMM0;
+
+            add       R9,            16;
+            sub       R8,            16;
+
+            // Checks if we're done writing bytes.
+            test      R8,            R8;
+            jz end;
+
+            // Write 1 byte at a time.
+            cmp       R8,            8;
+            jl aligned_1;
+
+        aligned_8:
+            mov       [ R9 ],        RAX;
+
+            add       R9,            8;
+            sub       R8,            8;
+
+            // Checks if we're done writing bytes.
+            test      R8,            R8;
+            jz end;
+
+        aligned_1:
+            mov       [ R9 ],        AL;
+
+            inc       R9;
+            dec       R8;
+
+            test      R8,            R8;
+            jnz aligned_1;
+
+        end:
+            ret;
+        }
     }
-    return asmCode ~ "}";
 }
 
 pragma(inline, true)
-package (tanya.memory) void fill(ubyte Byte)(void[] memory)
-pure nothrow @system @nogc
+package (tanya.memory) void copyBackward(const void[] source, void[] target)
+pure nothrow @system  @nogc
 {
     asm pure nothrow @nogc
     {
         naked;
+
+        // Save the registers should be restored.
+        mov R8, RSI;
+        mov R9, RDI;
     }
+    // Prepare the registers for movsb.
     version (Windows) asm pure nothrow @nogc
     {
-        /*
-         * RCX - array.
-         */
-        mov       R8,           [ RCX ];
+        // RDX - source.
+        // RCX - target.
+
+        mov RAX, [ RCX + 8 ];
+        mov R10, [ RDX + 8 ];
+        mov RCX, [ RDX ];
+
+        lea RDI, [ RAX + RCX - 1 ];
+        lea RSI, [ R10 + RCX - 1 ];
     }
     else asm pure nothrow @nogc
     {
-        /*
-         * RSI - pointer.
-         * RDI - length.
-         */
-        mov       R8,           RDI;
-    }
-    mixin(MovArrayPointer!"R9");
+        // RDX - source length.
+        // RCX - source data.
+        // RDI - target length
+        // RSI - target data.
 
-    asm pure nothrow @nogc
-    {
-        // Check for zero length.
-        test      R8,           R8;
-        jz        end;
-    }
-    // Set 128- and 64-bit registers to values we want to fill with.
-    static if (Byte == 0)
-    {
-        asm pure nothrow @nogc
-        {
-            xor  RAX,  RAX;
-            pxor XMM0, XMM0;
-        }
-    }
-    else
-    {
-        enum ulong FilledBytes = FilledBytes!Byte;
-        asm pure nothrow @nogc
-        {
-            mov     RAX,  FilledBytes;
-            movq    XMM0, RAX;
-            movlhps XMM0, XMM0;
-        }
+        lea RDI, [ RSI + RDX - 1 ];
+        lea RSI, [ RCX + RDX - 1 ];
+        mov RCX, RDX;
     }
     asm pure nothrow @nogc
     {
-        // Check if the pointer is aligned to a 16-byte boundary.
-        and       R9,           -0x10;
-    }
-    // Compute the number of misaligned bytes.
-    mixin(MovArrayPointer!"R10");
-    asm pure nothrow @nogc
-    {
-        sub       R10,          R9;
+        std; // Set the direction flag.
 
-        test      R10,          R10;
-        jz aligned;
+        rep;
+        movsb;
 
-        // Get the number of bytes to be written until we are aligned.
-        mov       RDX,          0x10;
-        sub       RDX,          R10;
-    }
-    mixin(MovArrayPointer!"R9");
-    asm pure nothrow @nogc
-    {
-    naligned:
-        mov       [ R9 ],       AL; // Write a byte.
+        cld; // Clear the direction flag.
 
-        // Advance the pointer. Decrease the total number of bytes
-        // and the misaligned ones.
-        inc       R9;
-        dec       RDX;
-        dec       R8;
+        // Restore registers.
+        mov RDI, R9;
+        mov RSI, R8;
 
-        // Checks if we are aligned.
-        test      RDX,          RDX;
-        jnz naligned;
-
-    aligned:
-        // Checks if we're done writing bytes.
-        test      R8,           R8;
-        jz end;
-
-        // Write 1 byte at a time.
-        cmp       R8,           8;
-        jl aligned_1;
-
-        // Write 8 bytes at a time.
-        cmp       R8,           16;
-        jl aligned_8;
-
-        // Write 16 bytes at a time.
-        cmp       R8,           32;
-        jl aligned_16;
-
-        // Write 32 bytes at a time.
-        cmp       R8,           64;
-        jl aligned_32;
-
-    aligned_64:
-        movdqa    [ R9 ],        XMM0;
-        movdqa    [ R9 + 16 ],   XMM0;
-        movdqa    [ R9 + 32 ],   XMM0;
-        movdqa    [ R9 + 48 ],   XMM0;
-
-        add       R9,            64;
-        sub       R8,            64;
-
-        cmp       R8,            64;
-        jge aligned_64;
-
-        // Checks if we're done writing bytes.
-        test      R8,            R8;
-        jz end;
-
-        // Write 1 byte at a time.
-        cmp       R8,            8;
-        jl aligned_1;
-
-        // Write 8 bytes at a time.
-        cmp       R8,            16;
-        jl aligned_8;
-
-        // Write 16 bytes at a time.
-        cmp       R8,            32;
-        jl aligned_16;
-
-    aligned_32:
-        movdqa    [ R9 ],        XMM0;
-        movdqa    [ R9 + 16 ],   XMM0;
-
-        add       R9,            32;
-        sub       R8,            32;
-
-        // Checks if we're done writing bytes.
-        test      R8,            R8;
-        jz end;
-
-        // Write 1 byte at a time.
-        cmp       R8,            8;
-        jl aligned_1;
-
-        // Write 8 bytes at a time.
-        cmp       R8,            16;
-        jl aligned_8;
-
-    aligned_16:
-        movdqa    [ R9 ],        XMM0;
-
-        add       R9,            16;
-        sub       R8,            16;
-
-        // Checks if we're done writing bytes.
-        test      R8,            R8;
-        jz end;
-
-        // Write 1 byte at a time.
-        cmp       R8,            8;
-        jl aligned_1;
-
-    aligned_8:
-        mov       [ R9 ],        RAX;
-
-        add       R9,            8;
-        sub       R8,            8;
-
-        // Checks if we're done writing bytes.
-        test      R8,            R8;
-        jz end;
-
-    aligned_1:
-        mov       [ R9 ],        AL;
-
-        inc       R9;
-        dec       R8;
-
-        test      R8,            R8;
-        jnz aligned_1;
-
-    end:
         ret;
     }
 }

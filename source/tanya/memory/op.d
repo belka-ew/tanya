@@ -17,20 +17,22 @@ version (D_InlineAsm_X86_64)
     static import tanya.memory.arch.x86_64;
 }
 
-private enum alignmentMask = size_t.sizeof - 1;
+private enum alignMask = size_t.sizeof - 1;
 
 /**
  * Copies $(D_PARAM source) into $(D_PARAM target).
  *
- * $(D_PARAM source) and $(D_PARAM target) shall not overlap so that an element
- * of $(D_PARAM target) points to an element of $(D_PARAM source).
+ * $(D_PARAM source) and $(D_PARAM target) shall not overlap so that
+ * $(D_PARAM source) points ahead of $(D_PARAM target).
  *
- * $(D_PARAM target) shall have enough space $(D_INLINECODE source.length)
+ * $(D_PARAM target) shall have enough space for $(D_INLINECODE source.length)
  * elements.
  *
  * Params:
  *  source = Memory to copy from.
  *  target = Destination memory.
+ *
+ * See_Also: $(D_PSYMBOL copyBackward).
  *
  * Precondition: $(D_INLINECODE source.length <= target.length).
  */
@@ -53,8 +55,8 @@ body
 
         // Check if the pointers are aligned or at least can be aligned
         // properly.
-        ushort naligned = (cast(size_t) source.ptr) & alignmentMask;
-        if (naligned == ((cast(size_t) target.ptr) & alignmentMask))
+        ushort naligned = (cast(size_t) source.ptr) & alignMask;
+        if (naligned == ((cast(size_t) target.ptr) & alignMask))
         {
             // Align the pointers if possible.
             if (naligned != 0)
@@ -135,7 +137,7 @@ package template FilledBytes(ubyte Byte, ubyte I = 0)
  *  Byte   = The value to fill $(D_PARAM memory) with.
  *  memory = Memory block.
  */
-void fill(ubyte Byte = 0)(void[] memory) pure nothrow @trusted @nogc
+void fill(ubyte Byte = 0)(void[] memory) @trusted
 {
     version (D_InlineAsm_X86_64)
     {
@@ -147,7 +149,7 @@ void fill(ubyte Byte = 0)(void[] memory) pure nothrow @trusted @nogc
         ubyte* vp = cast(ubyte*) memory.ptr;
 
         // Align.
-        while (((cast(size_t) vp) & alignmentMask) != 0)
+        while (((cast(size_t) vp) & alignMask) != 0)
         {
             *vp++ = Byte;
             --n;
@@ -205,4 +207,81 @@ pure nothrow @safe @nogc private unittest
             assert(v == 1);
         }
     }
+}
+
+/**
+ * Copies starting from the end of $(D_PARAM source) into the end of
+ * $(D_PARAM target).
+ *
+ * $(D_PSYMBOL copyBackward) copies the elements in reverse order, but the
+ * order of elements in the $(D_PARAM target) is exactly the same as in the
+ * $(D_PARAM source).
+ *
+ * $(D_PARAM source) and $(D_PARAM target) shall not overlap so that
+ * $(D_PARAM target) points ahead of $(D_PARAM source).
+ *
+ * $(D_PARAM target) shall have enough space for $(D_INLINECODE source.length)
+ * elements.
+ *
+ * Params:
+ *  source = Memory to copy from.
+ *  target = Destination memory.
+ *
+ * See_Also: $(D_PSYMBOL copy).
+ *
+ * Precondition: $(D_INLINECODE source.length <= target.length).
+ */
+void copyBackward(const void[] source, void[] target) pure nothrow @trusted @nogc
+in
+{
+    assert(source.length <= target.length);
+}
+body
+{
+    version (D_InlineAsm_X86_64)
+    {
+        tanya.memory.arch.x86_64.copyBackward(source, target);
+    }
+    else // Naive implementation.
+    {
+        auto count = source.length;
+
+        // Try to align the pointers if possible.
+        if (((cast(size_t) source.ptr) & alignMask) == ((cast(size_t) target.ptr) & alignMask))
+        {
+            while (((cast(size_t) (source.ptr + count)) & alignMask) != 0)
+            {
+                if (!count--)
+                {
+                    return;
+                }
+                (cast(ubyte[]) target)[count]
+                    = (cast(const(ubyte)[]) source)[count];
+            }
+        }
+
+        // Write as long we're aligned.
+        for (; count >= size_t.sizeof; count -= size_t.sizeof)
+        {
+                *(cast(size_t*) (target.ptr + count - size_t.sizeof))
+                    = *(cast(const(size_t)*) (source.ptr + count - size_t.sizeof));
+        }
+
+        // Write the remaining bytes.
+        while (count--)
+        {
+            (cast(ubyte[]) target)[count]
+                = (cast(const(ubyte)[]) source)[count];
+        }
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    ubyte[6] mem = [ 'a', 'a', 'b', 'b', 'c', 'c' ];
+    ubyte[6] expected = [ 'a', 'a', 'a', 'a', 'b', 'b' ];
+
+    copyBackward(mem[0 .. 4], mem[2 .. $]);
+    assert(expected == mem);
 }
