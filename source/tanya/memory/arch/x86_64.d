@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /*
- * Implementions of functions found in $(D_PSYMBOL tanya.memory.op) for X86-64.
+ * Implementions of functions found in $(D_PSYMBOL tanya.memory.op) for x64.
  *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
@@ -51,7 +51,7 @@ pure nothrow @system @nogc
     asm pure nothrow @nogc
     {
         cmp RDX, 0x08;
-        jc aligned_8;
+        jc aligned_1;
         test EDI, 0x07;
         jz aligned_8;
 
@@ -69,6 +69,7 @@ pure nothrow @system @nogc
         and EDX, 0x07;
         jz end;
 
+    aligned_1:
         // Write the remaining bytes.
         mov RCX, RDX;
         rep;
@@ -336,6 +337,102 @@ pure nothrow @system  @nogc
         // Restore registers.
         mov RDI, R9;
         mov RSI, R8;
+
+        ret;
+    }
+}
+
+pragma(inline, true)
+package (tanya.memory) int cmp(const void[] r1, const void[] r2)
+pure nothrow @system @nogc
+{
+    asm pure nothrow @nogc
+    {
+        naked;
+
+        // RDI and RSI should be preserved.
+        mov R9, RDI;
+        mov R8, RSI;
+    }
+    // Set the registers for cmpsb/cmpsq.
+    version (Windows) asm pure nothrow @nogc
+    {
+        // RDX - r1.
+        // RCX - r2.
+
+        mov RDI, [ RCX + 8 ];
+        mov RSI, [ RDX + 8 ];
+        mov RDX, [ RDX ];
+        mov RCX, [ RCX ];
+    }
+    else asm pure nothrow @nogc
+    {
+        // RDX - r1 length.
+        // RCX - r1 data.
+        // RDI - r2 length
+        // RSI - r2 data.
+
+        mov RSI, RCX;
+        mov RCX, RDI;
+        mov RDI, R8;
+    }
+    asm pure nothrow @nogc
+    {
+        // Compare the lengths.
+        cmp RDX, RCX;
+        jl  less;
+        jg  greater;
+
+        // Check if we're aligned.
+        cmp RDX, 0x08;
+        jc aligned_1;
+        test EDI, 0x07;
+        jz aligned_8;
+
+    naligned:
+        cmpsb;
+        jl less;
+        jg greater;
+
+        dec RDX;
+        test EDI, 0x07;
+        jnz naligned;
+
+    aligned_8:
+        mov RCX, RDX;
+        shr RCX, 0x03;
+
+        repe;
+        cmpsq;
+        jl less;
+        jg greater;
+
+        and EDX, 0x07;
+        jz equal;
+
+    aligned_1: // Compare the remaining bytes.
+        mov RCX, RDX;
+
+        repe;
+        cmpsb;
+        jl less;
+        jg greater;
+
+    equal:
+        xor RAX, RAX; // Return 0.
+        jmp end;
+
+    greater:
+        mov RAX, 1;
+        jmp end;
+
+    less:
+        mov RAX, -1;
+        jmp end;
+
+    end: // Restore registers.
+        mov RSI, R8;
+        mov RDI, R9;
 
         ret;
     }
