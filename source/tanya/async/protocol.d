@@ -13,6 +13,8 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/async/protocol.d,
+ *                 tanya/async/protocol.d)
  */
 module tanya.async.protocol;
 
