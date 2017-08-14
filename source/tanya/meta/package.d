@@ -14,4 +14,5 @@
  */
 module tanya.meta;
 
+public import tanya.meta.traits;
 public import tanya.meta.transform;
