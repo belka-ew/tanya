@@ -139,7 +139,7 @@ There are more containers in the `tanya.container` package.
 
 | dmd     |
 |:-------:|
-| 2.075.0 |
+| 2.075.1 |
 | 2.074.1 |
 | 2.073.2 |
 
