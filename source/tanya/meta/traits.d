@@ -31,6 +31,9 @@ import tanya.meta.transform;
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a floating point type,
+ *          $(D_KEYWORD false) otherwise.
  */
 enum bool isFloatingPoint(T) = is(Unqual!(OriginalType!T) == double)
                             || is(Unqual!(OriginalType!T) == float)
@@ -64,6 +67,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a signed numeric type,
+ *          $(D_KEYWORD false) otherwise.
  *
  * See_Also: $(D_PSYMBOL isUnsigned).
  */
@@ -103,6 +109,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an unsigned numeric type,
+ *          $(D_KEYWORD false) otherwise.
  *
  * See_Also: $(D_PSYMBOL isSigned).
  */
@@ -145,6 +154,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an integral type,
+ *          $(D_KEYWORD false) otherwise.
  */
 enum bool isIntegral(T) = isUnsigned!T
                        || is(Unqual!(OriginalType!T) == byte)
@@ -175,6 +187,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a complex type,
+ *          $(D_KEYWORD false) otherwise.
  */
 enum bool isComplex(T) = is(Unqual!(OriginalType!T) == cfloat)
                       || is(Unqual!(OriginalType!T) == ifloat)
@@ -205,6 +220,9 @@ pure nothrow @safe @nogc unittest
  * Params:
  *  T = A type.
  *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a numeric type,
+ *          $(D_KEYWORD false) otherwise.
+ *
  * See_Also: $(D_PSYMBOL isIntegral!T),
  *           $(D_PSYMBOL isFloatingPoint),
  *           $(D_PSYMBOL isComplex).
@@ -226,6 +244,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a boolean type,
+ *          $(D_KEYWORD false) otherwise.
  */
 enum bool isBoolean(T) = is(Unqual!(OriginalType!T) == bool);
 
@@ -274,6 +295,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a character type,
+ *          $(D_KEYWORD false) otherwise.
  */
 enum bool isSomeChar(T) = is(Unqual!(OriginalType!T) == char)
                        || is(Unqual!(OriginalType!T) == wchar)
@@ -302,6 +326,9 @@ pure nothrow @safe @nogc unittest
  * Params:
  *  T = A type.
  *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a scalar type,
+ *          $(D_KEYWORD false) otherwise.
+ *
  * See_Also: $(D_PSYMBOL isNumeric),
  *           $(D_PSYMBOL isBoolean),
  *           $(D_PSYMBOL isSomeChar).
@@ -322,6 +349,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a basic type,
+ *          $(D_KEYWORD false) otherwise.
  *
  * See_Also: $(D_PSYMBOL isScalarType).
  */
@@ -350,6 +380,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a pointer type,
+ *          $(D_KEYWORD false) otherwise.
  */
 template isPointer(T)
 {
@@ -379,6 +412,9 @@ pure nothrow @safe @nogc unittest
  * Params:
  *  T = A type.
  *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an array type,
+ *          $(D_KEYWORD false) otherwise.
+ *
  * See_Also: $(D_PSYMBOL isAssociativeArray).
  */
 template isArray(T)
@@ -405,10 +441,13 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Determines whether $(D_PARAM T) is a static array.
+ * Determines whether $(D_PARAM T) is a static array type.
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a static array type,
+ *          $(D_KEYWORD false) otherwise.
  *
  * See_Also: $(D_PSYMBOL isArray).
  */
@@ -436,10 +475,13 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Determines whether $(D_PARAM T) is a dynamic array.
+ * Determines whether $(D_PARAM T) is a dynamic array type.
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a dynamic array type,
+ *          $(D_KEYWORD false) otherwise.
  *
  * See_Also: $(D_PSYMBOL isArray).
  */
@@ -457,10 +499,13 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Determines whether $(D_PARAM T) is an associative array.
+ * Determines whether $(D_PARAM T) is an associative array type.
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an associative array type,
+ *          $(D_KEYWORD false) otherwise.
  *
  * See_Also: $(D_PSYMBOL isArray).
  */
@@ -495,6 +540,9 @@ pure nothrow @safe @nogc unittest
  * Params:
  *  T = A type.
  *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a built-in type,
+ *          $(D_KEYWORD false) otherwise.
+ *
  * See_Also: $(D_PSYMBOL isBasicType!T),
  *           $(D_PSYMBOL isArray),
  *           $(D_PSYMBOL isAssociativeArray).
@@ -526,6 +574,9 @@ pure nothrow @safe @nogc unittest
  *
  * Params:
  *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an aggregate type,
+ *          $(D_KEYWORD false) otherwise.
  */
 enum bool isAggregateType(T) = is(T == struct)
                             || is(T == class)
@@ -553,7 +604,10 @@ pure nothrow @safe @nogc unittest
  * Determines whether $(D_PARAM T) is some type.
  *
  * Params:
- *  T = Some symbol.
+ *  T = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a type,
+ *          $(D_KEYWORD false) otherwise.
  */
 enum bool isType(alias T) = is(T);
 
@@ -577,4 +631,780 @@ pure nothrow @safe @nogc unittest
     static assert(isType!(T!()));
     static assert(!isType!5);
     static assert(!isType!(tanya.meta.traits));
+}
+
+/**
+ * Determines whether $(D_PARAM T) is a narrow string, i.e. consists of
+ * $(D_KEYWORD char) or $(D_KEYWORD wchar).
+ *
+ * The character type of the string can be qualified with $(D_KEYWORD const),
+ * $(D_KEYWORD immutable) or $(D_KEYWORD inout), but an occurrence of
+ * $(D_KEYWORD shared) in the character type results in returning
+ * $(D_KEYWORD false).
+ * The string itself (in contrast to its character type) can have any type
+ * qualifiers.
+ *
+ * Static $(D_KEYWORD char) and $(D_KEYWORD wchar) arrays are not considered
+ * strings.
+ *
+ * Params:
+ *  T = A Type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a narrow string,
+ *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isWideString).
+ */
+enum bool isNarrowString(T) = (is(T : const char[]) || is (T : const wchar[]))
+                           && !isStaticArray!T;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isNarrowString!(char[]));
+    static assert(isNarrowString!(wchar[]));
+    static assert(!isNarrowString!(dchar[]));
+
+    static assert(isNarrowString!string);
+    static assert(isNarrowString!wstring);
+    static assert(!isNarrowString!dstring);
+
+    static assert(isNarrowString!(const string));
+    static assert(isNarrowString!(const wstring));
+    static assert(!isNarrowString!(const dstring));
+
+    static assert(isNarrowString!(shared string));
+    static assert(isNarrowString!(shared wstring));
+    static assert(!isNarrowString!(shared dstring));
+
+    static assert(isNarrowString!(const(char)[]));
+    static assert(isNarrowString!(inout(char)[]));
+    static assert(!isNarrowString!(shared(const(char))[]));
+    static assert(!isNarrowString!(shared(char)[]));
+    static assert(!isNarrowString!(char[10]));
+}
+
+/**
+ * Determines whether $(D_PARAM T) is a wide string, i.e. consists of
+ * $(D_KEYWORD dchar).
+ *
+ * The character type of the string can be qualified with $(D_KEYWORD const),
+ * $(D_KEYWORD immutable) or $(D_KEYWORD inout), but an occurrence of
+ * $(D_KEYWORD shared) in the character type results in returning
+ * $(D_KEYWORD false).
+ * The string itself (in contrast to its character type) can have any type
+ * qualifiers.
+ *
+ * Static $(D_KEYWORD char) and $(D_KEYWORD wchar) arrays are not considered
+ * strings.
+ *
+ * Params:
+ *  T = A Type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a wide string,
+ *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isNarrowString).
+ */
+enum bool isWideString(T) = is(T : const dchar[]) && !isStaticArray!T;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isWideString!(dchar[]));
+    static assert(!isWideString!(char[]));
+    static assert(!isWideString!(wchar[]));
+
+    static assert(isWideString!dstring);
+    static assert(!isWideString!string);
+    static assert(!isWideString!wstring);
+
+    static assert(isWideString!(const dstring));
+    static assert(!isWideString!(const string));
+    static assert(!isWideString!(const wstring));
+
+    static assert(isWideString!(shared dstring));
+    static assert(!isWideString!(shared string));
+    static assert(!isWideString!(shared wstring));
+
+    static assert(isWideString!(const(dchar)[]));
+    static assert(isWideString!(inout(dchar)[]));
+    static assert(!isWideString!(shared(const(dchar))[]));
+    static assert(!isWideString!(shared(dchar)[]));
+    static assert(!isWideString!(dchar[10]));
+}
+
+/**
+ * Determines whether $(D_PARAM T) is a string, i.e. consists of
+ * $(D_KEYWORD char), $(D_KEYWORD wchar) or $(D_KEYWORD dchar).
+ *
+ * The character type of the string can be qualified with $(D_KEYWORD const),
+ * $(D_KEYWORD immutable) or $(D_KEYWORD inout), but an occurrence of
+ * $(D_KEYWORD shared) in the character type results in returning
+ * $(D_KEYWORD false).
+ * The string itself (in contrast to its character type) can have any type
+ * qualifiers.
+ *
+ * Static character arrays are not considered strings.
+ *
+ * Params:
+ *  T = A Type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a string,
+ *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isNarrowString), $(D_PSYMBOL isWideString).
+ */
+enum bool isSomeString(T) = isNarrowString!T || isWideString!T;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isSomeString!(dchar[]));
+    static assert(isSomeString!(char[]));
+    static assert(isSomeString!(wchar[]));
+
+    static assert(isSomeString!dstring);
+    static assert(isSomeString!string);
+    static assert(isSomeString!wstring);
+
+    static assert(isSomeString!(const dstring));
+    static assert(isSomeString!(const string));
+    static assert(isSomeString!(const wstring));
+
+    static assert(isSomeString!(shared dstring));
+    static assert(isSomeString!(shared string));
+    static assert(isSomeString!(shared wstring));
+
+    static assert(isSomeString!(const(char)[]));
+    static assert(isSomeString!(inout(char)[]));
+    static assert(!isSomeString!(shared(const(char))[]));
+    static assert(!isSomeString!(shared(char)[]));
+    static assert(!isSomeString!(char[10]));
+}
+
+/**
+ * Returns the minimum value of type $(D_PARAM T). In contrast to
+ * $(D_INLINECODE T.min) this template works with floating point and complex
+ * types as well.
+ *
+ * Params:
+ *  T = Integral, boolean, floating point, complex or character type.
+ *
+ * Returns: The minimum value of $(D_PARAM T).
+ *
+ * See_Also: $(D_PSYMBOL isIntegral),
+ *           $(D_PSYMBOL isBoolean),
+ *           $(D_PSYMBOL isSomeChar),
+ *           $(D_PSYMBOL isFloatingPoint),
+ *           $(D_PSYMBOL isComplex).
+ */
+template mostNegative(T)
+{
+    static if (isIntegral!T || isBoolean!T || isSomeChar!T)
+    {
+        enum T mostNegative = T.min;
+    }
+    else static if (isFloatingPoint!T || isComplex!T)
+    {
+        enum T mostNegative = -T.max;
+    }
+    else
+    {
+        static assert(false, T.stringof ~ " doesn't have the minimum value");
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(mostNegative!char == char.min);
+    static assert(mostNegative!wchar == wchar.min);
+    static assert(mostNegative!dchar == dchar.min);
+
+    static assert(mostNegative!byte == byte.min);
+    static assert(mostNegative!ubyte == ubyte.min);
+    static assert(mostNegative!bool == bool.min);
+
+    static assert(mostNegative!float == -float.max);
+    static assert(mostNegative!double == -double.max);
+    static assert(mostNegative!real == -real.max);
+
+    static assert(mostNegative!ifloat == -ifloat.max);
+    static assert(mostNegative!cfloat == -cfloat.max);
+}
+
+/**
+ * Finds the type with the largest size in the $(D_PARAM Args) list. If several
+ * types have the same type, the leftmost is returned.
+ *
+ * Params:
+ *  Args = Type list.
+ *
+ * Returns: The largest type.
+ *
+ * See_Also: $(D_PSYMBOL Smallest).
+ */
+template Largest(Args...)
+if (Args.length >= 1)
+{
+    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
+
+    static if (Args.length == 1)
+    {
+        alias Largest = Args[0];
+    }
+    else static if (Largest!(Args[1 .. $]).sizeof > Args[0].sizeof)
+    {
+        alias Largest = Largest!(Args[1 .. $]);
+    }
+    else
+    {
+        alias Largest = Args[0];
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Largest!(int, short, uint) == int));
+    static assert(is(Largest!(short) == short));
+    static assert(is(Largest!(ubyte[8], ubyte[5]) == ubyte[8]));
+    static assert(!is(Largest!(short, 5)));
+}
+
+/**
+ * Finds the type with the smallest size in the $(D_PARAM Args) list. If
+ * several types have the same type, the leftmost is returned.
+ *
+ * Params:
+ *  Args = Type list.
+ *
+ * Returns: The smallest type.
+ *
+ * See_Also: $(D_PSYMBOL Largest).
+ */
+template Smallest(Args...)
+if (Args.length >= 1)
+{
+    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
+
+    static if (Args.length == 1)
+    {
+        alias Smallest = Args[0];
+    }
+    else static if (Smallest!(Args[1 .. $]).sizeof < Args[0].sizeof)
+    {
+        alias Smallest = Smallest!(Args[1 .. $]);
+    }
+    else
+    {
+        alias Smallest = Args[0];
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Smallest!(int, ushort, uint, short) == ushort));
+    static assert(is(Smallest!(short) == short));
+    static assert(is(Smallest!(ubyte[8], ubyte[5]) == ubyte[5]));
+    static assert(!is(Smallest!(short, 5)));
+}
+
+/**
+ * Determines whether the type $(D_PARAM T) is copyable.
+ *
+ * Only structs can be not copyable if their postblit constructor or the
+ * postblit constructor of one of its fields is disabled, i.e. annotated with
+ * $(D_KEYWORD @disable).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_PARAM true) if $(D_PARAM T) can be copied,
+ *          $(D_PARAM false) otherwise.
+ */
+enum bool isCopyable(T) = is(typeof({ T s1 = T.init; T s2 = s1; }));
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S1
+    {
+    }
+    struct S2
+    {
+        this(this)
+        {
+        }
+    }
+    struct S3
+    {
+        @disable this(this);
+    }
+    struct S4
+    {
+        S3 s;
+    }
+    class C
+    {
+    }
+
+    static assert(isCopyable!S1);
+    static assert(isCopyable!S2);
+    static assert(!isCopyable!S3);
+    static assert(!isCopyable!S4);
+
+    static assert(isCopyable!C);
+    static assert(isCopyable!bool);
+}
+
+/**
+ * Determines whether $(D_PARAM T) is an abstract class.
+ *
+ * Abstract class is a class marked as such or a class that has any abstract
+ * methods or doesn't implement all methods of abstract base classes.
+ *
+ * For all non-classes $(D_INLINECODE isAbstractClass!T) evaluates to
+ * $(D_KEYWORD false).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an abstract class,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    class A
+    {
+    }
+    abstract class B
+    {
+    }
+    class C
+    {
+        abstract void func();
+    }
+    class D : C
+    {
+    }
+    class E : C
+    {
+        override void func()
+        {
+        }
+    }
+    static assert(!isAbstractClass!A);
+    static assert(isAbstractClass!B);
+    static assert(isAbstractClass!C);
+    static assert(isAbstractClass!D);
+    static assert(!isAbstractClass!E);
+    static assert(!isAbstractClass!int);
+}
+
+/**
+ * Determines whether $(D_PARAM T) is a final class.
+ *
+ * For all non-classes $(D_INLINECODE isFinalClass!T) evaluates to
+ * $(D_KEYWORD false).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a final class,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isFinalClass(T) = __traits(isFinalClass, T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    final class A
+    {
+    }
+    class B
+    {
+    }
+
+    static assert(isFinalClass!A);
+    static assert(!isFinalClass!B);
+}
+
+/**
+ * Determines whether $(D_PARAM T) is an abstract method.
+ *
+ * For all non-methods $(D_INLINECODE isAbstractFunction!T) evaluates to
+ * $(D_KEYWORD false).
+ *
+ * Params:
+ *  F = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM F) is an abstract method,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template isAbstractFunction(F...)
+if (F.length == 1)
+{
+    enum bool isAbstractFunction = __traits(isAbstractFunction, F[0]);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    class A
+    {
+        void func()
+        {
+        }
+    }
+    class B
+    {
+        abstract void func();
+    }
+    class C : B
+    {
+        override void func()
+        {
+        }
+    }
+    static assert(!isAbstractFunction!(A.func));
+    static assert(isAbstractFunction!(B.func));
+    static assert(!isAbstractFunction!(C.func));
+    static assert(!isAbstractFunction!int);
+}
+
+/**
+ * Determines whether $(D_PARAM T) is a final method.
+ *
+ * For all non-methods $(D_INLINECODE isFinalFunction!T) evaluates to
+ * $(D_KEYWORD false).
+ *
+ * Params:
+ *  F = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM F) is a final method,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template isFinalFunction(F...)
+if (F.length == 1)
+{
+    enum bool isFinalFunction = __traits(isFinalFunction, F[0]);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    class A
+    {
+        void virtualFunc()
+        {
+        }
+        final void finalFunc()
+        {
+        }
+    }
+
+    static assert(isFinalFunction!(A.finalFunc));
+    static assert(!isFinalFunction!(A.virtualFunc));
+    static assert(!isFinalFunction!int);
+}
+
+/**
+ * Function pointer is a pointer to a function. So a simple function is not
+ * a function pointer, but getting the address of such function returns a
+ * function pointer.
+ *
+ * A function pointer doesn't save the context pointer, thus cannot have access
+ * to its outer scope.
+ *
+ * Params:
+ *  F = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM F) is a function pointer,
+ *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(LINK2 http://dlang.org/spec/function.html#closures,
+ *                   Delegates, Function Pointers, and Closures).
+ */
+template isFunctionPointer(F...)
+if (F.length == 1)
+{
+    static if ((is(typeof(F[0]) T : T*) && is(T == function))
+            || (is(F[0] T : T*) && is(T == function)))
+    {
+        enum bool isFunctionPointer = true;
+    }
+    else
+    {
+        enum bool isFunctionPointer = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isFunctionPointer!(void function()));
+    static assert(!isFunctionPointer!(void delegate()));
+
+    static assert(isFunctionPointer!(() {}));
+
+    void func()
+    {
+    }
+    static void staticFunc()
+    {
+    }
+    interface I
+    {
+        @property int prop();
+    }
+
+    static assert(!isFunctionPointer!func);
+    static assert(!isFunctionPointer!staticFunc);
+
+    auto functionPointer = &staticFunc;
+    auto dg = &func;
+
+    static assert(isFunctionPointer!functionPointer);
+    static assert(!isFunctionPointer!dg);
+
+    static assert(!isFunctionPointer!(I.prop));
+}
+
+/**
+ * Delegate stores the function pointer and function context.
+ *
+ * Params:
+ *  F = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM F) is a delegate,
+ *          $(D_KEYWORD false) delegate.
+ *
+ * See_Also: $(LINK2 http://dlang.org/spec/function.html#closures,
+ *                   Delegates, Function Pointers, and Closures).
+ */
+template isDelegate(F...)
+if (F.length == 1)
+{
+    static if (is(F[0] == delegate)
+            || is(typeof(F[0]) == delegate))
+    {
+        enum bool isDelegate = true;
+    }
+    else
+    {
+        enum bool isDelegate = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isDelegate!(void delegate()));
+    static assert(!isDelegate!(void function()));
+
+    static assert(!isDelegate!(() {}));
+
+    void func()
+    {
+    }
+    static void staticFunc()
+    {
+    }
+    interface I
+    {
+        @property int prop();
+    }
+
+    static assert(!isDelegate!func);
+    static assert(!isDelegate!staticFunc);
+
+    auto functionPointer = &staticFunc;
+    auto dg = &func;
+
+    static assert(!isDelegate!functionPointer);
+    static assert(isDelegate!dg);
+
+    static assert(!isDelegate!(I.prop));
+}
+
+/**
+ * $(D_PSYMBOL isFunction) returns $(D_KEYWORD true) only for plain functions,
+ * not function pointers or delegates. Use $(D_PSYMBOL isFunctionPointer) or
+ * $(D_PSYMBOL isDelegate) to detect them or $(D_PSYMBOL isSomeFunction)
+ * for detecting a function of any type.
+ *
+ * Params:
+ *  F = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM F) is a function,
+ *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(LINK2 http://dlang.org/spec/function.html#closures,
+ *                   Delegates, Function Pointers, and Closures).
+ */
+template isFunction(F...)
+if (F.length == 1)
+{
+    static if (is(F[0] == function)
+            || is(typeof(&F[0]) U == delegate)
+            || (is(typeof(&F[0]) T : T*) && is(T == function)))
+    {
+        enum bool isFunction = true;
+    }
+    else
+    {
+        enum bool isFunction = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(!isFunction!(void function()));
+    static assert(!isFunction!(() {}));
+    static assert(!isFunction!(void delegate()));
+
+    void func()
+    {
+    }
+    static void staticFunc()
+    {
+    }
+    interface I
+    {
+        @property int prop();
+    }
+
+    static assert(isFunction!func);
+    static assert(isFunction!staticFunc);
+
+    auto functionPointer = &staticFunc;
+    auto dg = &func;
+
+    static assert(!isFunction!functionPointer);
+    static assert(!isFunction!dg);
+
+    static assert(isFunction!(I.prop));
+}
+
+/**
+ * Params:
+ *  F = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM F) is a function, function pointer
+ *           or delegate, $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isFunction),
+ *           $(D_PSYMBOL isDelegate),
+ *           $(D_PSYMBOL isFunctionPointer).
+ */
+template isSomeFunction(F...)
+if (F.length == 1)
+{
+    enum bool isSomeFunction = isFunctionPointer!F
+                            || isFunction!F
+                            || isDelegate!F;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isSomeFunction!(void function()));
+    static assert(isSomeFunction!(() {}));
+    static assert(isSomeFunction!(void delegate()));
+
+    void func()
+    {
+    }
+    static void staticFunc()
+    {
+    }
+
+    static assert(isSomeFunction!func);
+    static assert(isSomeFunction!staticFunc);
+
+    auto functionPointer = &staticFunc;
+    auto dg = &func;
+
+    static assert(isSomeFunction!functionPointer);
+    static assert(isSomeFunction!dg);
+
+    static assert(!isSomeFunction!int);
+}
+
+/**
+ * Params:
+ *  F = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM F) is callable,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template isCallable(F...)
+if (F.length == 1)
+{
+    static if (isSomeFunction!F || (is(typeof(F[0].opCall) U) && isFunction!U))
+    {
+        enum bool isCallable = true;
+    }
+    else
+    {
+        enum bool isCallable = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+        void opCall()
+        {
+        }
+    }
+    class C
+    {
+        static void opCall()
+        {
+        }
+    }
+    interface I
+    {
+    }
+    S s;
+
+    static assert(isCallable!s);
+    static assert(isCallable!C);
+    static assert(isCallable!S);
+    static assert(!isCallable!I);
+}
+
+/**
+ * Params:
+ *  T      = Aggregate type.
+ *  member = Symbol name.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) defines a symbol
+ *          $(D_PARAM member), $(D_KEYWORD false) otherwise.
+ */
+enum bool hasMember(T, string member) = __traits(hasMember, T, member);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+         int member1;
+         void member2()
+         {
+         }
+    }
+    static assert(hasMember!(S, "member1"));
+    static assert(hasMember!(S, "member2"));
+    static assert(!hasMember!(S, "member3"));
 }

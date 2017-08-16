@@ -373,11 +373,14 @@ pure nothrow @safe @nogc unittest
  * Returns: Pointer target type.
  */
 template PointerTarget(T)
-if (isPointer!T)
 {
     static if (is(T U : U*))
     {
         alias PointerTarget = U;
+    }
+    else
+    {
+        static assert(T.stringof ~ " isn't a pointer type");
     }
 }
 
@@ -388,4 +391,85 @@ pure nothrow @safe @nogc unittest
     static assert(is(PointerTarget!(const bool*) == const bool));
     static assert(is(PointerTarget!(const shared bool*) == const shared bool));
     static assert(!is(PointerTarget!bool));
+}
+
+/**
+ * Params:
+ *  T = The type of the associative array.
+ *
+ * Returns: The key type of the associative array $(D_PARAM T).
+ */
+template KeyType(T)
+{
+    static if (is(T V : V[K], K))
+    {
+        alias KeyType = K;
+    }
+    else
+    {
+        static assert(false, T.stringof ~ " isn't an associative array");
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(KeyType!(int[string]) == string));
+    static assert(!is(KeyType!(int[15])));
+}
+
+/**
+ * Params:
+ *  T = The type of the associative array.
+ *
+ * Returns: The value type of the associative array $(D_PARAM T).
+ */
+template ValueType(T)
+{
+    static if (is(T V : V[K], K))
+    {
+        alias ValueType = V;
+    }
+    else
+    {
+        static assert(false, T.stringof ~ " isn't an associative array");
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(ValueType!(int[string]) == int));
+    static assert(!is(ValueType!(int[15])));
+}
+
+/**
+ * Params:
+ *  T = Scalar type.
+ *
+ * Returns: The type $(D_PARAM T) will promote to.
+ *
+ * See_Also: $(LINK2 https://dlang.org/spec/type.html#integer-promotions,
+ *                   Integer Promotions).
+ */
+template Promoted(T)
+if (isScalarType!T)
+{
+    alias Promoted = CopyTypeQualifiers!(T, typeof(T.init + T.init));
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Promoted!bool == int));
+    static assert(is(Promoted!byte == int));
+    static assert(is(Promoted!ubyte == int));
+    static assert(is(Promoted!short == int));
+    static assert(is(Promoted!ushort == int));
+    static assert(is(Promoted!char == int));
+    static assert(is(Promoted!wchar == int));
+    static assert(is(Promoted!dchar == uint));
+
+    static assert(is(Promoted!(const bool) == const int));
+    static assert(is(Promoted!(shared bool) == shared int));
 }
