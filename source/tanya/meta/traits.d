@@ -17,6 +17,7 @@
  */
 module tanya.meta.traits;
 
+import tanya.meta.metafunction;
 import tanya.meta.transform;
 
 /**
@@ -966,14 +967,13 @@ pure nothrow @safe @nogc unittest
  * Abstract class is a class marked as such or a class that has any abstract
  * methods or doesn't implement all methods of abstract base classes.
  *
- * For all non-classes $(D_INLINECODE isAbstractClass!T) evaluates to
- * $(D_KEYWORD false).
- *
  * Params:
  *  T = A type.
  *
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an abstract class,
  *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isAbstractFunction).
  */
 enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
 
@@ -1004,20 +1004,18 @@ pure nothrow @safe @nogc unittest
     static assert(isAbstractClass!C);
     static assert(isAbstractClass!D);
     static assert(!isAbstractClass!E);
-    static assert(!isAbstractClass!int);
 }
 
 /**
  * Determines whether $(D_PARAM T) is a final class.
- *
- * For all non-classes $(D_INLINECODE isFinalClass!T) evaluates to
- * $(D_KEYWORD false).
  *
  * Params:
  *  T = A type.
  *
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a final class,
  *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isFinalFunction).
  */
 enum bool isFinalClass(T) = __traits(isFinalClass, T);
 
@@ -1038,20 +1036,15 @@ pure nothrow @safe @nogc unittest
 /**
  * Determines whether $(D_PARAM T) is an abstract method.
  *
- * For all non-methods $(D_INLINECODE isAbstractFunction!T) evaluates to
- * $(D_KEYWORD false).
- *
  * Params:
  *  F = A symbol.
  *
  * Returns: $(D_KEYWORD true) if $(D_PARAM F) is an abstract method,
  *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isAbstractClass).
  */
-template isAbstractFunction(F...)
-if (F.length == 1)
-{
-    enum bool isAbstractFunction = __traits(isAbstractFunction, F[0]);
-}
+enum bool isAbstractFunction(alias F) = __traits(isAbstractFunction, F);
 
 ///
 pure nothrow @safe @nogc unittest
@@ -1075,26 +1068,20 @@ pure nothrow @safe @nogc unittest
     static assert(!isAbstractFunction!(A.func));
     static assert(isAbstractFunction!(B.func));
     static assert(!isAbstractFunction!(C.func));
-    static assert(!isAbstractFunction!int);
 }
 
 /**
  * Determines whether $(D_PARAM T) is a final method.
- *
- * For all non-methods $(D_INLINECODE isFinalFunction!T) evaluates to
- * $(D_KEYWORD false).
  *
  * Params:
  *  F = A symbol.
  *
  * Returns: $(D_KEYWORD true) if $(D_PARAM F) is a final method,
  *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isFinalClass).
  */
-template isFinalFunction(F...)
-if (F.length == 1)
-{
-    enum bool isFinalFunction = __traits(isFinalFunction, F[0]);
-}
+enum bool isFinalFunction(alias F) = __traits(isFinalFunction, F);
 
 ///
 pure nothrow @safe @nogc unittest
@@ -1111,7 +1098,6 @@ pure nothrow @safe @nogc unittest
 
     static assert(isFinalFunction!(A.finalFunc));
     static assert(!isFinalFunction!(A.virtualFunc));
-    static assert(!isFinalFunction!int);
 }
 
 /**
@@ -1252,7 +1238,7 @@ template isFunction(F...)
 if (F.length == 1)
 {
     static if (is(F[0] == function)
-            || is(typeof(&F[0]) U == delegate)
+            || is(typeof(&F[0]) T == delegate)
             || (is(typeof(&F[0]) T : T*) && is(T == function)))
     {
         enum bool isFunction = true;
@@ -1348,7 +1334,8 @@ pure nothrow @safe @nogc unittest
 template isCallable(F...)
 if (F.length == 1)
 {
-    static if (isSomeFunction!F || (is(typeof(F[0].opCall) U) && isFunction!U))
+    static if (isSomeFunction!F
+            || (is(typeof(F[0].opCall)) && isFunction!(F[0].opCall)))
     {
         enum bool isCallable = true;
     }
@@ -1384,6 +1371,20 @@ pure nothrow @safe @nogc unittest
     static assert(!isCallable!I);
 }
 
+private pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+        @property int opCall()
+        {
+            return 0;
+        }
+    }
+    S s;
+    static assert(isCallable!S);
+    static assert(isCallable!s);
+}
+
 /**
  * Params:
  *  T      = Aggregate type.
@@ -1403,8 +1404,304 @@ pure nothrow @safe @nogc unittest
          void member2()
          {
          }
+         static int member3;
+         static void member4()
+         {
+         }
     }
     static assert(hasMember!(S, "member1"));
     static assert(hasMember!(S, "member2"));
-    static assert(!hasMember!(S, "member3"));
+    static assert(hasMember!(S, "member3"));
+    static assert(hasMember!(S, "member4"));
+    static assert(!hasMember!(S, "member6"));
+}
+
+/**
+ * Params:
+ *  T      = Aggregate type.
+ *  member = Symbol name.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM member) is a static method of
+ *          $(D_PARAM T), $(D_KEYWORD false) otherwise.
+ */
+template hasStaticMember(T, string member)
+{
+    static if (hasMember!(T, member))
+    {
+        alias Member = Alias!(__traits(getMember, T, member));
+
+        static if (__traits(isStaticFunction, Member)
+                || (!isFunction!Member && is(typeof(&Member))))
+        {
+            enum bool hasStaticMember = true;
+        }
+        else
+        {
+            enum bool hasStaticMember = false;
+        }
+    }
+    else
+    {
+        enum bool hasStaticMember = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+         int member1;
+         void member2()
+         {
+         }
+         static int member3;
+         static void member4()
+         {
+         }
+         static void function() member5;
+    }
+    static assert(!hasStaticMember!(S, "member1"));
+    static assert(!hasStaticMember!(S, "member2"));
+    static assert(hasStaticMember!(S, "member3"));
+    static assert(hasStaticMember!(S, "member4"));
+    static assert(hasStaticMember!(S, "member5"));
+}
+
+/**
+ * Determines whether $(D_PARAM T) is mutable, i.e. has one of the following
+ * qualifiers or a combination of them:
+ *
+ * $(UL
+ *  $(LI $(D_KEYWORD const))
+ *  $(LI $(D_KEYWORD immutable))
+ *  $(LI $(D_KEYWORD const))
+ * )
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is mutable,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template isMutable(T)
+{
+    static if (is(T U == const U)
+            || is(T U == inout U)
+            || is(T U == inout const U)
+            || is(T U == immutable U)
+            || is(T U == shared const U)
+            || is(T U == shared inout U)
+            || is(T U == shared inout const U))
+    {
+        enum bool isMutable = false;
+    }
+    else
+    {
+        enum bool isMutable = true;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+        void method()
+        {
+            static assert(isMutable!(typeof(this)));
+        }
+
+        void method() inout
+        {
+            static assert(!isMutable!(typeof(this)));
+        }
+
+        void immMethod() const
+        {
+            static assert(!isMutable!(typeof(this)));
+        }
+        void immMethod() immutable
+        {
+            static assert(!isMutable!(typeof(this)));
+        }
+    }
+}
+
+/**
+ * POD (Plain Old Data) is a $(D_KEYWORD struct) without constructors,
+ * destructors and member functions.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a POD type,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isPOD(T) = __traits(isPOD, T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S1
+    {
+        void method()
+        {
+        }
+    }
+    static assert(!isPOD!S1);
+
+    struct S2
+    {
+        void function() val; // Function pointer, not a member function.
+    }
+    static assert(isPOD!S2);
+
+    struct S3
+    {
+        this(this)
+        {
+        }
+    }
+    static assert(!isPOD!S3);
+}
+
+/**
+ * Params:
+ *  T = $(D_KEYWORD class), $(D_KEYWORD struct) or $(D_KEYWORD union) type.
+ *
+ * Returns: $(D_KEYWORD true) if the argument is a nested type which internally
+ *          stores a context pointer, $(D_KEYWORD false) otherwise.
+ */
+template isNested(T)
+if (is(T == class) || is(T == struct) || is(T == union))
+{
+    enum bool isNested = __traits(isNested, T);
+}
+
+///
+pure nothrow @safe unittest
+{
+    static struct S
+    {
+    }
+    static assert(!isNested!S);
+
+    class C
+    {
+        void method()
+        {
+        }
+    }
+    static assert(isNested!C);
+}
+
+/**
+ * Params:
+ *  T = A function.
+ *
+ * Returns $(D_KEYWORD true) if the $(D_PARAM T) is a nested function,
+ *         $(D_KEYWORD false) otherwise.
+ */
+enum bool isNestedFunction(alias F) = __traits(isNested, F);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    void func()
+    {
+        void nestedFunc()
+        {
+        }
+        static assert(isNestedFunction!nestedFunc);
+    }
+}
+
+/**
+ * Params:
+ *  F = A function.
+ *
+ * Returns: Type of the function $(D_PARAM F).
+ */
+template FunctionTypeOf(F...)
+if (F.length == 1 && isCallable!F)
+{
+    static if ((is(typeof(F[0]) T : T*) && is(T == function))
+            || (is(F[0] T : T*) && is(T == function))
+            || is(F[0] T == delegate)
+            || is(typeof(F[0]) T == delegate)
+            || is(F[0] T == function)
+            || is(typeof(&F[0]) T == delegate)
+            || (is(typeof(&F[0]) T : T*) && is(T == function)))
+    {
+        alias FunctionTypeOf = T;
+    }
+    else
+    {
+        alias FunctionTypeOf = FunctionTypeOf!(F[0].opCall);
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(FunctionTypeOf!(void function()) == function));
+    static assert(is(FunctionTypeOf!(() {}) == function));
+}
+
+private pure nothrow @safe @nogc unittest
+{
+    static assert(is(FunctionTypeOf!(void delegate()) == function));
+
+    static void staticFunc()
+    {
+    }
+    auto functionPointer = &staticFunc;
+    static assert(is(FunctionTypeOf!staticFunc == function));
+    static assert(is(FunctionTypeOf!functionPointer == function));
+
+    void func()
+    {
+    }
+    auto dg = &func;
+    static assert(is(FunctionTypeOf!func == function));
+    static assert(is(FunctionTypeOf!dg == function));
+
+    interface I
+    {
+        @property int prop();
+    }
+    static assert(is(FunctionTypeOf!(I.prop) == function));
+
+    struct S
+    {
+        void opCall()
+        {
+        }
+    }
+    class C
+    {
+        static void opCall()
+        {
+        }
+    }
+    S s;
+
+    static assert(is(FunctionTypeOf!s == function));
+    static assert(is(FunctionTypeOf!C == function));
+    static assert(is(FunctionTypeOf!S == function));
+}
+
+private pure nothrow @safe @nogc unittest
+{
+    struct S2
+    {
+        @property int opCall()
+        {
+            return 0;
+        }
+    }
+    S2 s2;
+    static assert(is(FunctionTypeOf!S2 == function));
+    static assert(is(FunctionTypeOf!s2 == function));
 }
