@@ -12,10 +12,10 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/meta/traits.d,
- *                 tanya/meta/traits.d)
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/meta/trait.d,
+ *                 tanya/meta/trait.d)
  */
-module tanya.meta.traits;
+module tanya.meta.trait;
 
 import tanya.meta.metafunction;
 import tanya.meta.transform;
@@ -631,7 +631,7 @@ pure nothrow @safe @nogc unittest
     static assert(!isType!T);
     static assert(isType!(T!()));
     static assert(!isType!5);
-    static assert(!isType!(tanya.meta.traits));
+    static assert(!isType!(tanya.meta.trait));
 }
 
 /**
@@ -1598,7 +1598,7 @@ pure nothrow @safe unittest
 
 /**
  * Params:
- *  T = A function.
+ *  F = A function.
  *
  * Returns $(D_KEYWORD true) if the $(D_PARAM T) is a nested function,
  *         $(D_KEYWORD false) otherwise.

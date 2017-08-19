@@ -17,7 +17,7 @@
  */
 module tanya.meta.transform;
 
-import tanya.meta.traits;
+import tanya.meta.trait;
 
 /**
  * Removes any type qualifiers from $(D_PARAM T).

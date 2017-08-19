@@ -17,7 +17,7 @@ module tanya.meta.metafunction;
 
 version (unittest)
 {
-    import std.traits;
+    import tanya.meta.trait;
 }
 
 /**
@@ -205,4 +205,249 @@ pure nothrow @safe @nogc unittest
     static assert(staticIndexOf!(int, int) == 0);
     static assert(staticIndexOf!(int, float, double, int, real) == 2);
     static assert(staticIndexOf!(3, () {}, uint, 5, 3) == 3);
+}
+
+/**
+ * Instantiates the template $(D_PARAM T) with $(D_PARAM ARGS).
+ *
+ * Params:
+ *  T    = Template.
+ *  Args = Template parameters.
+ *
+ * Returns: Instantiated template.
+ */
+alias Instantiate(alias T, Args...) = T!Args;
+
+/**
+ * Combines multiple templates with logical AND. So $(D_PSYMBOL templateAnd)
+ * evaluates to $(D_INLINECODE Preds[0] && Preds[1] && Preds[2]) and so on.
+ *
+ * Empty $(D_PARAM Preds) evaluates to $(D_KEYWORD true).
+ *
+ * Params:
+ *  Preds = Template predicates.
+ *
+ * Returns: The constructed template.
+ */
+template templateAnd(Preds...)
+{
+    template templateAnd(T...)
+    {
+        static if (Preds.length == 0)
+        {
+            enum bool templateAnd = true;
+        }
+        else static if (Instantiate!(Preds[0], T))
+        {
+            alias templateAnd = Instantiate!(.templateAnd!(Preds[1 .. $]), T);
+        }
+        else
+        {
+            enum bool templateAnd = false;
+        }
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias isMutableInt = templateAnd!(isIntegral, isMutable);
+    static assert(isMutableInt!int);
+    static assert(!isMutableInt!(const int));
+    static assert(!isMutableInt!float);
+
+    alias alwaysTrue = templateAnd!();
+    static assert(alwaysTrue!int);
+
+    alias isIntegral = templateAnd!(.isIntegral);
+    static assert(isIntegral!int);
+    static assert(isIntegral!(const int));
+    static assert(!isIntegral!float);
+}
+
+/**
+ * Combines multiple templates with logical OR. So $(D_PSYMBOL templateOr)
+ * evaluates to $(D_INLINECODE Preds[0] || Preds[1] || Preds[2]) and so on.
+ *
+ * Empty $(D_PARAM Preds) evaluates to $(D_KEYWORD false).
+ *
+ * Params:
+ *  Preds = Template predicates.
+ *
+ * Returns: The constructed template.
+ */
+template templateOr(Preds...)
+{
+    template templateOr(T...)
+    {
+        static if (Preds.length == 0)
+        {
+            enum bool templateOr = false;
+        }
+        else static if (Instantiate!(Preds[0], T))
+        {
+            enum bool templateOr = true;
+        }
+        else
+        {
+            alias templateOr = Instantiate!(.templateOr!(Preds[1 .. $]), T);
+        }
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias isMutableOrInt = templateOr!(isIntegral, isMutable);
+    static assert(isMutableOrInt!int);
+    static assert(isMutableOrInt!(const int));
+    static assert(isMutableOrInt!float);
+    static assert(!isMutableOrInt!(const float));
+
+    alias alwaysFalse = templateOr!();
+    static assert(!alwaysFalse!int);
+
+    alias isIntegral = templateOr!(.isIntegral);
+    static assert(isIntegral!int);
+    static assert(isIntegral!(const int));
+    static assert(!isIntegral!float);
+}
+
+/**
+ * Params:
+ *  pred = Template predicate.
+ *
+ * Returns: Negated $(D_PARAM pred).
+ */
+template templateNot(alias pred)
+{
+    enum bool templateNot(T...) = !pred!T;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias isNotIntegral = templateNot!isIntegral;
+    static assert(!isNotIntegral!int);
+    static assert(isNotIntegral!(char[]));
+}
+
+/**
+ * Tests whether $(D_PARAM L) is sorted in ascending order according to
+ * $(D_PARAM cmp).
+ *
+ * $(D_PARAM cmp) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE a[i] < a[i + 1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE a[i] < a[i + 1]), a positive number that
+ *       $(D_INLINECODE a[i] > a[i + 1]), `0` if they equal.)
+ * )
+ *
+ * Params:
+ *  cmp = Comparison template.
+ *  L   = Arguments.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM L) is sorted, $(D_KEYWORD false)
+ *          if not.
+ */
+template staticIsSorted(alias cmp, L...)
+{
+    static if (L.length <= 1)
+    {
+        enum bool staticIsSorted = true;
+    }
+    else
+    {
+        // `L` is sorted if the both halves are sorted.
+        enum bool halves = staticIsSorted!(cmp, L[0 .. $ / 2])
+                        && staticIsSorted!(cmp, L[$ / 2 .. $]);
+        // Compare the boundary values of the havles.
+        enum result = cmp!(L[$ / 2], L[$ / 2 - 1]);
+        static if (is(typeof(result) == bool))
+        {
+            enum bool staticIsSorted = !result && halves;
+        }
+        else
+        {
+            enum bool staticIsSorted = result >= 0 && halves;
+        }
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    enum cmp(T, U) = T.sizeof < U.sizeof;
+    static assert(staticIsSorted!(cmp));
+    static assert(staticIsSorted!(cmp, byte));
+    static assert(staticIsSorted!(cmp, byte, ubyte, short, uint));
+    static assert(!staticIsSorted!(cmp, long, byte, ubyte, short, uint));
+}
+
+private pure nothrow @safe @nogc unittest
+{
+    enum cmp(int x, int y) = x - y;
+    static assert(staticIsSorted!(cmp));
+    static assert(staticIsSorted!(cmp, 1));
+    static assert(staticIsSorted!(cmp, 1, 2, 2));
+    static assert(staticIsSorted!(cmp, 1, 2, 2, 4));
+    static assert(staticIsSorted!(cmp, 1, 2, 2, 4, 8));
+    static assert(!staticIsSorted!(cmp, 32, 2, 2, 4, 8));
+    static assert(staticIsSorted!(cmp, 32, 32));
+}
+
+private pure nothrow @safe @nogc unittest
+{
+    enum cmp(int x, int y) = x < y;
+    static assert(staticIsSorted!(cmp));
+    static assert(staticIsSorted!(cmp, 1));
+    static assert(staticIsSorted!(cmp, 1, 2, 2));
+    static assert(staticIsSorted!(cmp, 1, 2, 2, 4));
+    static assert(staticIsSorted!(cmp, 1, 2, 2, 4, 8));
+    static assert(!staticIsSorted!(cmp, 32, 2, 2, 4, 8));
+    static assert(staticIsSorted!(cmp, 32, 32));
+}
+
+/**
+ * Params:
+ *  T    = A template.
+ *  Args = The first arguments for $(D_PARAM T).
+ *
+ * Returns: $(D_PARAM T) with $(D_PARAM Args) applied to it as its first
+ *          arguments.
+ */
+template ApplyLeft(alias T, Args...)
+{
+    alias ApplyLeft(U...) = T!(Args, U);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias allAreIntegral = ApplyLeft!(allSatisfy, isIntegral);
+    static assert(allAreIntegral!(int, uint));
+    static assert(!allAreIntegral!(int, float, uint));
+}
+
+/**
+ * Params:
+ *  T    = A template.
+ *  Args = The last arguments for $(D_PARAM T).
+ *
+ * Returns: $(D_PARAM T) with $(D_PARAM Args) applied to it as itslast
+ *          arguments.
+ */
+template ApplyRight(alias T, Args...)
+{
+    alias ApplyRight(U...) = T!(U, Args);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias intIs = ApplyRight!(allSatisfy, int);
+    static assert(intIs!(isIntegral));
+    static assert(!intIs!(isUnsigned));
 }
