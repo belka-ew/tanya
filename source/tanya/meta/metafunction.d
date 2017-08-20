@@ -15,9 +15,40 @@
  */
 module tanya.meta.metafunction;
 
+import tanya.meta.trait;
+
 version (unittest)
 {
-    import tanya.meta.trait;
+    import tanya.meta.transform;
+}
+
+// Used for sorting.
+private template lessEqual(alias cmp, Args...)
+if (Args.length == 2)
+{
+    enum result = cmp!(Args[1], Args[0]);
+    static if (is(typeof(result) == bool))
+    {
+        enum bool lessEqual = !result;
+    }
+    else
+    {
+        enum bool lessEqual = result >= 0;
+    }
+}
+
+private template equalTo(Args...)
+if (Args.length == 2)
+{
+    static if ((is(typeof(Args[0] == Args[1])) && (Args[0] == Args[1]))
+            || is(Args[0] == Args[1]))
+    {
+        enum bool equalTo = true;
+    }
+    else
+    {
+        enum bool equalTo = false;
+    }
 }
 
 /**
@@ -165,8 +196,7 @@ if (Args.length > 0)
     {
         enum ptrdiff_t indexOf = -1;
     }
-    else static if (is(Args[0] == Args[1])
-                 || (is(typeof(Args[0] == Args[1])) && (Args[0] == Args[1])))
+    else static if (equalTo!(Args[0 .. 2]))
     {
         enum ptrdiff_t indexOf = i;
     }
@@ -185,7 +215,7 @@ if (Args.length > 0)
  *  T = The type to search for.
  *  L = Type list.
  *
- * Returns: The index of the first occurence of $(D_PARAM T) in $(D_PARAM L).
+ * Returns: The index of the first occurrence of $(D_PARAM T) in $(D_PARAM L).
  */
 template staticIndexOf(T, L...)
 {
@@ -346,8 +376,8 @@ pure nothrow @safe @nogc unittest
  * )
  *
  * Params:
- *  cmp = Comparison template.
- *  L   = Arguments.
+ *  cmp = Sorting template predicate.
+ *  L   = Elements to be tested.
  *
  * Returns: $(D_KEYWORD true) if $(D_PARAM L) is sorted, $(D_KEYWORD false)
  *          if not.
@@ -360,19 +390,10 @@ template staticIsSorted(alias cmp, L...)
     }
     else
     {
-        // `L` is sorted if the both halves are sorted.
-        enum bool halves = staticIsSorted!(cmp, L[0 .. $ / 2])
-                        && staticIsSorted!(cmp, L[$ / 2 .. $]);
-        // Compare the boundary values of the havles.
-        enum result = cmp!(L[$ / 2], L[$ / 2 - 1]);
-        static if (is(typeof(result) == bool))
-        {
-            enum bool staticIsSorted = !result && halves;
-        }
-        else
-        {
-            enum bool staticIsSorted = result >= 0 && halves;
-        }
+        // `L` is sorted if the both halves and the boundary values are sorted.
+        enum bool staticIsSorted = lessEqual!(cmp, L[$ / 2 - 1], L[$ / 2])
+                                && staticIsSorted!(cmp, L[0 .. $ / 2])
+                                && staticIsSorted!(cmp, L[$ / 2 .. $]);
     }
 }
 
@@ -450,4 +471,542 @@ pure nothrow @safe @nogc unittest
     alias intIs = ApplyRight!(allSatisfy, int);
     static assert(intIs!(isIntegral));
     static assert(!intIs!(isUnsigned));
+}
+
+/**
+ * Params:
+ *  n = The number of times to repeat $(D_PARAM L).
+ *  L = The sequence to be repeated.
+ *
+ * Returns: $(D_PARAM L) repeated $(D_PARAM n) times.
+ */
+template Repeat(size_t n, L...)
+if (n > 0)
+{
+    static if (n == 1)
+    {
+        alias Repeat = L;
+    }
+    else
+    {
+        alias Repeat = AliasSeq!(L, Repeat!(n - 1, L));
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Repeat!(1, uint, int) == AliasSeq!(uint, int)));
+    static assert(is(Repeat!(2, uint, int) == AliasSeq!(uint, int, uint, int)));
+    static assert(is(Repeat!(3) == AliasSeq!()));
+}
+
+private template ReplaceOne(L...)
+{
+    static if (L.length == 2)
+    {
+        alias ReplaceOne = AliasSeq!();
+    }
+    else static if (equalTo!(L[0], L[2]))
+    {
+        alias ReplaceOne = AliasSeq!(L[1], L[3 .. $]);
+    }
+    else
+    {
+        alias ReplaceOne = AliasSeq!(L[2], ReplaceOne!(L[0], L[1], L[3 .. $]));
+    }
+}
+
+/**
+ * Replaces the first occurrence of $(D_PARAM T) in $(D_PARAM L) with
+ * $(D_PARAM U).
+ *
+ * Params:
+ *  T = The symbol to be replaced.
+ *  U = Replacement.
+ *  L = List of symbols.
+ *
+ * Returns: $(D_PARAM L) with the first occurrence of $(D_PARAM T) replaced.
+ */
+template Replace(T, U, L...)
+{
+    alias Replace = ReplaceOne!(T, U, L);
+}
+
+/// Ditto.
+template Replace(alias T, U, L...)
+{
+    alias Replace = ReplaceOne!(T, U, L);
+}
+
+/// Ditto.
+template Replace(T, alias U, L...)
+{
+    alias Replace = ReplaceOne!(T, U, L);
+}
+
+/// Ditto.
+template Replace(alias T, alias U, L...)
+{
+    alias Replace = ReplaceOne!(T, U, L);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Replace!(int, uint, int) == AliasSeq!(uint)));
+    static assert(is(Replace!(int, uint, short, int, int, ushort)
+               == AliasSeq!(short, uint, int, ushort)));
+
+    static assert(Replace!(5, 8, 1, 2, 5, 5) == AliasSeq!(1, 2, 8, 5));
+}
+
+private template ReplaceAllImpl(L...)
+{
+    static if (L.length == 2)
+    {
+        alias ReplaceAllImpl = AliasSeq!();
+    }
+    else
+    {
+        private alias Rest = ReplaceAllImpl!(L[0], L[1], L[3 .. $]);
+        static if (equalTo!(L[0], L[2]))
+        {
+            alias ReplaceAllImpl = AliasSeq!(L[1], Rest);
+        }
+        else
+        {
+            alias ReplaceAllImpl = AliasSeq!(L[2], Rest);
+        }
+    }
+}
+
+/**
+ * Replaces all occurrences of $(D_PARAM T) in $(D_PARAM L) with $(D_PARAM U).
+ *
+ * Params:
+ *  T = The symbol to be replaced.
+ *  U = Replacement.
+ *  L = List of symbols.
+ *
+ * Returns: $(D_PARAM L) with all occurrences of $(D_PARAM T) replaced.
+ */
+template ReplaceAll(T, U, L...)
+{
+    alias ReplaceAll = ReplaceAllImpl!(T, U, L);
+}
+
+/// Ditto.
+template ReplaceAll(alias T, U, L...)
+{
+    alias ReplaceAll = ReplaceAllImpl!(T, U, L);
+}
+
+/// Ditto.
+template ReplaceAll(T, alias U, L...)
+{
+    alias ReplaceAll = ReplaceAllImpl!(T, U, L);
+}
+
+/// Ditto.
+template ReplaceAll(alias T, alias U, L...)
+{
+    alias ReplaceAll = ReplaceAllImpl!(T, U, L);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(ReplaceAll!(int, uint, int) == AliasSeq!(uint)));
+    static assert(is(ReplaceAll!(int, uint, short, int, int, ushort)
+               == AliasSeq!(short, uint, uint, ushort)));
+
+    static assert(ReplaceAll!(5, 8, 1, 2, 5, 5) == AliasSeq!(1, 2, 8, 8));
+}
+
+/**
+ * Params:
+ *  L = List of symbols.
+ *
+ * Returns: $(D_PARAM L) with elements in reversed order.
+ */
+template Reverse(L...)
+{
+    static if (L.length == 0)
+    {
+        alias Reverse = AliasSeq!();
+    }
+    else
+    {
+        alias Reverse = AliasSeq!(L[$ - 1], Reverse!(L[0 .. $ - 1]));
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Reverse!(byte, short, int) == AliasSeq!(int, short, byte)));
+}
+
+/**
+ * Applies $(D_PARAM F) to all elements of $(D_PARAM T).
+ *
+ * Params:
+ *  F = Template predicate.
+ *  T = List of symbols.
+ *
+ * Returns: Elements $(D_PARAM T) after applying $(D_PARAM F) to them.
+ */
+template staticMap(alias F, T...)
+{
+    static if (T.length == 0)
+    {
+        alias staticMap = AliasSeq!();
+    }
+    else
+    {
+        alias staticMap = AliasSeq!(F!(T[0]), staticMap!(F, T[1 .. $]));
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(staticMap!(Unqual, const int, immutable short)
+               == AliasSeq!(int, short)));
+}
+
+/**
+ * Sorts $(D_PARAM L) in ascending order according to $(D_PARAM cmp).
+ *
+ * $(D_PARAM cmp) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE a[i] < a[i + 1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE a[i] < a[i + 1]), a positive number that
+ *       $(D_INLINECODE a[i] > a[i + 1]), `0` if they equal.)
+ * )
+ *
+ * Merge sort is used to sort the arguments.
+ *
+ * Params:
+ *  cmp = Sorting template predicate.
+ *  L   = Elements to be sorted.
+ *
+ * Returns: Elements of $(D_PARAM L) in ascending order.
+ *
+ * See_Also: $(LINK2 https://en.wikipedia.org/wiki/Merge_sort, Merge sort).
+ */
+template staticSort(alias cmp, L...)
+{
+    private template merge(size_t A, size_t B)
+    {
+        static if (A + B == L.length)
+        {
+            alias merge = AliasSeq!();
+        }
+        else static if (B >= Right.length
+                     || (A < Left.length && lessEqual!(cmp, Left[A], Right[B])))
+        {
+            alias merge = AliasSeq!(Left[A], merge!(A + 1, B));
+        }
+        else
+        {
+            alias merge = AliasSeq!(Right[B], merge!(A, B + 1));
+        }
+    }
+
+    static if (L.length <= 1)
+    {
+        alias staticSort = L;
+    }
+    else
+    {
+        private alias Left = staticSort!(cmp, L[0 .. $ / 2]);
+        private alias Right = staticSort!(cmp, L[$ / 2 .. $]);
+        alias staticSort = merge!(0, 0);
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    enum cmp(T, U) = T.sizeof < U.sizeof;
+    static assert(is(staticSort!(cmp, long, short, byte, int)
+               == AliasSeq!(byte, short, int, long)));
+}
+
+private pure nothrow @safe @nogc unittest
+{
+    enum cmp(int T, int U) = T - U;
+    static assert(staticSort!(cmp, 5, 17, 9, 12, 2, 10, 14)
+               == AliasSeq!(2, 5, 9, 10, 12, 14, 17));
+}
+
+private enum bool DerivedToFrontCmp(A, B) = is(A : B);
+
+/**
+ * Returns $(D_PARAM L) sorted in such a way that the most derived types come
+ * first.
+ *
+ * Params:
+ *  L = Type tuple.
+ *
+ * Returns: Sorted $(D_PARAM L).
+ */
+template DerivedToFront(L...)
+{
+    alias DerivedToFront = staticSort!(DerivedToFrontCmp, L);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    class A
+    {
+    }
+    class B : A
+    {
+    }
+    class C : B
+    {
+    }
+    static assert(is(DerivedToFront!(B, A, C) == AliasSeq!(C, B, A)));
+}
+
+/**
+ * Returns the type from the type tuple $(D_PARAM L) that is most derived from
+ * $(D_PARAM T).
+ *
+ * Params:
+ *  T = The type to compare to.
+ *  L = Type tuple.
+ *
+ * Returns: The type most derived from $(D_PARAM T).
+ */
+template MostDerived(T, L...)
+{
+    static if (L.length == 0)
+    {
+        alias MostDerived = T;
+    }
+    else static if (is(T : L[0]))
+    {
+        alias MostDerived = MostDerived!(T, L[1 .. $]);
+    }
+    else
+    {
+        alias MostDerived = MostDerived!(L[0], L[1 .. $]);
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    class A
+    {
+    }
+    class B : A
+    {
+    }
+    class C : B
+    {
+    }
+    static assert(is(MostDerived!(A, C, B) == C));
+}
+
+private template EraseOne(L...)
+if (L.length > 0)
+{
+    static if (L.length == 1)
+    {
+        alias EraseOne = AliasSeq!();
+    }
+    else static if (equalTo!(L[0 .. 2]))
+    {
+        alias EraseOne = AliasSeq!(L[2 .. $]);
+    }
+    else
+    {
+        alias EraseOne = AliasSeq!(L[1], EraseOne!(L[0], L[2 .. $]));
+    }
+}
+
+/**
+ * Removes the first occurrence of $(D_PARAM T) from the alias sequence
+ * $(D_PARAL L).
+ *
+ * Params:
+ *  T = The item to be removed.
+ *  L = Alias sequence.
+ *
+ * Returns: $(D_PARAM L) with the first occurrence of $(D_PARAM T) removed.
+ */
+template Erase(T, L...)
+{
+    alias Erase = EraseOne!(T, L);
+}
+
+/// Ditto.
+template Erase(alias T, L...)
+{
+    alias Erase = EraseOne!(T, L);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Erase!(int, short, int, int, uint) == AliasSeq!(short, int, uint)));
+    static assert(is(Erase!(int, short, uint) == AliasSeq!(short, uint)));
+}
+
+private template EraseAllImpl(L...)
+{
+    static if (L.length == 1)
+    {
+        alias EraseAllImpl = AliasSeq!();
+    }
+    else static if (equalTo!(L[0 .. 2]))
+    {
+        alias EraseAllImpl = EraseAllImpl!(L[0], L[2 .. $]);
+    }
+    else
+    {
+        alias EraseAllImpl = AliasSeq!(L[1], EraseAllImpl!(L[0], L[2 .. $]));
+    }
+}
+
+/**
+ * Removes all occurrences of $(D_PARAM T) from the alias sequence $(D_PARAL L).
+ *
+ * Params:
+ *  T = The item to be removed.
+ *  L = Alias sequence.
+ *
+ * Returns: $(D_PARAM L) with all occurrences of $(D_PARAM T) removed.
+ */
+template EraseAll(T, L...)
+{
+    alias EraseAll = EraseAllImpl!(T, L);
+}
+
+/// Ditto.
+template EraseAll(alias T, L...)
+{
+    alias EraseAll = EraseAllImpl!(T, L);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(EraseAll!(int, short, int, int, uint) == AliasSeq!(short, uint)));
+    static assert(is(EraseAll!(int, short, uint) == AliasSeq!(short, uint)));
+    static assert(is(EraseAll!(int, int, int) == AliasSeq!()));
+}
+
+/**
+ * Returns an alias sequence which contains only items that satisfy the
+ * condition $(D_PARAM pred).
+ *
+ * Params:
+ *  pred = Template predicate.
+ *  L    = Alias sequence.
+ *
+ * Returns: $(D_PARAM L) filtered so that it contains only items that satisfy
+ *          $(D_PARAM pred).
+ */
+template Filter(alias pred, L...)
+{
+    static if (L.length == 0)
+    {
+        alias Filter = AliasSeq!();
+    }
+    else static if (pred!(L[0]))
+    {
+        alias Filter = AliasSeq!(L[0], Filter!(pred, L[1 .. $]));
+    }
+    else
+    {
+        alias Filter = Filter!(pred, L[1 .. $]);
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Filter!(isIntegral, real, int, bool, uint) == AliasSeq!(int, uint)));
+}
+
+/**
+ * Removes all duplicates from the alias sequence $(D_PARAM L).
+ *
+ * Params:
+ *  L = Alias sequence.
+ *
+ * Returns: $(D_PARAM L) containing only unique items.
+ */
+template NoDuplicates(L...)
+{
+    static if (L.length == 0)
+    {
+        alias NoDuplicates = AliasSeq!();
+    }
+    else
+    {
+        private alias Rest = NoDuplicates!(EraseAll!(L[0], L[1 .. $]));
+        alias NoDuplicates = AliasSeq!(L[0], Rest);
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias Types = AliasSeq!(int, uint, int, short, short, uint);
+    static assert(is(NoDuplicates!Types == AliasSeq!(int, uint, short)));
+}
+
+/**
+ * Converts an input range $(D_PARAM range) into an alias sequence.
+ *
+ * Params:
+ *  range = Input range.
+ *
+ * Returns: Alias sequence with items from $(D_PARAM range).
+ */
+template aliasSeqOf(alias range)
+{
+    static if (isArray!(typeof(range)))
+    {
+        static if (range.length == 0)
+        {
+            alias aliasSeqOf = AliasSeq!();
+        }
+        else
+        {
+            alias aliasSeqOf = AliasSeq!(range[0], aliasSeqOf!(range[1 .. $]));
+        }
+    }
+    else
+    {
+        ReturnType!(typeof(&range.front))[] toArray(typeof(range) range)
+        {
+            typeof(return) result;
+            foreach (r; range)
+            {
+                result ~= r;
+            }
+            return result;
+        }
+        alias aliasSeqOf = aliasSeqOf!(toArray(range));
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    foreach (i, e; aliasSeqOf!([0, 1, 2, 3]))
+    {
+        static assert(i == e);
+    }
 }

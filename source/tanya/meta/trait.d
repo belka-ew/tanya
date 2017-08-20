@@ -1624,7 +1624,7 @@ pure nothrow @safe @nogc unittest
  * Returns: Type of the function $(D_PARAM F).
  */
 template FunctionTypeOf(F...)
-if (F.length == 1 && isCallable!F)
+if (isCallable!F)
 {
     static if ((is(typeof(F[0]) T : T*) && is(T == function))
             || (is(F[0] T : T*) && is(T == function))
@@ -1704,4 +1704,23 @@ private pure nothrow @safe @nogc unittest
     S2 s2;
     static assert(is(FunctionTypeOf!S2 == function));
     static assert(is(FunctionTypeOf!s2 == function));
+}
+
+/**
+ * Params:
+ *  F = A callable object.
+ *
+ * Returns: Return type of $(D_PARAM F).
+ */
+template ReturnType(F...)
+if (isCallable!F)
+{
+    static if (is(FunctionTypeOf!(F[0]) T == return))
+    {
+        alias ReturnType = T;
+    }
+    else
+    {
+        static assert(false, "Argument is not a callable");
+    }
 }
