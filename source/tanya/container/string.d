@@ -30,31 +30,11 @@ import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.algorithm.searching;
-import std.range;
+import std.range : isInfinite, isInputRange, ElementEncodingType, hasLength,
+                   popFrontN, empty;
 import std.traits;
 import tanya.memory;
-
-private ref const(wchar) front(const wchar[] str)
-pure nothrow @safe @nogc
-in
-{
-    assert(str.length > 0);
-}
-body
-{
-    return str[0];
-}
-
-private void popFront(ref const(wchar)[] str, const size_t s = 1)
-pure nothrow @safe @nogc
-in
-{
-    assert(str.length >= s);
-}
-body
-{
-    str = str[s .. $];
-}
+import tanya.range.array;
 
 /**
  * Thrown on encoding errors.
@@ -790,7 +770,7 @@ struct String
                     }
                     dchar d = (range[0] - 0xd800) | ((range[1] - 0xdc00) >> 10);
 
-                    range.popFront(2);
+                    range.popFrontN(2);
                 }
                 else
                 {
