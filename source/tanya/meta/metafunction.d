@@ -15,40 +15,262 @@
  */
 module tanya.meta.metafunction;
 
-import tanya.meta.trait;
+import tanya.meta.transform;
 
 version (unittest)
 {
-    import tanya.meta.transform;
+    import tanya.meta.trait;
 }
 
-// Used for sorting.
-private template lessEqual(alias cmp, Args...)
+/**
+ * Tests whether $(D_INLINECODE Args[0]) is less than or equal to
+ * $(D_INLINECODE Args[1]) according to $(D_PARAM cmp).
+ *
+ * $(D_PARAM cmp) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE Args[0] < Args[1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE Args[0] < Args[1]), a positive number that
+ *       $(D_INLINECODE Args[0] > Args[1]), `0` if they equal.)
+ * )
+ *
+ * Params:
+ *  Args = Two aliases to compare for equality.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE Args[0]) is less than or equal
+ *          to $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
+ */
+template isLessEqual(alias cmp, Args...)
 if (Args.length == 2)
 {
-    enum result = cmp!(Args[1], Args[0]);
+    private enum result = cmp!(Args[1], Args[0]);
     static if (is(typeof(result) == bool))
     {
-        enum bool lessEqual = !result;
+        enum bool isLessEqual = !result;
     }
     else
     {
-        enum bool lessEqual = result >= 0;
+        enum bool isLessEqual = result >= 0;
     }
 }
 
-private template equalTo(Args...)
+///
+pure nothrow @safe @nogc unittest
+{
+    enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
+    static assert(isLessEqual!(boolCmp, byte, int));
+    static assert(isLessEqual!(boolCmp, uint, int));
+    static assert(!isLessEqual!(boolCmp, long, int));
+
+    enum ptrdiff_t intCmp(T, U) = T.sizeof - U.sizeof;
+    static assert(isLessEqual!(intCmp, byte, int));
+    static assert(isLessEqual!(intCmp, uint, int));
+    static assert(!isLessEqual!(intCmp, long, int));
+}
+
+/**
+ * Tests whether $(D_INLINECODE Args[0]) is greater than or equal to
+ * $(D_INLINECODE Args[1]) according to $(D_PARAM cmp).
+ *
+ * $(D_PARAM cmp) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE Args[0] < Args[1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE Args[0] < Args[1]), a positive number that
+ *       $(D_INLINECODE Args[0] > Args[1]), `0` if they equal.)
+ * )
+ *
+ * Params:
+ *  Args = Two aliases to compare for equality.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE Args[0]) is greater than or
+ *          equal to $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
+ */
+template isGreaterEqual(alias cmp, Args...)
+if (Args.length == 2)
+{
+    private enum result = cmp!Args;
+    static if (is(typeof(result) == bool))
+    {
+        enum bool isGreaterEqual = !result;
+    }
+    else
+    {
+        enum bool isGreaterEqual = result >= 0;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
+    static assert(!isGreaterEqual!(boolCmp, byte, int));
+    static assert(isGreaterEqual!(boolCmp, uint, int));
+    static assert(isGreaterEqual!(boolCmp, long, int));
+
+    enum ptrdiff_t intCmp(T, U) = T.sizeof - U.sizeof;
+    static assert(!isGreaterEqual!(intCmp, byte, int));
+    static assert(isGreaterEqual!(intCmp, uint, int));
+    static assert(isGreaterEqual!(intCmp, long, int));
+}
+
+/**
+ * Tests whether $(D_INLINECODE Args[0]) is less than
+ * $(D_INLINECODE Args[1]) according to $(D_PARAM cmp).
+ *
+ * $(D_PARAM cmp) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE Args[0] < Args[1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE Args[0] < Args[1]), a positive number that
+ *       $(D_INLINECODE Args[0] > Args[1]), `0` if they equal.)
+ * )
+ *
+ * Params:
+ *  Args = Two aliases to compare for equality.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE Args[0]) is less than
+ *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
+ */
+template isLess(alias cmp, Args...)
+if (Args.length == 2)
+{
+    private enum result = cmp!Args;
+    static if (is(typeof(result) == bool))
+    {
+        enum bool isLess = result;
+    }
+    else
+    {
+        enum bool isLess = result < 0;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
+    static assert(isLess!(boolCmp, byte, int));
+    static assert(!isLess!(boolCmp, uint, int));
+    static assert(!isLess!(boolCmp, long, int));
+
+    enum ptrdiff_t intCmp(T, U) = T.sizeof - U.sizeof;
+    static assert(isLess!(intCmp, byte, int));
+    static assert(!isLess!(intCmp, uint, int));
+    static assert(!isLess!(intCmp, long, int));
+}
+
+/**
+ * Tests whether $(D_INLINECODE Args[0]) is greater than
+ * $(D_INLINECODE Args[1]) according to $(D_PARAM cmp).
+ *
+ * $(D_PARAM cmp) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE Args[0] < Args[1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE Args[0] < Args[1]), a positive number that
+ *       $(D_INLINECODE Args[0] > Args[1]), `0` if they equal.)
+ * )
+ *
+ * Params:
+ *  Args = Two aliases to compare for equality.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE Args[0]) is greater than
+ *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
+ */
+template isGreater(alias cmp, Args...)
+if (Args.length == 2)
+{
+    private enum result = cmp!Args;
+    static if (is(typeof(result) == bool))
+    {
+        enum bool isGreater = !result && cmp!(Args[1], Args[0]);
+    }
+    else
+    {
+        enum bool isGreater = result > 0;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
+    static assert(!isGreater!(boolCmp, byte, int));
+    static assert(!isGreater!(boolCmp, uint, int));
+    static assert(isGreater!(boolCmp, long, int));
+
+    enum ptrdiff_t intCmp(T, U) = T.sizeof - U.sizeof;
+    static assert(!isGreater!(intCmp, byte, int));
+    static assert(!isGreater!(intCmp, uint, int));
+    static assert(isGreater!(intCmp, long, int));
+}
+
+/**
+ * Tests whether $(D_INLINECODE Args[0]) is equal to $(D_INLINECODE Args[1]).
+ *
+ * $(D_PSYMBOL isEqual) checks first if $(D_PARAM Args) can be compared directly. If not, they are compared as types:
+ * $(D_INLINECODE is(Args[0] == Args[1])). It it fails, the arguments are
+ * considered to be not equal.
+ *
+ * Params:
+ *  Args = Two aliases to compare for equality.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE Args[0]) is equal to
+ *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
+ */
+template isEqual(Args...)
 if (Args.length == 2)
 {
     static if ((is(typeof(Args[0] == Args[1])) && (Args[0] == Args[1]))
             || is(Args[0] == Args[1]))
     {
-        enum bool equalTo = true;
+        enum bool isEqual = true;
     }
     else
     {
-        enum bool equalTo = false;
+        enum bool isEqual = false;
     }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isEqual!(int, int));
+    static assert(!isEqual!(5, int));
+    static assert(!isEqual!(5, 8));
+}
+
+/**
+ * Tests whether $(D_INLINECODE Args[0]) isn't equal to
+ * $(D_INLINECODE Args[1]).
+ *
+ * $(D_PSYMBOL isNotEqual) checks first if $(D_PARAM Args) can be compared directly. If not, they are compared as types:
+ * $(D_INLINECODE is(Args[0] == Args[1])). It it fails, the arguments are
+ * considered to be not equal.
+ *
+ * Params:
+ *  Args = Two aliases to compare for equality.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE Args[0]) isn't equal to
+ *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
+ */
+template isNotEqual(Args...)
+if (Args.length == 2)
+{
+    enum bool isNotEqual = !isEqual!Args;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(!isNotEqual!(int, int));
+    static assert(isNotEqual!(5, int));
+    static assert(isNotEqual!(5, 8));
 }
 
 /**
@@ -196,7 +418,7 @@ if (Args.length > 0)
     {
         enum ptrdiff_t indexOf = -1;
     }
-    else static if (equalTo!(Args[0 .. 2]))
+    else static if (isEqual!(Args[0 .. 2]))
     {
         enum ptrdiff_t indexOf = i;
     }
@@ -391,7 +613,7 @@ template staticIsSorted(alias cmp, L...)
     else
     {
         // `L` is sorted if the both halves and the boundary values are sorted.
-        enum bool staticIsSorted = lessEqual!(cmp, L[$ / 2 - 1], L[$ / 2])
+        enum bool staticIsSorted = isLessEqual!(cmp, L[$ / 2 - 1], L[$ / 2])
                                 && staticIsSorted!(cmp, L[0 .. $ / 2])
                                 && staticIsSorted!(cmp, L[$ / 2 .. $]);
     }
@@ -507,7 +729,7 @@ private template ReplaceOne(L...)
     {
         alias ReplaceOne = AliasSeq!();
     }
-    else static if (equalTo!(L[0], L[2]))
+    else static if (isEqual!(L[0], L[2]))
     {
         alias ReplaceOne = AliasSeq!(L[1], L[3 .. $]);
     }
@@ -570,7 +792,7 @@ private template ReplaceAllImpl(L...)
     else
     {
         private alias Rest = ReplaceAllImpl!(L[0], L[1], L[3 .. $]);
-        static if (equalTo!(L[0], L[2]))
+        static if (isEqual!(L[0], L[2]))
         {
             alias ReplaceAllImpl = AliasSeq!(L[1], Rest);
         }
@@ -707,7 +929,7 @@ template staticSort(alias cmp, L...)
             alias merge = AliasSeq!();
         }
         else static if (B >= Right.length
-                     || (A < Left.length && lessEqual!(cmp, Left[A], Right[B])))
+                     || (A < Left.length && isLessEqual!(cmp, Left[A], Right[B])))
         {
             alias merge = AliasSeq!(Left[A], merge!(A + 1, B));
         }
@@ -823,7 +1045,7 @@ if (L.length > 0)
     {
         alias EraseOne = AliasSeq!();
     }
-    else static if (equalTo!(L[0 .. 2]))
+    else static if (isEqual!(L[0 .. 2]))
     {
         alias EraseOne = AliasSeq!(L[2 .. $]);
     }
@@ -867,7 +1089,7 @@ private template EraseAllImpl(L...)
     {
         alias EraseAllImpl = AliasSeq!();
     }
-    else static if (equalTo!(L[0 .. 2]))
+    else static if (isEqual!(L[0 .. 2]))
     {
         alias EraseAllImpl = EraseAllImpl!(L[0], L[2 .. $]);
     }
@@ -1005,8 +1227,67 @@ template aliasSeqOf(alias range)
 ///
 pure nothrow @safe @nogc unittest
 {
-    foreach (i, e; aliasSeqOf!([0, 1, 2, 3]))
+    static assert(aliasSeqOf!([0, 1, 2, 3]) == AliasSeq!(0, 1, 2, 3));
+}
+
+/**
+ * Produces a alias sequence consisting of every $(D_PARAM n)th element of
+ * $(D_PARAM Args), starting with the first.
+ *
+ * Params:
+ *  n    = Step.
+ *  Args = The items to stride.
+ *
+ * Returns: Alias sequence of every $(D_PARAM n)th element of $(D_PARAM Args).
+ */
+template Stride(size_t n, Args...)
+if (n > 0)
+{
+    static if (Args.length > n)
     {
-        static assert(i == e);
+        alias Stride = AliasSeq!(Args[0], Stride!(n, Args[n .. $]));
+    }
+    else static if (Args.length > 0)
+    {
+        alias Stride = AliasSeq!(Args[0]);
+    }
+    else
+    {
+        alias Stride = AliasSeq!();
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(Stride!(3, 1, 2, 3, 4, 5, 6, 7, 8) == AliasSeq!(1, 4, 7));
+    static assert(Stride!(2, 1, 2, 3) == AliasSeq!(1, 3));
+    static assert(Stride!(2, 1, 2) == AliasSeq!(1));
+    static assert(Stride!(2, 1) == AliasSeq!(1));
+    static assert(Stride!(1, 1, 2, 3) == AliasSeq!(1, 2, 3));
+    static assert(is(Stride!3 == AliasSeq!()));
+}
+
+/**
+ * Aliases itself to $(D_INLINECODE T[0]) if $(D_PARAM cond) is $(D_KEYWORD true),
+ * to $(D_INLINECODE T[1]) if $(D_KEYWORD false).
+ *
+ * Params:
+ *  cond = Template predicate.
+ *  T    = Two arguments.
+ *
+ * Returns: $(D_INLINECODE T[0]) if $(D_PARAM cond) is $(D_KEYWORD true),
+ * $(D_INLINECODE T[1]) otherwise.
+ */
+template Select(bool cond, T...)
+if (T.length == 2)
+{
+    static if (condition)
+    {
+        alias Select = L[0];
+    }
+    else
+    {
+        alias Select = L[1];
     }
 }

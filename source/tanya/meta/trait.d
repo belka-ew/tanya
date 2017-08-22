@@ -1617,110 +1617,441 @@ pure nothrow @safe @nogc unittest
     }
 }
 
+deprecated("Use tanya.meta.transform.FunctionTypeOf instead")
+alias FunctionTypeOf = tanya.meta.transform.FunctionTypeOf;
+
+deprecated("Use tanya.meta.transform.ReturnType instead")
+alias ReturnType = tanya.meta.transform.ReturnType;
+
 /**
- * Params:
- *  F = A function.
+ * Returns size of the type $(D_PARAM T).
  *
- * Returns: Type of the function $(D_PARAM F).
- */
-template FunctionTypeOf(F...)
-if (isCallable!F)
+ * Params:
+ *  T = A type.
+ *
+ * Returns: Size of the type $(D_PARAM T).
+ */ 
+enum size_t sizeOf(T) = T.sizeof;
+
+///
+pure nothrow @safe @nogc unittest
 {
-    static if ((is(typeof(F[0]) T : T*) && is(T == function))
-            || (is(F[0] T : T*) && is(T == function))
-            || is(F[0] T == delegate)
-            || is(typeof(F[0]) T == delegate)
-            || is(F[0] T == function)
-            || is(typeof(&F[0]) T == delegate)
-            || (is(typeof(&F[0]) T : T*) && is(T == function)))
+    static assert(sizeOf!(bool function()) == size_t.sizeof);
+    static assert(sizeOf!bool == 1);
+    static assert(sizeOf!short == 2);
+    static assert(sizeOf!int == 4);
+    static assert(sizeOf!long == 8);
+    static assert(sizeOf!(void[16]) == 16);
+}
+
+/**
+ * Returns the mangled name of the symbol $(D_PARAM T).
+ *
+ * Params:
+ *  T = A symbol.
+ *
+ * Returns: Mangled name of $(D_PARAM T).
+ */
+enum string mangledName(T) = T.mangleof;
+
+///
+enum string mangledName(alias T) = T.mangleof;
+
+/**
+ * Tests whether $(D_INLINECODE Args[0]) and $(D_INLINECODE Args[1]) are the
+ * same symbol.
+ *
+ * Params:
+ *  Args = Two symbols to be tested.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM Args) are the same symbol,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template isSame(Args...)
+if (Args.length == 2)
+{
+    enum bool isSame = __traits(isSame, Args[0], Args[1]);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isSame!("string", "string"));
+    static assert(!isSame!(string, immutable(char)[]));
+}
+
+/**
+ * Tests whether $(D_PARAM T) is a template.
+ *
+ * $(D_PSYMBOL isTemplate) isn't $(D_KEYWORD true) for template instances,
+ * since the latter already represent some type. Only not instantiated
+ * templates, i.e. that accept some template parameters, are considered
+ * templates.
+ *
+ * Params:
+ *  T = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a template,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isTemplate(alias T) = __traits(isTemplate, T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S(T)
     {
-        alias FunctionTypeOf = T;
+    }
+    static assert(isTemplate!S);
+    static assert(!isTemplate!(S!int));
+}
+
+/**
+ * Tests whether $(D_PARAM I) is an instance of template $(D_PARAM T).
+ *
+ * Params:
+ *  T = Template.
+ *  I = Template instance.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM I) is an instance of $(D_PARAM T),
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isInstanceOf(alias T, I) = is(I == T!Args, Args...);
+
+template isInstanceOf(alias T, alias I)
+{
+    static if (is(typeof(TemplateOf!I)))
+    {
+        enum bool isInstanceOf = isSame!(TemplateOf!I, T);
     }
     else
     {
-        alias FunctionTypeOf = FunctionTypeOf!(F[0].opCall);
+        enum bool isInstanceOf = false;
     }
 }
 
 ///
 pure nothrow @safe @nogc unittest
 {
-    static assert(is(FunctionTypeOf!(void function()) == function));
-    static assert(is(FunctionTypeOf!(() {}) == function));
-}
-
-private pure nothrow @safe @nogc unittest
-{
-    static assert(is(FunctionTypeOf!(void delegate()) == function));
-
-    static void staticFunc()
+    struct S(T)
     {
     }
-    auto functionPointer = &staticFunc;
-    static assert(is(FunctionTypeOf!staticFunc == function));
-    static assert(is(FunctionTypeOf!functionPointer == function));
+    static assert(isInstanceOf!(S, S!int));
 
-    void func()
+    static void func(T)()
     {
     }
-    auto dg = &func;
-    static assert(is(FunctionTypeOf!func == function));
-    static assert(is(FunctionTypeOf!dg == function));
+    static assert(isInstanceOf!(func, func!int));
 
-    interface I
+    template T(U)
     {
-        @property int prop();
     }
-    static assert(is(FunctionTypeOf!(I.prop) == function));
+    static assert(isInstanceOf!(T, T!int));
 
-    struct S
-    {
-        void opCall()
-        {
-        }
-    }
-    class C
-    {
-        static void opCall()
-        {
-        }
-    }
-    S s;
-
-    static assert(is(FunctionTypeOf!s == function));
-    static assert(is(FunctionTypeOf!C == function));
-    static assert(is(FunctionTypeOf!S == function));
-}
-
-private pure nothrow @safe @nogc unittest
-{
-    struct S2
-    {
-        @property int opCall()
-        {
-            return 0;
-        }
-    }
-    S2 s2;
-    static assert(is(FunctionTypeOf!S2 == function));
-    static assert(is(FunctionTypeOf!s2 == function));
 }
 
 /**
- * Params:
- *  F = A callable object.
+ * Checks whether $(D_PARAM From) is implicitly (without explicit
+ * $(D_KEYWORD cast)) to $(D_PARAM To).
  *
- * Returns: Return type of $(D_PARAM F).
+ * Params:
+ *  From = Source type.
+ *  To   = Conversion target type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM From) is implicitly convertible to
+ *          $(D_PARAM To), $(D_KEYWORD false) if not.
  */
-template ReturnType(F...)
-if (isCallable!F)
+enum bool isImplicitlyConvertible(From, To) = is(From : To);
+
+///
+pure nothrow @safe @nogc unittest
 {
-    static if (is(FunctionTypeOf!(F[0]) T == return))
+    static assert(isImplicitlyConvertible!(const(byte), byte));
+    static assert(isImplicitlyConvertible!(byte, char));
+    static assert(isImplicitlyConvertible!(byte, short));
+    static assert(!isImplicitlyConvertible!(short, byte));
+    static assert(isImplicitlyConvertible!(string, const(char)[]));
+}
+
+/**
+ * Determine whether $(D_PARAM T) is an interface.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an interface,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isInterface(T) = is(T == interface);
+
+/**
+ * Determine whether $(D_PARAM T) is a class.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a class
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isClass(T) = is(T == class);
+
+/**
+ * Determine whether $(D_PARAM T) is a struct.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a struct,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isStruct(T) = is(T == struct);
+
+/**
+ * Returns a tuple of base classes and interfaces of $(D_PARAM T).
+ *
+ * $(D_PSYMBOL BaseTypeTuple) returns only classes and interfaces $(D_PARAM T)
+ * directly inherits from, but not the base classes and interfaces of its parents.
+ *
+ * Params:
+ *  T = Class or interface type.
+ *
+ * Returns: A tuple of base classes or interfaces of ($D_PARAM T).
+ *
+ * See_Also: $(D_PSYMBOL TransitiveBaseTypeTuple).
+ */
+template BaseTypeTuple(T)
+if (is(T == class) || (is(T == interface)))
+{
+    static if (is(T Tuple == super))
     {
-        alias ReturnType = T;
+        alias BaseTypeTuple = Tuple;
     }
     else
     {
-        static assert(false, "Argument is not a callable");
+        static assert(false, "Argument isn't a class or interface");
     }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    interface I1
+    {
+    }
+    interface I2
+    {
+    }
+    interface I3 : I1, I2
+    {
+    }
+    interface I4
+    {
+    }
+    class A : I3, I4
+    {
+    }
+    static assert(is(BaseTypeTuple!A == AliasSeq!(Object, I3, I4)));
+    static assert(BaseTypeTuple!Object.length == 0);
+}
+
+/**
+ * Returns a tuple of all base classes and interfaces of $(D_PARAM T).
+ *
+ * $(D_PSYMBOL TransitiveBaseTypeTuple) returns first the parent class, then
+ * grandparent and so on. The last class is $(D_PSYMBOL Object). Then the interfaces
+ * follow.
+ *
+ * Params:
+ *  T = Class or interface type.
+ *
+ * Returns: A tuple of all base classes and interfaces of ($D_PARAM T).
+ *
+ * See_Also: $(D_PSYMBOL BaseTypeTuple).
+ */
+template TransitiveBaseTypeTuple(T)
+if (is(T == class) || is(T == interface))
+{
+    private template Impl(T...)
+    {
+        static if (T.length == 0)
+        {
+            alias Impl = AliasSeq!();
+        }
+        else
+        {
+            alias Impl = AliasSeq!(BaseTypeTuple!(T[0]),
+                                   staticMap!(ImplCopy, BaseTypeTuple!(T[0])));
+        }
+    }
+    private alias ImplCopy = Impl; // To avoid recursive template expansion.
+    private enum bool cmp(A, B) = is(B == interface) && is(A == class);
+
+    alias TransitiveBaseTypeTuple = NoDuplicates!(staticSort!(cmp, Impl!T));
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    interface I1
+    {
+    }
+    interface I2 : I1
+    {
+    }
+    class A : I2
+    {
+    }
+    class B : A, I1
+    {
+    }
+    class C : B, I2
+    {
+    }
+    alias Expected = AliasSeq!(B, A, Object, I2, I1);
+    static assert(is(TransitiveBaseTypeTuple!C == Expected));
+
+    static assert(is(TransitiveBaseTypeTuple!Object == AliasSeq!()));
+    static assert(is(TransitiveBaseTypeTuple!I2 == AliasSeq!(I1)));
+}
+
+/**
+ * Returns all the base classes of $(D_PARAM T), the direct parent class comes
+ * first, $(D_PSYMBOL Object) ist the last one.
+ *
+ * The only type that doesn't have any base class is $(D_PSYMBOL Object).
+ *
+ * Params:
+ *  T = Class type.
+ *
+ * Returns: Base classes of $(D_PARAM T).
+ */
+template BaseClassesTuple(T)
+if (is(T == class))
+{
+    static if (is(T == Object))
+    {
+        alias BaseClassesTuple = AliasSeq!();
+    }
+    else
+    {
+        private alias Parents = BaseTypeTuple!T;
+        alias BaseClassesTuple = AliasSeq!(Parents[0], BaseClassesTuple!(Parents[0]));
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    interface I1
+    {
+    }
+    interface I2
+    {
+    }
+    class A : I1, I2
+    {
+    }
+    class B : A, I1
+    {
+    }
+    class C : B, I2
+    {
+    }
+    static assert(is(BaseClassesTuple!C == AliasSeq!(B, A, Object)));
+    static assert(BaseClassesTuple!Object.length == 0);
+}
+
+/**
+ * Returns all the interfaces $(D_PARAM T) inherits from.
+ *
+ * Params:
+ *  T = Class or interface type.
+ *
+ * Returns: Interfaces $(D_PARAM T) inherits from.
+ */
+template InterfacesTuple(T)
+if (is(T == class) || is(T == interface))
+{
+    alias InterfacesTuple = Filter!(isInterface, TransitiveBaseTypeTuple!T);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    interface I1
+    {
+    }
+    interface I2 : I1
+    {
+    }
+    class A : I2
+    {
+    }
+    class B : A, I1
+    {
+    }
+    class C : B, I2
+    {
+    }
+    static assert(is(InterfacesTuple!C == AliasSeq!(I2, I1)));
+
+    static assert(is(InterfacesTuple!Object == AliasSeq!()));
+    static assert(is(InterfacesTuple!I1 == AliasSeq!()));
+}
+
+/**
+ * Tests whether a value of type $(D_PARAM Rhs) can be assigned to a variable
+ * of type $(D_PARAM Lhs).
+ *
+ * If $(D_PARAM Rhs) isn't specified, $(D_PSYMBOL isAssignable) tests whether a
+ * value of type $(D_PARAM Lhs) can be assigned to a variable of the same type.
+ *
+ * $(D_PSYMBOL isAssignable) tells whether $(D_PARAM Rhs) can be assigned by
+ * value as well by reference.
+ *
+ * Params:
+ *  Lhs = Variable type.
+ *  Rhs = Expression type.
+ *
+ * Returns: $(D_KEYWORD true) if a value of type $(D_PARAM Rhs) can be assigned
+ *          to a variable of type $(D_PARAM Lhs), $(D_KEYWORD false) otherwise.
+ */
+template isAssignable(Lhs, Rhs = Lhs)
+{
+    enum bool isAssignable = is(typeof({
+        Lhs lhs = Lhs.init;
+        Rhs rhs = Rhs.init;
+        lhs = ((inout ref Rhs) => Rhs.init)(rhs);
+    }));
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S1
+    {
+        @disable this();
+        @disable this(this);
+    }
+    struct S2
+    {
+        void opAssign(S1 s) pure nothrow @safe @nogc
+        {
+        }
+    }
+    struct S3
+    {
+        void opAssign(ref S1 s) pure nothrow @safe @nogc
+        {
+        }
+
+    }
+    static assert(isAssignable!(S2, S1));
+    static assert(!isAssignable!(S3, S1));
+
+    static assert(isAssignable!(const(char)[], string));
+    static assert(!isAssignable!(string, char[]));
+
+    static assert(isAssignable!int);
+    static assert(!isAssignable!(const int, int));
 }
