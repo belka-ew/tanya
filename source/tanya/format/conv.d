@@ -17,6 +17,7 @@ module tanya.format.conv;
 import std.traits;
 import tanya.container.string;
 import tanya.memory;
+import tanya.memory.op;
 
 /**
  * Thrown if a type conversion fails.
@@ -669,32 +670,17 @@ package char[] number2String(T)(const T number, char[] buffer)
     // Write the string.
     char* bp = buffer.ptr;
 
-    // Set sign.
+    // Set the sign.
     if (number < 0)
     {
         *bp++ = '-';
     }
 
     // Copy the string into the target buffer.
-    uint n = l;
-    while (n)
-    {
-        int i = n;
-        n -= i;
+    int i = l;
+    copy(start[0 .. l], bp[0 .. l]);
+    bp += l;
 
-        while (i >= 4)
-        {
-            *cast(uint*) bp = *cast(uint*) start;
-            bp += 4;
-            start += 4;
-            i -= 4;
-        }
-        while (i)
-        {
-            *bp++ = *start++;
-            --i;
-        }
-    }
     return buffer[0 .. bp - buffer.ptr];
 }
 
