@@ -15,9 +15,6 @@
  */
 module tanya.meta.metafunction;
 
-import tanya.meta.trait;
-import tanya.meta.transform;
-
 /**
  * Tests whether $(D_INLINECODE Args[0]) is less than or equal to
  * $(D_INLINECODE Args[1]) according to $(D_PARAM cmp).
@@ -268,6 +265,15 @@ pure nothrow @safe @nogc unittest
     static assert(isNotEqual!(5, int));
     static assert(isNotEqual!(5, 8));
 }
+
+version (TanyaPhobos)
+{
+    public import std.meta;
+}
+else:
+
+import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Creates an alias for $(D_PARAM T).

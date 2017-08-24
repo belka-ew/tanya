@@ -137,17 +137,6 @@ body
     .allocator = allocator;
 }
 
-private nothrow @nogc unittest
-{
-    import tanya.memory.mallocator;
-
-    auto oldAllocator = defaultAllocator;
-    defaultAllocator = Mallocator.instance;
-    assert(defaultAllocator is Mallocator.instance);
-
-    defaultAllocator = oldAllocator;
-}
-
 /**
  * Returns the size in bytes of the state that needs to be allocated to hold an
  * object of type $(D_PARAM T).

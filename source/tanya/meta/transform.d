@@ -17,6 +17,31 @@
  */
 module tanya.meta.transform;
 
+version (TanyaPhobos)
+{
+    public import std.traits : Unqual,
+                               OriginalType,
+                               CopyConstness,
+                               CopyTypeQualifiers,
+                               Unsigned,
+                               Signed,
+                               PointerTarget,
+                               KeyType,
+                               ValueType,
+                               Promoted,
+                               FunctionTypeOf,
+                               ReturnType,
+                               TemplateOf,
+                               InoutOf,
+                               ConstOf,
+                               SharedOf,
+                               SharedInoutOf,
+                               SharedConstOf,
+                               ImmutableOf,
+                               QualifierOf;
+}
+else:
+
 import tanya.meta.trait;
 
 /**

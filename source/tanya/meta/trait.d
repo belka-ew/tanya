@@ -21,6 +21,381 @@ import tanya.meta.metafunction;
 import tanya.meta.transform;
 
 /**
+ * Determines whether $(D_PARAM T) is a wide string, i.e. consists of
+ * $(D_KEYWORD dchar).
+ *
+ * The character type of the string can be qualified with $(D_KEYWORD const),
+ * $(D_KEYWORD immutable) or $(D_KEYWORD inout), but an occurrence of
+ * $(D_KEYWORD shared) in the character type results in returning
+ * $(D_KEYWORD false).
+ * The string itself (in contrast to its character type) can have any type
+ * qualifiers.
+ *
+ * Static $(D_KEYWORD char) and $(D_KEYWORD wchar) arrays are not considered
+ * strings.
+ *
+ * Params:
+ *  T = A Type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a wide string,
+ *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL isNarrowString).
+ */
+enum bool isWideString(T) = is(T : const dchar[]) && !isStaticArray!T;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isWideString!(dchar[]));
+    static assert(!isWideString!(char[]));
+    static assert(!isWideString!(wchar[]));
+
+    static assert(isWideString!dstring);
+    static assert(!isWideString!string);
+    static assert(!isWideString!wstring);
+
+    static assert(isWideString!(const dstring));
+    static assert(!isWideString!(const string));
+    static assert(!isWideString!(const wstring));
+
+    static assert(isWideString!(shared dstring));
+    static assert(!isWideString!(shared string));
+    static assert(!isWideString!(shared wstring));
+
+    static assert(isWideString!(const(dchar)[]));
+    static assert(isWideString!(inout(dchar)[]));
+    static assert(!isWideString!(shared(const(dchar))[]));
+    static assert(!isWideString!(shared(dchar)[]));
+    static assert(!isWideString!(dchar[10]));
+}
+
+/**
+ * Finds the type with the smallest size in the $(D_PARAM Args) list. If
+ * several types have the same type, the leftmost is returned.
+ *
+ * Params:
+ *  Args = Type list.
+ *
+ * Returns: The smallest type.
+ *
+ * See_Also: $(D_PSYMBOL Largest).
+ */
+template Smallest(Args...)
+if (Args.length >= 1)
+{
+    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
+
+    static if (Args.length == 1)
+    {
+        alias Smallest = Args[0];
+    }
+    else static if (Smallest!(Args[1 .. $]).sizeof < Args[0].sizeof)
+    {
+        alias Smallest = Smallest!(Args[1 .. $]);
+    }
+    else
+    {
+        alias Smallest = Args[0];
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Smallest!(int, ushort, uint, short) == ushort));
+    static assert(is(Smallest!(short) == short));
+    static assert(is(Smallest!(ubyte[8], ubyte[5]) == ubyte[5]));
+    static assert(!is(Smallest!(short, 5)));
+}
+
+/**
+ * Determines whether $(D_PARAM T) is a complex type.
+ *
+ * Complex types are:
+ * $(UL
+ *  $(LI cfloat)
+ *  $(LI ifloat)
+ *  $(LI cdouble)
+ *  $(LI idouble)
+ *  $(LI creal)
+ *  $(LI ireal)
+ * )
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a complex type,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isComplex(T) = is(Unqual!(OriginalType!T) == cfloat)
+                      || is(Unqual!(OriginalType!T) == ifloat)
+                      || is(Unqual!(OriginalType!T) == cdouble)
+                      || is(Unqual!(OriginalType!T) == idouble)
+                      || is(Unqual!(OriginalType!T) == creal)
+                      || is(Unqual!(OriginalType!T) == ireal);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isComplex!cfloat);
+    static assert(isComplex!ifloat);
+    static assert(isComplex!cdouble);
+    static assert(isComplex!idouble);
+    static assert(isComplex!creal);
+    static assert(isComplex!ireal);
+
+    static assert(!isComplex!float);
+    static assert(!isComplex!double);
+    static assert(!isComplex!real);
+}
+
+/**
+ * POD (Plain Old Data) is a $(D_KEYWORD struct) without constructors,
+ * destructors and member functions.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a POD type,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isPOD(T) = __traits(isPOD, T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S1
+    {
+        void method()
+        {
+        }
+    }
+    static assert(!isPOD!S1);
+
+    struct S2
+    {
+        void function() val; // Function pointer, not a member function.
+    }
+    static assert(isPOD!S2);
+
+    struct S3
+    {
+        this(this)
+        {
+        }
+    }
+    static assert(!isPOD!S3);
+}
+
+/**
+ * Returns size of the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: Size of the type $(D_PARAM T).
+ */ 
+enum size_t sizeOf(T) = T.sizeof;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(sizeOf!(bool function()) == size_t.sizeof);
+    static assert(sizeOf!bool == 1);
+    static assert(sizeOf!short == 2);
+    static assert(sizeOf!int == 4);
+    static assert(sizeOf!long == 8);
+    static assert(sizeOf!(void[16]) == 16);
+}
+
+/**
+ * Tests whether $(D_INLINECODE Args[0]) and $(D_INLINECODE Args[1]) are the
+ * same symbol.
+ *
+ * Params:
+ *  Args = Two symbols to be tested.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM Args) are the same symbol,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template isSame(Args...)
+if (Args.length == 2)
+{
+    enum bool isSame = __traits(isSame, Args[0], Args[1]);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isSame!("string", "string"));
+    static assert(!isSame!(string, immutable(char)[]));
+}
+
+/**
+ * Tests whether $(D_PARAM T) is a template.
+ *
+ * $(D_PSYMBOL isTemplate) isn't $(D_KEYWORD true) for template instances,
+ * since the latter already represent some type. Only not instantiated
+ * templates, i.e. that accept some template parameters, are considered
+ * templates.
+ *
+ * Params:
+ *  T = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a template,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isTemplate(alias T) = __traits(isTemplate, T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S(T)
+    {
+    }
+    static assert(isTemplate!S);
+    static assert(!isTemplate!(S!int));
+}
+
+/**
+ * Determine whether $(D_PARAM T) is an interface.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an interface,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isInterface(T) = is(T == interface);
+
+/**
+ * Determine whether $(D_PARAM T) is a class.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a class
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isClass(T) = is(T == class);
+
+/**
+ * Determine whether $(D_PARAM T) is a struct.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a struct,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isStruct(T) = is(T == struct);
+
+/**
+ * Params:
+ *  T      = Aggregate type.
+ *  member = Symbol name.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM member) is a static method of
+ *          $(D_PARAM T), $(D_KEYWORD false) otherwise.
+ */
+template hasStaticMember(T, string member)
+{
+    static if (hasMember!(T, member))
+    {
+        alias Member = Alias!(__traits(getMember, T, member));
+
+        static if (__traits(isStaticFunction, Member)
+                || (!isFunction!Member && is(typeof(&Member))))
+        {
+            enum bool hasStaticMember = true;
+        }
+        else
+        {
+            enum bool hasStaticMember = false;
+        }
+    }
+    else
+    {
+        enum bool hasStaticMember = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S
+    {
+         int member1;
+         void member2()
+         {
+         }
+         static int member3;
+         static void member4()
+         {
+         }
+         static void function() member5;
+    }
+    static assert(!hasStaticMember!(S, "member1"));
+    static assert(!hasStaticMember!(S, "member2"));
+    static assert(hasStaticMember!(S, "member3"));
+    static assert(hasStaticMember!(S, "member4"));
+    static assert(hasStaticMember!(S, "member5"));
+}
+
+version (TanyaPhobos)
+{
+    public import std.traits : isFloatingPoint,
+                               isSigned,
+                               isUnsigned,
+                               isIntegral,
+                               isNumeric,
+                               isBoolean,
+                               isSomeChar,
+                               isScalarType,
+                               isBasicType,
+                               isPointer,
+                               isArray,
+                               isStaticArray,
+                               isDynamicArray,
+                               isAssociativeArray,
+                               isBuiltinType,
+                               isAggregateType,
+                               isType,
+                               isNarrowString,
+                               isSomeString,
+                               mostNegative,
+                               Largest,
+                               isCopyable,
+                               isAbstractClass,
+                               isFinalClass,
+                               isAbstractFunction,
+                               isFinalFunction,
+                               isFunctionPointer,
+                               isDelegate,
+                               isFunction,
+                               isSomeFunction,
+                               isCallable,
+                               hasMember,
+                               isMutable,
+                               isNested,
+                               isNestedFunction,
+                               mangledName,
+                               isInstanceOf,
+                               isImplicitlyConvertible,
+                               BaseTypeTuple,
+                               TransitiveBaseTypeTuple,
+                               BaseClassesTuple,
+                               InterfacesTuple,
+                               isAssignable,
+                               TemplateArgsOf,
+                               Parameters,
+                               ParameterIdentifierTuple,
+                               functionAttributes;
+}
+else:
+
+/**
  * Determines whether $(D_PARAM T) is a floating point type.
  *
  * Floating point types are:
@@ -171,47 +546,6 @@ pure nothrow @safe @nogc unittest
     static assert(isIntegral!ubyte);
     static assert(isIntegral!byte);
     static assert(!isIntegral!float);
-}
-
-/**
- * Determines whether $(D_PARAM T) is a complex type.
- *
- * Complex types are:
- * $(UL
- *  $(LI cfloat)
- *  $(LI ifloat)
- *  $(LI cdouble)
- *  $(LI idouble)
- *  $(LI creal)
- *  $(LI ireal)
- * )
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a complex type,
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isComplex(T) = is(Unqual!(OriginalType!T) == cfloat)
-                      || is(Unqual!(OriginalType!T) == ifloat)
-                      || is(Unqual!(OriginalType!T) == cdouble)
-                      || is(Unqual!(OriginalType!T) == idouble)
-                      || is(Unqual!(OriginalType!T) == creal)
-                      || is(Unqual!(OriginalType!T) == ireal);
-
-///
-pure nothrow @safe @nogc unittest
-{
-    static assert(isComplex!cfloat);
-    static assert(isComplex!ifloat);
-    static assert(isComplex!cdouble);
-    static assert(isComplex!idouble);
-    static assert(isComplex!creal);
-    static assert(isComplex!ireal);
-
-    static assert(!isComplex!float);
-    static assert(!isComplex!double);
-    static assert(!isComplex!real);
 }
 
 /**
@@ -686,56 +1020,6 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Determines whether $(D_PARAM T) is a wide string, i.e. consists of
- * $(D_KEYWORD dchar).
- *
- * The character type of the string can be qualified with $(D_KEYWORD const),
- * $(D_KEYWORD immutable) or $(D_KEYWORD inout), but an occurrence of
- * $(D_KEYWORD shared) in the character type results in returning
- * $(D_KEYWORD false).
- * The string itself (in contrast to its character type) can have any type
- * qualifiers.
- *
- * Static $(D_KEYWORD char) and $(D_KEYWORD wchar) arrays are not considered
- * strings.
- *
- * Params:
- *  T = A Type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a wide string,
- *          $(D_KEYWORD false) otherwise.
- *
- * See_Also: $(D_PSYMBOL isNarrowString).
- */
-enum bool isWideString(T) = is(T : const dchar[]) && !isStaticArray!T;
-
-///
-pure nothrow @safe @nogc unittest
-{
-    static assert(isWideString!(dchar[]));
-    static assert(!isWideString!(char[]));
-    static assert(!isWideString!(wchar[]));
-
-    static assert(isWideString!dstring);
-    static assert(!isWideString!string);
-    static assert(!isWideString!wstring);
-
-    static assert(isWideString!(const dstring));
-    static assert(!isWideString!(const string));
-    static assert(!isWideString!(const wstring));
-
-    static assert(isWideString!(shared dstring));
-    static assert(!isWideString!(shared string));
-    static assert(!isWideString!(shared wstring));
-
-    static assert(isWideString!(const(dchar)[]));
-    static assert(isWideString!(inout(dchar)[]));
-    static assert(!isWideString!(shared(const(dchar))[]));
-    static assert(!isWideString!(shared(dchar)[]));
-    static assert(!isWideString!(dchar[10]));
-}
-
-/**
  * Determines whether $(D_PARAM T) is a string, i.e. consists of
  * $(D_KEYWORD char), $(D_KEYWORD wchar) or $(D_KEYWORD dchar).
  *
@@ -872,45 +1156,6 @@ pure nothrow @safe @nogc unittest
     static assert(is(Largest!(short) == short));
     static assert(is(Largest!(ubyte[8], ubyte[5]) == ubyte[8]));
     static assert(!is(Largest!(short, 5)));
-}
-
-/**
- * Finds the type with the smallest size in the $(D_PARAM Args) list. If
- * several types have the same type, the leftmost is returned.
- *
- * Params:
- *  Args = Type list.
- *
- * Returns: The smallest type.
- *
- * See_Also: $(D_PSYMBOL Largest).
- */
-template Smallest(Args...)
-if (Args.length >= 1)
-{
-    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
-
-    static if (Args.length == 1)
-    {
-        alias Smallest = Args[0];
-    }
-    else static if (Smallest!(Args[1 .. $]).sizeof < Args[0].sizeof)
-    {
-        alias Smallest = Smallest!(Args[1 .. $]);
-    }
-    else
-    {
-        alias Smallest = Args[0];
-    }
-}
-
-///
-pure nothrow @safe @nogc unittest
-{
-    static assert(is(Smallest!(int, ushort, uint, short) == ushort));
-    static assert(is(Smallest!(short) == short));
-    static assert(is(Smallest!(ubyte[8], ubyte[5]) == ubyte[5]));
-    static assert(!is(Smallest!(short, 5)));
 }
 
 /**
@@ -1417,58 +1662,6 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Params:
- *  T      = Aggregate type.
- *  member = Symbol name.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM member) is a static method of
- *          $(D_PARAM T), $(D_KEYWORD false) otherwise.
- */
-template hasStaticMember(T, string member)
-{
-    static if (hasMember!(T, member))
-    {
-        alias Member = Alias!(__traits(getMember, T, member));
-
-        static if (__traits(isStaticFunction, Member)
-                || (!isFunction!Member && is(typeof(&Member))))
-        {
-            enum bool hasStaticMember = true;
-        }
-        else
-        {
-            enum bool hasStaticMember = false;
-        }
-    }
-    else
-    {
-        enum bool hasStaticMember = false;
-    }
-}
-
-///
-pure nothrow @safe @nogc unittest
-{
-    struct S
-    {
-         int member1;
-         void member2()
-         {
-         }
-         static int member3;
-         static void member4()
-         {
-         }
-         static void function() member5;
-    }
-    static assert(!hasStaticMember!(S, "member1"));
-    static assert(!hasStaticMember!(S, "member2"));
-    static assert(hasStaticMember!(S, "member3"));
-    static assert(hasStaticMember!(S, "member4"));
-    static assert(hasStaticMember!(S, "member5"));
-}
-
-/**
  * Determines whether $(D_PARAM T) is mutable, i.e. has one of the following
  * qualifiers or a combination of them:
  *
@@ -1529,44 +1722,6 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * POD (Plain Old Data) is a $(D_KEYWORD struct) without constructors,
- * destructors and member functions.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a POD type,
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isPOD(T) = __traits(isPOD, T);
-
-///
-pure nothrow @safe @nogc unittest
-{
-    struct S1
-    {
-        void method()
-        {
-        }
-    }
-    static assert(!isPOD!S1);
-
-    struct S2
-    {
-        void function() val; // Function pointer, not a member function.
-    }
-    static assert(isPOD!S2);
-
-    struct S3
-    {
-        this(this)
-        {
-        }
-    }
-    static assert(!isPOD!S3);
-}
-
-/**
  * Params:
  *  T = $(D_KEYWORD class), $(D_KEYWORD struct) or $(D_KEYWORD union) type.
  *
@@ -1624,27 +1779,6 @@ deprecated("Use tanya.meta.transform.ReturnType instead")
 alias ReturnType = tanya.meta.transform.ReturnType;
 
 /**
- * Returns size of the type $(D_PARAM T).
- *
- * Params:
- *  T = A type.
- *
- * Returns: Size of the type $(D_PARAM T).
- */ 
-enum size_t sizeOf(T) = T.sizeof;
-
-///
-pure nothrow @safe @nogc unittest
-{
-    static assert(sizeOf!(bool function()) == size_t.sizeof);
-    static assert(sizeOf!bool == 1);
-    static assert(sizeOf!short == 2);
-    static assert(sizeOf!int == 4);
-    static assert(sizeOf!long == 8);
-    static assert(sizeOf!(void[16]) == 16);
-}
-
-/**
  * Returns the mangled name of the symbol $(D_PARAM T).
  *
  * Params:
@@ -1656,55 +1790,6 @@ enum string mangledName(T) = T.mangleof;
 
 ///
 enum string mangledName(alias T) = T.mangleof;
-
-/**
- * Tests whether $(D_INLINECODE Args[0]) and $(D_INLINECODE Args[1]) are the
- * same symbol.
- *
- * Params:
- *  Args = Two symbols to be tested.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM Args) are the same symbol,
- *          $(D_KEYWORD false) otherwise.
- */
-template isSame(Args...)
-if (Args.length == 2)
-{
-    enum bool isSame = __traits(isSame, Args[0], Args[1]);
-}
-
-///
-pure nothrow @safe @nogc unittest
-{
-    static assert(isSame!("string", "string"));
-    static assert(!isSame!(string, immutable(char)[]));
-}
-
-/**
- * Tests whether $(D_PARAM T) is a template.
- *
- * $(D_PSYMBOL isTemplate) isn't $(D_KEYWORD true) for template instances,
- * since the latter already represent some type. Only not instantiated
- * templates, i.e. that accept some template parameters, are considered
- * templates.
- *
- * Params:
- *  T = A symbol.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a template,
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isTemplate(alias T) = __traits(isTemplate, T);
-
-///
-pure nothrow @safe @nogc unittest
-{
-    struct S(T)
-    {
-    }
-    static assert(isTemplate!S);
-    static assert(!isTemplate!(S!int));
-}
 
 /**
  * Tests whether $(D_PARAM I) is an instance of template $(D_PARAM T).
@@ -1770,39 +1855,6 @@ pure nothrow @safe @nogc unittest
     static assert(!isImplicitlyConvertible!(short, byte));
     static assert(isImplicitlyConvertible!(string, const(char)[]));
 }
-
-/**
- * Determine whether $(D_PARAM T) is an interface.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an interface,
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isInterface(T) = is(T == interface);
-
-/**
- * Determine whether $(D_PARAM T) is a class.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a class
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isClass(T) = is(T == class);
-
-/**
- * Determine whether $(D_PARAM T) is a struct.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a struct,
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isStruct(T) = is(T == struct);
 
 /**
  * Returns a tuple of base classes and interfaces of $(D_PARAM T).
@@ -2150,47 +2202,6 @@ pure nothrow @safe @nogc unittest
     static assert(P[0] == "stuff");
     static assert(P[1] == "");
     static assert(P[2] == "k");
-}
-
-/**
- * Returns number of the arguments of the function $(D_PARAM F).
- *
- * For typesafe variadic functions variadic arguments count as one argument.
- * For other variadic functions (D- and C-style) only non-variadic
- * arguments count.
- *
- * Params:
- *  F = A function:
- *
- * Returns: Number of the arguments of $(D_PARAM F).
- */
-template arity(F...)
-if (isCallable!F)
-{
-    static if (is(FunctionTypeOf!F T == function))
-    {
-        enum size_t arity = T.length;
-    }
-    else
-    {
-        static assert(false, "Function has no parameters");
-    }
-}
-
-///
-pure nothrow @safe @nogc unittest
-{
-    int func1(Object stuff = null, uint[] = null, uint k = 1);
-    static assert(arity!func1 == 3);
-
-    int func2();
-    static assert(arity!func2 == 0);
-
-    int func3(int, ...);
-    static assert(arity!func3 == 1);
-
-    int func4(int, int[]...);
-    static assert(arity!func4 == 2);
 }
 
 /// Attributes can be attached to a function.

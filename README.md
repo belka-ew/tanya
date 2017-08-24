@@ -30,11 +30,13 @@ string, Hash set.
 * `format`: Formatting and conversion functions.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
+* `meta`: Template metaprogramming package.
 * `net`: URL-Parsing, network programming.
 * `network`: Socket implementation. `network` is currently under rework.
 After finishing the new socket implementation will land in the `net` package and
 `network` will be deprecated.
 * `os`: Platform-independent interfaces to operating system functionality.
+* `range`: Generic functions and templates for D ranges.
 * `typecons`: Templates that allow to build new types based on the available
 ones.
 

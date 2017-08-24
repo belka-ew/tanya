@@ -11,7 +11,14 @@
 
 	"configurations": [
 		{
-			"name": "library"
+			"name": "library",
+			"targetType": "library",
+			"versions": ["TanyaPhobos"]
+		},
+		{
+			"name": "native",
+			"targetType": "library",
+			"platforms": ["linux-x86_64"]
 		}
 	]
 }

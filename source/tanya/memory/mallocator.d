@@ -14,6 +14,8 @@
  */
 module tanya.memory.mallocator;
 
+version (TanyaPhobos):
+
 import core.stdc.stdlib;
 import tanya.memory.allocator;
 
