@@ -1738,9 +1738,7 @@ pure nothrow @safe @nogc unittest
     }
     static assert(isInstanceOf!(S, S!int));
 
-    static void func(T)()
-    {
-    }
+    static void func(T)();
     static assert(isInstanceOf!(func, func!int));
 
     template T(U)
@@ -2054,4 +2052,270 @@ pure nothrow @safe @nogc unittest
 
     static assert(isAssignable!int);
     static assert(!isAssignable!(const int, int));
+}
+
+/**
+ * Returns template parameters of $(D_PARAM T).
+ *
+ * Params:
+ *  T = Template instance.
+ *
+ * Returns: Template parameters of $(D_PARAM T).
+ */
+alias TemplateArgsOf(alias T : Base!Args, alias Base, Args...) = Args;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    template T(A, B)
+    {
+    }
+    static assert(is(TemplateArgsOf!(T!(int, uint)) == AliasSeq!(int, uint)));
+}
+
+/**
+ * Returns a tuple with parameter types of a function.
+ *
+ * Params:
+ *  F = A function.
+ *
+ * Returns: Tuple with parameter types of a function.
+ */
+template Parameters(F...)
+if (isCallable!F)
+{
+    static if (is(FunctionTypeOf!F T == function))
+    {
+        alias Parameters = T;
+    }
+    else
+    {
+        static assert(false, "Function has no parameters");
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    int func(Object, uint[]);
+    static assert(is(Parameters!func == AliasSeq!(Object, uint[])));
+}
+
+/**
+ * Returns a string array with all parameter names of a function.
+ *
+ * If a parameter has no name, an empty string is placed into array.
+ *
+ * Params:
+ *  F = A function.
+ *
+ * Returns: Function parameter names.
+ */
+template ParameterIdentifierTuple(F...)
+if (isCallable!F)
+{
+    static if (is(FunctionTypeOf!F Params == __parameters))
+    {
+        enum string[] Impl()
+        {
+            string[] tuple;
+
+            foreach (k, P; Params)
+            {
+                static if (is(typeof(__traits(identifier, Params[k .. $]))))
+                {
+                    tuple ~= __traits(identifier, Params[k .. $]);
+                }
+                else
+                {
+                    tuple ~= "";
+                }
+            }
+
+            return tuple;
+        }
+        enum string[] ParameterIdentifierTuple = Impl();
+    }
+    else
+    {
+        static assert(false, "Function has no parameters");
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    int func(ref Object stuff, uint[] = null, scope uint k = 1);
+    alias P = ParameterIdentifierTuple!func;
+    static assert(P[0] == "stuff");
+    static assert(P[1] == "");
+    static assert(P[2] == "k");
+}
+
+/**
+ * Returns number of the arguments of the function $(D_PARAM F).
+ *
+ * For typesafe variadic functions variadic arguments count as one argument.
+ * For other variadic functions (D- and C-style) only non-variadic
+ * arguments count.
+ *
+ * Params:
+ *  F = A function:
+ *
+ * Returns: Number of the arguments of $(D_PARAM F).
+ */
+template arity(F...)
+if (isCallable!F)
+{
+    static if (is(FunctionTypeOf!F T == function))
+    {
+        enum size_t arity = T.length;
+    }
+    else
+    {
+        static assert(false, "Function has no parameters");
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    int func1(Object stuff = null, uint[] = null, uint k = 1);
+    static assert(arity!func1 == 3);
+
+    int func2();
+    static assert(arity!func2 == 0);
+
+    int func3(int, ...);
+    static assert(arity!func3 == 1);
+
+    int func4(int, int[]...);
+    static assert(arity!func4 == 2);
+}
+
+/// Attributes can be attached to a function.
+enum FunctionAttribute : uint
+{
+    none = 0x0000,
+    pure_ = 0x0001,
+    nothrow_ = 0x0002,
+    ref_ = 0x0004,
+    property = 0x0008,
+    trusted = 0x0010,
+    safe = 0x0020,
+    nogc = 0x0040,
+    system = 0x0080,
+    const_ = 0x0100,
+    immutable_ = 0x0200,
+    inout_ = 0x0400,
+    shared_ = 0x0800,
+    return_ = 0x1000,
+    scope_ = 0x2000,
+}
+
+/**
+ * Retrieves the attributes of the function $(D_PARAM F).
+ *
+ * The attributes are returned as a bit-mask of
+ * $(D_PSYMBOL FunctionAttribute) values.
+ *
+ * Params: A function.
+ *
+ * Returns: Attributes of the function $(D_PARAM F).
+ *
+ * See_Also: $(D_PSYMBOL FunctionAttribute).
+ */
+template functionAttributes(F...)
+if (isCallable!F)
+{
+    enum uint Impl()
+    {
+        uint attrs = FunctionAttribute.none;
+        foreach (a; __traits(getFunctionAttributes, F[0]))
+        {
+            static if (a == "const")
+            {
+                attrs |= FunctionAttribute.const_;
+            }
+            else static if (a == "immutable")
+            {
+                attrs |= FunctionAttribute.immutable_;
+            }
+            else static if (a == "inout")
+            {
+                attrs |= FunctionAttribute.inout_;
+            }
+            else static if (a == "@nogc")
+            {
+                attrs |= FunctionAttribute.nogc;
+            }
+            else static if (a == "nothrow")
+            {
+                attrs |= FunctionAttribute.nothrow_;
+            }
+            else static if (a == "@property")
+            {
+                attrs |= FunctionAttribute.property;
+            }
+            else static if (a == "pure")
+            {
+                attrs |= FunctionAttribute.pure_;
+            }
+            else static if (a == "ref")
+            {
+                attrs |= FunctionAttribute.ref_;
+            }
+            else static if (a == "return")
+            {
+                attrs |= FunctionAttribute.return_;
+            }
+            else static if (a == "@safe")
+            {
+                attrs |= FunctionAttribute.safe;
+            }
+            else static if (a == "scope")
+            {
+                attrs |= FunctionAttribute.scope_;
+            }
+            else static if (a == "shared")
+            {
+                attrs |= FunctionAttribute.shared_;
+            }
+            else static if (a == "system")
+            {
+                attrs |= FunctionAttribute.system;
+            }
+            else static if (a == "@trusted")
+            {
+                attrs |= FunctionAttribute.trusted;
+            }
+        }
+        return attrs;
+    }
+    enum uint functionAttributes = Impl();
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    @property ref int func1() pure nothrow @safe @nogc shared scope;
+    static assert((functionAttributes!func1 & FunctionAttribute.pure_)
+               == FunctionAttribute.pure_);
+    static assert((functionAttributes!func1 & FunctionAttribute.nothrow_)
+               == FunctionAttribute.nothrow_);
+    static assert((functionAttributes!func1 & FunctionAttribute.safe)
+               == FunctionAttribute.safe);
+    static assert((functionAttributes!func1 & FunctionAttribute.nogc)
+               == FunctionAttribute.nogc);
+    static assert((functionAttributes!func1 & FunctionAttribute.shared_)
+               == FunctionAttribute.shared_);
+    static assert((functionAttributes!func1 & FunctionAttribute.ref_)
+               == FunctionAttribute.ref_);
+    static assert((functionAttributes!func1 & FunctionAttribute.property)
+               == FunctionAttribute.property);
+    static assert((functionAttributes!func1 & FunctionAttribute.scope_)
+               == FunctionAttribute.scope_);
+    static assert((functionAttributes!func1 & FunctionAttribute.system) == 0);
+    static assert((functionAttributes!func1 & FunctionAttribute.trusted) == 0);
+    static assert((functionAttributes!func1 & FunctionAttribute.return_) == 0);
 }

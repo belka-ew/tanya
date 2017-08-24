@@ -617,3 +617,211 @@ pure nothrow @safe @nogc unittest
     }
     static assert(isSame!(TemplateOf!(T!int), T));
 }
+
+/**
+ * Adds $(D_KEYWORD inout) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE inout(T)).
+ */
+alias InoutOf(T) = inout(T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(InoutOf!int == inout int));
+}
+
+/**
+ * Adds $(D_KEYWORD inout) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE inout(T)).
+ */
+alias ConstOf(T) = const(T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(ConstOf!int == const int));
+}
+
+/**
+ * Adds $(D_KEYWORD inout) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE inout(T)).
+ */
+alias SharedOf(T) = shared(T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(SharedOf!int == shared int));
+}
+
+/**
+ * Adds $(D_KEYWORD inout) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE inout(T)).
+ */
+alias SharedInoutOf(T) = shared(inout T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(SharedInoutOf!int == shared inout int));
+}
+
+/**
+ * Adds $(D_KEYWORD shared const) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE shared(const T)).
+ */
+alias SharedConstOf(T) = shared(const T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(SharedConstOf!int == shared const int));
+}
+
+/**
+ * Adds $(D_KEYWORD immutable) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE immutable(T)).
+ */
+alias ImmutableOf(T) = immutable(T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(ImmutableOf!int == immutable int));
+}
+
+/**
+ * Adds $(D_KEYWORD inout const) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE inout(const T)).
+ */
+alias InoutConstOf(T) = inout(const T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(InoutConstOf!int == inout const int));
+}
+
+/**
+ * Adds $(D_KEYWORD shared inout const) qualifier to the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE shared(inout const T)).
+ */
+alias SharedInoutConstOf(T) = shared(inout const T);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(SharedInoutConstOf!int == shared inout const int));
+}
+
+/**
+ * Returns a template with one argument which applies all qualifiers of
+ * $(D_PARAM T) on its argument if instantiated.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_INLINECODE shared(inout const T)).
+ */
+template QualifierOf(T)
+{
+    static if (is(T U == const U))
+    {
+        alias QualifierOf = ConstOf;
+    }
+    else static if (is(T U == immutable U))
+    {
+        alias QualifierOf = ImmutableOf;
+    }
+    else static if (is(T U == inout U))
+    {
+        alias QualifierOf = InoutOf;
+    }
+    else static if (is(T U == inout const U))
+    {
+        alias QualifierOf = InoutConstOf;
+    }
+    else static if (is(T U == shared U))
+    {
+        alias QualifierOf = SharedOf;
+    }
+    else static if (is(T U == shared const U))
+    {
+        alias QualifierOf = SharedConstOf;
+    }
+    else static if (is(T U == shared inout U))
+    {
+        alias QualifierOf = SharedInoutOf;
+    }
+    else static if (is(T U == shared inout const U))
+    {
+        alias QualifierOf = SharedInoutConstOf;
+    }
+    else
+    {
+        alias QualifierOf(T) = T;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias MutableOf = QualifierOf!int;
+    static assert(is(MutableOf!uint == uint));
+
+    alias ConstOf = QualifierOf!(const int);
+    static assert(is(ConstOf!uint == const uint));
+
+    alias InoutOf = QualifierOf!(inout int);
+    static assert(is(InoutOf!uint == inout uint));
+
+    alias InoutConstOf = QualifierOf!(inout const int);
+    static assert(is(InoutConstOf!uint == inout const uint));
+
+    alias ImmutableOf = QualifierOf!(immutable int);
+    static assert(is(ImmutableOf!uint == immutable uint));
+
+    alias SharedOf = QualifierOf!(shared int);
+    static assert(is(SharedOf!uint == shared uint));
+
+    alias SharedConstOf = QualifierOf!(shared const int);
+    static assert(is(SharedConstOf!uint == shared const uint));
+
+    alias SharedInoutOf = QualifierOf!(shared inout int);
+    static assert(is(SharedInoutOf!uint == shared inout uint));
+
+    alias SharedInoutConstOf = QualifierOf!(shared inout const int);
+    static assert(is(SharedInoutConstOf!uint == shared inout const uint));
+}

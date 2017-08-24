@@ -17,9 +17,10 @@ module tanya.math.mp;
 import std.algorithm;
 import std.ascii;
 import std.range;
-import std.traits;
 import tanya.container.array;
 import tanya.memory;
+import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Algebraic sign.

@@ -17,7 +17,7 @@
  */
 module tanya.typecons;
 
-import std.meta;
+import tanya.meta.metafunction;
 
 /**
  * $(D_PSYMBOL Pair) can store two heterogeneous objects.

@@ -16,21 +16,8 @@ module tanya.net.inet;
 
 import std.math;
 import std.range.primitives;
-import std.traits;
-
-version (unittest)
-{
-    version (Windows)
-    {
-        import core.sys.windows.winsock2;
-        version = PlattformUnittest;
-    }
-    else version (Posix)
-    {
-        import core.sys.posix.arpa.inet;
-        version = PlattformUnittest;
-    }
-}
+import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Represents an unsigned integer as an $(D_KEYWORD ubyte) range.
@@ -212,79 +199,6 @@ private unittest
     static assert(!is(NetworkOrder!1));
 }
 
-// Tests against the system's htonl, htons.
-version (PlattformUnittest)
-{
-    private unittest
-    {
-        for (uint counter; counter <= 8 * uint.sizeof; ++counter)
-        {
-            const value = pow(2, counter) - 1;
-            const inNetworkOrder = htonl(value);
-            const p = cast(ubyte*) &inNetworkOrder;
-            auto networkOrder = NetworkOrder!4(value);
-
-            assert(networkOrder.length == 4);
-            assert(!networkOrder.empty);
-            assert(networkOrder.front == *p);
-            assert(networkOrder.back == *(p + 3));
-
-            networkOrder.popBack();
-            assert(networkOrder.length == 3);
-            assert(networkOrder.front == *p);
-            assert(networkOrder.back == *(p + 2));
-
-            networkOrder.popFront();
-            assert(networkOrder.length == 2);
-            assert(networkOrder.front == *(p + 1));
-            assert(networkOrder.back == *(p + 2));
-
-            networkOrder.popFront();
-            assert(networkOrder.length == 1);
-            assert(networkOrder.front == *(p + 2));
-            assert(networkOrder.back == *(p + 2));
-
-            networkOrder.popBack();
-            assert(networkOrder.length == 0);
-            assert(networkOrder.empty);
-        }
-
-        for (ushort counter; counter <= 8 * ushort.sizeof; ++counter)
-        {
-            const value = cast(ushort) (pow(2, counter) - 1);
-            const inNetworkOrder = htons(value);
-            const p = cast(ubyte*) &inNetworkOrder;
-
-            auto networkOrder = NetworkOrder!2(value);
-
-            assert(networkOrder.length == 2);
-            assert(!networkOrder.empty);
-            assert(networkOrder.front == *p);
-            assert(networkOrder.back == *(p + 1));
-
-            networkOrder.popBack();
-            assert(networkOrder.length == 1);
-            assert(networkOrder.front == *p);
-            assert(networkOrder.back == *p);
-
-            networkOrder.popBack();
-            assert(networkOrder.length == 0);
-            assert(networkOrder.empty);
-
-            networkOrder = NetworkOrder!2(value);
-
-            networkOrder.popFront();
-            assert(networkOrder.length == 1);
-            assert(networkOrder.front == *(p + 1));
-            assert(networkOrder.back == *(p + 1));
-
-            networkOrder.popFront();
-            assert(networkOrder.length == 0);
-            assert(networkOrder.empty);
-        }
-    }
-}
-
 /**
  * Converts the $(D_KEYWORD ubyte) input range $(D_PARAM range) to
  * $(D_PARAM T).
@@ -329,30 +243,4 @@ pure nothrow @safe @nogc unittest
     const value = 0xae34e2u;
     auto networkOrder = NetworkOrder!4(value);
     assert(networkOrder.toHostOrder() == value);
-}
-
-// Tests against the system's htonl, htons.
-version (PlattformUnittest)
-{
-    private unittest
-    {
-        for (uint counter; counter <= 8 * uint.sizeof; ++counter)
-        {
-            const value = pow(2, counter) - 1;
-            const inNetworkOrder = htonl(value);
-            const p = cast(ubyte*) &inNetworkOrder;
-            auto networkOrder = NetworkOrder!4(value);
-
-            assert(p[0 .. uint.sizeof].toHostOrder() == value);
-        }
-        for (ushort counter; counter <= 8 * ushort.sizeof; ++counter)
-        {
-            const value = cast(ushort) (pow(2, counter) - 1);
-            const inNetworkOrder = htons(value);
-            const p = cast(ubyte*) &inNetworkOrder;
-            auto networkOrder = NetworkOrder!2(value);
-
-            assert(p[0 .. ushort.sizeof].toHostOrder() == value);
-        }
-    }
 }

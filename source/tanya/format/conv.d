@@ -8,7 +8,7 @@
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
- * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
+ * Authors: Jeff Roberts, $(LINK2 mailto:info@caraus.de, Eugene Wissner)
  * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/format/conv.d,
  *                 tanya/format/conv.d)
  */
@@ -611,13 +611,13 @@ private @nogc unittest
     defaultAllocator.dispose(exception);
 }
 
-package char[] number2String(T)(const T number, char[] buffer)
+// Returns the last part of buffer with converted number.
+package char[] number2String(T)(const T number, out char[20] buffer)
 {
     // abs the integer.
     ulong n64 = number < 0 ? -cast(long) number : number;
 
-    char[20] rightAligned;
-    char* start = rightAligned.ptr + rightAligned.sizeof;
+    char* start = buffer.ptr + buffer.sizeof;
 
     while (true)
     {
@@ -644,8 +644,7 @@ package char[] number2String(T)(const T number, char[] buffer)
         // Ignore the leading zero if it was the last part of the integer.
         if (n64 == 0)
         {
-            if ((start[0] == '0')
-             && (start != (rightAligned.ptr + rightAligned.sizeof)))
+            if ((start[0] == '0') && (start != (buffer.ptr + buffer.sizeof)))
             {
                 ++start;
             }
@@ -659,34 +658,25 @@ package char[] number2String(T)(const T number, char[] buffer)
         }
     }
 
-    // Get the length that we copied.
-    auto l = cast(uint) ((rightAligned.ptr + rightAligned.sizeof) - start);
+    // Get the length that we have copied.
+    uint l = cast(uint) ((buffer.ptr + buffer.sizeof) - start);
     if (l == 0)
     {
         *--start = '0';
         l = 1;
     }
-
-    // Write the string.
-    char* bp = buffer.ptr;
-
-    // Set the sign.
-    if (number < 0)
+    else if (number < 0) // Set the sign.
     {
-        *bp++ = '-';
+        *--start = '-';
+        ++l;
     }
 
-    // Copy the string into the target buffer.
-    int i = l;
-    copy(start[0 .. l], bp[0 .. l]);
-    bp += l;
-
-    return buffer[0 .. bp - buffer.ptr];
+    return buffer[$ - l .. $];
 }
 
-private @nogc unittest
+private pure nothrow @system @nogc unittest
 {
-    char[21] buf;
+    char[20] buf;
 
     assert(number2String(80, buf) == "80");
     assert(number2String(-80, buf) == "-80");

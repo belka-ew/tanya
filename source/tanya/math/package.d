@@ -14,9 +14,9 @@
  */
 module tanya.math;
 
-import std.traits;
 public import tanya.math.mp;
 public import tanya.math.random;
+import tanya.meta.trait;
 
 version (unittest)
 {

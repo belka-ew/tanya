@@ -15,12 +15,8 @@
  */
 module tanya.meta.metafunction;
 
+import tanya.meta.trait;
 import tanya.meta.transform;
-
-version (unittest)
-{
-    import tanya.meta.trait;
-}
 
 /**
  * Tests whether $(D_INLINECODE Args[0]) is less than or equal to
