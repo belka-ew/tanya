@@ -14,8 +14,8 @@
  */
 module tanya.container.buffer;
 
-import std.traits;
 import tanya.memory;
+import tanya.meta.trait;
 
 version (unittest)
 {

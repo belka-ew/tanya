@@ -32,8 +32,9 @@ import std.algorithm.mutation;
 import std.algorithm.searching;
 import std.range : isInfinite, isInputRange, ElementEncodingType, hasLength,
                    popFrontN, empty;
-import std.traits;
 import tanya.memory;
+import tanya.meta.trait;
+import tanya.meta.transform;
 import tanya.range.array;
 
 /**

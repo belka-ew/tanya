@@ -22,8 +22,8 @@ import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.conv;
 import std.range;
-import std.traits;
 import tanya.memory;
+import tanya.meta.trait;
 
 private template Payload(T)
 {

@@ -16,10 +16,11 @@
 module tanya.container.set;
 
 import std.algorithm.mutation;
-import std.traits;
 import tanya.container;
 import tanya.container.entry;
 import tanya.memory;
+import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Bidirectional range that iterates over the $(D_PSYMBOL Set)'s values.

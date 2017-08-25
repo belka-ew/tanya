@@ -15,10 +15,10 @@
 module tanya.container.queue;
 
 import core.exception;
-import std.traits;
 import std.algorithm.mutation;
 import tanya.container.entry;
 import tanya.memory;
+import tanya.meta.trait;
 
 /**
  * FIFO queue.

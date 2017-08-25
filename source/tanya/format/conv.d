@@ -14,10 +14,11 @@
  */
 module tanya.format.conv;
 
-import std.traits;
 import tanya.container.string;
 import tanya.memory;
 import tanya.memory.op;
+import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Thrown if a type conversion fails.

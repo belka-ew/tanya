@@ -14,7 +14,7 @@
  */
 module tanya.container.entry;
 
-import std.traits;
+import tanya.meta.trait;
 import tanya.typecons;
 
 package struct SEntry(T)

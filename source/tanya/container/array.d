@@ -21,8 +21,9 @@ import std.algorithm.mutation;
 import std.conv;
 import std.range.primitives;
 import std.meta;
-import std.traits;
 import tanya.memory;
+import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Random-access range for the $(D_PSYMBOL Array).
