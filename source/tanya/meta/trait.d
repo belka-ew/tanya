@@ -1935,13 +1935,13 @@ if (is(T == class) || is(T == interface))
         else
         {
             alias Impl = AliasSeq!(BaseTypeTuple!(T[0]),
-                                   staticMap!(ImplCopy, BaseTypeTuple!(T[0])));
+                                   Map!(ImplCopy, BaseTypeTuple!(T[0])));
         }
     }
     private alias ImplCopy = Impl; // To avoid recursive template expansion.
     private enum bool cmp(A, B) = is(B == interface) && is(A == class);
 
-    alias TransitiveBaseTypeTuple = NoDuplicates!(staticSort!(cmp, Impl!T));
+    alias TransitiveBaseTypeTuple = NoDuplicates!(Sort!(cmp, Impl!T));
 }
 
 ///

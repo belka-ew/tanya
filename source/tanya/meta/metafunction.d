@@ -16,6 +16,69 @@
 module tanya.meta.metafunction;
 
 /**
+ * Holds a typed sequence of template parameters.
+ *
+ * Different than $(D_PSYMBOL AliasSeq), $(D_PSYMBOL AliasTuple) doesn't unpack
+ * its template parameters automatically. Consider:
+ *
+ * ---
+ * template A(Args...)
+ * {
+ *  static assert(Args.length == 4);
+ * }
+ *
+ * alias AInstance = A!(AliasSeq!(int, uint), AliasSeq!(float, double));
+ * ---
+ *
+ * Using $(D_PSYMBOL AliasSeq) template `A` gets 4 parameters instead of 2,
+ * because $(D_PSYMBOL AliasSeq) is just an alias for its template parameters.
+ *
+ * With $(D_PSYMBOL AliasTuple) it is possible to pass distinguishable
+ * sequences of parameters to a template. So:
+ *
+ * ---
+ * template B(Args...)
+ * {
+ *  static assert(Args.length == 2);
+ * }
+ *
+ * alias BInstance = B!(AliasTuple!(int, uint), AliasTuple!(float, double));
+ * ---
+ *
+ * Params:
+ *  Args = Elements of this $(D_PSYMBOL AliasTuple).
+ *
+ * See_Also: $(D_PSYMBOL AliasSeq).
+ */
+template AliasTuple(Args...)
+{
+    /// Elements in this tuple as $(D_PSYMBOL AliasSeq).
+    alias Seq = Args;
+
+    /// The length of the tuple.
+    enum size_t length = Args.length;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias A = AliasTuple!(short);
+    alias B = AliasTuple!(3, 8, 9);
+    alias C = AliasTuple!(A, B);
+
+    static assert(C.length == 2);
+
+    static assert(A.length == 1);
+    static assert(is(A.Seq == AliasSeq!short));
+    static assert(B.length == 3);
+    static assert(B.Seq == AliasSeq!(3, 8, 9));
+
+    alias D = AliasTuple!();
+    static assert(D.length == 0);
+    static assert(is(D.Seq == AliasSeq!()));
+}
+
+/**
  * Tests whether $(D_INLINECODE Args[0]) is less than or equal to
  * $(D_INLINECODE Args[1]) according to $(D_PARAM cmp).
  *
@@ -268,7 +331,30 @@ pure nothrow @safe @nogc unittest
 
 version (TanyaPhobos)
 {
-    public import std.meta;
+    public import std.meta : Alias,
+                             AliasSeq,
+                             aliasSeqOf,
+                             Erase,
+                             EraseAll,
+                             Filter,
+                             NoDuplicates,
+                             DerivedToFront,
+                             MostDerived,
+                             Repeat,
+                             Replace,
+                             ReplaceAll,
+                             Reverse,
+                             Map = staticMap,
+                             Sort = staticSort,
+                             allSatisfy,
+                             anySatisfy,
+                             staticIndexOf,
+                             templateAnd,
+                             templateNot,
+                             templateOr,
+                             isSorted = staticIsSorted,
+                             ApplyLeft,
+                             ApplyRight;
 }
 else:
 
@@ -316,9 +402,19 @@ pure nothrow @safe @nogc unittest
     static assert(is(typeof(Alias!i)));
 }
 
+
 /**
+ * Holds a sequence of aliases.
+ *
+ * $(D_PSYMBOL AliasSeq) can be used to pass multiple parameters to a template
+ * at once. $(D_PSYMBOL AliasSeq) behaves as it were just $(D_PARAM Args). Note
+ * that because of this property, if multiple instances of
+ * $(D_PSYMBOL AliasSeq) are passed to a template, they are not distinguishable
+ * from each other and act as a single sequence. There is also no way to make
+ * $(D_PSYMBOL AliasSeq) nested, it always unpacks its elements.
+ *
  * Params:
- *  Args = List of symbols.
+ *  Args = Symbol sequence.
  *
  * Returns: An alias for sequence $(D_PARAM Args).
  *
@@ -336,6 +432,11 @@ pure nothrow @safe @nogc unittest
 
     static assert(AliasSeq!().length == 0);
     static assert(AliasSeq!(int, short, 5).length == 3);
+
+    alias A = AliasSeq!(short, float);
+    alias B = AliasSeq!(ushort, double);
+    alias C = AliasSeq!(A, B);
+    static assert(C.length == 4);
 }
 
 /**
@@ -606,53 +707,56 @@ pure nothrow @safe @nogc unittest
  * Returns: $(D_KEYWORD true) if $(D_PARAM L) is sorted, $(D_KEYWORD false)
  *          if not.
  */
-template staticIsSorted(alias cmp, L...)
+template isSorted(alias cmp, L...)
 {
     static if (L.length <= 1)
     {
-        enum bool staticIsSorted = true;
+        enum bool isSorted = true;
     }
     else
     {
         // `L` is sorted if the both halves and the boundary values are sorted.
-        enum bool staticIsSorted = isLessEqual!(cmp, L[$ / 2 - 1], L[$ / 2])
-                                && staticIsSorted!(cmp, L[0 .. $ / 2])
-                                && staticIsSorted!(cmp, L[$ / 2 .. $]);
+        enum bool isSorted = isLessEqual!(cmp, L[$ / 2 - 1], L[$ / 2])
+                          && isSorted!(cmp, L[0 .. $ / 2])
+                          && isSorted!(cmp, L[$ / 2 .. $]);
     }
 }
+
+deprecated("Use tanya.meta.metafunction.isSorted instead")
+alias staticIsSorted = isSorted;
 
 ///
 pure nothrow @safe @nogc unittest
 {
     enum cmp(T, U) = T.sizeof < U.sizeof;
-    static assert(staticIsSorted!(cmp));
-    static assert(staticIsSorted!(cmp, byte));
-    static assert(staticIsSorted!(cmp, byte, ubyte, short, uint));
-    static assert(!staticIsSorted!(cmp, long, byte, ubyte, short, uint));
+    static assert(isSorted!(cmp));
+    static assert(isSorted!(cmp, byte));
+    static assert(isSorted!(cmp, byte, ubyte, short, uint));
+    static assert(!isSorted!(cmp, long, byte, ubyte, short, uint));
 }
 
 private pure nothrow @safe @nogc unittest
 {
     enum cmp(int x, int y) = x - y;
-    static assert(staticIsSorted!(cmp));
-    static assert(staticIsSorted!(cmp, 1));
-    static assert(staticIsSorted!(cmp, 1, 2, 2));
-    static assert(staticIsSorted!(cmp, 1, 2, 2, 4));
-    static assert(staticIsSorted!(cmp, 1, 2, 2, 4, 8));
-    static assert(!staticIsSorted!(cmp, 32, 2, 2, 4, 8));
-    static assert(staticIsSorted!(cmp, 32, 32));
+    static assert(isSorted!(cmp));
+    static assert(isSorted!(cmp, 1));
+    static assert(isSorted!(cmp, 1, 2, 2));
+    static assert(isSorted!(cmp, 1, 2, 2, 4));
+    static assert(isSorted!(cmp, 1, 2, 2, 4, 8));
+    static assert(!isSorted!(cmp, 32, 2, 2, 4, 8));
+    static assert(isSorted!(cmp, 32, 32));
 }
 
 private pure nothrow @safe @nogc unittest
 {
     enum cmp(int x, int y) = x < y;
-    static assert(staticIsSorted!(cmp));
-    static assert(staticIsSorted!(cmp, 1));
-    static assert(staticIsSorted!(cmp, 1, 2, 2));
-    static assert(staticIsSorted!(cmp, 1, 2, 2, 4));
-    static assert(staticIsSorted!(cmp, 1, 2, 2, 4, 8));
-    static assert(!staticIsSorted!(cmp, 32, 2, 2, 4, 8));
-    static assert(staticIsSorted!(cmp, 32, 32));
+    static assert(isSorted!(cmp));
+    static assert(isSorted!(cmp, 1));
+    static assert(isSorted!(cmp, 1, 2, 2));
+    static assert(isSorted!(cmp, 1, 2, 2, 4));
+    static assert(isSorted!(cmp, 1, 2, 2, 4, 8));
+    static assert(!isSorted!(cmp, 32, 2, 2, 4, 8));
+    static assert(isSorted!(cmp, 32, 32));
 }
 
 /**
@@ -881,22 +985,22 @@ pure nothrow @safe @nogc unittest
  *
  * Returns: Elements $(D_PARAM T) after applying $(D_PARAM F) to them.
  */
-template staticMap(alias F, T...)
+template Map(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = AliasSeq!();
+        alias Map = AliasSeq!();
     }
     else
     {
-        alias staticMap = AliasSeq!(F!(T[0]), staticMap!(F, T[1 .. $]));
+        alias Map = AliasSeq!(F!(T[0]), Map!(F, T[1 .. $]));
     }
 }
 
 ///
 pure nothrow @safe @nogc unittest
 {
-    static assert(is(staticMap!(Unqual, const int, immutable short)
+    static assert(is(Map!(Unqual, const int, immutable short)
                == AliasSeq!(int, short)));
 }
 
@@ -922,7 +1026,7 @@ pure nothrow @safe @nogc unittest
  *
  * See_Also: $(LINK2 https://en.wikipedia.org/wiki/Merge_sort, Merge sort).
  */
-template staticSort(alias cmp, L...)
+template Sort(alias cmp, L...)
 {
     private template merge(size_t A, size_t B)
     {
@@ -943,13 +1047,13 @@ template staticSort(alias cmp, L...)
 
     static if (L.length <= 1)
     {
-        alias staticSort = L;
+        alias Sort = L;
     }
     else
     {
-        private alias Left = staticSort!(cmp, L[0 .. $ / 2]);
-        private alias Right = staticSort!(cmp, L[$ / 2 .. $]);
-        alias staticSort = merge!(0, 0);
+        private alias Left = Sort!(cmp, L[0 .. $ / 2]);
+        private alias Right = Sort!(cmp, L[$ / 2 .. $]);
+        alias Sort = merge!(0, 0);
     }
 }
 
@@ -957,14 +1061,14 @@ template staticSort(alias cmp, L...)
 pure nothrow @safe @nogc unittest
 {
     enum cmp(T, U) = T.sizeof < U.sizeof;
-    static assert(is(staticSort!(cmp, long, short, byte, int)
+    static assert(is(Sort!(cmp, long, short, byte, int)
                == AliasSeq!(byte, short, int, long)));
 }
 
 private pure nothrow @safe @nogc unittest
 {
     enum cmp(int T, int U) = T - U;
-    static assert(staticSort!(cmp, 5, 17, 9, 12, 2, 10, 14)
+    static assert(Sort!(cmp, 5, 17, 9, 12, 2, 10, 14)
                == AliasSeq!(2, 5, 9, 10, 12, 14, 17));
 }
 
@@ -981,7 +1085,7 @@ private enum bool DerivedToFrontCmp(A, B) = is(A : B);
  */
 template DerivedToFront(L...)
 {
-    alias DerivedToFront = staticSort!(DerivedToFrontCmp, L);
+    alias DerivedToFront = Sort!(DerivedToFrontCmp, L);
 }
 
 ///
