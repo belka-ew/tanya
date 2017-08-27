@@ -15,6 +15,109 @@
  */
 module tanya.meta.metafunction;
 
+import tanya.meta.trait;
+
+template Min(alias pred, Args...)
+if (Args.length > 0 && isTemplate!pred)
+{
+    static if (Args.length == 1)
+    {
+        alias Min = Alias!(Args[0]);
+    }
+    else static if (isLess!(pred, Args[1], Args[0]))
+    {
+        alias Min = Min!(pred, Args[1], Args[2 .. $]);
+    }
+    else
+    {
+        alias Min = Min!(pred, Args[0], Args[2 .. $]);
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    enum bool cmp(alias T, alias U) = T < U;
+    static assert(Min!(cmp, 8, 4, 5, 3, 13) == 3);
+    static assert(Min!(cmp, 8) == 8);
+}
+
+template Max(alias pred, Args...)
+if (Args.length > 0 && isTemplate!pred)
+{
+    static if (Args.length == 1)
+    {
+        alias Max = Alias!(Args[0]);
+    }
+    else static if (isGreater!(pred, Args[1], Args[0]))
+    {
+        alias Max = Max!(pred, Args[1], Args[2 .. $]);
+    }
+    else
+    {
+        alias Max = Max!(pred, Args[0], Args[2 .. $]);
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    enum bool cmp(alias T, alias U) = T < U;
+    static assert(Max!(cmp, 8, 4, 5, 3, 13) == 13);
+    static assert(Max!(cmp, 8) == 8);
+}
+
+template ZipWith(alias pred, Tuples...)
+if (Tuples.length > 0
+ && isTemplate!pred
+ && allSatisfy!(ApplyLeft!(isInstanceOf, AliasTuple), Tuples))
+{
+    private template GetIth(size_t i, Args...)
+    {
+        static if ((Args.length == 0) || (Args[0].Seq.length <= i))
+        {
+            alias GetIth = AliasSeq!();
+        }
+        else
+        {
+            alias GetIth = AliasSeq!(Args[0].Seq[i], GetIth!(i, Args[1 .. $]));
+        }
+    }
+    private template Iterate(size_t i, Args...)
+    {
+        alias Tuple = GetIth!(i, Args);
+
+        static if (Tuple.length < Tuples.length)
+        {
+            alias Iterate = AliasSeq!();
+        }
+        else
+        {
+            alias Iterate = AliasSeq!(pred!Tuple,
+                                      Iterate!(i + 1, Args));
+        }
+    }
+    alias ZipWith = Iterate!(0, Tuples);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias Result1 = ZipWith!(AliasSeq,
+                             AliasTuple!(1, 2),
+                             AliasTuple!(5, 6),
+                             AliasTuple!(9, 10));
+    static assert(Result1 == AliasSeq!(1, 5, 9, 2, 6, 10));
+
+    alias Result2 = ZipWith!(AliasSeq,
+                             AliasTuple!(1, 2, 3),
+                             AliasTuple!(4, 5));
+    static assert(Result2 == AliasSeq!(1, 4, 2, 5));
+
+    alias Result3 = ZipWith!(AliasSeq, AliasTuple!(), AliasTuple!(4, 5));
+    static assert(Result3.length == 0);
+}
+
 /**
  * Holds a typed sequence of template parameters.
  *
@@ -98,7 +201,7 @@ pure nothrow @safe @nogc unittest
  *          to $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isLessEqual(alias cmp, Args...)
-if (Args.length == 2)
+if (Args.length == 2 && isTemplate!cmp)
 {
     private enum result = cmp!(Args[1], Args[0]);
     static if (is(typeof(result) == bool))
@@ -145,7 +248,7 @@ pure nothrow @safe @nogc unittest
  *          equal to $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isGreaterEqual(alias cmp, Args...)
-if (Args.length == 2)
+if (Args.length == 2 && isTemplate!cmp)
 {
     private enum result = cmp!Args;
     static if (is(typeof(result) == bool))
@@ -192,7 +295,7 @@ pure nothrow @safe @nogc unittest
  *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isLess(alias cmp, Args...)
-if (Args.length == 2)
+if (Args.length == 2 && isTemplate!cmp)
 {
     private enum result = cmp!Args;
     static if (is(typeof(result) == bool))
@@ -239,7 +342,7 @@ pure nothrow @safe @nogc unittest
  *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isGreater(alias cmp, Args...)
-if (Args.length == 2)
+if (Args.length == 2 && isTemplate!cmp)
 {
     private enum result = cmp!Args;
     static if (is(typeof(result) == bool))
@@ -329,6 +432,17 @@ pure nothrow @safe @nogc unittest
     static assert(isNotEqual!(5, 8));
 }
 
+/**
+ * Instantiates the template $(D_PARAM T) with $(D_PARAM ARGS).
+ *
+ * Params:
+ *  T    = Template.
+ *  Args = Template parameters.
+ *
+ * Returns: Instantiated template.
+ */
+alias Instantiate(alias T, Args...) = T!Args;
+
 version (TanyaPhobos)
 {
     public import std.meta : Alias,
@@ -402,7 +516,6 @@ pure nothrow @safe @nogc unittest
     static assert(is(typeof(Alias!i)));
 }
 
-
 /**
  * Holds a sequence of aliases.
  *
@@ -454,6 +567,7 @@ pure nothrow @safe @nogc unittest
  *          $(D_PARAM F), $(D_KEYWORD false) otherwise.
  */
 template allSatisfy(alias F, L...)
+if (isTemplate!F)
 {
     static if (L.length == 0)
     {
@@ -491,6 +605,7 @@ pure nothrow @safe @nogc unittest
  *          $(D_PARAM F), $(D_KEYWORD false) otherwise.
  */
 template anySatisfy(alias F, L...)
+if (isTemplate!F)
 {
     static if (L.length == 0)
     {
@@ -563,17 +678,6 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Instantiates the template $(D_PARAM T) with $(D_PARAM ARGS).
- *
- * Params:
- *  T    = Template.
- *  Args = Template parameters.
- *
- * Returns: Instantiated template.
- */
-alias Instantiate(alias T, Args...) = T!Args;
-
-/**
  * Combines multiple templates with logical AND. So $(D_PSYMBOL templateAnd)
  * evaluates to $(D_INLINECODE Preds[0] && Preds[1] && Preds[2]) and so on.
  *
@@ -585,6 +689,7 @@ alias Instantiate(alias T, Args...) = T!Args;
  * Returns: The constructed template.
  */
 template templateAnd(Preds...)
+if (allSatisfy!(isTemplate, Preds))
 {
     template templateAnd(T...)
     {
@@ -632,6 +737,7 @@ pure nothrow @safe @nogc unittest
  * Returns: The constructed template.
  */
 template templateOr(Preds...)
+if (allSatisfy!(isTemplate, Preds))
 {
     template templateOr(T...)
     {
@@ -675,6 +781,7 @@ pure nothrow @safe @nogc unittest
  * Returns: Negated $(D_PARAM pred).
  */
 template templateNot(alias pred)
+if (isTemplate!pred)
 {
     enum bool templateNot(T...) = !pred!T;
 }
@@ -708,6 +815,7 @@ pure nothrow @safe @nogc unittest
  *          if not.
  */
 template isSorted(alias cmp, L...)
+if (isTemplate!cmp)
 {
     static if (L.length <= 1)
     {
@@ -986,6 +1094,7 @@ pure nothrow @safe @nogc unittest
  * Returns: Elements $(D_PARAM T) after applying $(D_PARAM F) to them.
  */
 template Map(alias F, T...)
+if (isTemplate!F)
 {
     static if (T.length == 0)
     {
@@ -1027,6 +1136,7 @@ pure nothrow @safe @nogc unittest
  * See_Also: $(LINK2 https://en.wikipedia.org/wiki/Merge_sort, Merge sort).
  */
 template Sort(alias cmp, L...)
+if (isTemplate!cmp)
 {
     private template merge(size_t A, size_t B)
     {
