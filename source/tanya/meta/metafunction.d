@@ -17,6 +17,28 @@ module tanya.meta.metafunction;
 
 import tanya.meta.trait;
 
+/**
+ * Finds the minimum value in $(D_PARAM Args) according to $(D_PARAM pred).
+ *
+ * $(D_PARAM Args) should contain at least one element.
+ *
+ * $(D_PARAM pred) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE Args[0] < Args[1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE Args[0] < Args[1]), a positive number that
+ *       $(D_INLINECODE Args[0] > Args[1]), `0` if they equal.)
+ * )
+ * 
+ * Params:
+ *  pred = Template predicate.
+ *  Args = Elements for which you want to find the minimum value.
+ *
+ * Returns: The minimum.
+ *
+ * See_Also: $(D_PSYMBOL isLess).
+ */
 template Min(alias pred, Args...)
 if (Args.length > 0 && isTemplate!pred)
 {
@@ -42,6 +64,28 @@ pure nothrow @safe @nogc unittest
     static assert(Min!(cmp, 8) == 8);
 }
 
+/**
+ * Finds the maximum value in $(D_PARAM Args) according to $(D_PARAM pred).
+ *
+ * $(D_PARAM Args) should contain at least one element.
+ *
+ * $(D_PARAM pred) can evaluate to:
+ * $(UL
+ *  $(LI $(D_KEYWORD bool): $(D_KEYWORD true) means
+ *       $(D_INLINECODE Args[0] < Args[1]).)
+ *  $(LI $(D_KEYWORD int): a negative number means that
+ *       $(D_INLINECODE Args[0] < Args[1]), a positive number that
+ *       $(D_INLINECODE Args[0] > Args[1]), `0` if they equal.)
+ * )
+ * 
+ * Params:
+ *  pred = Template predicate.
+ *  Args = Elements for which you want to find the maximum value.
+ *
+ * Returns: The maximum.
+ *
+ * See_Also: $(D_PSYMBOL isLess).
+ */
 template Max(alias pred, Args...)
 if (Args.length > 0 && isTemplate!pred)
 {
@@ -67,9 +111,40 @@ pure nothrow @safe @nogc unittest
     static assert(Max!(cmp, 8) == 8);
 }
 
-template ZipWith(alias pred, Tuples...)
+/**
+ * Zips one or more $(D_PSYMBOL AliasTuple)s with $(D_PARAM f).
+ *
+ * Given $(D_PARAM f) and tuples t1, t2, ..., tk, where tk[i] denotes the
+ * $(I i)-th element of the tuple $(I k)-th tuple, $(D_PSYMBOL ZipWith)
+ * produces a sequence:
+ *
+ * ---
+ * f(t1[0], t2[0], ... tk[0]),
+ * f(t1[1], t2[1], ... tk[1]),
+ * ...
+ * f(tk[0], tk[1], ... tk[i]),
+ * ---
+ *
+ * $(D_PSYMBOL ZipWith) begins with the first elements from $(D_PARAM Tuples)
+ * and applies $(D_PARAM f) to them, then it takes the second
+ * ones and does the same, and so on.
+ *
+ * If not all argument tuples have the same length, $(D_PSYMBOL ZipWith) will
+ * zip only `n` elements from each tuple, where `n` is the length of the
+ * shortest tuple in the argument list. Remaining elements in the longer tuples
+ * are just ignored.
+ *
+ * Params:
+ *  f      = Some template that can be applied to the elements of
+ *           $(D_PARAM Tuples).
+ *  Tuples = $(D_PSYMBOL AliasTuple) instances.
+ *
+ * Returns: A sequence, whose $(I i)-th element contains the $(I i)-th element
+ *          from each of the $(D_PARAM Tuples).
+ */
+template ZipWith(alias f, Tuples...)
 if (Tuples.length > 0
- && isTemplate!pred
+ && isTemplate!f
  && allSatisfy!(ApplyLeft!(isInstanceOf, AliasTuple), Tuples))
 {
     private template GetIth(size_t i, Args...)
@@ -93,7 +168,7 @@ if (Tuples.length > 0
         }
         else
         {
-            alias Iterate = AliasSeq!(pred!Tuple,
+            alias Iterate = AliasSeq!(f!Tuple,
                                       Iterate!(i + 1, Args));
         }
     }
@@ -442,6 +517,22 @@ pure nothrow @safe @nogc unittest
  * Returns: Instantiated template.
  */
 alias Instantiate(alias T, Args...) = T!Args;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    template Template(T)
+    {
+        alias Template = T;
+    }
+    alias Seq = AliasSeq!(Template, Template);
+
+    alias Instance1 = Instantiate!(Seq[0], int);
+    static assert(is(Instance1 == int));
+
+    alias Instance2 = Instantiate!(Seq[1], float);
+    static assert(is(Instance2 == float));
+}
 
 version (TanyaPhobos)
 {
