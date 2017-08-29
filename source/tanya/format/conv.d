@@ -613,12 +613,14 @@ private @nogc unittest
 }
 
 // Returns the last part of buffer with converted number.
-package char[] number2String(T)(const T number, out char[20] buffer)
+package(tanya) char[] number2String(T)(const T number,
+                                       return ref char[21] buffer)
+if (isIntegral!T)
 {
     // abs the integer.
     ulong n64 = number < 0 ? -cast(long) number : number;
 
-    char* start = buffer.ptr + buffer.sizeof;
+    char* start = buffer[].ptr + buffer.sizeof - 1;
 
     while (true)
     {
@@ -645,7 +647,8 @@ package char[] number2String(T)(const T number, out char[20] buffer)
         // Ignore the leading zero if it was the last part of the integer.
         if (n64 == 0)
         {
-            if ((start[0] == '0') && (start != (buffer.ptr + buffer.sizeof)))
+            if ((start[0] == '0')
+             && (start != (buffer[].ptr + buffer.sizeof -1)))
             {
                 ++start;
             }
@@ -660,7 +663,7 @@ package char[] number2String(T)(const T number, out char[20] buffer)
     }
 
     // Get the length that we have copied.
-    uint l = cast(uint) ((buffer.ptr + buffer.sizeof) - start);
+    uint l = cast(uint) ((buffer[].ptr + buffer.sizeof - 1) - start);
     if (l == 0)
     {
         *--start = '0';
@@ -672,12 +675,13 @@ package char[] number2String(T)(const T number, out char[20] buffer)
         ++l;
     }
 
-    return buffer[$ - l .. $];
+    return buffer[$ - l - 1 .. $ - 1];
 }
 
+// Converting an integer to string.
 private pure nothrow @system @nogc unittest
 {
-    char[20] buf;
+    char[21] buf;
 
     assert(number2String(80, buf) == "80");
     assert(number2String(-80, buf) == "-80");
