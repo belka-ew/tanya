@@ -570,10 +570,10 @@ pure nothrow @nogc
         ++f;
 
         // ok, we have a percent, read the modifiers first
-        uint fw = 0;
-        uint pr = -1;
-        uint fl = 0;
+        int fw = 0;
+        int pr = -1;
         int tz = 0;
+        uint fl = 0;
 
         // flags
         for (;;)
@@ -699,7 +699,10 @@ pure nothrow @nogc
             // are we 64-bit on size_t or ptrdiff_t? (c99)
             case 'z':
             case 't':
-                fl |= ((char*).sizeof == 8) ? Modifier.intMax : 0;
+                static if (size_t.sizeof == 8)
+                {
+                    fl |= Modifier.intMax;
+                }
                 ++f;
                 break;
             // are we 64-bit (msft style)
@@ -715,7 +718,10 @@ pure nothrow @nogc
                 }
                 else
                 {
-                    fl |= ((void*).sizeof == 8) ? Modifier.intMax : 0;
+                    static if (size_t.sizeof == 8)
+                    {
+                        fl |= Modifier.intMax;
+                    }
                     ++f;
                 }
                 break;
@@ -1300,7 +1306,10 @@ pure nothrow @nogc
                 goto radixnum;
 
             case 'p': // pointer
-                fl |= ((void*).sizeof == 8) ? Modifier.intMax : 0;
+                static if (size_t.sizeof == 8)
+                {
+                    fl |= Modifier.intMax;
+                }
                 pr = (void*).sizeof * 2;
                 fl &= ~Modifier.leadingZero; // 'p' only prints the pointer with zeros
                                         // drop through to X
@@ -1345,7 +1354,7 @@ pure nothrow @nogc
                 // convert to string
                 for (;;)
                 {
-                    *--s = h[n64 & ((1 << (l >> 8)) - 1)];
+                    *--s = h[cast(size_t) (n64 & ((1 << (l >> 8)) - 1))];
                     n64 >>= (l >> 8);
                     if (!((n64) || (cast(int) ((num.ptr + NUMSZ) - s) < pr)))
                     {
@@ -1732,11 +1741,23 @@ nothrow
     return result;
 }
 
-// Converting a floating point to string.
 private nothrow unittest
 {
     char[318] buffer;
 
+    // Format without arguments.
+    assert(format(buffer, "") == "");
+    assert(format(buffer, "asdfqweryxcvz") == "asdfqweryxcvz");
+
+    // Modifiers.
+    assert(format(buffer, "%-5g", 8.5) == "8.5  ");
+    assert(format(buffer, "%05g", 8.6) == "008.6");
+    assert(format(buffer, "%+d", 8) == "+8");
+
+    // Integer conversions.
+    assert(format(buffer, "%d", 8) == "8");
+
+    // Floating point conversions.
     assert(format(buffer, "%g", 0.1234) == "0.1234");
     assert(format(buffer, "%g", 0.3) == "0.3");
     assert(format(buffer, "%g", 0.333333333333) == "0.333333");
