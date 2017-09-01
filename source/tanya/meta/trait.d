@@ -210,6 +210,23 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
+ * Returns the alignment of the type $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: Alignment of the type $(D_PARAM T).
+ */
+enum size_t alignOf(T) = T.alignof;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(alignOf!bool == bool.alignof);
+    static assert(is(typeof(alignOf!bool) == typeof(bool.alignof)));
+}
+
+/**
  * Tests whether $(D_INLINECODE Args[0]) and $(D_INLINECODE Args[1]) are the
  * same symbol.
  *
@@ -396,7 +413,8 @@ version (TanyaPhobos)
                                hasElaborateDestructor,
                                hasElaborateCopyConstructor,
                                hasElaborateAssign,
-                               EnumMembers;
+                               EnumMembers,
+                               classInstanceAlignment;
 }
 else:
 
@@ -2626,4 +2644,44 @@ pure nothrow @nogc @safe unittest
         three,
     }
     static assert([E.one, E.two, E.three] == [ EnumMembers!E ]);
+}
+
+/**
+ * Different than $(D_INLINECODE T.alignof), which is the same for all class
+ * types,  $(D_PSYMBOL classInstanceOf) determines the alignment of the class
+ * instance and not of its reference.
+ *
+ * Params:
+ *  T = A class.
+ *
+ * Returns: Alignment of an instance of the class $(D_PARAM T).
+ */
+template classInstanceAlignment(T)
+if (is(T == class))
+{
+    private enum ptrdiff_t pred(U1, U2) = U1.alignof - U2.alignof;
+    private alias Fields = typeof(T.tupleof);
+    enum size_t classInstanceAlignment = Max!(pred, T, Fields).alignof;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    class C1
+    {
+    }
+    static assert(classInstanceAlignment!C1 == C1.alignof);
+
+    struct S
+    {
+        align(8)
+        uint s;
+
+        int i;
+    }
+    class C2
+    {
+        S s;
+    }
+    static assert(classInstanceAlignment!C2 == S.alignof);
 }

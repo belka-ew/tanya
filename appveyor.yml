@@ -4,6 +4,12 @@ os: Visual Studio 2015
 environment:
   matrix:
     - DC: dmd
+      DVersion: 2.076.0
+      arch: x64
+    - DC: dmd
+      DVersion: 2.076.0
+      arch: x86
+    - DC: dmd
       DVersion: 2.075.1
       arch: x64
     - DC: dmd
