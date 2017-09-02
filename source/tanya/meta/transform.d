@@ -850,3 +850,38 @@ pure nothrow @safe @nogc unittest
     alias SharedInoutConstOf = QualifierOf!(shared inout const int);
     static assert(is(SharedInoutConstOf!uint == shared inout const uint));
 }
+
+/**
+ * Determines the type of $(D_PARAM T). If $(D_PARAM T) is already a type,
+ * $(D_PSYMBOL TypeOf) aliases itself to $(D_PARAM T).
+ *
+ * $(D_PSYMBOL TypeOf) evaluates to $(D_KEYWORD void) for template arguments.
+ *
+ * The symbols that don't have a type and aren't types cannot be used as
+ * arguments to $(D_PSYMBOL TypeOf).
+ *
+ * Params:
+ *  T = Expression, type or template.
+ *
+ * Returns: The type of $(D_PARAM T).
+ */
+alias TypeOf(T) = T;
+
+/// Ditto.
+template TypeOf(alias T)
+if (isExpressions!T || isTemplate!T)
+{
+    alias TypeOf = typeof(T);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S(T)
+    {
+    }
+    static assert(is(TypeOf!S == void));
+    static assert(is(TypeOf!int == int));
+    static assert(is(TypeOf!true == bool));
+    static assert(!is(TypeOf!(tanya.meta)));
+}

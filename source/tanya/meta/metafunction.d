@@ -1589,12 +1589,19 @@ pure nothrow @safe @nogc unittest
 template Select(bool cond, T...)
 if (T.length == 2)
 {
-    static if (condition)
+    static if (cond)
     {
-        alias Select = L[0];
+        alias Select = T[0];
     }
     else
     {
-        alias Select = L[1];
+        alias Select = T[1];
     }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(Select!(true, int, float) == int));
+    static assert(is(Select!(false, int, float) == float));
 }

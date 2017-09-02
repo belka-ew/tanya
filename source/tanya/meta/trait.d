@@ -378,7 +378,7 @@ version (TanyaPhobos)
                                isAssociativeArray,
                                isBuiltinType,
                                isAggregateType,
-                               isType,
+                               getUDAs,
                                isNarrowString,
                                isSomeString,
                                mostNegative,
@@ -415,7 +415,9 @@ version (TanyaPhobos)
                                hasElaborateAssign,
                                EnumMembers,
                                classInstanceAlignment,
-                               ifTestable;
+                               ifTestable,
+                               isTypeTuple,
+                               isExpressions;
 }
 else:
 
@@ -968,9 +970,11 @@ pure nothrow @safe @nogc unittest
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a type,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use isTypeTuple instead")
 enum bool isType(alias T) = is(T);
 
 /// Ditto.
+deprecated("Use isTypeTuple instead")
 enum bool isType(T) = true;
 
 ///
@@ -1273,6 +1277,79 @@ pure nothrow @safe @nogc unittest
     static assert(isAbstractClass!C);
     static assert(isAbstractClass!D);
     static assert(!isAbstractClass!E);
+}
+
+/**
+ * Determines whether $(D_PARAM Args) contains only types.
+ *
+ * Params:
+ *  Args = Alias sequence.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM Args) consists only of types,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isTypeTuple(Args...) = allSatisfy!(isType, Args);
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isTypeTuple!(int, uint, Object));
+    static assert(isTypeTuple!());
+    static assert(!isTypeTuple!(int, 8, Object));
+    static assert(!isTypeTuple!(5, 8, 2));
+}
+
+/**
+ * Tells whether $(D_PARAM Args) contains only expressions.
+ *
+ * An expression is determined by applying $(D_KEYWORD typeof) to an argument:
+ *
+ * ---
+ * static if (is(typeof(Args[i])))
+ * {
+ *  // Args[i] is an expression.
+ * }
+ * else
+ * {
+ *  // Args[i] is not an expression.
+ * }
+ * ---
+ *
+ * Params:
+ *  Args = Alias sequence.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM Args) consists only of expressions,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template isExpressions(Args...)
+{
+    static if (Args.length == 0)
+    {
+        enum bool isExpressions = true;
+    }
+    else static if (is(typeof(Args[0]) U))
+    {
+        enum bool isExpressions = !is(U == void)
+                               && isExpressions!(Args[1 .. $]);
+    }
+    else
+    {
+        enum bool isExpressions = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(isExpressions!(5, 8, 2));
+    static assert(isExpressions!());
+    static assert(!isExpressions!(int, uint, Object));
+    static assert(!isExpressions!(int, 8, Object));
+
+    template T(U)
+    {
+    }
+    static assert(!isExpressions!T);
 }
 
 /**
@@ -1854,7 +1931,6 @@ pure nothrow @safe @nogc unittest
     {
     }
     static assert(isInstanceOf!(T, T!int));
-
 }
 
 /**
@@ -2726,4 +2802,127 @@ pure nothrow @safe @nogc unittest
         }
     }
     static assert(ifTestable!S2);
+}
+
+/**
+ * Returns a compile-time tuple of user-defined attributes (UDA) attached to
+ * $(D_PARAM symbol).
+ *
+ * $(D_PARAM symbol) can be:
+ *
+ * $(DL
+ *  $(DT Template)
+ *  $(DD The attribute is matched if it is an instance of the template
+ *       $(D_PARAM attr).)
+ *  $(DT Type)
+ *  $(DD The attribute is matched if it its type is $(D_PARAM attr).)
+ *  $(DT Expression)
+ *  $(DD The attribute is matched if it equals to $(D_PARAM attr).)
+ * )
+ *
+ * If $(D_PARAM attr) isn't given, all user-defined attributes of
+ * $(D_PARAM symbol) are returned.
+ *
+ * Params:
+ *  symbol = A symbol.
+ *  attr   = User-defined attribute.
+ *
+ * Returns: A tuple of user-defined attributes attached to $(D_PARAM symbol)
+ *          and matching $(D_PARAM attr).
+ *
+ * See_Also: $(LINK2 https://dlang.org/spec/attribute.html#uda,
+ *                   User Defined Attributes).
+ */
+template getUDAs(alias symbol, alias attr)
+{
+    private template FindUDA(T...)
+    {
+        static if (T.length == 0)
+        {
+            alias FindUDA = AliasSeq!();
+        }
+        else static if ((isType!attr && is(TypeOf!(T[0]) == attr))
+                     || (is(typeof(T[0] == attr)) && (T[0] == attr))
+                     || isInstanceOf!(attr, TypeOf!(T[0])))
+        {
+            alias FindUDA = AliasSeq!(T[0], FindUDA!(T[1 .. $]));
+        }
+        else
+        {
+            alias FindUDA = FindUDA!(T[1 .. $]);
+        }
+    }
+    alias getUDAs = FindUDA!(__traits(getAttributes, symbol));
+}
+
+///
+alias getUDAs(alias symbol) = AliasSeq!(__traits(getAttributes, symbol));
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct Attr
+    {
+        int i;
+    }
+    @Attr int a;
+    static assert(getUDAs!(a, Attr).length == 1);
+
+    @Attr(8) int b;
+    static assert(getUDAs!(b, Attr).length == 1);
+    static assert(getUDAs!(b, Attr)[0].i == 8);
+    static assert(getUDAs!(b, Attr(8)).length == 1);
+    static assert(getUDAs!(b, Attr(7)).length == 0);
+
+    @("string", 5) int c;
+    static assert(getUDAs!(c, "string").length == 1);
+    static assert(getUDAs!(c, 5).length == 1);
+    static assert(getUDAs!(c, "String").length == 0);
+    static assert(getUDAs!(c, 4).length == 0);
+
+    struct T(U)
+    {
+        enum U s = 7;
+        U i;
+    }
+    @T!int @T!int(8) int d;
+    static assert(getUDAs!(d, T).length == 2);
+    static assert(getUDAs!(d, T)[0].s == 7);
+    static assert(getUDAs!(d, T)[1].i == 8);
+
+    @T int e;
+    static assert(getUDAs!(e, T).length == 0);
+}
+
+/**
+ * Determines whether $(D_PARAM symbol) has user-defined attribute
+ * $(D_PARAM attr) attached to it.
+ *
+ * Params:
+ *  symbol = A symbol.
+ *  attr   = User-defined attribute.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM symbol) has user-defined attribute
+ *          $(D_PARAM attr), $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(LINK2 https://dlang.org/spec/attribute.html#uda,
+ *                   User Defined Attributes).
+ */
+template hasUDA(alias symbol, alias attr)
+{
+    enum bool hasUDA = getUDAs!(symbol, attr).length != 0;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct Attr1
+    {
+    }
+    struct Attr2
+    {
+    }
+    @Attr1 int a;
+    static assert(hasUDA!(a, Attr1));
+    static assert(!hasUDA!(a, Attr2));
 }
