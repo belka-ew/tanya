@@ -16,7 +16,7 @@ Tanya extends Phobos functionality and provides alternative implementations for
 data structures and utilities that depend on the Garbage Collector in Phobos.
 
 * [Bug tracker](https://issues.caraus.io/projects/tanya/issues)
-* [Documentation](https://docs.caraus.io/tanya)
+* [API Documentation](https://docs.caraus.io/tanya)
 * [Contribution guidelines](CONTRIBUTING.md)
 
 
@@ -141,6 +141,7 @@ There are more containers in the `tanya.container` package.
 
 | dmd     |
 |:-------:|
+| 2.076.0 |
 | 2.075.1 |
 | 2.074.1 |
 | 2.073.2 |

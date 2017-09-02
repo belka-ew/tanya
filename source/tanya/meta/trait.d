@@ -414,7 +414,8 @@ version (TanyaPhobos)
                                hasElaborateCopyConstructor,
                                hasElaborateAssign,
                                EnumMembers,
-                               classInstanceAlignment;
+                               classInstanceAlignment,
+                               ifTestable;
 }
 else:
 
@@ -2684,4 +2685,45 @@ pure nothrow @safe @nogc unittest
         S s;
     }
     static assert(classInstanceAlignment!C2 == S.alignof);
+}
+
+/**
+ * Tests whether $(D_INLINECODE pred(T)) can be used as condition in an
+ * $(D_KEYWORD if)-statement or a ternary operator.
+ *
+ * $(D_PARAM pred) is an optional parameter. By default $(D_PSYMBOL ifTestable)
+ * tests whether $(D_PARAM T) itself is usable as condition in an
+ * $(D_KEYWORD if)-statement or a ternary operator, i.e. if it a value of type
+ * $(D_PARAM T) can be converted to a boolean.
+ *
+ * Params:
+ *  T    = A type.
+ *  pred = Function with one argument.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_INLINECODE pred(T)) can be used as
+ *          condition in an $(D_KEYWORD if)-statement or a ternary operator.
+ */
+template ifTestable(T, alias pred = a => a)
+{
+    enum bool ifTestable = is(typeof(pred(T.init) ? true : false));
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(ifTestable!int);
+
+    struct S1
+    {
+    }
+    static assert(!ifTestable!S1);
+
+    struct S2
+    {
+        bool opCast(T : bool)()
+        {
+            return true;
+        }
+    }
+    static assert(ifTestable!S2);
 }
