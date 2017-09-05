@@ -416,6 +416,9 @@ version (TanyaPhobos)
                                EnumMembers,
                                classInstanceAlignment,
                                ifTestable,
+                               FunctionTypeOf,
+                               ReturnType,
+                               TemplateOf,
                                isTypeTuple,
                                isExpressions;
 }
@@ -1873,11 +1876,149 @@ pure nothrow @safe @nogc unittest
     }
 }
 
-deprecated("Use tanya.meta.transform.FunctionTypeOf instead")
-alias FunctionTypeOf = tanya.meta.transform.FunctionTypeOf;
+/**
+ * Params:
+ *  F = A function.
+ *
+ * Returns: Type of the function $(D_PARAM F).
+ */
+template FunctionTypeOf(F...)
+if (isCallable!F)
+{
+    static if ((is(typeof(F[0]) T : T*) && is(T == function))
+            || (is(F[0] T : T*) && is(T == function))
+            || is(F[0] T == delegate)
+            || is(typeof(F[0]) T == delegate)
+            || is(F[0] T == function)
+            || is(typeof(&F[0]) T == delegate)
+            || (is(typeof(&F[0]) T : T*) && is(T == function)))
+    {
+        alias FunctionTypeOf = T;
+    }
+    else
+    {
+        alias FunctionTypeOf = FunctionTypeOf!(F[0].opCall);
+    }
+}
 
-deprecated("Use tanya.meta.transform.ReturnType instead")
-alias ReturnType = tanya.meta.transform.ReturnType;
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(FunctionTypeOf!(void function()) == function));
+    static assert(is(FunctionTypeOf!(() {}) == function));
+}
+
+private pure nothrow @safe @nogc unittest
+{
+    static assert(is(FunctionTypeOf!(void delegate()) == function));
+
+    static void staticFunc()
+    {
+    }
+    auto functionPointer = &staticFunc;
+    static assert(is(FunctionTypeOf!staticFunc == function));
+    static assert(is(FunctionTypeOf!functionPointer == function));
+
+    void func()
+    {
+    }
+    auto dg = &func;
+    static assert(is(FunctionTypeOf!func == function));
+    static assert(is(FunctionTypeOf!dg == function));
+
+    interface I
+    {
+        @property int prop();
+    }
+    static assert(is(FunctionTypeOf!(I.prop) == function));
+
+    struct S
+    {
+        void opCall()
+        {
+        }
+    }
+    class C
+    {
+        static void opCall()
+        {
+        }
+    }
+    S s;
+
+    static assert(is(FunctionTypeOf!s == function));
+    static assert(is(FunctionTypeOf!C == function));
+    static assert(is(FunctionTypeOf!S == function));
+}
+
+private pure nothrow @safe @nogc unittest
+{
+    struct S2
+    {
+        @property int opCall()
+        {
+            return 0;
+        }
+    }
+    S2 s2;
+    static assert(is(FunctionTypeOf!S2 == function));
+    static assert(is(FunctionTypeOf!s2 == function));
+}
+
+/**
+ * Params:
+ *  F = A callable object.
+ *
+ * Returns: Return type of $(D_PARAM F).
+ */
+template ReturnType(F...)
+if (isCallable!F)
+{
+    static if (is(FunctionTypeOf!(F[0]) T == return))
+    {
+        alias ReturnType = T;
+    }
+    else
+    {
+        static assert(false, "Argument is not a callable");
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(is(ReturnType!(int delegate()) == int));
+    static assert(is(ReturnType!(bool function()) == bool));
+}
+
+/**
+ * Determines the template $(D_PARAM T) is an instance of.
+ *
+ * Params:
+ *  T = Template instance.
+ *
+ * Returns: Template $(D_PARAM T) is an instance of.
+ */
+alias TemplateOf(alias T : Base!Args, alias Base, Args...) = Base;
+
+///
+pure nothrow @safe @nogc unittest
+{
+    struct S(T)
+    {
+    }
+    static assert(isSame!(TemplateOf!(S!int), S));
+
+    static void func(T)()
+    {
+    }
+    static assert(isSame!(TemplateOf!(func!int), func));
+
+    template T(U)
+    {
+    }
+    static assert(isSame!(TemplateOf!(T!int), T));
+}
 
 /**
  * Returns the mangled name of the symbol $(D_PARAM T).
@@ -2392,7 +2533,7 @@ if (isCallable!F)
             {
                 attrs |= FunctionAttribute.shared_;
             }
-            else static if (a == "system")
+            else static if (a == "@system")
             {
                 attrs |= FunctionAttribute.system;
             }

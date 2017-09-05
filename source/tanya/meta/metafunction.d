@@ -112,7 +112,7 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Zips one or more $(D_PSYMBOL AliasTuple)s with $(D_PARAM f).
+ * Zips one or more $(D_PSYMBOL Tuple)s with $(D_PARAM f).
  *
  * Given $(D_PARAM f) and tuples t1, t2, ..., tk, where tk[i] denotes the
  * $(I i)-th element of the tuple $(I k)-th tuple, $(D_PSYMBOL ZipWith)
@@ -137,7 +137,7 @@ pure nothrow @safe @nogc unittest
  * Params:
  *  f      = Some template that can be applied to the elements of
  *           $(D_PARAM Tuples).
- *  Tuples = $(D_PSYMBOL AliasTuple) instances.
+ *  Tuples = $(D_PSYMBOL Tuple) instances.
  *
  * Returns: A sequence, whose $(I i)-th element contains the $(I i)-th element
  *          from each of the $(D_PARAM Tuples).
@@ -145,7 +145,7 @@ pure nothrow @safe @nogc unittest
 template ZipWith(alias f, Tuples...)
 if (Tuples.length > 0
  && isTemplate!f
- && allSatisfy!(ApplyLeft!(isInstanceOf, AliasTuple), Tuples))
+ && allSatisfy!(ApplyLeft!(isInstanceOf, Tuple), Tuples))
 {
     private template GetIth(size_t i, Args...)
     {
@@ -179,24 +179,24 @@ if (Tuples.length > 0
 pure nothrow @safe @nogc unittest
 {
     alias Result1 = ZipWith!(AliasSeq,
-                             AliasTuple!(1, 2),
-                             AliasTuple!(5, 6),
-                             AliasTuple!(9, 10));
+                             Tuple!(1, 2),
+                             Tuple!(5, 6),
+                             Tuple!(9, 10));
     static assert(Result1 == AliasSeq!(1, 5, 9, 2, 6, 10));
 
     alias Result2 = ZipWith!(AliasSeq,
-                             AliasTuple!(1, 2, 3),
-                             AliasTuple!(4, 5));
+                             Tuple!(1, 2, 3),
+                             Tuple!(4, 5));
     static assert(Result2 == AliasSeq!(1, 4, 2, 5));
 
-    alias Result3 = ZipWith!(AliasSeq, AliasTuple!(), AliasTuple!(4, 5));
+    alias Result3 = ZipWith!(AliasSeq, Tuple!(), Tuple!(4, 5));
     static assert(Result3.length == 0);
 }
 
 /**
  * Holds a typed sequence of template parameters.
  *
- * Different than $(D_PSYMBOL AliasSeq), $(D_PSYMBOL AliasTuple) doesn't unpack
+ * Different than $(D_PSYMBOL AliasSeq), $(D_PSYMBOL Tuple) doesn't unpack
  * its template parameters automatically. Consider:
  *
  * ---
@@ -211,7 +211,7 @@ pure nothrow @safe @nogc unittest
  * Using $(D_PSYMBOL AliasSeq) template `A` gets 4 parameters instead of 2,
  * because $(D_PSYMBOL AliasSeq) is just an alias for its template parameters.
  *
- * With $(D_PSYMBOL AliasTuple) it is possible to pass distinguishable
+ * With $(D_PSYMBOL Tuple) it is possible to pass distinguishable
  * sequences of parameters to a template. So:
  *
  * ---
@@ -220,15 +220,15 @@ pure nothrow @safe @nogc unittest
  *  static assert(Args.length == 2);
  * }
  *
- * alias BInstance = B!(AliasTuple!(int, uint), AliasTuple!(float, double));
+ * alias BInstance = B!(Tuple!(int, uint), Tuple!(float, double));
  * ---
  *
  * Params:
- *  Args = Elements of this $(D_PSYMBOL AliasTuple).
+ *  Args = Elements of this $(D_PSYMBOL Tuple).
  *
  * See_Also: $(D_PSYMBOL AliasSeq).
  */
-template AliasTuple(Args...)
+template Tuple(Args...)
 {
     /// Elements in this tuple as $(D_PSYMBOL AliasSeq).
     alias Seq = Args;
@@ -240,9 +240,9 @@ template AliasTuple(Args...)
 ///
 pure nothrow @safe @nogc unittest
 {
-    alias A = AliasTuple!(short);
-    alias B = AliasTuple!(3, 8, 9);
-    alias C = AliasTuple!(A, B);
+    alias A = Tuple!(short);
+    alias B = Tuple!(3, 8, 9);
+    alias C = Tuple!(A, B);
 
     static assert(C.length == 2);
 
@@ -251,9 +251,173 @@ pure nothrow @safe @nogc unittest
     static assert(B.length == 3);
     static assert(B.Seq == AliasSeq!(3, 8, 9));
 
-    alias D = AliasTuple!();
+    alias D = Tuple!();
     static assert(D.length == 0);
     static assert(is(D.Seq == AliasSeq!()));
+}
+
+/**
+ * Unordered sequence of unique aliases.
+ *
+ * $(D_PARAM Args) can contain duplicates, but they will be filteredout, so
+ * $(D_PSYMBOL Set) contains only unique items. $(D_PSYMBOL isEqual) is used
+ * for determining if two items are equal.
+ *
+ * Params:
+ *  Args = Elements of this $(D_PSYMBOL Tuple).
+ */
+template Set(Args...)
+{
+    /// Elements in this set as $(D_PSYMBOL AliasSeq).
+    alias Seq = NoDuplicates!Args;
+
+    /// The length of the set.
+    enum size_t length = Seq.length;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias S1 = Set!(int, 5, 5, int, 4);
+    static assert(S1.length == 3);
+}
+
+/**
+ * Produces a $(D_PSYMBOL Set) containing all elements of the given
+ * $(D_PARAM Sets).
+ *
+ * Params:
+ *  Sets = List of $(D_PSYMBOL Set) instances.
+ *
+ * Returns: Set-theoretic union of all $(D_PARAM Sets).
+ *
+ * See_Also: $(D_PSYMBOL Set).
+ */
+template Union(Sets...)
+if (allSatisfy!(ApplyLeft!(isInstanceOf, Set), Sets))
+{
+    private template Impl(Sets...)
+    {
+        static if (Sets.length == 0)
+        {
+            alias Impl = AliasSeq!();
+        }
+        else
+        {
+            alias Impl = AliasSeq!(Sets[0].Seq, Impl!(Sets[1 .. $]));
+        }
+    }
+    alias Union = Set!(Impl!Sets);
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias S1 = Set!(2, 5, 8, 4);
+    alias S2 = Set!(3, 8, 4, 1);
+    static assert(Union!(S1, S2).Seq == AliasSeq!(2, 5, 8, 4, 3, 1));
+}
+
+/**
+ * Produces a $(D_PSYMBOL Set) that containing elements of
+ * $(D_INLINECODE Sets[0]) that are also elements of all other sets in
+ * $(D_PARAM Sets).
+ *
+ * Params:
+ *  Sets = List of $(D_PSYMBOL Set) instances.
+ *
+ * Returns: Set-theoretic intersection of all $(D_PARAM Sets).
+ *
+ * See_Also: $(D_PSYMBOL Set).
+ */
+template Intersection(Sets...)
+if (allSatisfy!(ApplyLeft!(isInstanceOf, Set), Sets))
+{
+    private template Impl(Args...)
+    if (Args.length > 0)
+    {
+        alias Equal = ApplyLeft!(isEqual, Args[0]);
+        static if (Args.length == 1)
+        {
+            enum bool Impl = true;
+        }
+        else static if (!anySatisfy!(Equal, Args[1].Seq))
+        {
+            enum bool Impl = false;
+        }
+        else
+        {
+            enum bool Impl = Impl!(Args[0], Args[2 .. $]);
+        }
+    }
+
+    private enum bool FilterImpl(Args...) = Impl!(Args[0], Sets[1 .. $]);
+
+    static if (Sets.length == 0)
+    {
+        alias Intersection = Set!();
+    }
+    else
+    {
+        alias Intersection = Set!(Filter!(FilterImpl, Sets[0].Seq));
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias S1 = Set!(2, 5, 8, 4);
+    alias S2 = Set!(3, 8, 4, 1);
+    static assert(Intersection!(S1, S2).Seq == AliasSeq!(8, 4));
+
+    static assert(Intersection!(S1).Seq == AliasSeq!(2, 5, 8, 4));
+    static assert(Intersection!().length == 0);
+}
+
+/**
+ * Produces a $(D_PSYMBOL Set) that contains all elements of
+ * $(D_PARAM S1) that are not members of $(D_PARAM S2).
+ *
+ * Params:
+ *  S1 = A $(D_PSYMBOL Set).
+ *  S2 = A $(D_PSYMBOL Set).
+ *
+ * Returns: Set-theoretic difference of two sets $(D_PARAM S1) and
+ *          $(D_PARAM S2).
+ *
+ * See_Also: $(D_PSYMBOL Set).
+ */
+template Difference(alias S1, alias S2)
+if (isInstanceOf!(Set, S1) && isInstanceOf!(Set, S2))
+{
+    private template Impl(Args...)
+    {
+        alias Equal = ApplyLeft!(isEqual, Args[0]);
+        enum bool Impl = !anySatisfy!(Equal, S2.Seq);
+    }
+
+    static if (S1.length == 0)
+    {
+        alias Difference = Set!();
+    }
+    else static if (S2.length == 1)
+    {
+        alias Difference = S1;
+    }
+    else
+    {
+        alias Difference = Set!(Filter!(Impl, S1.Seq));
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    alias S1 = Set!(2, 5, 8, 4);
+    alias S2 = Set!(3, 8, 4, 1);
+    static assert(Difference!(S1, S2).Seq == AliasSeq!(2, 5));
+    static assert(Difference!(S2, S1).Seq == AliasSeq!(3, 1));
+    static assert(Difference!(S1, Set!()).Seq == AliasSeq!(2, 5, 8, 4));
 }
 
 /**
@@ -451,6 +615,9 @@ pure nothrow @safe @nogc unittest
  * $(D_INLINECODE is(Args[0] == Args[1])). It it fails, the arguments are
  * considered to be not equal.
  *
+ * If two items cannot be compared (for example comparing a type with a
+ * number), they are considered not equal.
+ *
  * Params:
  *  Args = Two aliases to compare for equality.
  *
@@ -461,7 +628,8 @@ template isEqual(Args...)
 if (Args.length == 2)
 {
     static if ((is(typeof(Args[0] == Args[1])) && (Args[0] == Args[1]))
-            || is(Args[0] == Args[1]))
+            || (isTypeTuple!Args && is(Args[0] == Args[1]))
+            || isSame!Args)
     {
         enum bool isEqual = true;
     }
@@ -475,6 +643,8 @@ if (Args.length == 2)
 pure nothrow @safe @nogc unittest
 {
     static assert(isEqual!(int, int));
+    static assert(isEqual!(8, 8));
+    static assert(!isEqual!(int, const(int)));
     static assert(!isEqual!(5, int));
     static assert(!isEqual!(5, 8));
 }
