@@ -12,3 +12,6 @@ __test__*__.core
 /docs.json
 
 /*.lst
+
+# Ninja build
+.ninja_*

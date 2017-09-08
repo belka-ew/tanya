@@ -1,0 +1,9 @@
+rule gas
+  command = gcc -c $in -o $out
+
+rule archive
+  command = ar rcs $out $in
+
+build syscall.o: gas x64/linux/syscall.S
+
+build tanya.a: archive syscall.o
