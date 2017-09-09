@@ -5,6 +5,10 @@
 /**
  * Template metaprogramming.
  *
+ * This package contains utilities to acquire type information at compile-time,
+ * to transform from one type to another. It has also different algorithms for
+ * iterating, searching and modifying template arguments.
+ *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).

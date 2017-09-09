@@ -30,7 +30,10 @@ string, Hash set.
 * `format`: Formatting and conversion functions.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
-* `meta`: Template metaprogramming package.
+* `meta`: Template metaprogramming. This package contains utilities to acquire
+type information at compile-time, to transform from one type to another. It has
+also different algorithms for iterating, searching and modifying template
+arguments.
 * `net`: URL-Parsing, network programming.
 * `network`: Socket implementation. `network` is currently under rework.
 After finishing the new socket implementation will land in the `net` package and

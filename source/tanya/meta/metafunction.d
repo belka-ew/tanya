@@ -3,8 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * This module contains functions that manipulate template type lists as well
- * as algorithms to perform arbitrary compile-time computations.
+ * This module is suited for computations on template arguments, both types and
+ * values at compile time.
+ *
+ * It contains different algorithms for iterating, searching and modifying
+ * template arguments.
  *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
