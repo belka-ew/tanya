@@ -18,9 +18,9 @@ import core.exception;
 import std.algorithm.iteration;
 import std.algorithm.mutation;
 import std.conv;
-import std.range;
 public import tanya.memory.allocator;
 import tanya.memory.mmappool;
+import tanya.range.primitive;
 import tanya.meta.trait;
 
 /**

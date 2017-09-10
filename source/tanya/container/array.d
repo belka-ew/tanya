@@ -19,11 +19,11 @@ import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.conv;
-import std.range.primitives;
 import std.meta;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.range.primitive;
 
 /**
  * Random-access range for the $(D_PSYMBOL Array).

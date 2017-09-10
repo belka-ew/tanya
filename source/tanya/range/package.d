@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * This package contains generic function and templates to be used with D
+ * This package contains generic functions and templates to be used with D
  * ranges.
  *
  * Copyright: Eugene Wissner 2017.
@@ -16,3 +16,4 @@
 module tanya.range;
 
 public import tanya.range.array;
+public import tanya.range.primitive;

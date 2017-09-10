@@ -15,9 +15,9 @@
 module tanya.net.inet;
 
 import std.math;
-import std.range.primitives;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.range.primitive;
 
 /**
  * Represents an unsigned integer as an $(D_KEYWORD ubyte) range.

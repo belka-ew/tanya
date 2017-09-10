@@ -702,7 +702,7 @@ private @nogc unittest
 // Static checks.
 private unittest
 {
-    import std.range.primitives;
+    import tanya.range.primitive;
 
     static assert(isBidirectionalRange!(Set!int.ConstRange));
     static assert(isBidirectionalRange!(Set!int.Range));

@@ -17,10 +17,11 @@ module tanya.container.list;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.algorithm.searching;
-import std.range.primitives;
 import tanya.container.entry;
 import tanya.memory;
 import tanya.meta.trait;
+import tanya.range.array;
+import tanya.range.primitive;
 
 /**
  * Forward range for the $(D_PSYMBOL SList).
