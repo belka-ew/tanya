@@ -18,11 +18,6 @@ public import tanya.math.mp;
 public import tanya.math.random;
 import tanya.meta.trait;
 
-version (unittest)
-{
-    import std.algorithm.iteration;
-}
-
 /**
  * Computes $(D_PARAM x) to the power $(D_PARAM y) modulo $(D_PARAM z).
  *
@@ -43,7 +38,7 @@ version (unittest)
  * Precondition: $(D_INLINECODE z > 0)
  */
 H pow(I, G, H)(in auto ref I x, in auto ref G y, in auto ref H z)
-    if (isIntegral!I && isIntegral!G && isIntegral!H)
+if (isIntegral!I && isIntegral!G && isIntegral!H)
 in
 {
     assert(z > 0, "Division by zero.");
@@ -84,7 +79,7 @@ body
 
 /// Ditto.
 I pow(I)(const auto ref I x, const auto ref I y, const auto ref I z)
-    if (is(I == Integer))
+if (is(I == Integer))
 in
 {
     assert(z.length > 0, "Division by zero.");
@@ -137,7 +132,7 @@ pure nothrow @safe @nogc unittest
 }
 
 ///
-unittest
+nothrow @safe @nogc unittest
 {
     assert(pow(Integer(3), Integer(5), Integer(7)) == 5);
     assert(pow(Integer(2), Integer(2), Integer(1)) == 0);
@@ -165,23 +160,52 @@ bool isPseudoprime(ulong x) nothrow pure @safe @nogc
 }
 
 ///
-unittest
+pure nothrow @safe @nogc unittest
 {
-    uint[30] known = [74623, 74653, 74687, 74699, 74707, 74713, 74717, 74719,
-                      74843, 74747, 74759, 74761, 74771, 74779, 74797, 74821,
-                      74827, 9973, 104729, 15485867, 49979693, 104395303,
-                      593441861, 104729, 15485867, 49979693, 104395303,
-                      593441861, 899809363, 982451653];
+    assert(74623.isPseudoprime);
+    assert(104729.isPseudoprime);
+    assert(15485867.isPseudoprime);
+    assert(!15485868.isPseudoprime);
+}
 
-    known.each!((ref x) => assert(isPseudoprime(x)));
+private pure nothrow @safe @nogc unittest
+{
+    assert(74653.isPseudoprime);
+    assert(74687.isPseudoprime);
+    assert(74699.isPseudoprime);
+    assert(74707.isPseudoprime);
+    assert(74713.isPseudoprime);
+    assert(74717.isPseudoprime);
+    assert(74719.isPseudoprime);
+    assert(74747.isPseudoprime);
+    assert(74759.isPseudoprime);
+    assert(74761.isPseudoprime);
+    assert(74771.isPseudoprime);
+    assert(74779.isPseudoprime);
+    assert(74797.isPseudoprime);
+    assert(74821.isPseudoprime);
+    assert(74827.isPseudoprime);
+    assert(9973.isPseudoprime);
+    assert(49979693.isPseudoprime);
+    assert(104395303.isPseudoprime);
+    assert(593441861.isPseudoprime);
+    assert(104729.isPseudoprime);
+    assert(15485867.isPseudoprime);
+    assert(49979693.isPseudoprime);
+    assert(104395303.isPseudoprime);
+    assert(593441861.isPseudoprime);
+    assert(899809363.isPseudoprime);
+    assert(982451653.isPseudoprime);
 }
 
 /**
+ * Calculates the absolute value of a number.
+ *
  * Params:
  *  I = Value type.
  *  x = Value.
  *
- * Returns: The absolute value of a number.
+ * Returns: Absolute value of $(D_PARAM x).
  */
 I abs(I : Integer)(const auto ref I x)
 {
@@ -199,7 +223,7 @@ I abs(I : Integer)(I x)
 
 /// Ditto.
 I abs(I)(const I x)
-    if (isIntegral!I)
+if (isIntegral!I)
 {
     return x >= 0 ? x : -x;
 }

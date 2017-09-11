@@ -69,7 +69,7 @@ struct Integer
      * Precondition: $(D_INLINECODE allocator !is null)
      */
     this(T)(const T value, shared Allocator allocator = defaultAllocator)
-        if (isIntegral!T)
+    if (isIntegral!T)
     {
         this(allocator);
         this = value;
@@ -77,7 +77,7 @@ struct Integer
 
     /// Ditto.
     this(T)(ref T value, shared Allocator allocator = defaultAllocator)
-        if (is(Unqual!T == Integer))
+    if (is(Unqual!T == Integer))
     {
         this(allocator);
         this = value;
@@ -85,8 +85,7 @@ struct Integer
 
     /// Ditto.
     this(T)(T value, shared Allocator allocator = defaultAllocator)
-    nothrow @safe @nogc
-        if (is(T == Integer))
+    if (is(T == Integer))
     {
         this(allocator);
         if (allocator is value.allocator)
@@ -129,8 +128,8 @@ struct Integer
     this(R)(const Sign sign,
             R value,
             shared Allocator allocator = defaultAllocator)
-        if (isBidirectionalRange!R && hasLength!R
-         && is(Unqual!(ElementType!R) == ubyte))
+    if (isBidirectionalRange!R && hasLength!R
+     && is(Unqual!(ElementType!R) == ubyte))
     {
         this(allocator);
         grow(value.length / (digitBitCount / 8) + 1);
@@ -156,6 +155,7 @@ struct Integer
         }
     }
 
+    ///
     nothrow @safe @nogc unittest
     {
         ubyte[8] range = [ 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xdd, 0xee ];
@@ -173,10 +173,9 @@ struct Integer
      *
      * Precondition: $(D_INLINECODE allocator !is null)
      */
-    this(R)(R value,
-            shared Allocator allocator = defaultAllocator)
-        if (isBidirectionalRange!R && hasLength!R
-         && is(Unqual!(ElementType!R) == ubyte))
+    this(R)(R value, shared Allocator allocator = defaultAllocator)
+    if (isBidirectionalRange!R && hasLength!R
+     && is(Unqual!(ElementType!R) == ubyte))
     {
         this(Sign.positive, value, allocator);
 
@@ -280,6 +279,19 @@ struct Integer
         }
     }
 
+    ///
+    private nothrow @safe @nogc unittest
+    {
+        {
+            Integer i;
+            assert(i.length == 0);
+        }
+        {
+            auto i = Integer(-123456789);
+            assert(i.length == 4);
+        }
+    }
+
     /**
      * Assigns a new value.
      *
@@ -290,7 +302,7 @@ struct Integer
      * Returns: $(D_KEYWORD this).
      */
     ref Integer opAssign(T)(const T value)
-        if (isIntegral!T)
+    if (isIntegral!T)
     {
         rep[0 .. this.size].fill(digit.init);
         grow(digitBitCount / 8 + 1);
@@ -325,7 +337,7 @@ struct Integer
 
     /// Ditto.
     ref Integer opAssign(T)(ref T value) @trusted
-        if (is(Unqual!T == Integer))
+    if (is(Unqual!T == Integer))
     {
         this.rep = allocator.resize(this.rep, value.size);
         value.rep[0 .. value.size].copy(this.rep[0 .. value.size]);
@@ -337,7 +349,7 @@ struct Integer
 
     /// Ditto.
     ref Integer opAssign(T)(T value) nothrow @safe @nogc
-        if (is(T == Integer))
+    if (is(T == Integer))
     {
         swap(this.rep, value.rep);
         swap(this.sign, value.sign);
@@ -361,7 +373,7 @@ struct Integer
 
     /// Ditto.
     T opCast(T)() const
-        if (isIntegral!T && isUnsigned!T)
+    if (isIntegral!T && isUnsigned!T)
     {
         T ret;
         ubyte shift;
@@ -375,7 +387,7 @@ struct Integer
 
     /// Ditto.
     T opCast(T)() const
-        if (isIntegral!T && isSigned!T)
+    if (isIntegral!T && isSigned!T)
     {
         return this.sign ? -(cast(Unsigned!T) this) : cast(Unsigned!T) this;
     }
@@ -405,7 +417,7 @@ struct Integer
         assert(cast(long) integer == 0);
     }
 
-    /* trim unused digits 
+    /* Trim unused digits.
      *
      * This is used to ensure that leading zero digits are
      * trimed and the leading "size" digit will be non-zero
@@ -667,7 +679,7 @@ struct Integer
 
     /// Ditto.
     int opCmp(I)(const I that) const
-        if (isIntegral!I)
+    if (isIntegral!I)
     {
         if (that < 0 && !this.sign)
         {
@@ -713,7 +725,7 @@ struct Integer
      * Returns: Whether the two integers are equal.
      */
     bool opEquals(I)(auto ref const I that) const
-        if (is(I : Integer) || isIntegral!I)
+    if (is(I : Integer) || isIntegral!I)
     {
         return opCmp!I(that) == 0;
     }
@@ -1135,14 +1147,14 @@ struct Integer
      * Returns: Result.
      */
     Integer opBinary(string op)(auto ref const Integer operand) const
-        if ((op == "+" || op == "-") || (op == "*"))
+    if ((op == "+" || op == "-") || (op == "*"))
     {
         mixin("return Integer(this, allocator) " ~ op ~ "= operand;");
     }
 
     /// Ditto.
     Integer opBinary(string op)(const auto ref Integer operand) const
-        if (op == "/" || op == "%")
+    if (op == "/" || op == "%")
     in
     {
         assert(operand.length > 0, "Division by zero.");
@@ -1154,7 +1166,7 @@ struct Integer
 
     /// Ditto.
     Integer opBinary(string op)(const size_t operand) const
-        if (op == "<<" || op == ">>")
+    if (op == "<<" || op == ">>")
     {
         mixin("return Integer(this, allocator) " ~ op ~ "= operand;");
     }
@@ -1260,9 +1272,9 @@ struct Integer
                                     auto ref Q quotient,
                                     ref ARGS args)
     const nothrow @safe @nogc
-        if ((is(Q : typeof(null))
-         || (is(Q : Integer) && __traits(isRef, quotient)))
-         && (ARGS.length == 0 || (ARGS.length == 1 && is(ARGS[0] : Integer))))
+    if ((is(Q : typeof(null))
+     || (is(Q : Integer) && __traits(isRef, quotient)))
+     && (ARGS.length == 0 || (ARGS.length == 1 && is(ARGS[0] : Integer))))
     in
     {
         assert(divisor != 0, "Division by zero.");

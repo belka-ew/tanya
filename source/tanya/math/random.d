@@ -227,8 +227,9 @@ class Entropy
      * See_Also:
      *  $(D_PSYMBOL EntropySource)
      */
-    Entropy opOpAssign(string Op)(EntropySource source) pure nothrow @safe @nogc
-        if (Op == "~")
+    Entropy opOpAssign(string op)(EntropySource source)
+    pure nothrow @safe @nogc
+    if (op == "~")
     in
     {
         assert(sourceCount_ <= sources.length);
