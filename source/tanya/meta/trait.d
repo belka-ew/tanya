@@ -965,41 +965,6 @@ pure nothrow @safe @nogc unittest
 }
 
 /**
- * Determines whether $(D_PARAM T) is some type.
- *
- * Params:
- *  T = A symbol.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a type,
- *          $(D_KEYWORD false) otherwise.
- */
-deprecated("Use isTypeTuple instead")
-enum bool isType(alias T) = is(T);
-
-/// Ditto.
-deprecated("Use isTypeTuple instead")
-enum bool isType(T) = true;
-
-///
-pure nothrow @safe @nogc unittest
-{
-    class C;
-    enum E : bool;
-    union U;
-    struct T();
-
-    static assert(isType!C);
-    static assert(isType!E);
-    static assert(isType!U);
-    static assert(isType!void);
-    static assert(isType!int);
-    static assert(!isType!T);
-    static assert(isType!(T!()));
-    static assert(!isType!5);
-    static assert(!isType!(tanya.meta.trait));
-}
-
-/**
  * Determines whether $(D_PARAM T) is a narrow string, i.e. consists of
  * $(D_KEYWORD char) or $(D_KEYWORD wchar).
  *
@@ -1282,6 +1247,9 @@ pure nothrow @safe @nogc unittest
     static assert(!isAbstractClass!E);
 }
 
+private enum bool isType(alias T) = is(T);
+private enum bool isType(T) = true;
+
 /**
  * Determines whether $(D_PARAM Args) contains only types.
  *
@@ -1300,6 +1268,21 @@ pure nothrow @safe @nogc unittest
     static assert(isTypeTuple!());
     static assert(!isTypeTuple!(int, 8, Object));
     static assert(!isTypeTuple!(5, 8, 2));
+
+    class C;
+    enum E : bool;
+    union U;
+    struct T();
+
+    static assert(isTypeTuple!C);
+    static assert(isTypeTuple!E);
+    static assert(isTypeTuple!U);
+    static assert(isTypeTuple!void);
+    static assert(isTypeTuple!int);
+    static assert(!isTypeTuple!T);
+    static assert(isTypeTuple!(T!()));
+    static assert(!isTypeTuple!5);
+    static assert(!isTypeTuple!(tanya.meta.trait));
 }
 
 /**
@@ -2982,7 +2965,7 @@ template getUDAs(alias symbol, alias attr)
         {
             alias FindUDA = AliasSeq!();
         }
-        else static if ((isType!attr && is(TypeOf!(T[0]) == attr))
+        else static if ((isTypeTuple!attr && is(TypeOf!(T[0]) == attr))
                      || (is(typeof(T[0] == attr)) && (T[0] == attr))
                      || isInstanceOf!(attr, TypeOf!(T[0])))
         {

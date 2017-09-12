@@ -1094,9 +1094,6 @@ if (isTemplate!cmp)
     }
 }
 
-deprecated("Use tanya.meta.metafunction.isSorted instead")
-alias staticIsSorted = isSorted;
-
 ///
 pure nothrow @safe @nogc unittest
 {
