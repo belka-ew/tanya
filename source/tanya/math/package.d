@@ -15,6 +15,7 @@
 module tanya.math;
 
 public import tanya.math.mp;
+public import tanya.math.nbtheory;
 public import tanya.math.random;
 import tanya.meta.trait;
 
@@ -196,34 +197,4 @@ private pure nothrow @safe @nogc unittest
     assert(593441861.isPseudoprime);
     assert(899809363.isPseudoprime);
     assert(982451653.isPseudoprime);
-}
-
-/**
- * Calculates the absolute value of a number.
- *
- * Params:
- *  I = Value type.
- *  x = Value.
- *
- * Returns: Absolute value of $(D_PARAM x).
- */
-I abs(I : Integer)(const auto ref I x)
-{
-    auto result = Integer(x, x.allocator);
-    result.sign = Sign.positive;
-    return result;
-}
-
-/// Ditto.
-I abs(I : Integer)(I x)
-{
-    x.sign = Sign.positive;
-    return x;
-}
-
-/// Ditto.
-I abs(I)(const I x)
-if (isIntegral!I)
-{
-    return x >= 0 ? x : -x;
 }

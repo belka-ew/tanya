@@ -18,7 +18,9 @@
 		{
 			"name": "native",
 			"targetType": "library",
-			"platforms": ["linux-x86_64"]
+			"platforms": ["linux-x86_64"],
+			"preBuildCommands": ["ninja -C arch"],
+			"lflags": ["arch/tanya.a"]
 		}
 	]
 }
