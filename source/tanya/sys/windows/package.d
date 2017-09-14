@@ -16,4 +16,5 @@ version (Windows):
 
 public import tanya.sys.windows.def;
 public import tanya.sys.windows.error;
+public import tanya.sys.windows.wdm;
 public import tanya.sys.windows.winsock2;
