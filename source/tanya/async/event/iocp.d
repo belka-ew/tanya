@@ -27,10 +27,8 @@ import tanya.async.watcher;
 import tanya.memory;
 import tanya.memory.mmappool;
 import tanya.network.socket;
-import core.sys.windows.basetyps;
 import core.sys.windows.mswsock;
 import core.sys.windows.winbase;
-import core.sys.windows.windef;
 import core.sys.windows.winsock2;
 
 /**
@@ -185,7 +183,7 @@ final class IOCPLoop : Loop
     {
         super();
 
-        completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+        completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, null, 0, 0);
         if (!completionPort)
         {
             throw make!BadLoopException(defaultAllocator,
@@ -215,7 +213,7 @@ final class IOCPLoop : Loop
 
             if (CreateIoCompletionPort(cast(HANDLE) socket.handle,
                                        completionPort,
-                                       cast(ULONG_PTR) (cast(void*) watcher),
+                                       cast(size_t) (cast(void*) watcher),
                                        0) !is completionPort)
             {
                 return false;
@@ -241,7 +239,7 @@ final class IOCPLoop : Loop
 
             if (CreateIoCompletionPort(cast(HANDLE) transport.socket.handle,
                                        completionPort,
-                                       cast(ULONG_PTR) (cast(void*) watcher),
+                                       cast(size_t) (cast(void*) watcher),
                                        0) !is completionPort)
             {
                 return false;
@@ -286,7 +284,7 @@ final class IOCPLoop : Loop
     override protected void poll() @nogc
     {
         DWORD lpNumberOfBytes;
-        ULONG_PTR key;
+        size_t key;
         LPOVERLAPPED overlap;
         immutable timeout = cast(immutable int) blockTime.total!"msecs";
 
@@ -295,7 +293,7 @@ final class IOCPLoop : Loop
                                                 &key,
                                                 &overlap,
                                                 timeout);
-        if (result == FALSE && overlap == NULL)
+        if (result == FALSE && overlap is null)
         {
             return; // Timeout
         }
