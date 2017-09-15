@@ -27,8 +27,8 @@ import tanya.async.watcher;
 import tanya.memory;
 import tanya.memory.mmappool;
 import tanya.network.socket;
+import tanya.sys.windows.winbase;
 import core.sys.windows.mswsock;
-import core.sys.windows.winbase;
 import core.sys.windows.winsock2;
 
 /**
@@ -285,7 +285,7 @@ final class IOCPLoop : Loop
     {
         DWORD lpNumberOfBytes;
         size_t key;
-        LPOVERLAPPED overlap;
+        OVERLAPPED* overlap;
         immutable timeout = cast(immutable int) blockTime.total!"msecs";
 
         auto result = GetQueuedCompletionStatus(completionPort,

@@ -3,6 +3,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * Base type definitions and aliases.
+ *
+ * This module doesn't provide aliases for all types used by Windows, but only
+ * for types that can vary on different platforms. For example there is no
+ * need to define `INT32` alias for D, since $(D_KEYWORD int) is always a
+ * 32-bit signed integer. But `int` and its Windows alias `INT` is not the
+ * same on all platforms in C, so its size can be something differen than
+ * 32 bit, therefore an $(D_PSYMBOL INT) alias is available in this module.
+ * $(D_PARAM TCHAR) can be a $(D_KEYWORD char) if Unicode isn't supported or
+ * $(D_KEYWORD wchar) if Unicode is supported, so $(D_PSYMBOL TCHAR) is
+ * defined here.
+ * Also aliases for specific types like $(D_PSYMBOL SOCKET) are defined here.
+ *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -34,6 +47,15 @@ alias BOOL = int;
 alias BOOLEAN = BYTE;
 
 alias HANDLE = void*;
+enum HANDLE INVALID_HANDLE_VALUE = cast(HANDLE) -1;
 
 enum TRUE = 1;
 enum FALSE = 0;
+
+align(1) struct GUID
+{
+    uint Data1;
+    ushort Data2;
+    ushort Data3;
+    char[8] Data4;
+}

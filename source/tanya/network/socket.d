@@ -44,12 +44,8 @@ version (Posix)
 }
 else version (Windows)
 {
-    import core.sys.windows.basetyps : GUID;
-    import core.sys.windows.mswsock : WSAID_ACCEPTEX;
-    import core.sys.windows.winbase : LPOVERLAPPED,
-                                      GetModuleHandle,
+    import core.sys.windows.winbase : GetModuleHandle,
                                       GetProcAddress,
-                                      GetOverlappedResult,
                                       ERROR_IO_PENDING,
                                       ERROR_IO_INCOMPLETE;
     import core.sys.windows.winsock2 : sockaddr,
@@ -64,7 +60,6 @@ else version (Windows)
                                        socklen_t,
                                        SOCKADDR,
                                        SOCKADDR_STORAGE,
-                                       LPWSAOVERLAPPED_COMPLETION_ROUTINE,
                                        addrinfo,
                                        sockaddr_in,
                                        sockaddr_in6,
@@ -92,6 +87,8 @@ else version (Windows)
                                      EPROTOTYPE = WSAEPROTOTYPE,
                                      ETIMEDOUT = WSAETIMEDOUT,
                                      ESOCKTNOSUPPORT = WSAESOCKTNOSUPPORT;
+    import tanya.sys.windows.def;
+    public import tanya.sys.windows.winbase;
     public import tanya.sys.windows.winsock2;
 
     enum SocketType : size_t
@@ -100,105 +97,6 @@ else version (Windows)
     }
 
     private alias LingerField = ushort;
-
-    struct WSAPROTOCOL_INFO
-    {
-        DWORD                      dwServiceFlags1;
-        DWORD                      dwServiceFlags2;
-        DWORD                      dwServiceFlags3;
-        DWORD                      dwServiceFlags4;
-        DWORD                      dwProviderFlags;
-        GUID                       ProviderId;
-        DWORD                      dwCatalogEntryId;
-        WSAPROTOCOLCHAIN           ProtocolChain;
-        int                        iVersion;
-        int                        iAddressFamily;
-        int                        iMaxSockAddr;
-        int                        iMinSockAddr;
-        int                        iSocketType;
-        int                        iProtocol;
-        int                        iProtocolMaxOffset;
-        int                        iNetworkByteOrder;
-        int                        iSecurityScheme;
-        DWORD                      dwMessageSize;
-        DWORD                      dwProviderReserved;
-        TCHAR[WSAPROTOCOL_LEN + 1] szProtocol;
-    }
-    alias LPWSAPROTOCOL_INFO = WSAPROTOCOL_INFO*;
-
-    extern (Windows) @nogc nothrow
-    {
-        private SOCKET WSASocketW(int af,
-                                  int type,
-                                  int protocol,
-                                  LPWSAPROTOCOL_INFO lpProtocolInfo,
-                                  GROUP g,
-                                  DWORD dwFlags);
-        int WSARecv(SOCKET s,
-                    WSABUF* lpBuffers,
-                    DWORD dwBufferCount,
-                    DWORD* lpNumberOfBytesRecvd,
-                    DWORD* lpFlags,
-                    LPOVERLAPPED lpOverlapped,
-                    LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
-        int WSASend(SOCKET s,
-                    WSABUF* lpBuffers,
-                    DWORD dwBufferCount,
-                    DWORD* lpNumberOfBytesRecvd,
-                    DWORD lpFlags,
-                    LPOVERLAPPED lpOverlapped,
-                    LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
-        int WSAIoctl(SOCKET s,
-                     uint dwIoControlCode,
-                     void* lpvInBuffer,
-                     uint cbInBuffer,
-                     void* lpvOutBuffer,
-                     uint cbOutBuffer,
-                     uint* lpcbBytesReturned,
-                     LPWSAOVERLAPPED lpOverlapped,
-                     LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
-        alias LPFN_ACCEPTEX = BOOL function(SOCKET,
-                                            SOCKET,
-                                            void*,
-                                            DWORD,
-                                            DWORD,
-                                            DWORD,
-                                            DWORD*,
-                                            LPOVERLAPPED);
-    }
-    alias WSASocket = WSASocketW;
-
-    alias LPFN_GETACCEPTEXSOCKADDRS = void function(void*,
-                                                    DWORD,
-                                                    DWORD,
-                                                    DWORD,
-                                                    SOCKADDR**,
-                                                    INT*,
-                                                    SOCKADDR**,
-                                                    INT*);
-    const GUID WSAID_GETACCEPTEXSOCKADDRS = {
-        0xb5367df2, 0xcbac, 0x11cf,
-        [ 0x95, 0xca, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92 ],
-    };
-
-    struct WSAOVERLAPPED
-    {
-        size_t Internal;
-        size_t InternalHigh;
-        union
-        {
-            struct
-            {
-                DWORD Offset;
-                DWORD OffsetHigh;
-            }
-            void* Pointer;
-        }
-        HANDLE hEvent;
-    }
-    alias LPWSAOVERLAPPED = WSAOVERLAPPED*;
-
-    enum SO_UPDATE_ACCEPT_CONTEXT = 0x700B;
 
     enum OverlappedSocketEvent
     {
@@ -256,7 +154,7 @@ else version (Windows)
             overlapped.buffer.buf = cast(char*) buffer.ptr;
 
             auto result = WSARecv(handle_,
-                                  &overlapped.buffer,
+                                  cast(WSABUF*) &overlapped.buffer,
                                   1u,
                                   null,
                                   &receiveFlags,

@@ -14,7 +14,11 @@
  */
 module tanya.memory.op;
 
-version (D_InlineAsm_X86_64)
+version (TanyaPhobos)
+{
+    import core.stdc.string;
+}
+else
 {
     static import tanya.memory.arch.x86_64;
 }
@@ -45,46 +49,13 @@ in
 }
 body
 {
-    version (D_InlineAsm_X86_64)
+    version (TanyaPhobos)
+    {
+        memcpy(target.ptr, source.ptr, source.length);
+    }
+    else
     {
         tanya.memory.arch.x86_64.copy(source, target);
-    }
-    else // Naive implementation.
-    {
-        auto source1 = cast(const(ubyte)*) source;
-        auto target1 = cast(ubyte*) target;
-        auto count = source.length;
-
-        // Check if the pointers are aligned or at least can be aligned
-        // properly.
-        ushort naligned = (cast(size_t) source.ptr) & alignMask;
-        if (naligned == ((cast(size_t) target.ptr) & alignMask))
-        {
-            // Align the pointers if possible.
-            if (naligned != 0)
-            {
-                count -= naligned;
-                while (naligned--)
-                {
-                    *target1++ = *source1++;
-                }
-            }
-            // Copy size_t.sizeof bytes at once.
-            auto longSource = cast(const(size_t)*) source1;
-            auto longTarget = cast(size_t*) target1;
-            for (; count >= size_t.sizeof; count -= size_t.sizeof)
-            {
-                *longTarget++ = *longSource++;
-            }
-            // Adjust the original pointers.
-            source1 = cast(const(ubyte)*) longSource;
-            target1 = cast(ubyte*) longTarget;
-        }
-        // Copy the remaining bytes by one.
-        while (count--)
-        {
-            *target1++ = *source1++;
-        }
     }
 }
 
@@ -120,58 +91,34 @@ private pure nothrow @safe @nogc unittest
 /*
  * size_t value each of which bytes is set to `Byte`.
  */
-package template FilledBytes(ubyte Byte, ubyte I = 0)
+private template filledBytes(ubyte Byte, ubyte I = 0)
 {
     static if (I == size_t.sizeof)
     {
-        enum size_t FilledBytes = Byte;
+        enum size_t filledBytes = Byte;
     }
     else
     {
-        enum size_t FilledBytes = (FilledBytes!(Byte, I + 1) << 8) | Byte;
+        enum size_t filledBytes = (filledBytes!(Byte, I + 1) << 8) | Byte;
     }
 }
 
 /**
- * Fills $(D_PARAM memory) with single $(D_PARAM Byte)s.
+ * Fills $(D_PARAM memory) with the single byte $(D_PARAM c).
  *
  * Param:
- *  Byte   = The value to fill $(D_PARAM memory) with.
+ *  c      = The value to fill $(D_PARAM memory) with.
  *  memory = Memory block.
  */
-void fill(ubyte Byte = 0)(void[] memory) @trusted
+void fill(ubyte c = 0)(void[] memory) @trusted
 {
-    version (D_InlineAsm_X86_64)
+    version (TanyaPhobos)
     {
-        tanya.memory.arch.x86_64.fill!Byte(memory);
+        memset(memory.ptr, c, memory.length);
     }
-    else // Naive implementation.
+    else
     {
-        auto n = memory.length;
-        ubyte* vp = cast(ubyte*) memory.ptr;
-
-        // Align.
-        while (((cast(size_t) vp) & alignMask) != 0)
-        {
-            *vp++ = Byte;
-            --n;
-        }
-
-        // Set size_t.sizeof bytes at ones.
-        auto sp = cast(size_t*) vp;
-        while (n / size_t.sizeof > 0)
-        {
-            *sp++ = FilledBytes!Byte;
-            n -= size_t.sizeof;
-        }
-
-        // Write the remaining bytes.
-        vp = cast(ubyte*) sp;
-        while (n--)
-        {
-            *vp = Byte;
-            ++vp;
-        }
+        tanya.memory.arch.x86_64.fill(memory, filledBytes!c);
     }
 }
 
@@ -240,41 +187,13 @@ in
 }
 body
 {
-    version (D_InlineAsm_X86_64)
+    version (TanyaPhobos)
+    {
+        memmove(target.ptr, source.ptr, source.length);
+    }
+    else
     {
         tanya.memory.arch.x86_64.copyBackward(source, target);
-    }
-    else // Naive implementation.
-    {
-        auto count = source.length;
-
-        // Try to align the pointers if possible.
-        if (((cast(size_t) source.ptr) & alignMask) == ((cast(size_t) target.ptr) & alignMask))
-        {
-            while (((cast(size_t) (source.ptr + count)) & alignMask) != 0)
-            {
-                if (!count--)
-                {
-                    return;
-                }
-                (cast(ubyte[]) target)[count]
-                    = (cast(const(ubyte)[]) source)[count];
-            }
-        }
-
-        // Write as long we're aligned.
-        for (; count >= size_t.sizeof; count -= size_t.sizeof)
-        {
-                *(cast(size_t*) (target.ptr + count - size_t.sizeof))
-                    = *(cast(const(size_t)*) (source.ptr + count - size_t.sizeof));
-        }
-
-        // Write the remaining bytes.
-        while (count--)
-        {
-            (cast(ubyte[]) target)[count]
-                = (cast(const(ubyte)[]) source)[count];
-        }
     }
 }
 
@@ -316,60 +235,17 @@ private nothrow @safe @nogc unittest
  */
 int cmp(const void[] r1, const void[] r2) pure nothrow @trusted @nogc
 {
-    version (D_InlineAsm_X86_64)
-    {
-        return tanya.memory.arch.x86_64.cmp(r1, r2);
-    }
-    else // Naive implementation.
+    version (TanyaPhobos)
     {
         if (r1.length > r2.length)
         {
             return 1;
         }
-        else if (r1.length < r2.length)
-        {
-            return -1;
-        }
-        auto p1 = cast(const(ubyte)*) r1;
-        auto p2 = cast(const(ubyte)*) r2;
-        auto count = r1.length;
-
-        // Check if the pointers are aligned or at least can be aligned
-        // properly.
-        if (((cast(size_t) p1) & alignMask) == ((cast(size_t) p2) & alignMask))
-        {
-            // Align the pointers if possible.
-            for (; ((cast(size_t) p1) & alignMask) != 0; ++p1, ++p2, --count)
-            {
-                if (*p1 != *p2)
-                {
-                    return *p1 - *p2;
-                }
-            }
-            // Compare size_t.sizeof bytes at once.
-            for (; count >= size_t.sizeof; count -= size_t.sizeof)
-            {
-                if (*(cast(const(size_t)*) p1) > *(cast(const(size_t)*) p2))
-                {
-                    return 1;
-                }
-                else if (*(cast(const(size_t)*) p1) < *(cast(const(size_t)*) p2))
-                {
-                    return -1;
-                }
-                p1 += size_t.sizeof;
-                p2 += size_t.sizeof;
-            }
-        }
-        // Compare the remaining bytes by one.
-        for (; count--; ++p1, ++p2)
-        {
-            if (*p1 != *p2)
-            {
-                return *p1 - *p2;
-            }
-        }
-        return 0;
+        return r1.length < r2.length ? -1 : memcmp(r1.ptr, r2.ptr, r1.length);
+    }
+    else
+    {
+        return tanya.memory.arch.x86_64.cmp(r1, r2);
     }
 }
 

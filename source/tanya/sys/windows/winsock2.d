@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
+ * Definitions from winsock2.h, ws2def.h and MSWSock.h.
+ *
  * Copyright: Eugene Wissner 2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -15,6 +17,7 @@ module tanya.sys.windows.winsock2;
 version (Windows):
 
 public import tanya.sys.windows.def;
+public import tanya.sys.windows.winbase;
 
 alias SOCKET = size_t;
 enum SOCKET INVALID_SOCKET = ~0;
@@ -99,4 +102,118 @@ struct WSABUF
 {
     ULONG len;
     CHAR* buf;
+}
+
+struct WSAPROTOCOL_INFO
+{
+    DWORD                      dwServiceFlags1;
+    DWORD                      dwServiceFlags2;
+    DWORD                      dwServiceFlags3;
+    DWORD                      dwServiceFlags4;
+    DWORD                      dwProviderFlags;
+    GUID                       ProviderId;
+    DWORD                      dwCatalogEntryId;
+    WSAPROTOCOLCHAIN           ProtocolChain;
+    int                        iVersion;
+    int                        iAddressFamily;
+    int                        iMaxSockAddr;
+    int                        iMinSockAddr;
+    int                        iSocketType;
+    int                        iProtocol;
+    int                        iProtocolMaxOffset;
+    int                        iNetworkByteOrder;
+    int                        iSecurityScheme;
+    DWORD                      dwMessageSize;
+    DWORD                      dwProviderReserved;
+    TCHAR[WSAPROTOCOL_LEN + 1] szProtocol;
+}
+
+const GUID WSAID_GETACCEPTEXSOCKADDRS = {
+    0xb5367df2, 0xcbac, 0x11cf,
+    [0x95, 0xca, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92],
+};
+
+const GUID WSAID_ACCEPTEX = {
+    0xb5367df1, 0xcbac, 0x11cf,
+    [0x95, 0xca, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92],
+};
+
+alias LPWSAOVERLAPPED_COMPLETION_ROUTINE = void function(DWORD dwError,
+                                                         DWORD cbTransferred,
+                                                         OVERLAPPED* lpOverlapped,
+                                                         DWORD dwFlags) nothrow @nogc;
+
+extern(Windows)
+SOCKET WSASocket(int af,
+                 int type,
+                 int protocol,
+                 WSAPROTOCOL_INFO* lpProtocolInfo,
+                 GROUP g,
+                 DWORD dwFlags) nothrow @system @nogc;
+
+extern(Windows)
+int WSARecv(SOCKET s,
+            WSABUF* lpBuffers,
+            DWORD dwBufferCount,
+            DWORD* lpNumberOfBytesRecvd,
+            DWORD* lpFlags,
+            OVERLAPPED* lpOverlapped,
+            LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+nothrow @system @nogc;
+
+extern(Windows)
+int WSASend(SOCKET s,
+            WSABUF* lpBuffers,
+            DWORD dwBufferCount,
+            DWORD* lpNumberOfBytesRecvd,
+            DWORD lpFlags,
+            OVERLAPPED* lpOverlapped,
+            LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+nothrow @system @nogc;
+
+extern(Windows)
+int WSAIoctl(SOCKET s,
+             uint dwIoControlCode,
+             void* lpvInBuffer,
+             uint cbInBuffer,
+             void* lpvOutBuffer,
+             uint cbOutBuffer,
+             uint* lpcbBytesReturned,
+             OVERLAPPED* lpOverlapped,
+             LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)             
+nothrow @system @nogc;
+
+alias ADDRESS_FAMILY = USHORT;
+
+struct SOCKADDR
+{
+    ADDRESS_FAMILY sa_family;           // Address family.
+    CHAR[14] sa_data;                   // Up to 14 bytes of direct address.
+}
+
+alias LPFN_GETACCEPTEXSOCKADDRS = void function(void*,
+                                                DWORD,
+                                                DWORD,
+                                                DWORD,
+                                                SOCKADDR**,
+                                                INT*,
+                                                SOCKADDR**,
+                                                INT*) nothrow @nogc;
+
+alias LPFN_ACCEPTEX = extern(Windows) BOOL function(SOCKET,
+                                                    SOCKET,
+                                                    void*,
+                                                    DWORD,
+                                                    DWORD,
+                                                    DWORD,
+                                                    DWORD*,
+                                                    OVERLAPPED*) @nogc nothrow;
+
+enum
+{
+    SO_MAXDG = 0x7009,
+    SO_MAXPATHDG = 0x700A,
+    SO_UPDATE_ACCEPT_CONTEXT = 0x700B,
+    SO_CONNECT_TIME = 0x700C,
+    SO_UPDATE_CONNECT_CONTEXT = 0x7010,
 }
