@@ -18,66 +18,6 @@ import tanya.math.mp;
 import tanya.meta.trait;
 
 /**
- * Floating-point number precisions according to IEEE-754.
- */
-enum IEEEPrecision : ubyte
-{
-    /// Single precision: 64-bit.
-    single = 4,
-
-    /// Single precision: 64-bit.
-    double_ = 8,
-
-    /// Extended precision: 80-bit.
-    extended = 10,
-}
-
-/**
- * Tests the precision of floating-point type $(D_PARAM F).
- *
- * For $(D_KEYWORD float), $(D_PSYMBOL ieeePrecision) always evaluates to
- * $(D_INLINECODE IEEEPrecision.single); for $(D_KEYWORD double) - to
- * $(D_INLINECODE IEEEPrecision.double). It returns different values only
- * for $(D_KEYWORD real), since $(D_KEYWORD real) is a platform-dependent type.
- *
- * If $(D_PARAM F) is a $(D_KEYWORD real) and the target platform isn't
- * currently supported, static assertion error will be raised (you can use
- * $(D_INLINECODE is(typeof(ieeePrecision!F))) for testing the platform support
- * without a compilation error).
- *
- * Params:
- *  F = Type to be tested.
- *
- * Returns: Precision according to IEEE-754.
- *
- * See_Also: $(D_PSYMBOL IEEEPrecision).
- */
-template ieeePrecision(F)
-if (isFloatingPoint!F)
-{
-    static if (F.sizeof == float.sizeof)
-    {
-        enum IEEEPrecision ieeePrecision = IEEEPrecision.single;
-    }
-    else static if (F.sizeof == double.sizeof)
-    {
-        enum IEEEPrecision ieeePrecision = IEEEPrecision.double_;
-    }
-    else version (X86)
-    {
-        enum IEEEPrecision ieeePrecision = IEEEPrecision.extended;
-    }
-    else version (X86_64)
-    {
-        enum IEEEPrecision ieeePrecision = IEEEPrecision.extended;
-    }
-    else
-    {
-        static assert(false, "Unsupported IEEE 754 precision");
-    }
-}
-
-/**
  * Calculates the absolute value of a number.
  *
  * Params:

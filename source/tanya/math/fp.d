@@ -12,6 +12,68 @@
  */
 module tanya.math.fp;
 
+import tanya.math.nbtheory;
+
+/**
+ * Floating-point number precisions according to IEEE-754.
+ */
+enum IEEEPrecision : ubyte
+{
+    /// Single precision: 64-bit.
+    single = 4,
+
+    /// Single precision: 64-bit.
+    double_ = 8,
+
+    /// Extended precision: 80-bit.
+    extended = 10,
+}
+
+/**
+ * Tests the precision of floating-point type $(D_PARAM F).
+ *
+ * For $(D_KEYWORD float), $(D_PSYMBOL ieeePrecision) always evaluates to
+ * $(D_INLINECODE IEEEPrecision.single); for $(D_KEYWORD double) - to
+ * $(D_INLINECODE IEEEPrecision.double). It returns different values only
+ * for $(D_KEYWORD real), since $(D_KEYWORD real) is a platform-dependent type.
+ *
+ * If $(D_PARAM F) is a $(D_KEYWORD real) and the target platform isn't
+ * currently supported, static assertion error will be raised (you can use
+ * $(D_INLINECODE is(typeof(ieeePrecision!F))) for testing the platform support
+ * without a compilation error).
+ *
+ * Params:
+ *  F = Type to be tested.
+ *
+ * Returns: Precision according to IEEE-754.
+ *
+ * See_Also: $(D_PSYMBOL IEEEPrecision).
+ */
+template ieeePrecision(F)
+if (isFloatingPoint!F)
+{
+    static if (F.sizeof == float.sizeof)
+    {
+        enum IEEEPrecision ieeePrecision = IEEEPrecision.single;
+    }
+    else static if (F.sizeof == double.sizeof)
+    {
+        enum IEEEPrecision ieeePrecision = IEEEPrecision.double_;
+    }
+    else version (X86)
+    {
+        enum IEEEPrecision ieeePrecision = IEEEPrecision.extended;
+    }
+    else version (X86_64)
+    {
+        enum IEEEPrecision ieeePrecision = IEEEPrecision.extended;
+    }
+    else
+    {
+        static assert(false, "Unsupported IEEE 754 floating point precision");
+    }
+}
+
 private union FloatBits(F)
 {
     F floating;
@@ -25,7 +87,7 @@ private union FloatBits(F)
     }
     else static if (ieeePrecision!F == IEEEPrecision.extended)
     {
-        struct
+        struct // Little-endian.
         {
             ulong mantissa;
             ushort exp;
@@ -33,7 +95,7 @@ private union FloatBits(F)
     }
     else
     {
-        static assert(false, "Unsupported IEEE-754 floating point representation");
+        static assert(false, "Unsupported IEEE 754 floating point precision");
     }
 }
 
@@ -88,6 +150,25 @@ if (isFloatingPoint!F)
     }
     else static if (ieeePrecision!F == IEEEPrecision.extended)
     {
+        if (bits.exp == 0x7fff)
+        {
+            if ((bits.mantissa & 0x7fffffffffffffff) == 0)
+            {
+                return FloatingPointClass.infinite;
+            }
+            else
+            {
+                return FloatingPointClass.nan;
+            }
+        }
+        else if (bits.exp == 0)
+        {
+            return FloatingPointClass.subnormal;
+        }
+        else if (bits.mantissa < 0x8000000000000000) // "Unnormal".
+        {
+            return FloatingPointClass.nan;
+        }
     }
 
     return FloatingPointClass.normal;
@@ -96,94 +177,87 @@ if (isFloatingPoint!F)
 bool isFinite(F)(F x)
 if (isFloatingPoint!F)
 {
+    FloatBits!F bits;
     static if (ieeePrecision!F == IEEEPrecision.single)
     {
-        FloatBits!F bits;
         bits.floating = x;
         bits.integral &= 0x7f800000;
         return bits.integral != 0x7f800000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.double_)
     {
-        FloatBits!F bits;
         bits.floating = x;
         bits.integral &= 0x7ff0000000000000;
         return bits.integral != 0x7ff0000000000000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.extended)
     {
-        FloatBits!F bits;
         bits.floating = abs(x);
-        return exponent != 0x7fff;
+        return (bits.exp != 0x7fff) && (bits.mantissa >= 0x8000000000000000);
     }
 }
 
 bool isNaN(F)(F x)
 if (isFloatingPoint!F)
 {
+    FloatBits!F bits;
+    bits.floating = abs(x);
+
     static if (ieeePrecision!F == IEEEPrecision.single)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
         return bits.integral > 0x7f800000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.double_)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
         return bits.integral > 0x7ff0000000000000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.extended)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
-        return bits.exponent == 0x7fff && bits.mantissa != 0;
+        if ((bits.exp == 0x7fff && (bits.mantissa & 0x7fffffffffffffff) != 0)
+         || ((bits.exp != 0) && (bits.mantissa < 0x8000000000000000)))
+        {
+            return true;
+        }
+        return false;
     }
 }
 
 bool isInfinity(F)(F x)
 if (isFloatingPoint!F)
 {
+    FloatBits!F bits;
+    bits.floating = abs(x);
     static if (ieeePrecision!F == IEEEPrecision.single)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
         return bits.integral == 0x7f800000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.double_)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
         return bits.integral == 0x7ff0000000000000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.extended)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
-        return bits.exponent == 0x7fff && bits.mantissa == 0;
+        return (bits.exp == 0x7fff)
+            && ((bits.mantissa & 0x7fffffffffffffff) == 0);
     }
 }
 
 bool isSubnormal(F)(F x)
 if (isFloatingPoint!F)
 {
+    FloatBits!F bits;
+    bits.floating = abs(x);
     static if (ieeePrecision!F == IEEEPrecision.single)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
         return bits.integral < 0x800000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.double_)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
         return bits.integral < 0x10000000000000;
     }
     else static if (ieeePrecision!F == IEEEPrecision.extended)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
-        return bits.exponent == 0 && bits.mantissa != 0;
+        return bits.exp == 0;
     }
 }
 
@@ -206,8 +280,25 @@ if (isFloatingPoint!F)
     }
     else static if (ieeePrecision!F == IEEEPrecision.extended)
     {
-        FloatBits!F bits;
-        bits.floating = abs(x);
-        return bits.exponent != 0 && exponent != 0x7fff;
+        return classify(x) == FloatingPointClass.normal;
+    }
+}
+
+bool signBit(F)(F x)
+if (isFloatingPoint!F)
+{
+    FloatBits!F bits;
+    bits.floating = x;
+    static if (ieeePrecision!F == IEEEPrecision.single)
+    {
+        return (bits.integral & (1 << 31)) != 0;
+    }
+    else static if (ieeePrecision!F == IEEEPrecision.double_)
+    {
+        return (bits.integral & (1 << 63)) != 0;
+    }
+    else static if (ieeePrecision!F == IEEEPrecision.extended)
+    {
+        return (bits.exp & (1 << 15)) != 0;
     }
 }
