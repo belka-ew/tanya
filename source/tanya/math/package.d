@@ -5,6 +5,13 @@
 /**
  * This package provides mathematical functions.
  *
+ * The $(D_PSYMBOL tanya.math) package itself provides only representation
+ * functions for built-in types, such as functions that provide information
+ * about internal representation of floating-point numbers and low-level
+ * operatons on these. Actual mathematical functions and additional types can
+ * be found in its submodules. $(D_PSYMBOL tanya.math) doesn't import any
+ * submodules publically, they should be imported explicitly.
+ *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
@@ -14,9 +21,8 @@
  */
 module tanya.math;
 
-public import tanya.math.mp;
-public import tanya.math.nbtheory;
-public import tanya.math.random;
+import tanya.math.mp;
+import tanya.math.nbtheory;
 import tanya.meta.trait;
 
 /// Floating-point number precisions according to IEEE-754.
