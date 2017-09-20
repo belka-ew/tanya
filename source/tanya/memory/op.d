@@ -278,3 +278,79 @@ private pure nothrow @safe @nogc unittest
     assert(cmp(r1[0 .. $ - 1], r2[0 .. $ - 1]) == 0);
     assert(cmp(r1[0 .. 8], r2[0 .. 8]) == 0);
 }
+
+/**
+ * Finds the first occurrence of $(D_PARAM needle) in $(D_PARAM haystack) if
+ * any.
+ *
+ * Params:
+ *  haystack = Memory block.
+ *  needle   = A byte.
+ *
+ * Returns: The subrange of $(D_PARAM haystack) whose first element is the
+ *          first occurrence of $(D_PARAM needle). If $(D_PARAM needle)
+ *          couldn't be found, an empty `inout void[]` is returned.
+ */
+inout(void[]) find(return inout void[] haystack, const ubyte needle)
+pure nothrow @trusted @nogc
+{
+    auto length = haystack.length;
+    const size_t needleWord = size_t.max * needle;
+    enum size_t highBits = filledBytes!(0x01, 0);
+    enum size_t mask = filledBytes!(0x80, 0);
+
+    // Align
+    auto bytes = cast(inout(ubyte)*) haystack;
+    while (length > 0 && ((cast(size_t) bytes) & 3) != 0)
+    {
+        if (*bytes == needle)
+        {
+            return bytes[0 .. length];
+        }
+        bytes++;
+        length--;
+    }
+
+    // Check if some of the words has the needle
+    auto words = cast(inout(size_t)*) bytes;
+    while (length >= size_t.sizeof)
+    {
+        if (((*words ^ needleWord) - highBits) & (~*words) & mask)
+        {
+            break;
+        }
+        words++;
+        length -= size_t.sizeof;
+    }
+
+    // Find the exact needle position in the word
+    bytes = cast(inout(ubyte)*) words;
+    while (length > 0)
+    {
+        if (*bytes == needle)
+        {
+            return bytes[0 .. length];
+        }
+        bytes++;
+        length--;
+    }
+
+    return haystack[$ .. $];
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    const ubyte[9] haystack = ['a', 'b', 'c', 'd', 'e', 'f', 'b', 'g', 'h'];
+
+    assert(find(haystack, 'a') == haystack[]);
+    assert(find(haystack, 'b') == haystack[1 .. $]);
+    assert(find(haystack, 'c') == haystack[2 .. $]);
+    assert(find(haystack, 'd') == haystack[3 .. $]);
+    assert(find(haystack, 'e') == haystack[4 .. $]);
+    assert(find(haystack, 'f') == haystack[5 .. $]);
+    assert(find(haystack, 'h') == haystack[8 .. $]);
+    assert(find(haystack, 'i').length == 0);
+
+    assert(find(null, 'a').length == 0);
+}
