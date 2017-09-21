@@ -15,9 +15,9 @@
 module tanya.math.mp;
 
 import std.algorithm;
-import std.ascii;
 import std.range;
 import tanya.container.array;
+import tanya.encoding.ascii;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;

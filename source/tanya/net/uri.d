@@ -14,8 +14,7 @@
  */
 module tanya.net.uri;
 
-import std.ascii : isAlphaNum, isDigit;
-import std.uni : isAlpha, isNumber;
+import tanya.encoding.ascii;
 import tanya.memory;
 
 /**
@@ -199,8 +198,8 @@ struct URL
                         this.pass = source[start + i + 1 .. pos]; 
                     }
                 }
-                else if (!c.isAlpha &&
-                         !c.isNumber &&
+                else if (!c.isAlpha() &&
+                         !c.isDigit() &&
                          c != '!' &&
                          c != ';' &&
                          c != '=' &&
