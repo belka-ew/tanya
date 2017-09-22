@@ -72,7 +72,7 @@ mixin template DefaultAllocator()
         return allocator_;
     }
 
-    /// Ditto.
+    /// ditto
     @property shared(Allocator) allocator() const pure nothrow @trusted @nogc
     out (allocator)
     {

@@ -100,7 +100,7 @@ struct ReadBuffer(T = ubyte)
         buffer_ = cast(T[]) allocator_.allocate(size * T.sizeof);
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator)
     in
     {
@@ -143,7 +143,7 @@ struct ReadBuffer(T = ubyte)
         return length_ - start;
     }
 
-    /// Ditto.
+    /// ditto
     alias opDollar = length;
 
     /**
@@ -395,7 +395,7 @@ struct WriteBuffer(T = ubyte)
         }
     }
 
-    /// Ditto.
+    /// ditto
     alias opDollar = length;
 
     ///

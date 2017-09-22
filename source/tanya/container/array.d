@@ -177,7 +177,7 @@ struct Array(T)
     /// The range types for $(D_PSYMBOL Array).
     alias Range = .Range!Array;
 
-    /// Ditto.
+    /// ditto
     alias ConstRange = .Range!(const Array);
 
     private size_t length_;
@@ -245,7 +245,7 @@ struct Array(T)
         insertBack(init[]);
     }
 
-    /// Ditto.
+    /// ditto
     this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
         if (is(R == Array))
     {
@@ -313,14 +313,14 @@ struct Array(T)
         length_ = len;
     }
 
-    /// Ditto.
+    /// ditto
     this(const size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         length = len;
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator)
     in
     {
@@ -416,7 +416,7 @@ struct Array(T)
         return length_;
     }
 
-    /// Ditto.
+    /// ditto
     size_t opDollar() const
     {
         return length;
@@ -704,7 +704,7 @@ struct Array(T)
         return 1;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(R)(ref R el) @trusted
         if (isImplicitlyConvertible!(R, T))
     {
@@ -714,7 +714,7 @@ struct Array(T)
         return 1;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(R)(R el)
         if (!isInfinite!R
          && isInputRange!R
@@ -732,13 +732,13 @@ struct Array(T)
         return retLength;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(size_t R)(T[R] el)
     {
         return insertBack!(T[])(el[]);
     }
 
-    /// Ditto.
+    /// ditto
     alias insert = insertBack;
 
     ///
@@ -813,7 +813,7 @@ struct Array(T)
         return inserted;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertAfter(size_t R)(Range r, T[R] el)
     in
     {
@@ -826,7 +826,7 @@ struct Array(T)
         return insertAfter!(T[])(r, el[]);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertAfter(R)(Range r, auto ref R el)
         if (isImplicitlyConvertible!(R, T))
     in
@@ -853,7 +853,7 @@ struct Array(T)
         return 1;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBefore(R)(Range r, R el)
         if (!isInfinite!R
          && isInputRange!R
@@ -869,7 +869,7 @@ struct Array(T)
         return insertAfter(Range(this, this.data, r.begin), el);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBefore(size_t R)(Range r, T[R] el)
     in
     {
@@ -882,7 +882,7 @@ struct Array(T)
         return insertBefore!(T[])(r, el[]);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBefore(R)(Range r, auto ref R el)
         if (isImplicitlyConvertible!(R, T))
     in
@@ -998,7 +998,7 @@ struct Array(T)
         return opIndex(pos) = value;
     }
 
-    /// Ditto.
+    /// ditto
     Range opIndexAssign(E : T)(auto ref E value)
     {
         return opSliceAssign(value, 0, length);
@@ -1028,7 +1028,7 @@ struct Array(T)
         return opSliceAssign!R(value, 0, length);
     }
 
-    /// Ditto.
+    /// ditto
     Range opIndexAssign(Range value)
     {
         return opSliceAssign(value, 0, length);
@@ -1077,7 +1077,7 @@ struct Array(T)
         return typeof(return)(this, this.data, this.data + length);
     }
 
-    /// Ditto.
+    /// ditto
     ConstRange opIndex() const @trusted
     {
         return typeof(return)(this, this.data, this.data + length);
@@ -1110,13 +1110,13 @@ struct Array(T)
         return equal(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
-    /// Ditto.
+    /// ditto
     bool opEquals()(auto ref const typeof(this) that) const @trusted
     {
         return equal(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
-    /// Ditto.
+    /// ditto
     bool opEquals(Range that)
     {
         return equal(opIndex(), that);
@@ -1233,7 +1233,7 @@ struct Array(T)
         return typeof(return)(this, this.data + i, this.data + j);
     }
 
-    /// Ditto.
+    /// ditto
     ConstRange opSlice(const size_t i, const size_t j) const @trusted
     in
     {
@@ -1317,7 +1317,7 @@ struct Array(T)
         return opSlice(i, j);
     }
 
-    /// Ditto.
+    /// ditto
     Range opSliceAssign(R : T)(auto ref R value, const size_t i, const size_t j)
     @trusted
     in
@@ -1331,7 +1331,7 @@ struct Array(T)
         return opSlice(i, j);
     }
 
-    /// Ditto.
+    /// ditto
     Range opSliceAssign(Range value, const size_t i, const size_t j) @trusted
     in
     {
@@ -1416,7 +1416,7 @@ struct Array(T)
         return this = that[];
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(R)(R that) @trusted
         if (is(R == Array))
     {

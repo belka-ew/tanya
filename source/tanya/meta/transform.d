@@ -721,7 +721,7 @@ pure nothrow @safe @nogc unittest
  */
 alias TypeOf(T) = T;
 
-/// Ditto.
+/// ditto
 template TypeOf(alias T)
 if (isExpressions!T || isTemplate!T)
 {

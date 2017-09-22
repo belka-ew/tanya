@@ -100,7 +100,7 @@ struct SList(T)
     /// The range types for $(D_PSYMBOL SList).
     alias Range = SRange!SList;
 
-    /// Ditto.
+    /// ditto
     alias ConstRange = SRange!(const SList);
 
     private alias Entry = SEntry!T;
@@ -184,7 +184,7 @@ struct SList(T)
         assert(l.empty);
     }
 
-    /// Ditto.
+    /// ditto
     this(const size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(len, T.init, allocator);
@@ -198,7 +198,7 @@ struct SList(T)
         assert(l.front == 0);
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator)
     in
     {
@@ -232,7 +232,7 @@ struct SList(T)
         this(init[], allocator);
     }
 
-    /// Ditto.
+    /// ditto
     this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
     if (is(R == SList))
     {
@@ -356,7 +356,7 @@ struct SList(T)
         return moveEntry(this.head, el);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertFront(R)(ref R el) @trusted
     if (isImplicitlyConvertible!(R, T))
     {
@@ -378,7 +378,7 @@ struct SList(T)
         assert(l.front == 8);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertFront(R)(R el) @trusted
     if (!isInfinite!R
      && isInputRange!R
@@ -408,13 +408,13 @@ struct SList(T)
         return retLength;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertFront(size_t R)(T[R] el)
     {
         return insertFront!(T[])(el[]);
     }
 
-    /// Ditto.
+    /// ditto
     alias insert = insertFront;
 
     ///
@@ -480,7 +480,7 @@ struct SList(T)
         assert(l1 == l2);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBefore(R)(Range r, R el)
     if (!isInfinite!R
      && isInputRange!R
@@ -512,7 +512,7 @@ struct SList(T)
         assert(l1 == l2);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBefore(Range r, ref T el) @trusted
     in
     {
@@ -746,7 +746,7 @@ struct SList(T)
         return typeof(return)(this.head);
     }
 
-    /// Ditto.
+    /// ditto
     ConstRange opIndex() const
     {
         return typeof(return)(this.head);
@@ -773,7 +773,7 @@ struct SList(T)
         return this = that[];
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(R)(R that)
     if (is(R == SList))
     {
@@ -1019,7 +1019,7 @@ struct DList(T)
     /// The range types for $(D_PSYMBOL DList).
     alias Range = DRange!DList;
 
-    /// Ditto.
+    /// ditto
     alias ConstRange = DRange!(const DList);
 
     private alias Entry = DEntry!T;
@@ -1114,7 +1114,7 @@ struct DList(T)
         assert(l.empty);
     }
 
-    /// Ditto.
+    /// ditto
     this(const size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(len, T.init, allocator);
@@ -1128,7 +1128,7 @@ struct DList(T)
         assert(l.front == 0);
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator)
     in
     {
@@ -1162,7 +1162,7 @@ struct DList(T)
         this(init[], allocator);
     }
 
-    /// Ditto.
+    /// ditto
     this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
     if (is(R == DList))
     {
@@ -1353,7 +1353,7 @@ struct DList(T)
         return moveFront(this.head, el);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertFront(R)(ref R el) @trusted
     if (isImplicitlyConvertible!(R, T))
     {
@@ -1385,7 +1385,7 @@ struct DList(T)
         assert(l.back == 5);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertFront(R)(R el)
     if (!isInfinite!R
      && isInputRange!R
@@ -1413,7 +1413,7 @@ struct DList(T)
         assert(l1.head is l1.head.next.prev);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertFront(size_t R)(T[R] el)
     {
         return insertFront!(T[])(el[]);
@@ -1479,7 +1479,7 @@ struct DList(T)
         return moveBack(this.tail, el);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(R)(ref R el) @trusted
     if (isImplicitlyConvertible!(R, T))
     {
@@ -1511,7 +1511,7 @@ struct DList(T)
         assert(l.back == value);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(R)(R el) @trusted
     if (!isInfinite!R
      && isInputRange!R
@@ -1536,7 +1536,7 @@ struct DList(T)
         return inserted;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(size_t R)(T[R] el)
     {
         return insertBack!(T[])(el[]);
@@ -1561,7 +1561,7 @@ struct DList(T)
         assert(l2.back == 9);
     }
 
-    /// Ditto.
+    /// ditto
     alias insert = insertBack;
 
     version (assert)
@@ -1608,7 +1608,7 @@ struct DList(T)
         assert(l1 == l2);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBefore(Range r, ref T el) @trusted
     in
     {
@@ -1643,7 +1643,7 @@ struct DList(T)
         assert(l1 == l2);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBefore(R)(Range r, R el)
     if (!isInfinite!R
      && isInputRange!R
@@ -1734,7 +1734,7 @@ struct DList(T)
         assert(l.length == 1);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertAfter(Range r, ref T el) @trusted
     in
     {
@@ -1769,7 +1769,7 @@ struct DList(T)
         assert(l1 == l2);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertAfter(R)(Range r, R el)
     if (!isInfinite!R
      && isInputRange!R
@@ -1925,7 +1925,7 @@ struct DList(T)
         assert(l.empty);
     }
 
-    /// Ditto.
+    /// ditto
     void removeBack()
     in
     {
@@ -1998,7 +1998,7 @@ struct DList(T)
         assert(l.removeFront(3) == 0);
     }
 
-    /// Ditto.
+    /// ditto
     size_t removeBack(const size_t howMany)
     out (removed)
     {
@@ -2111,7 +2111,7 @@ struct DList(T)
         return typeof(return)(this.head, this.tail);
     }
 
-    /// Ditto.
+    /// ditto
     ConstRange opIndex() const
     {
         return typeof(return)(this.head, this.tail);
@@ -2138,7 +2138,7 @@ struct DList(T)
         return this = that[];
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(R)(R that)
     if (is(R == DList))
     {

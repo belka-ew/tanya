@@ -417,7 +417,7 @@ struct String
         }
     }
 
-    /// Ditto.
+    /// ditto
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     nothrow @trusted @nogc
     if (is(Unqual!S == String))
@@ -428,7 +428,7 @@ struct String
         this.length_ = init.length;
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator) pure nothrow @safe @nogc
     in
     {
@@ -585,7 +585,7 @@ struct String
         return 1;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(const wchar chr) @trusted @nogc
     {
         reserve(length + 3);
@@ -620,7 +620,7 @@ struct String
         defaultAllocator.dispose(exception);
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(const dchar chr) @trusted @nogc
     {
         reserve(length + dchar.sizeof);
@@ -730,7 +730,7 @@ struct String
         }
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(R)(R str) @trusted
     if (!isInfinite!R
      && isInputRange!R
@@ -796,7 +796,7 @@ struct String
         return this.length_ - oldLength;
     }
 
-    /// Ditto.
+    /// ditto
     size_t insertBack(R)(R str) @trusted
     if (!isInfinite!R
      && isInputRange!R
@@ -815,7 +815,7 @@ struct String
         return insertedLength;
     }
 
-    /// Ditto.
+    /// ditto
     alias insert = insertBack;
 
     /**
@@ -943,7 +943,7 @@ struct String
         return target;
     }
 
-    /// Ditto.
+    /// ditto
     ByCodeUnit!char opSliceAssign(const char[] value,
                                   const size_t i,
                                   const size_t j)
@@ -959,7 +959,7 @@ struct String
         return opSlice(i, j);
     }
 
-    /// Ditto.
+    /// ditto
     ByCodeUnit!char opSliceAssign(const char value,
                                   const size_t i,
                                   const size_t j)
@@ -1072,7 +1072,7 @@ struct String
         return typeof(return)(this, this.data, this.data + length);
     }
 
-    /// Ditto.
+    /// ditto
     ByCodeUnit!(const char) opIndex() const pure nothrow @trusted @nogc
     {
         return typeof(return)(this, this.data, this.data + length);
@@ -1105,7 +1105,7 @@ struct String
         return typeof(return)(this, this.data, this.data + length);
     }
 
-    /// Ditto.
+    /// ditto
     ByCodePoint!(const char) byCodePoint() const pure nothrow @trusted @nogc
     {
         return typeof(return)(this, this.data, this.data + length);
@@ -1173,7 +1173,7 @@ struct String
         return typeof(return)(this, this.data + i, this.data + j);
     }
 
-    /// Ditto.
+    /// ditto
     ByCodeUnit!(const char) opSlice(const size_t i, const size_t j)
     const pure nothrow @trusted @nogc
     in
@@ -1240,7 +1240,7 @@ struct String
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref String opAssign(S)(ref S that) @trusted
     if (is(Unqual!S == String))
     {
@@ -1301,7 +1301,7 @@ struct String
         return cmp(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
-    /// Ditto.
+    /// ditto
     int opCmp(S)(ByCodeUnit!S that) const @trusted
     if (is(Unqual!S == char))
     {
@@ -1309,7 +1309,7 @@ struct String
                    that.begin[0 .. that.end - that.begin]);
     }
 
-    /// Ditto.
+    /// ditto
     int opCmp(S)(ByCodePoint!S that) const @trusted
     if (is(Unqual!S == char))
     {
@@ -1317,7 +1317,7 @@ struct String
                    that.begin[0 .. that.end - that.begin]);
     }
 
-    /// Ditto.
+    /// ditto
     int opCmp()(const char[] that) const @trusted
     {
         return cmp(this.data[0 .. length], that);
@@ -1362,7 +1362,7 @@ struct String
                      that.begin[0 .. that.end - that.begin]);
     }
 
-    /// Ditto.
+    /// ditto
     bool opEquals(S)(ByCodePoint!S that) const @trusted
     if (is(Unqual!S == char))
     {
@@ -1370,7 +1370,7 @@ struct String
                      that.begin[0 .. that.end - that.begin]);
     }
 
-    /// Ditto.
+    /// ditto
     bool opEquals()(const char[] that) const @trusted
     {
         return equal(this.data[0 .. length], that);
@@ -1443,7 +1443,7 @@ struct String
         assert(s2 == "cup");
     }
 
-    /// Ditto.
+    /// ditto
     ByCodeUnit!char opIndexAssign(const char value) pure nothrow @safe @nogc
     {
         return opSliceAssign(value, 0, length);
@@ -1456,7 +1456,7 @@ struct String
         assert(s1 == "aaa");
     }
 
-    /// Ditto.
+    /// ditto
     ByCodeUnit!char opIndexAssign(const char[] value) pure nothrow @safe @nogc
     {
         return opSliceAssign(value, 0, length);

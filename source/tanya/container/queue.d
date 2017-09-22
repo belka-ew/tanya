@@ -115,7 +115,7 @@ struct Queue(T)
         enqueueEntry(temp);
     }
 
-    /// Ditto.
+    /// ditto
     void enqueue(T x)
     {
         auto temp = allocateEntry();
@@ -212,7 +212,7 @@ struct Queue(T)
         return result;
     }
 
-    /// Ditto.
+    /// ditto
     int opApply(scope int delegate(ref T) @nogc dg)
     {
         int result;

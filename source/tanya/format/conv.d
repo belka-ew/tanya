@@ -64,7 +64,7 @@ template to(To)
         return from;
     }
 
-    /// Ditto.
+    /// ditto
     To to(From)(From from)
     if (is(Unqual!To == Unqual!From) || (isNumeric!From && isFloatingPoint!To))
     {
@@ -358,7 +358,7 @@ private @nogc unittest
     defaultAllocator.dispose(exception);
 }
 
-/// Ditto.
+/// ditto
 To to(To, From)(auto ref const From from)
 if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
 {
@@ -443,7 +443,7 @@ pure nothrow @safe @nogc unittest
     assert(false.to!int == 0);
 }
 
-/// Ditto.
+/// ditto
 To to(To, From)(const From from)
 if (is(Unqual!From == bool) && is(Unqual!To == String))
 {

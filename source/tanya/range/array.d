@@ -143,7 +143,7 @@ body
     array = array[1 .. $];
 }
 
-/// Ditto.
+/// ditto
 void popBack(T)(ref T[] array)
 in
 {

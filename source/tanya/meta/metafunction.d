@@ -765,7 +765,7 @@ import tanya.meta.transform;
  */
 alias Alias(alias T) = T;
 
-/// Ditto.
+/// ditto
 alias Alias(T) = T;
 
 ///
@@ -926,7 +926,7 @@ template staticIndexOf(T, L...)
     enum ptrdiff_t staticIndexOf = indexOf!(0, AliasSeq!(T, L));
 }
 
-/// Ditto.
+/// ditto
 template staticIndexOf(alias T, L...)
 {
     enum ptrdiff_t staticIndexOf = indexOf!(0, AliasSeq!(T, L));
@@ -1230,19 +1230,19 @@ template Replace(T, U, L...)
     alias Replace = ReplaceOne!(T, U, L);
 }
 
-/// Ditto.
+/// ditto
 template Replace(alias T, U, L...)
 {
     alias Replace = ReplaceOne!(T, U, L);
 }
 
-/// Ditto.
+/// ditto
 template Replace(T, alias U, L...)
 {
     alias Replace = ReplaceOne!(T, U, L);
 }
 
-/// Ditto.
+/// ditto
 template Replace(alias T, alias U, L...)
 {
     alias Replace = ReplaceOne!(T, U, L);
@@ -1293,19 +1293,19 @@ template ReplaceAll(T, U, L...)
     alias ReplaceAll = ReplaceAllImpl!(T, U, L);
 }
 
-/// Ditto.
+/// ditto
 template ReplaceAll(alias T, U, L...)
 {
     alias ReplaceAll = ReplaceAllImpl!(T, U, L);
 }
 
-/// Ditto.
+/// ditto
 template ReplaceAll(T, alias U, L...)
 {
     alias ReplaceAll = ReplaceAllImpl!(T, U, L);
 }
 
-/// Ditto.
+/// ditto
 template ReplaceAll(alias T, alias U, L...)
 {
     alias ReplaceAll = ReplaceAllImpl!(T, U, L);
@@ -1547,7 +1547,7 @@ template Erase(T, L...)
     alias Erase = EraseOne!(T, L);
 }
 
-/// Ditto.
+/// ditto
 template Erase(alias T, L...)
 {
     alias Erase = EraseOne!(T, L);
@@ -1590,7 +1590,7 @@ template EraseAll(T, L...)
     alias EraseAll = EraseAllImpl!(T, L);
 }
 
-/// Ditto.
+/// ditto
 template EraseAll(alias T, L...)
 {
     alias EraseAll = EraseAllImpl!(T, L);

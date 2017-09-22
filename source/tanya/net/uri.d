@@ -553,7 +553,7 @@ if (T == "scheme"
     return mixin("ret." ~ T);
 }
 
-/// Ditto.
+/// ditto
 URL parseURL(const char[] source) @nogc
 {
     return URL(source);

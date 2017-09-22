@@ -618,7 +618,7 @@ body
     return result;
 }
 
-/// Ditto.
+/// ditto
 I pow(I)(const auto ref I x, const auto ref I y, const auto ref I z)
 if (is(I == Integer))
 in

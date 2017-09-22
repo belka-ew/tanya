@@ -127,7 +127,7 @@ struct RefCounted(T)
         this.storage.payload = value;
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator)
     in
     {
@@ -209,7 +209,7 @@ struct RefCounted(T)
         assert(*rc == 7);
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(typeof(null))
     {
         if (this.storage is null)
@@ -237,7 +237,7 @@ struct RefCounted(T)
         assert(!rc.isInitialized);
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(typeof(this) rhs)
     {
         swap(this.allocator_, rhs.allocator_);
@@ -660,7 +660,7 @@ struct Unique(T)
         this.payload = value;
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator)
     in
     {
@@ -706,14 +706,14 @@ struct Unique(T)
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(typeof(null))
     {
         allocator.dispose(this.payload);
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(typeof(this) rhs)
     {
         swap(this.allocator_, rhs.allocator_);

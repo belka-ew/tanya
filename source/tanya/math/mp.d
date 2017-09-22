@@ -75,7 +75,7 @@ struct Integer
         this = value;
     }
 
-    /// Ditto.
+    /// ditto
     this(T)(ref T value, shared Allocator allocator = defaultAllocator)
     if (is(Unqual!T == Integer))
     {
@@ -83,7 +83,7 @@ struct Integer
         this = value;
     }
 
-    /// Ditto.
+    /// ditto
     this(T)(T value, shared Allocator allocator = defaultAllocator)
     if (is(T == Integer))
     {
@@ -103,7 +103,7 @@ struct Integer
         }
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator) pure nothrow @safe @nogc
     in
     {
@@ -335,7 +335,7 @@ struct Integer
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opAssign(T)(ref T value) @trusted
     if (is(Unqual!T == Integer))
     {
@@ -347,7 +347,7 @@ struct Integer
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opAssign(T)(T value) nothrow @safe @nogc
     if (is(T == Integer))
     {
@@ -371,7 +371,7 @@ struct Integer
         return this.size > 0;
     }
 
-    /// Ditto.
+    /// ditto
     T opCast(T)() const
     if (isIntegral!T && isUnsigned!T)
     {
@@ -385,7 +385,7 @@ struct Integer
         return ret;
     }
 
-    /// Ditto.
+    /// ditto
     T opCast(T)() const
     if (isIntegral!T && isSigned!T)
     {
@@ -677,7 +677,7 @@ struct Integer
         assert(integer1 > integer2);
     }
 
-    /// Ditto.
+    /// ditto
     int opCmp(I)(const I that) const
     if (isIntegral!I)
     {
@@ -789,7 +789,7 @@ struct Integer
         }
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opOpAssign(string op : "-")(auto ref const Integer operand)
     {
         if (this.sign != operand.sign)
@@ -837,7 +837,7 @@ struct Integer
         }
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opOpAssign(string op : "*")(auto ref const Integer operand)
     {
         const digits = this.size + operand.size + 1;
@@ -861,7 +861,7 @@ struct Integer
         assert(h1 == 56088);
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opOpAssign(string op : "/")(auto ref const Integer operand)
     in
     {
@@ -873,7 +873,7 @@ struct Integer
         return this;
     }
 
-     /// Ditto.
+     /// ditto
     ref Integer opOpAssign(string op : "%")(auto ref const Integer operand)
     in
     {
@@ -906,7 +906,7 @@ struct Integer
         assert(h1 == 123);
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opOpAssign(string op : ">>")(const size_t operand)
     {
         if (operand == 0)
@@ -968,7 +968,7 @@ struct Integer
         assert(integer == 0);
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opOpAssign(string op : "<<")(const size_t operand)
     {
         const step = operand / digitBitCount;
@@ -1027,7 +1027,7 @@ struct Integer
         return ret;
     }
 
-    /// Ditto.
+    /// ditto
     Integer opUnary(string op : "-")() const
     {
         auto ret = Integer(this, allocator);
@@ -1068,7 +1068,7 @@ struct Integer
         assert(h2 == ~cast(ubyte) 79);
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opUnary(string op : "++")()
     {
         if (this.sign)
@@ -1082,7 +1082,7 @@ struct Integer
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref Integer opUnary(string op : "--")()
     {
         if (this.size == 0)
@@ -1152,7 +1152,7 @@ struct Integer
         mixin("return Integer(this, allocator) " ~ op ~ "= operand;");
     }
 
-    /// Ditto.
+    /// ditto
     Integer opBinary(string op)(const auto ref Integer operand) const
     if (op == "/" || op == "%")
     in
@@ -1164,7 +1164,7 @@ struct Integer
         mixin("return Integer(this, allocator) " ~ op ~ "= operand;");
     }
 
-    /// Ditto.
+    /// ditto
     Integer opBinary(string op)(const size_t operand) const
     if (op == "<<" || op == ">>")
     {

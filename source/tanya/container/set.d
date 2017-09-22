@@ -156,7 +156,7 @@ struct Set(T)
     /// The range types for $(D_PSYMBOL Set).
     alias Range = .Range!T;
 
-    /// Ditto.
+    /// ditto
     alias ConstRange = .Range!(const T);
 
     invariant
@@ -186,7 +186,7 @@ struct Set(T)
         rehash(n);
     }
 
-    /// Ditto.
+    /// ditto
     this(shared Allocator allocator)
     in
     {
@@ -232,7 +232,7 @@ struct Set(T)
         this.data = typeof(this.data)(init.data, allocator);
     }
 
-    /// Ditto.
+    /// ditto
     this(S)(S init, shared Allocator allocator = defaultAllocator)
         if (is(S == Set))
     in
@@ -266,7 +266,7 @@ struct Set(T)
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref typeof(this) opAssign(S)(S that) @trusted
         if (is(S == Set))
     {
@@ -614,7 +614,7 @@ struct Set(T)
         return typeof(return)(this.data[]);
     }
 
-    /// Ditto.
+    /// ditto
     ConstRange opIndex() const
     {
         return typeof(return)(this.data[]);

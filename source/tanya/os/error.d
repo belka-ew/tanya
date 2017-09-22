@@ -234,7 +234,7 @@ struct ErrorCode
         return this.value_;
     }
 
-    /// Ditto.
+    /// ditto
     ErrorNo opCast(T : int)() const
     {
         return this.value_;
@@ -264,7 +264,7 @@ struct ErrorCode
         return this;
     }
 
-    /// Ditto.
+    /// ditto
     ref ErrorCode opAssign()(auto ref const ErrorCode that)
     pure nothrow @safe @nogc
     {
@@ -305,7 +305,7 @@ struct ErrorCode
         return this.value_ == that;
     }
 
-    /// Ditto.
+    /// ditto
     bool opEquals()(auto ref const ErrorCode that)
     const pure nothrow @safe @nogc
     {
