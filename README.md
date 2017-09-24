@@ -27,6 +27,7 @@ Tanya consists of the following packages and (top-level) modules:
 * `async`: Event loop (epoll, kqueue and IOCP).
 * `container`: Queue, Array, Singly and doubly linked lists, Buffers, UTF-8
 string, Hash set.
+* `encoding`: This package provides tools to work with text encodings.
 * `format`: Formatting and conversion functions.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
@@ -142,11 +143,11 @@ There are more containers in the `tanya.container` package.
 
 ### Supported compilers
 
-| dmd     |
-|:-------:|
-| 2.076.0 |
-| 2.075.1 |
-| 2.074.1 |
+| DMD     | GCC            |
+|:-------:|:--------------:|
+| 2.076.0 | *gdc-5* branch |
+| 2.075.1 |                |
+| 2.074.1 |                |
 
 ### Current status
 
