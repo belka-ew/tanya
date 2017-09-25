@@ -7,6 +7,7 @@
 __test__*__
 __test__*__.core
 /tanya-test-*
+/dub_platform_probe-*
 
 /docs/
 /docs.json
