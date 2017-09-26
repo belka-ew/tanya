@@ -5,6 +5,9 @@ rule archive
   command = ar rcs $out $in
 
 build abs.o: gas x64/linux/math/abs.S
+build cmp.o: gas x64/linux/memory/cmp.S
+build fill.o: gas x64/linux/memory/fill.S
+build copy.o: gas x64/linux/memory/copy.S
 build syscall.o: gas x64/linux/syscall.S
 
-build tanya.a: archive syscall.o abs.o
+build tanya.a: archive syscall.o copy.o fill.o cmp.o abs.o

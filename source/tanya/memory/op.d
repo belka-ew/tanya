@@ -14,13 +14,22 @@
  */
 module tanya.memory.op;
 
-version (TanyaPhobos)
+version (TanyaNative)
 {
-    import core.stdc.string;
+    extern private void fillMemory(void[], size_t) pure nothrow @system @nogc;
+
+    extern private void copyMemory(const void[], void[])
+    pure nothrow @system @nogc;
+
+    extern private void moveMemory(const void[], void[])
+    pure nothrow @system @nogc;
+
+    extern private int cmpMemory(const void[], const void[])
+    pure nothrow @system @nogc;
 }
 else
 {
-    static import tanya.memory.arch.x86_64;
+    import core.stdc.string;
 }
 
 private enum alignMask = size_t.sizeof - 1;
@@ -49,13 +58,13 @@ in
 }
 body
 {
-    version (TanyaPhobos)
+    version (TanyaNative)
     {
-        memcpy(target.ptr, source.ptr, source.length);
+        copyMemory(source, target);
     }
     else
     {
-        tanya.memory.arch.x86_64.copy(source, target);
+        memcpy(target.ptr, source.ptr, source.length);
     }
 }
 
@@ -112,13 +121,13 @@ private template filledBytes(ubyte Byte, ubyte I = 0)
  */
 void fill(ubyte c = 0)(void[] memory) @trusted
 {
-    version (TanyaPhobos)
+    version (TanyaNative)
     {
-        memset(memory.ptr, c, memory.length);
+        fillMemory(memory, filledBytes!c);
     }
     else
     {
-        tanya.memory.arch.x86_64.fill(memory, filledBytes!c);
+        memset(memory.ptr, c, memory.length);
     }
 }
 
@@ -187,13 +196,13 @@ in
 }
 body
 {
-    version (TanyaPhobos)
+    version (TanyaNative)
     {
-        memmove(target.ptr, source.ptr, source.length);
+        moveMemory(source, target);
     }
     else
     {
-        tanya.memory.arch.x86_64.copyBackward(source, target);
+        memmove(target.ptr, source.ptr, source.length);
     }
 }
 
@@ -235,17 +244,17 @@ private nothrow @safe @nogc unittest
  */
 int cmp(const void[] r1, const void[] r2) pure nothrow @trusted @nogc
 {
-    version (TanyaPhobos)
+    version (TanyaNative)
+    {
+        return cmpMemory(r1, r2);
+    }
+    else
     {
         if (r1.length > r2.length)
         {
             return 1;
         }
         return r1.length < r2.length ? -1 : memcmp(r1.ptr, r2.ptr, r1.length);
-    }
-    else
-    {
-        return tanya.memory.arch.x86_64.cmp(r1, r2);
     }
 }
 

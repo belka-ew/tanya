@@ -18,9 +18,10 @@
 		{
 			"name": "native",
 			"targetType": "library",
-			"platforms": ["linux-x86_64"],
+			"platforms": ["linux-x86_64-gdc"],
 			"preBuildCommands": ["ninja -C arch"],
-			"lflags": ["arch/tanya.a"]
+			"lflags": ["arch/tanya.a"],
+			"versions": ["TanyaNative"]
 		}
 	]
 }
