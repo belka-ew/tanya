@@ -89,6 +89,7 @@ else version (Windows)
  * block as free and only if all blocks in the region are free, the complete
  * region is deallocated.
  *
+ * <pre>
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  * |      |     |         |     |            ||      |     |                  |
  * |      |prev <-----------    |            ||      |     |                  |
@@ -100,6 +101,7 @@ else version (Windows)
  * |  N   |    -----------> next|            ||   N  |     |                  |
  * |      |     |         |     |            ||      |     |                  |
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ * </pre>
  */
 final class MmapPool : Allocator
 {
