@@ -14,9 +14,9 @@
  */
 module tanya.memory.mmappool;
 
-import core.stdc.string;
 import std.algorithm.comparison;
 import tanya.memory.allocator;
+import tanya.memory.op;
 
 version (Posix)
 {
@@ -24,7 +24,7 @@ version (Posix)
                                      MAP_ANON, MAP_FAILED;
     import core.sys.posix.unistd;
 
-    extern (C)
+    extern(C)
     private void* mmap(void* addr,
                        size_t len,
                        int prot,
@@ -32,7 +32,7 @@ version (Posix)
                        int fd,
                        off_t offset) pure nothrow @system @nogc;
 
-    extern (C)
+    extern(C)
     private int munmap(void* addr, size_t len) pure nothrow @system @nogc;
 
     private void* mapMemory(const size_t len) pure nothrow @system @nogc
@@ -56,11 +56,11 @@ else version (Windows)
 {
     import core.sys.windows.winbase : GetSystemInfo, SYSTEM_INFO;
 
-    extern (Windows)
+    extern(Windows)
     private void* VirtualAlloc(void*, size_t, uint, uint)
     pure nothrow @system @nogc;
 
-    extern (Windows)
+    extern(Windows)
     private int VirtualFree(void* addr, size_t len, uint)
     pure nothrow @system @nogc;
 
@@ -347,10 +347,10 @@ final class MmapPool : Allocator
          || dataSize < size
          || block1.next.size + BlockEntry.sizeof < delta)
         {
-            /* * It is the last block in the region
-             * * The next block is too small
-             * * The next block isn't free
-             * * Requested size is too large
+            /* - It is the last block in the region
+             * - The next block isn't free
+             * - The next block is too small
+             * - Requested size is too large
              */
             return false;
         }
@@ -365,8 +365,8 @@ final class MmapPool : Allocator
             {
                 block1.next.next.prev = block2;
             }
-            // block1.next and block2 can overlap.
-            memmove(cast(void*) block2, cast(void*) block1.next, BlockEntry.sizeof);
+            copyBackward((cast(void*) block1.next)[0 .. BlockEntry.sizeof],
+                         (cast(void*) block2)[0 .. BlockEntry.sizeof]);
             block1.next = block2;
         }
         else
@@ -438,7 +438,7 @@ final class MmapPool : Allocator
         }
         if (p !is null)
         {
-            memcpy(reallocP.ptr, p.ptr, min(p.length, size));
+            copy(p[0 .. min(p.length, size)], reallocP);
             deallocate(p);
         }
         p = reallocP;
@@ -502,7 +502,7 @@ final class MmapPool : Allocator
             void* data = initializeRegion(instanceSize, head, pageSize);
             if (data !is null)
             {
-                memcpy(data, typeid(MmapPool).initializer.ptr, instanceSize);
+                copy(typeid(MmapPool).initializer, data[0 .. instanceSize]);
                 instance_ = cast(shared MmapPool) data;
                 instance_.head = head;
                 instance_.pageSize = pageSize;
