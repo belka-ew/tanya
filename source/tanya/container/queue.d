@@ -201,7 +201,7 @@ struct Queue(T)
     {
         int result;
 
-        for (size_t i = 0; !empty; ++i)
+        for (size_t i; !empty; ++i)
         {
             auto e = dequeue();
             if ((result = dg(i, e)) != 0)

@@ -14,8 +14,8 @@
  */
 module tanya.async.watcher;
 
-import std.functional;
 import std.exception;
+import std.functional;
 import tanya.async.loop;
 import tanya.async.protocol;
 import tanya.async.transport;

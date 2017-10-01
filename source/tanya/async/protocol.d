@@ -18,8 +18,8 @@
  */
 module tanya.async.protocol;
 
-import tanya.network.socket;
 import tanya.async.transport;
+import tanya.network.socket;
 
 /**
  * Common protocol interface.

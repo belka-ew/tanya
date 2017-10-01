@@ -19,6 +19,7 @@
 module tanya.meta.metafunction;
 
 import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Finds the minimum value in $(D_PARAM Args) according to $(D_PARAM pred).
@@ -706,38 +707,6 @@ pure nothrow @safe @nogc unittest
     alias Instance2 = Instantiate!(Seq[1], float);
     static assert(is(Instance2 == float));
 }
-
-version (TanyaPhobos)
-{
-    public import std.meta : Alias,
-                             AliasSeq,
-                             aliasSeqOf,
-                             Erase,
-                             EraseAll,
-                             Filter,
-                             NoDuplicates,
-                             DerivedToFront,
-                             MostDerived,
-                             Repeat,
-                             Replace,
-                             ReplaceAll,
-                             Reverse,
-                             Map = staticMap,
-                             Sort = staticSort,
-                             allSatisfy,
-                             anySatisfy,
-                             staticIndexOf,
-                             templateAnd,
-                             templateNot,
-                             templateOr,
-                             isSorted = staticIsSorted,
-                             ApplyLeft,
-                             ApplyRight;
-}
-else:
-
-import tanya.meta.trait;
-import tanya.meta.transform;
 
 /**
  * Creates an alias for $(D_PARAM T).

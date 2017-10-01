@@ -20,8 +20,8 @@ import std.algorithm.mutation;
 import std.conv;
 public import tanya.memory.allocator;
 import tanya.memory.mmappool;
-import tanya.range.primitive;
 import tanya.meta.trait;
+import tanya.range.primitive;
 
 /**
  * The mixin generates common methods for classes and structs using

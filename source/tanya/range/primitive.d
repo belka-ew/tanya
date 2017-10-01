@@ -15,6 +15,7 @@
 module tanya.range.primitive;
 
 import tanya.meta.trait;
+import tanya.meta.transform;
 
 /**
  * Returns the element type of the range $(D_PARAM R).
@@ -286,18 +287,6 @@ pure nothrow @safe @nogc unittest
     }
     static assert(hasSlicing!D);
 }
-
-version (TanyaPhobos)
-{
-    public import std.range.primitives : isInputRange,
-                                         isForwardRange,
-                                         isBidirectionalRange,
-                                         isRandomAccessRange,
-                                         isInfinite;
-}
-else:
-
-import tanya.meta.transform;
 
 version (unittest)
 {

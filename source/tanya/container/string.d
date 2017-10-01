@@ -30,8 +30,7 @@ import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.algorithm.searching;
-import std.range : isInfinite, isInputRange, ElementEncodingType, hasLength,
-                   popFrontN, empty;
+static import std.range;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -353,9 +352,9 @@ struct String
      * Precondition: $(D_INLINECODE allocator is null).
      */
     this(S)(const S str, shared Allocator allocator = defaultAllocator)
-    if (!isInfinite!S
-     && isInputRange!S
-     && isSomeChar!(ElementEncodingType!S))
+    if (!std.range.isInfinite!S
+     && std.range.isInputRange!S
+     && isSomeChar!(std.range.ElementEncodingType!S))
     {
         this(allocator);
         insertBack(str);
@@ -668,12 +667,12 @@ struct String
      * Throws: $(D_PSYMBOL UTFException).
      */
     size_t insertBack(R)(R str) @trusted
-    if (!isInfinite!R
-     && isInputRange!R
-     && is(Unqual!(ElementEncodingType!R) == char))
+    if (!std.range.isInfinite!R
+     && std.range.isInputRange!R
+     && is(Unqual!(std.range.ElementEncodingType!R) == char))
     {
         size_t size;
-        static if (hasLength!R || isNarrowString!R)
+        static if (std.range.hasLength!R || isNarrowString!R)
         {
             size = str.length + length;
             reserve(size);
@@ -732,11 +731,11 @@ struct String
 
     /// ditto
     size_t insertBack(R)(R str) @trusted
-    if (!isInfinite!R
-     && isInputRange!R
-     && is(Unqual!(ElementEncodingType!R) == wchar))
+    if (!std.range.isInfinite!R
+     && std.range.isInputRange!R
+     && is(Unqual!(std.range.ElementEncodingType!R) == wchar))
     {
-        static if (hasLength!R || isNarrowString!R)
+        static if (std.range.hasLength!R || isNarrowString!R)
         {
             reserve(length + str.length * wchar.sizeof);
         }
@@ -771,7 +770,7 @@ struct String
                     }
                     dchar d = (range[0] - 0xd800) | ((range[1] - 0xdc00) >> 10);
 
-                    range.popFrontN(2);
+                    std.range.popFrontN(range, 2);
                 }
                 else
                 {
@@ -798,11 +797,11 @@ struct String
 
     /// ditto
     size_t insertBack(R)(R str) @trusted
-    if (!isInfinite!R
-     && isInputRange!R
-     && is(Unqual!(ElementEncodingType!R) == dchar))
+    if (!std.range.isInfinite!R
+     && std.range.isInputRange!R
+     && is(Unqual!(std.range.ElementEncodingType!R) == dchar))
     {
-        static if (hasLength!R || isSomeString!R)
+        static if (std.range.hasLength!R || isSomeString!R)
         {
             reserve(length + str.length * 4);
         }
@@ -1269,9 +1268,9 @@ struct String
      * Throws: $(D_PSYMBOL UTFException).
      */
     ref String opAssign(S)(S that) nothrow
-    if (!isInfinite!S
-     && isInputRange!S
-     && isSomeChar!(ElementEncodingType!S))
+    if (!std.range.isInfinite!S
+     && std.range.isInputRange!S
+     && isSomeChar!(std.range.ElementEncodingType!S))
     {
         this.length_ = 0;
         insertBack(that);
@@ -1507,7 +1506,7 @@ struct String
         assert(s.length == 38);
 
         auto byCodePoint = s.byCodePoint();
-        byCodePoint.popFrontN(8);
+        std.range.popFrontN(byCodePoint, 8);
 
         assert(s.remove(byCodePoint).count == 0);
         assert(s == "Из слова");
@@ -1532,9 +1531,9 @@ struct String
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     size_t insertAfter(T, R)(R r, T el) @trusted
-    if ((isSomeChar!T || (!isInfinite!T
-     && isInputRange!T
-     && isSomeChar!(ElementEncodingType!T)))
+    if ((isSomeChar!T || (!std.range.isInfinite!T
+     && std.range.isInputRange!T
+     && isSomeChar!(std.range.ElementEncodingType!T)))
      && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
     in
     {
@@ -1565,9 +1564,9 @@ struct String
 
     ///
     size_t insertBefore(T, R)(R r, T el) @trusted
-    if ((isSomeChar!T || (!isInfinite!T
-     && isInputRange!T
-     && isSomeChar!(ElementEncodingType!T)))
+    if ((isSomeChar!T || (!std.range.isInfinite!T
+     && std.range.isInputRange!T
+     && isSomeChar!(std.range.ElementEncodingType!T)))
      && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
     in
     {

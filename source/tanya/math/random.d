@@ -300,7 +300,7 @@ class Entropy
         // Perform second SHA-512 on entropy
         output = sha512Of(output);
 
-        for (ubyte i = 0; i < sourceCount; ++i)
+        for (ubyte i; i < sourceCount; ++i)
         {
             sources[i].size = 0;
         }

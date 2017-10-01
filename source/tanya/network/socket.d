@@ -17,7 +17,7 @@ module tanya.network.socket;
 import core.stdc.errno;
 import core.time;
 import std.algorithm.comparison;
-public import std.socket : SocketOptionLevel, SocketOption;
+public import std.socket : SocketOption, SocketOptionLevel;
 import std.traits;
 import std.typecons;
 import tanya.memory;
@@ -44,50 +44,50 @@ version (Posix)
 }
 else version (Windows)
 {
-    import core.sys.windows.winbase : GetModuleHandle,
-                                      GetProcAddress,
+    import core.sys.windows.winbase : ERROR_IO_INCOMPLETE,
                                       ERROR_IO_PENDING,
-                                      ERROR_IO_INCOMPLETE;
-    import core.sys.windows.winsock2 : sockaddr,
+                                      GetModuleHandle,
+                                      GetProcAddress;
+    import core.sys.windows.winsock2 : accept,
+                                       addrinfo,
+                                       bind,
+                                       closesocket,
+                                       FIONBIO,
                                        freeaddrinfo,
                                        getaddrinfo,
-                                       SD_RECEIVE,
-                                       SD_SEND,
-                                       SD_BOTH,
+                                       getsockopt,
+                                       ioctlsocket,
+                                       listen,
+                                       MSG_DONTROUTE,
                                        MSG_OOB,
                                        MSG_PEEK,
-                                       MSG_DONTROUTE,
-                                       socklen_t,
+                                       recv,
+                                       SD_BOTH,
+                                       SD_RECEIVE,
+                                       SD_SEND,
+                                       send,
+                                       setsockopt,
+                                       shutdown,
                                        SOCKADDR,
-                                       SOCKADDR_STORAGE,
-                                       addrinfo,
+                                       sockaddr,
                                        sockaddr_in,
                                        sockaddr_in6,
-                                       shutdown,
-                                       closesocket,
-                                       listen,
+                                       SOCKADDR_STORAGE,
                                        socket,
-                                       bind,
-                                       accept,
-                                       WSAGetLastError,
-                                       recv,
-                                       send,
-                                       getsockopt,
-                                       setsockopt,
-                                       ioctlsocket,
-                                       FIONBIO,
+                                       socklen_t,
                                        SOL_SOCKET,
-                                       SO_TYPE;
+                                       SO_TYPE,
+                                       WSAGetLastError;
     import tanya.async.iocp;
-    import tanya.sys.windows.error : EWOULDBLOCK = WSAEWOULDBLOCK,
-                                     ECONNABORTED = WSAECONNABORTED,
+    import tanya.sys.windows.def;
+    import tanya.sys.windows.error : ECONNABORTED = WSAECONNABORTED,
                                      ENOBUFS = WSAENOBUFS,
                                      EOPNOTSUPP = WSAEOPNOTSUPP,
                                      EPROTONOSUPPORT = WSAEPROTONOSUPPORT,
                                      EPROTOTYPE = WSAEPROTOTYPE,
+                                     ESOCKTNOSUPPORT = WSAESOCKTNOSUPPORT,
                                      ETIMEDOUT = WSAETIMEDOUT,
-                                     ESOCKTNOSUPPORT = WSAESOCKTNOSUPPORT;
-    import tanya.sys.windows.def;
+                                     EWOULDBLOCK = WSAEWOULDBLOCK;
     public import tanya.sys.windows.winbase;
     public import tanya.sys.windows.winsock2;
 

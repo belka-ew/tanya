@@ -16,10 +16,10 @@ module tanya.container;
 
 public import tanya.container.array;
 public import tanya.container.buffer;
-public import tanya.container.set;
 public import tanya.container.list;
-public import tanya.container.string;
 public import tanya.container.queue;
+public import tanya.container.set;
+public import tanya.container.string;
 
 /**
  * Thrown if $(D_PSYMBOL Set) cannot insert a new element because the container

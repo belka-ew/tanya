@@ -360,70 +360,6 @@ pure nothrow @safe @nogc unittest
     static assert(hasStaticMember!(S, "member5"));
 }
 
-version (TanyaPhobos)
-{
-    public import std.traits : isFloatingPoint,
-                               isSigned,
-                               isUnsigned,
-                               isIntegral,
-                               isNumeric,
-                               isBoolean,
-                               isSomeChar,
-                               isScalarType,
-                               isBasicType,
-                               isPointer,
-                               isArray,
-                               isStaticArray,
-                               isDynamicArray,
-                               isAssociativeArray,
-                               isBuiltinType,
-                               isAggregateType,
-                               getUDAs,
-                               isNarrowString,
-                               isSomeString,
-                               mostNegative,
-                               Largest,
-                               isCopyable,
-                               isAbstractClass,
-                               isFinalClass,
-                               isAbstractFunction,
-                               isFinalFunction,
-                               isFunctionPointer,
-                               isDelegate,
-                               isFunction,
-                               isSomeFunction,
-                               isCallable,
-                               hasMember,
-                               isMutable,
-                               isNested,
-                               isNestedFunction,
-                               mangledName,
-                               isInstanceOf,
-                               isImplicitlyConvertible,
-                               BaseTypeTuple,
-                               TransitiveBaseTypeTuple,
-                               BaseClassesTuple,
-                               InterfacesTuple,
-                               isAssignable,
-                               TemplateArgsOf,
-                               Parameters,
-                               ParameterIdentifierTuple,
-                               functionAttributes,
-                               ParameterDefaults,
-                               hasElaborateDestructor,
-                               hasElaborateCopyConstructor,
-                               hasElaborateAssign,
-                               EnumMembers,
-                               classInstanceAlignment,
-                               ifTestable,
-                               FunctionTypeOf,
-                               ReturnType,
-                               TemplateOf,
-                               isTypeTuple,
-                               isExpressions;
-}
-else:
-
 /**
  * Determines whether $(D_PARAM T) is a floating point type.
  *
@@ -1269,10 +1205,20 @@ pure nothrow @safe @nogc unittest
     static assert(!isTypeTuple!(int, 8, Object));
     static assert(!isTypeTuple!(5, 8, 2));
 
-    class C;
-    enum E : bool;
-    union U;
-    struct T();
+    class C
+    {
+    }
+    enum E : bool
+    {
+        t,
+        f,
+    }
+    union U
+    {
+    }
+    struct T()
+    {
+    }
 
     static assert(isTypeTuple!C);
     static assert(isTypeTuple!E);
@@ -2392,7 +2338,7 @@ if (isCallable!F)
 {
     static if (is(FunctionTypeOf!F Params == __parameters))
     {
-        enum string[] Impl()
+        string[] Impl()
         {
             string[] tuple;
 
@@ -2463,7 +2409,7 @@ enum FunctionAttribute : uint
 template functionAttributes(F...)
 if (isCallable!F)
 {
-    enum uint Impl()
+    uint Impl()
     {
         uint attrs = FunctionAttribute.none;
         foreach (a; __traits(getFunctionAttributes, F[0]))

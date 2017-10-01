@@ -19,17 +19,17 @@ version (D_Ddoc)
 }
 else version (Windows):
 
-import tanya.container.buffer;
+import core.sys.windows.mswsock;
+import core.sys.windows.winsock2;
 import tanya.async.loop;
 import tanya.async.protocol;
 import tanya.async.transport;
 import tanya.async.watcher;
+import tanya.container.buffer;
 import tanya.memory;
 import tanya.memory.mmappool;
 import tanya.network.socket;
 import tanya.sys.windows.winbase;
-import core.sys.windows.mswsock;
-import core.sys.windows.winsock2;
 
 /**
  * Transport for stream sockets.

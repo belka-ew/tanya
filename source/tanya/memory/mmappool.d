@@ -20,8 +20,11 @@ import tanya.memory.op;
 
 version (Posix)
 {
-    import core.sys.posix.sys.mman : PROT_READ, PROT_WRITE, MAP_PRIVATE,
-                                     MAP_ANON, MAP_FAILED;
+    import core.sys.posix.sys.mman : MAP_ANON,
+                                     MAP_FAILED,
+                                     MAP_PRIVATE,
+                                     PROT_READ,
+                                     PROT_WRITE;
     import core.sys.posix.unistd;
 
     extern(C)

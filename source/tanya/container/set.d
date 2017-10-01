@@ -437,7 +437,7 @@ struct Set(T)
         InsertStatus status = insertInUnusedBucket(value);
         for (; !status; status = insertInUnusedBucket(value))
         {
-            if ((this.primes.length - 1) == this.lengthIndex)
+            if (this.primes.length == (this.lengthIndex + 1))
             {
                 throw make!HashContainerFullException(defaultAllocator,
                                                       "Set is full");

@@ -19,20 +19,20 @@ version (D_Ddoc)
 }
 else version (linux):
 
+import core.stdc.errno;
 public import core.sys.linux.epoll;
-import tanya.async.protocol;
+import core.sys.posix.unistd;
+import core.time;
+import std.algorithm.comparison;
 import tanya.async.event.selector;
 import tanya.async.loop;
+import tanya.async.protocol;
 import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.array;
 import tanya.memory;
 import tanya.memory.mmappool;
 import tanya.network.socket;
-import core.stdc.errno;
-import core.sys.posix.unistd;
-import core.time;
-import std.algorithm.comparison;
 
 extern (C) nothrow @nogc
 {
