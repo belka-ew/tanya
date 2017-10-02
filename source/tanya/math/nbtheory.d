@@ -17,6 +17,15 @@ module tanya.math.nbtheory;
 import tanya.math.mp;
 import tanya.meta.trait;
 
+version (TanyaNative)
+{
+}
+else
+{
+    import core.math : fabs;
+    import std.math : log;
+}
+
 /**
  * Calculates the absolute value of a number.
  *
@@ -57,20 +66,18 @@ version (D_Ddoc)
     I abs(I)(I x)
     if (isFloatingPoint!I);
 }
-else version (TanyaPhobos)
+else version (TanyaNative)
 {
-    import core.math;
-
+    extern I abs(I)(I number) pure nothrow @safe @nogc
+    if (isFloatingPoint!I);
+}
+else
+{
     I abs(I)(I x)
     if (isFloatingPoint!I)
     {
         return fabs(cast(real) x);
     }
-}
-else
-{
-    extern I abs(I)(I number) pure nothrow @safe @nogc
-    if (isFloatingPoint!I);
 }
 
 ///
@@ -102,4 +109,57 @@ I abs(I : Integer)(I x)
 {
     x.sign = Sign.positive;
     return x;
+}
+
+version (D_Ddoc)
+{
+    /**
+     * Calculates natural logarithm of $(D_PARAM x).
+     *
+     * Params:
+     *  x = Argument.
+     *
+     * Returns: Natural logarithm of $(D_PARAM x).
+     */
+    float ln(float x) pure nothrow @safe @nogc;
+    /// ditto
+    double ln(double x) pure nothrow @safe @nogc;
+    /// ditto
+    real ln(real x) pure nothrow @safe @nogc;
+}
+else version (TanyaNative)
+{
+    extern float ln(float x) pure nothrow @safe @nogc;
+    extern double ln(double x) pure nothrow @safe @nogc;
+    extern real ln(real x) pure nothrow @safe @nogc;
+}
+else
+{
+    float ln(float x) pure nothrow @safe @nogc
+    {
+        return log(x);
+    }
+    double ln(double x) pure nothrow @safe @nogc
+    {
+        return log(x);
+    }
+    alias ln = log;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    import tanya.math;
+
+    assert(isNaN(ln(-7.389f)));
+    assert(isNaN(ln(-7.389)));
+    assert(isNaN(ln(-7.389L)));
+
+    assert(isInfinity(ln(0.0f)));
+    assert(isInfinity(ln(0.0)));
+    assert(isInfinity(ln(0.0L)));
+
+    assert(ln(1.0f) == 0.0f);
+    assert(ln(1.0) == 0.0);
+    assert(ln(1.0L) == 0.0L);
 }

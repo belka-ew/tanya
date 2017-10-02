@@ -35,6 +35,7 @@ import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.array;
+import tanya.range.primitive;
 
 /**
  * Thrown on encoding errors.
@@ -352,9 +353,9 @@ struct String
      * Precondition: $(D_INLINECODE allocator is null).
      */
     this(S)(const S str, shared Allocator allocator = defaultAllocator)
-    if (!std.range.isInfinite!S
-     && std.range.isInputRange!S
-     && isSomeChar!(std.range.ElementEncodingType!S))
+    if (!isInfinite!S
+     && isInputRange!S
+     && isSomeChar!(ElementType!S))
     {
         this(allocator);
         insertBack(str);
@@ -667,12 +668,12 @@ struct String
      * Throws: $(D_PSYMBOL UTFException).
      */
     size_t insertBack(R)(R str) @trusted
-    if (!std.range.isInfinite!R
-     && std.range.isInputRange!R
-     && is(Unqual!(std.range.ElementEncodingType!R) == char))
+    if (!isInfinite!R
+     && isInputRange!R
+     && is(Unqual!(ElementType!R) == char))
     {
         size_t size;
-        static if (std.range.hasLength!R || isNarrowString!R)
+        static if (hasLength!R || isNarrowString!R)
         {
             size = str.length + length;
             reserve(size);
@@ -731,11 +732,11 @@ struct String
 
     /// ditto
     size_t insertBack(R)(R str) @trusted
-    if (!std.range.isInfinite!R
-     && std.range.isInputRange!R
-     && is(Unqual!(std.range.ElementEncodingType!R) == wchar))
+    if (!isInfinite!R
+     && isInputRange!R
+     && is(Unqual!(ElementType!R) == wchar))
     {
-        static if (std.range.hasLength!R || isNarrowString!R)
+        static if (hasLength!R || isNarrowString!R)
         {
             reserve(length + str.length * wchar.sizeof);
         }
@@ -797,11 +798,11 @@ struct String
 
     /// ditto
     size_t insertBack(R)(R str) @trusted
-    if (!std.range.isInfinite!R
-     && std.range.isInputRange!R
-     && is(Unqual!(std.range.ElementEncodingType!R) == dchar))
+    if (!isInfinite!R
+     && isInputRange!R
+     && is(Unqual!(ElementType!R) == dchar))
     {
-        static if (std.range.hasLength!R || isSomeString!R)
+        static if (hasLength!R || isSomeString!R)
         {
             reserve(length + str.length * 4);
         }
@@ -1268,9 +1269,9 @@ struct String
      * Throws: $(D_PSYMBOL UTFException).
      */
     ref String opAssign(S)(S that) nothrow
-    if (!std.range.isInfinite!S
-     && std.range.isInputRange!S
-     && isSomeChar!(std.range.ElementEncodingType!S))
+    if (!isInfinite!S
+     && isInputRange!S
+     && isSomeChar!(ElementType!S))
     {
         this.length_ = 0;
         insertBack(that);
@@ -1531,9 +1532,9 @@ struct String
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     size_t insertAfter(T, R)(R r, T el) @trusted
-    if ((isSomeChar!T || (!std.range.isInfinite!T
-     && std.range.isInputRange!T
-     && isSomeChar!(std.range.ElementEncodingType!T)))
+    if ((isSomeChar!T || (!isInfinite!T
+     && isInputRange!T
+     && isSomeChar!(ElementType!T)))
      && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
     in
     {
@@ -1564,9 +1565,9 @@ struct String
 
     ///
     size_t insertBefore(T, R)(R r, T el) @trusted
-    if ((isSomeChar!T || (!std.range.isInfinite!T
-     && std.range.isInputRange!T
-     && isSomeChar!(std.range.ElementEncodingType!T)))
+    if ((isSomeChar!T || (!isInfinite!T
+     && isInputRange!T
+     && isSomeChar!(ElementType!T)))
      && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
     in
     {
