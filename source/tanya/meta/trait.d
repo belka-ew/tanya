@@ -660,8 +660,12 @@ enum bool isBasicType(T) = isScalarType!T || is(T : void);
 ///
 pure nothrow @safe @nogc unittest
 {
-    struct S;
-    class C;
+    static struct S
+    {
+    }
+    class C
+    {
+    }
     enum E : int
     {
         i = 0,
@@ -2995,4 +2999,52 @@ pure nothrow @safe @nogc unittest
     @Attr1 int a;
     static assert(hasUDA!(a, Attr1));
     static assert(!hasUDA!(a, Attr2));
+}
+
+/**
+ * Tests whether $(D_PARAM T) is an inner class, i.e. a class nested inside
+ * another class.
+ *
+ * All inner classes get `outer` propery automatically generated, which points
+ * to its parent class, though it can be explicitly defined to be something
+ * different. If $(D_PARAM T) does this, $(D_PSYMBOL isInnerClass)
+ * evaluates to $(D_KEYWORD false).
+ *
+ * Params:
+ *  T = Class to be tested.
+ *
+ * Returns $(D_KEYWORD true) if $(D_PARAM T) is an inner class,
+ *         $(D_KEYWORD false) otherwise.
+ */
+template isInnerClass(T)
+{
+    static if (is(T == class) && is(Alias!(__traits(parent, T)) == class))
+    {
+        enum bool isInnerClass = !canFind!("outer", __traits(allMembers, T));
+    }
+    else
+    {
+        enum bool isInnerClass = false;
+    }
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    class A
+    {
+    }
+    class O
+    {
+        class I
+        {
+        }
+        class Fake
+        {
+            bool outer;
+        }
+    }
+    static assert(!isInnerClass!(O));
+    static assert(isInnerClass!(O.I));
+    static assert(!isInnerClass!(O.Fake));
 }

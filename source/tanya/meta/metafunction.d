@@ -885,8 +885,8 @@ if (Args.length > 0)
  * `-1` is returned if $(D_PARAM T) is not found.
  *
  * Params:
- *  T = The type to search for.
- *  L = Type list.
+ *  T = The item to search for.
+ *  L = Symbol sequence.
  *
  * Returns: The index of the first occurrence of $(D_PARAM T) in $(D_PARAM L).
  */
@@ -908,6 +908,37 @@ pure nothrow @safe @nogc unittest
     static assert(staticIndexOf!(int, int) == 0);
     static assert(staticIndexOf!(int, float, double, int, real) == 2);
     static assert(staticIndexOf!(3, () {}, uint, 5, 3) == 3);
+}
+
+/**
+ * Looks for $(D_PARAM T) in $(D_PARAM L) and returns $(D_KEYWORD true) if it
+ * could be found and $(D_KEYWORD false) otherwise.
+ *
+ * Params:
+ *  T = The item to search for.
+ *  L = Symbol sequence.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) can be found in $(D_PARAM L),
+ *          $(D_KEYWORD false) otherwise.
+ */
+template canFind(T, L...)
+{
+    enum bool canFind = indexOf!(0, AliasSeq!(T, L)) != -1;
+}
+
+/// ditto
+template canFind(alias T, L...)
+{
+    enum bool canFind = indexOf!(0, AliasSeq!(T, L)) != -1;
+}
+
+///
+pure nothrow @safe @nogc unittest
+{
+    static assert(!canFind!(int));
+    static assert(canFind!(int, int));
+    static assert(canFind!(int, float, double, int, real));
+    static assert(canFind!(3, () {}, uint, 5, 3));
 }
 
 /**
