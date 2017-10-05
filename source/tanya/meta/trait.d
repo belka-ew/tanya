@@ -275,38 +275,37 @@ pure nothrow @safe @nogc unittest
     static assert(!isTemplate!(S!int));
 }
 
-/**
- * Determine whether $(D_PARAM T) is an interface.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an interface,
- *          $(D_KEYWORD false) otherwise.
- */
+deprecated("Use is(T == interface) instead")
 enum bool isInterface(T) = is(T == interface);
 
-/**
- * Determine whether $(D_PARAM T) is a class.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a class
- *          $(D_KEYWORD false) otherwise.
- */
+deprecated("Use is(T == class) instead")
 enum bool isClass(T) = is(T == class);
 
+deprecated("Use is(T == struct) instead")
+enum bool isStruct(T) = is(T == struct);
+
 /**
- * Determine whether $(D_PARAM T) is a struct.
+ * Determines whether $(D_PARAM T) is a polymorphic type, i.e. a
+ * $(D_KEYWORD class) or an $(D_KEYWORD interface).
  *
  * Params:
  *  T = A type.
  *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a struct,
- *          $(D_KEYWORD false) otherwise.
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a $(D_KEYWORD class) or an
+ *          $(D_KEYWORD interface), $(D_KEYWORD false) otherwise.
  */
-enum bool isStruct(T) = is(T == struct);
+enum bool isPolymorphic(T) = is(T == class) || is(T == interface);
+
+///
+@nogc nothrow pure @safe unittest
+{
+    interface I
+    {
+    }
+    static assert(isPolymorphic!Object);
+    static assert(isPolymorphic!I);
+    static assert(!isPolymorphic!short);
+}
 
 /**
  * Params:
