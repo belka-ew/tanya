@@ -164,7 +164,7 @@ body
  */
 template stateSize(T)
 {
-    static if (isPolymorphic!T)
+    static if (isPolymorphicType!T)
     {
         enum size_t stateSize = __traits(classInstanceSize, T);
     }

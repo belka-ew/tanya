@@ -294,7 +294,7 @@ enum bool isStruct(T) = is(T == struct);
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a $(D_KEYWORD class) or an
  *          $(D_KEYWORD interface), $(D_KEYWORD false) otherwise.
  */
-enum bool isPolymorphic(T) = is(T == class) || is(T == interface);
+enum bool isPolymorphicType(T) = is(T == class) || is(T == interface);
 
 ///
 @nogc nothrow pure @safe unittest
@@ -302,9 +302,9 @@ enum bool isPolymorphic(T) = is(T == class) || is(T == interface);
     interface I
     {
     }
-    static assert(isPolymorphic!Object);
-    static assert(isPolymorphic!I);
-    static assert(!isPolymorphic!short);
+    static assert(isPolymorphicType!Object);
+    static assert(isPolymorphicType!I);
+    static assert(!isPolymorphicType!short);
 }
 
 /**
