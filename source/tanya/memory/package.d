@@ -141,19 +141,52 @@ body
  * Returns the size in bytes of the state that needs to be allocated to hold an
  * object of type $(D_PARAM T).
  *
+ * There is a difference between the `.sizeof`-property and
+ * $(D_PSYMBOL stateSize) if $(D_PARAM T) is a class or an interface.
+ * `T.sizeof` is constant on the given architecture then and is the same as
+ * `size_t.sizeof` and `ptrdiff_t.sizeof`. This is because classes and
+ * interfaces are reference types and `.sizeof` returns the size of the
+ * reference which is the same as the size of a pointer. $(D_PSYMBOL stateSize)
+ * returns the size of the instance itself.
+ *
+ * The size of a dynamic array is `size_t.sizeof * 2` since a dynamic array
+ * stores its length and a data pointer. The size of the static arrays is
+ * calculated differently since they are value types. It is the array length
+ * multiplied by the element size.
+ *
+ * `stateSize!void` is `1` since $(D_KEYWORD void) is mostly used as a synonym
+ * for $(D_KEYWORD byte)/$(D_KEYWORD ubyte) in `void*`.
+ *
  * Params:
  *  T = Object type.
+ *
+ * Returns: Size of an instance of type $(D_PARAM T).
  */
 template stateSize(T)
 {
-    static if (is(T == class) || is(T == interface))
+    static if (isPolymorphic!T)
     {
-        enum stateSize = __traits(classInstanceSize, T);
+        enum size_t stateSize = __traits(classInstanceSize, T);
     }
     else
     {
-        enum stateSize = T.sizeof;
+        enum size_t stateSize = T.sizeof;
     }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(stateSize!int == 4);
+    static assert(stateSize!bool == 1);
+    static assert(stateSize!(int[]) == (size_t.sizeof * 2)); 
+    static assert(stateSize!(short[3]) == 6); 
+
+    static struct Empty
+    {
+    }
+    static assert(stateSize!Empty == 1);
+    static assert(stateSize!void == 1);
 }
 
 /**
