@@ -45,7 +45,7 @@ import tanya.meta.transform;
 enum bool isWideString(T) = is(T : const dchar[]) && !isStaticArray!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isWideString!(dchar[]));
     static assert(!isWideString!(char[]));
@@ -101,7 +101,7 @@ if (Args.length >= 1)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Smallest!(int, ushort, uint, short) == ushort));
     static assert(is(Smallest!(short) == short));
@@ -136,7 +136,7 @@ enum bool isComplex(T) = is(Unqual!(OriginalType!T) == cfloat)
                       || is(Unqual!(OriginalType!T) == ireal);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isComplex!cfloat);
     static assert(isComplex!ifloat);
@@ -163,7 +163,7 @@ pure nothrow @safe @nogc unittest
 enum bool isPOD(T) = __traits(isPOD, T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S1
     {
@@ -199,7 +199,7 @@ pure nothrow @safe @nogc unittest
 enum size_t sizeOf(T) = T.sizeof;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(sizeOf!(bool function()) == size_t.sizeof);
     static assert(sizeOf!bool == 1);
@@ -220,7 +220,7 @@ pure nothrow @safe @nogc unittest
 enum size_t alignOf(T) = T.alignof;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(alignOf!bool == bool.alignof);
     static assert(is(typeof(alignOf!bool) == typeof(bool.alignof)));
@@ -243,7 +243,7 @@ if (Args.length == 2)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isSame!("string", "string"));
     static assert(!isSame!(string, immutable(char)[]));
@@ -266,7 +266,7 @@ pure nothrow @safe @nogc unittest
 enum bool isTemplate(alias T) = __traits(isTemplate, T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S(T)
     {
@@ -338,7 +338,7 @@ template hasStaticMember(T, string member)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S
     {
@@ -380,7 +380,7 @@ enum bool isFloatingPoint(T) = is(Unqual!(OriginalType!T) == double)
                             || is(Unqual!(OriginalType!T) == real);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isFloatingPoint!float);
     static assert(isFloatingPoint!double);
@@ -420,7 +420,7 @@ enum bool isSigned(T) = is(Unqual!(OriginalType!T) == byte)
                      || isFloatingPoint!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isSigned!byte);
     static assert(isSigned!short);
@@ -461,7 +461,7 @@ enum bool isUnsigned(T) = is(Unqual!(OriginalType!T) == ubyte)
                        || is(Unqual!(OriginalType!T) == ulong);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isUnsigned!ubyte);
     static assert(isUnsigned!ushort);
@@ -505,7 +505,7 @@ enum bool isIntegral(T) = isUnsigned!T
                        || is(Unqual!(OriginalType!T) == long);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isIntegral!ubyte);
     static assert(isIntegral!byte);
@@ -529,7 +529,7 @@ pure nothrow @safe @nogc unittest
 enum bool isNumeric(T) = isIntegral!T || isFloatingPoint!T || isComplex!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias F = float;
     static assert(isNumeric!F);
@@ -550,7 +550,7 @@ pure nothrow @safe @nogc unittest
 enum bool isBoolean(T) = is(Unqual!(OriginalType!T) == bool);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isBoolean!bool);
     static assert(isBoolean!(shared const bool));
@@ -603,7 +603,7 @@ enum bool isSomeChar(T) = is(Unqual!(OriginalType!T) == char)
                        || is(Unqual!(OriginalType!T) == dchar);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isSomeChar!char);
     static assert(isSomeChar!wchar);
@@ -635,7 +635,7 @@ pure nothrow @safe @nogc unittest
 enum bool isScalarType(T) = isNumeric!T || isBoolean!T || isSomeChar!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isScalarType!int);
     static assert(!isScalarType!(int[]));
@@ -657,7 +657,7 @@ pure nothrow @safe @nogc unittest
 enum bool isBasicType(T) = isScalarType!T || is(T : void);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct S
     {
@@ -700,7 +700,7 @@ template isPointer(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isPointer!(bool*));
     static assert(isPointer!(const bool*));
@@ -733,7 +733,7 @@ template isArray(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isArray!(bool[]));
     static assert(isArray!(const bool[]));
@@ -767,7 +767,7 @@ template isStaticArray(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isStaticArray!(bool[8]));
     static assert(isStaticArray!(const bool[8]));
@@ -791,7 +791,7 @@ pure nothrow @safe @nogc unittest
 enum bool isDynamicArray(T) = isArray!T && !isStaticArray!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isDynamicArray!(bool[]));
     static assert(isDynamicArray!(const bool[]));
@@ -825,7 +825,7 @@ template isAssociativeArray(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isAssociativeArray!(bool[string]));
     static assert(isAssociativeArray!(const bool[string]));
@@ -855,7 +855,7 @@ enum bool isBuiltinType(T) = isBasicType!T
                           || isAssociativeArray!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isBuiltinType!int);
     static assert(isBuiltinType!(int[]));
@@ -887,7 +887,7 @@ enum bool isAggregateType(T) = is(T == struct)
                             || is(T == union);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S;
     class C;
@@ -929,7 +929,7 @@ enum bool isNarrowString(T) = (is(T : const char[]) || is (T : const wchar[]))
                            && !isStaticArray!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isNarrowString!(char[]));
     static assert(isNarrowString!(wchar[]));
@@ -978,7 +978,7 @@ pure nothrow @safe @nogc unittest
 enum bool isSomeString(T) = isNarrowString!T || isWideString!T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isSomeString!(dchar[]));
     static assert(isSomeString!(char[]));
@@ -1036,7 +1036,7 @@ template mostNegative(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(mostNegative!char == char.min);
     static assert(mostNegative!wchar == wchar.min);
@@ -1085,7 +1085,7 @@ if (Args.length >= 1)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Largest!(int, short, uint) == int));
     static assert(is(Largest!(short) == short));
@@ -1109,7 +1109,7 @@ pure nothrow @safe @nogc unittest
 enum bool isCopyable(T) = is(typeof({ T s1 = T.init; T s2 = s1; }));
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S1
     {
@@ -1158,7 +1158,7 @@ pure nothrow @safe @nogc unittest
 enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
@@ -1201,7 +1201,7 @@ private enum bool isType(T) = true;
 enum bool isTypeTuple(Args...) = allSatisfy!(isType, Args);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isTypeTuple!(int, uint, Object));
     static assert(isTypeTuple!());
@@ -1274,7 +1274,7 @@ template isExpressions(Args...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isExpressions!(5, 8, 2));
     static assert(isExpressions!());
@@ -1301,7 +1301,7 @@ pure nothrow @safe @nogc unittest
 enum bool isFinalClass(T) = __traits(isFinalClass, T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     final class A
     {
@@ -1328,7 +1328,7 @@ pure nothrow @safe @nogc unittest
 enum bool isAbstractFunction(alias F) = __traits(isAbstractFunction, F);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
@@ -1365,7 +1365,7 @@ pure nothrow @safe @nogc unittest
 enum bool isFinalFunction(alias F) = __traits(isFinalFunction, F);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
@@ -1413,7 +1413,7 @@ if (F.length == 1)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isFunctionPointer!(void function()));
     static assert(!isFunctionPointer!(void delegate()));
@@ -1470,7 +1470,7 @@ if (F.length == 1)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isDelegate!(void delegate()));
     static assert(!isDelegate!(void function()));
@@ -1531,7 +1531,7 @@ if (F.length == 1)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(!isFunction!(void function()));
     static assert(!isFunction!(() {}));
@@ -1580,7 +1580,7 @@ if (F.length == 1)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isSomeFunction!(void function()));
     static assert(isSomeFunction!(() {}));
@@ -1627,7 +1627,7 @@ if (F.length == 1)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S
     {
@@ -1652,7 +1652,7 @@ pure nothrow @safe @nogc unittest
     static assert(!isCallable!I);
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S
     {
@@ -1677,7 +1677,7 @@ private pure nothrow @safe @nogc unittest
 enum bool hasMember(T, string member) = __traits(hasMember, T, member);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S
     {
@@ -1732,7 +1732,7 @@ template isMutable(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S
     {
@@ -1797,7 +1797,7 @@ pure nothrow @safe unittest
 enum bool isNestedFunction(alias F) = __traits(isNested, F);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     void func()
     {
@@ -1834,13 +1834,13 @@ if (isCallable!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(FunctionTypeOf!(void function()) == function));
     static assert(is(FunctionTypeOf!(() {}) == function));
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(FunctionTypeOf!(void delegate()) == function));
 
@@ -1883,7 +1883,7 @@ private pure nothrow @safe @nogc unittest
     static assert(is(FunctionTypeOf!S == function));
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S2
     {
@@ -1917,7 +1917,7 @@ if (isCallable!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(ReturnType!(int delegate()) == int));
     static assert(is(ReturnType!(bool function()) == bool));
@@ -1934,7 +1934,7 @@ pure nothrow @safe @nogc unittest
 alias TemplateOf(alias T : Base!Args, alias Base, Args...) = Base;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S(T)
     {
@@ -1990,7 +1990,7 @@ template isInstanceOf(alias T, alias I)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S(T)
     {
@@ -2020,7 +2020,7 @@ pure nothrow @safe @nogc unittest
 enum bool isImplicitlyConvertible(From, To) = is(From : To);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isImplicitlyConvertible!(const(byte), byte));
     static assert(isImplicitlyConvertible!(byte, char));
@@ -2056,7 +2056,7 @@ if (is(T == class) || (is(T == interface)))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     interface I1
     {
@@ -2113,7 +2113,7 @@ if (is(T == class) || is(T == interface))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     interface I1
     {
@@ -2163,7 +2163,7 @@ if (is(T == class))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     interface I1
     {
@@ -2199,7 +2199,7 @@ if (is(T == class) || is(T == interface))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     interface I1
     {
@@ -2249,7 +2249,7 @@ template isAssignable(Lhs, Rhs = Lhs)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S1
     {
@@ -2290,7 +2290,7 @@ pure nothrow @safe @nogc unittest
 alias TemplateArgsOf(alias T : Base!Args, alias Base, Args...) = Args;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     template T(A, B)
     {
@@ -2320,7 +2320,7 @@ if (isCallable!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     int func(Object, uint[]);
     static assert(is(Parameters!func == AliasSeq!(Object, uint[])));
@@ -2368,7 +2368,7 @@ if (isCallable!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     int func(ref Object stuff, uint[] = null, scope uint k = 1);
     alias P = ParameterIdentifierTuple!func;
@@ -2480,7 +2480,7 @@ if (isCallable!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     @property ref int func1() pure nothrow @safe @nogc shared scope;
     static assert((functionAttributes!func1 & FunctionAttribute.pure_)
@@ -2548,7 +2548,7 @@ if (isCallable!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     void func1(int k, uint b = 5, int[] = [1, 2]);
     alias Defaults = ParameterDefaults!func1;
@@ -2587,7 +2587,7 @@ template hasElaborateDestructor(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class C
     {
@@ -2653,7 +2653,7 @@ template hasElaborateCopyConstructor(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(!hasElaborateCopyConstructor!int);
 
@@ -2715,7 +2715,7 @@ template hasElaborateAssign(T)
     }
 }
 
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(!hasElaborateAssign!int);
 
@@ -2815,7 +2815,7 @@ if (is(T == class))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class C1
     {
@@ -2858,7 +2858,7 @@ template ifTestable(T, alias pred = a => a)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(ifTestable!int);
 
@@ -2932,7 +2932,7 @@ template getUDAs(alias symbol, alias attr)
 alias getUDAs(alias symbol) = AliasSeq!(__traits(getAttributes, symbol));
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct Attr
     {
@@ -2987,7 +2987,7 @@ template hasUDA(alias symbol, alias attr)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct Attr1
     {
@@ -3017,7 +3017,7 @@ pure nothrow @safe @nogc unittest
  */
 template isInnerClass(T)
 {
-    static if (is(T == class) && is(Alias!(__traits(parent, T)) == class))
+    static if (is(T == class) && is(typeof(T.outer) == class))
     {
         enum bool isInnerClass = !canFind!("outer", __traits(allMembers, T));
     }
@@ -3028,7 +3028,7 @@ template isInnerClass(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
@@ -3046,4 +3046,12 @@ pure nothrow @safe @nogc unittest
     static assert(!isInnerClass!(O));
     static assert(isInnerClass!(O.I));
     static assert(!isInnerClass!(O.Fake));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    class RefCountedStore(T)
+    {
+    }
+    static assert(!isInnerClass!(RefCountedStore!int));
 }

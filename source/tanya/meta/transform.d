@@ -60,7 +60,7 @@ template Unqual(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Unqual!bool == bool));
     static assert(is(Unqual!(immutable bool) == bool));
@@ -95,7 +95,7 @@ template OriginalType(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum E1 : const(int)
     {
@@ -166,7 +166,7 @@ template CopyConstness(From, To)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(CopyConstness!(int, char) == char));
     static assert(is(CopyConstness!(const int, char) == const char));
@@ -245,7 +245,7 @@ template CopyTypeQualifiers(From, To)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(CopyTypeQualifiers!(int, char) == char));
     static assert(is(CopyTypeQualifiers!(const int, char) == const char));
@@ -297,7 +297,7 @@ if (isIntegral!T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Unsigned!byte == ubyte));
     static assert(is(Unsigned!short == ushort));
@@ -350,7 +350,7 @@ if (isIntegral!T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Signed!ubyte == byte));
     static assert(is(Signed!ushort == short));
@@ -386,7 +386,7 @@ template PointerTarget(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(PointerTarget!(bool*) == bool));
     static assert(is(PointerTarget!(const bool*) == const bool));
@@ -413,7 +413,7 @@ template KeyType(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(KeyType!(int[string]) == string));
     static assert(!is(KeyType!(int[15])));
@@ -438,7 +438,7 @@ template ValueType(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(ValueType!(int[string]) == int));
     static assert(!is(ValueType!(int[15])));
@@ -460,7 +460,7 @@ if (isScalarType!T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Promoted!bool == int));
     static assert(is(Promoted!byte == int));
@@ -486,7 +486,7 @@ pure nothrow @safe @nogc unittest
 alias InoutOf(T) = inout(T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(InoutOf!int == inout int));
 }
@@ -502,7 +502,7 @@ pure nothrow @safe @nogc unittest
 alias ConstOf(T) = const(T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(ConstOf!int == const int));
 }
@@ -518,7 +518,7 @@ pure nothrow @safe @nogc unittest
 alias SharedOf(T) = shared(T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(SharedOf!int == shared int));
 }
@@ -534,7 +534,7 @@ pure nothrow @safe @nogc unittest
 alias SharedInoutOf(T) = shared(inout T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(SharedInoutOf!int == shared inout int));
 }
@@ -550,7 +550,7 @@ pure nothrow @safe @nogc unittest
 alias SharedConstOf(T) = shared(const T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(SharedConstOf!int == shared const int));
 }
@@ -566,7 +566,7 @@ pure nothrow @safe @nogc unittest
 alias ImmutableOf(T) = immutable(T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(ImmutableOf!int == immutable int));
 }
@@ -582,7 +582,7 @@ pure nothrow @safe @nogc unittest
 alias InoutConstOf(T) = inout(const T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(InoutConstOf!int == inout const int));
 }
@@ -598,7 +598,7 @@ pure nothrow @safe @nogc unittest
 alias SharedInoutConstOf(T) = shared(inout const T);
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(SharedInoutConstOf!int == shared inout const int));
 }
@@ -653,7 +653,7 @@ template QualifierOf(T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias MutableOf = QualifierOf!int;
     static assert(is(MutableOf!uint == uint));
@@ -707,7 +707,7 @@ if (isExpressions!T || isTemplate!T)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct S(T)
     {

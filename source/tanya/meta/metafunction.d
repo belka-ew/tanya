@@ -61,7 +61,7 @@ if (Args.length > 0 && isTemplate!pred)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum bool cmp(alias T, alias U) = T < U;
     static assert(Min!(cmp, 8, 4, 5, 3, 13) == 3);
@@ -108,7 +108,7 @@ if (Args.length > 0 && isTemplate!pred)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum bool cmp(alias T, alias U) = T < U;
     static assert(Max!(cmp, 8, 4, 5, 3, 13) == 13);
@@ -180,7 +180,7 @@ if (Tuples.length > 0
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias Result1 = ZipWith!(AliasSeq,
                              Tuple!(1, 2),
@@ -242,7 +242,7 @@ template Tuple(Args...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias A = Tuple!(short);
     alias B = Tuple!(3, 8, 9);
@@ -280,7 +280,7 @@ template Set(Args...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias S1 = Set!(int, 5, 5, int, 4);
     static assert(S1.length == 3);
@@ -315,7 +315,7 @@ if (allSatisfy!(ApplyLeft!(isInstanceOf, Set), Sets))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias S1 = Set!(2, 5, 8, 4);
     alias S2 = Set!(3, 8, 4, 1);
@@ -368,7 +368,7 @@ if (allSatisfy!(ApplyLeft!(isInstanceOf, Set), Sets))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias S1 = Set!(2, 5, 8, 4);
     alias S2 = Set!(3, 8, 4, 1);
@@ -415,7 +415,7 @@ if (isInstanceOf!(Set, S1) && isInstanceOf!(Set, S2))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias S1 = Set!(2, 5, 8, 4);
     alias S2 = Set!(3, 8, 4, 1);
@@ -458,7 +458,7 @@ if (Args.length == 2 && isTemplate!cmp)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
     static assert(isLessEqual!(boolCmp, byte, int));
@@ -505,7 +505,7 @@ if (Args.length == 2 && isTemplate!cmp)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
     static assert(!isGreaterEqual!(boolCmp, byte, int));
@@ -552,7 +552,7 @@ if (Args.length == 2 && isTemplate!cmp)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
     static assert(isLess!(boolCmp, byte, int));
@@ -599,7 +599,7 @@ if (Args.length == 2 && isTemplate!cmp)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum bool boolCmp(T, U) = T.sizeof < U.sizeof;
     static assert(!isGreater!(boolCmp, byte, int));
@@ -644,7 +644,7 @@ if (Args.length == 2)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(isEqual!(int, int));
     static assert(isEqual!(8, 8));
@@ -674,7 +674,7 @@ if (Args.length == 2)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(!isNotEqual!(int, int));
     static assert(isNotEqual!(5, int));
@@ -693,7 +693,7 @@ pure nothrow @safe @nogc unittest
 alias Instantiate(alias T, Args...) = T!Args;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     template Template(T)
     {
@@ -738,7 +738,7 @@ alias Alias(alias T) = T;
 alias Alias(T) = T;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Alias!int));
 
@@ -769,7 +769,7 @@ pure nothrow @safe @nogc unittest
 alias AliasSeq(Args...) = Args;
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(typeof({ alias T = AliasSeq!(short, 5); })));
     static assert(is(typeof({ alias T = AliasSeq!(int, short, 5); })));
@@ -817,7 +817,7 @@ if (isTemplate!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(allSatisfy!(isSigned, int, short, byte, long));
     static assert(!allSatisfy!(isUnsigned, uint, ushort, float, ulong));
@@ -855,7 +855,7 @@ if (isTemplate!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(anySatisfy!(isSigned, int, short, byte, long));
     static assert(anySatisfy!(isUnsigned, uint, ushort, float, ulong));
@@ -902,7 +902,7 @@ template staticIndexOf(alias T, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(staticIndexOf!(int) == -1);
     static assert(staticIndexOf!(int, int) == 0);
@@ -933,7 +933,7 @@ template canFind(alias T, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(!canFind!(int));
     static assert(canFind!(int, int));
@@ -973,7 +973,7 @@ if (allSatisfy!(isTemplate, Preds))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias isMutableInt = templateAnd!(isIntegral, isMutable);
     static assert(isMutableInt!int);
@@ -1021,7 +1021,7 @@ if (allSatisfy!(isTemplate, Preds))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias isMutableOrInt = templateOr!(isIntegral, isMutable);
     static assert(isMutableOrInt!int);
@@ -1051,7 +1051,7 @@ if (isTemplate!pred)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias isNotIntegral = templateNot!isIntegral;
     static assert(!isNotIntegral!int);
@@ -1095,7 +1095,7 @@ if (isTemplate!cmp)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum cmp(T, U) = T.sizeof < U.sizeof;
     static assert(isSorted!(cmp));
@@ -1104,7 +1104,7 @@ pure nothrow @safe @nogc unittest
     static assert(!isSorted!(cmp, long, byte, ubyte, short, uint));
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum cmp(int x, int y) = x - y;
     static assert(isSorted!(cmp));
@@ -1116,7 +1116,7 @@ private pure nothrow @safe @nogc unittest
     static assert(isSorted!(cmp, 32, 32));
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum cmp(int x, int y) = x < y;
     static assert(isSorted!(cmp));
@@ -1142,7 +1142,7 @@ template ApplyLeft(alias T, Args...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias allAreIntegral = ApplyLeft!(allSatisfy, isIntegral);
     static assert(allAreIntegral!(int, uint));
@@ -1163,7 +1163,7 @@ template ApplyRight(alias T, Args...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias intIs = ApplyRight!(allSatisfy, int);
     static assert(intIs!(isIntegral));
@@ -1191,7 +1191,7 @@ if (n > 0)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Repeat!(1, uint, int) == AliasSeq!(uint, int)));
     static assert(is(Repeat!(2, uint, int) == AliasSeq!(uint, int, uint, int)));
@@ -1249,7 +1249,7 @@ template Replace(alias T, alias U, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Replace!(int, uint, int) == AliasSeq!(uint)));
     static assert(is(Replace!(int, uint, short, int, int, ushort)
@@ -1312,7 +1312,7 @@ template ReplaceAll(alias T, alias U, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(ReplaceAll!(int, uint, int) == AliasSeq!(uint)));
     static assert(is(ReplaceAll!(int, uint, short, int, int, ushort)
@@ -1340,7 +1340,7 @@ template Reverse(L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Reverse!(byte, short, int) == AliasSeq!(int, short, byte)));
 }
@@ -1368,7 +1368,7 @@ if (isTemplate!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Map!(Unqual, const int, immutable short)
                == AliasSeq!(int, short)));
@@ -1429,14 +1429,14 @@ if (isTemplate!cmp)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum cmp(T, U) = T.sizeof < U.sizeof;
     static assert(is(Sort!(cmp, long, short, byte, int)
                == AliasSeq!(byte, short, int, long)));
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     enum cmp(int T, int U) = T - U;
     static assert(Sort!(cmp, 5, 17, 9, 12, 2, 10, 14)
@@ -1460,7 +1460,7 @@ template DerivedToFront(L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
@@ -1501,7 +1501,7 @@ template MostDerived(T, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
@@ -1554,7 +1554,7 @@ template Erase(alias T, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Erase!(int, short, int, int, uint) == AliasSeq!(short, int, uint)));
     static assert(is(Erase!(int, short, uint) == AliasSeq!(short, uint)));
@@ -1597,7 +1597,7 @@ template EraseAll(alias T, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(EraseAll!(int, short, int, int, uint) == AliasSeq!(short, uint)));
     static assert(is(EraseAll!(int, short, uint) == AliasSeq!(short, uint)));
@@ -1632,7 +1632,7 @@ template Filter(alias pred, L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Filter!(isIntegral, real, int, bool, uint) == AliasSeq!(int, uint)));
 }
@@ -1659,7 +1659,7 @@ template NoDuplicates(L...)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     alias Types = AliasSeq!(int, uint, int, short, short, uint);
     static assert(is(NoDuplicates!Types == AliasSeq!(int, uint, short)));
@@ -1702,7 +1702,7 @@ template aliasSeqOf(alias range)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(aliasSeqOf!([0, 1, 2, 3]) == AliasSeq!(0, 1, 2, 3));
 }
@@ -1735,7 +1735,7 @@ if (n > 0)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(Stride!(3, 1, 2, 3, 4, 5, 6, 7, 8) == AliasSeq!(1, 4, 7));
     static assert(Stride!(2, 1, 2, 3) == AliasSeq!(1, 3));
@@ -1770,7 +1770,7 @@ if (T.length == 2)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Select!(true, int, float) == int));
     static assert(is(Select!(false, int, float) == float));
