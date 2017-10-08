@@ -26,7 +26,6 @@
  */
 module tanya.container.string;
 
-import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
 import std.algorithm.searching;
@@ -499,6 +498,14 @@ struct String
     {
         auto s = String(0, 'K');
         assert(s.length == 0);
+    }
+
+    this(this) @nogc nothrow @trusted
+    {
+        auto buf = this.data[0 .. this.length_];
+        this.length_ = capacity_ = 0;
+        this.data = null;
+        insertBack(buf);
     }
 
     /**
@@ -1112,15 +1119,13 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc @safe unittest
     {
-        auto s = String("Высоцкий");
+        auto s = String("Мне есть, что спеть, представ перед Всевышним.");
         auto cp = s.byCodePoint();
-        assert(cp.front == 'В');
+        assert(cp.front == 'М');
         cp.popFront();
-        assert(cp.front == 'ы');
-        cp.popFront();
-        assert(cp.front == 'с');
+        assert(cp.front == 'н');
 
         s = String("€");
         cp = s.byCodePoint();
@@ -1131,6 +1136,24 @@ struct String
         cp = s.byCodePoint();
         assert(cp.front == '\U00024B62');
         assert(s.length == 4);
+    }
+
+    ///
+    @nogc @safe unittest
+    {
+        auto s = const String("Высоцкий");
+        auto cp1 = s.byCodePoint();
+        assert(cp1.front == 'В');
+
+        auto cp2 = cp1[];
+        cp1.popFront();
+        assert(cp1.front == 'ы');
+        assert(cp2.front == 'В');
+
+        cp2 = cp1.save();
+        cp1.popFront();
+        assert(cp1.front == 'с');
+        assert(cp2.front == 'ы');
     }
 
     /**
@@ -1593,4 +1616,24 @@ struct String
     }
 
     mixin DefaultAllocator;
+}
+
+// Postblit works.
+@nogc @safe unittest
+{
+    void internFunc(String arg)
+    {
+    }
+    void middleFunc(S...)(S args)
+    {
+        foreach (arg; args)
+        {
+            internFunc(arg);
+        }
+    }
+    void topFunc(String args)
+    {
+        middleFunc(args);
+    }
+    topFunc(String("asdf"));
 }
