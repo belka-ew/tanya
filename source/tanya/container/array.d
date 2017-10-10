@@ -15,11 +15,10 @@
 module tanya.container.array;
 
 import core.checkedint;
-import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
-import std.conv;
 import std.meta;
+import tanya.exception;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -501,7 +500,7 @@ struct Array(T)
             buf = allocator.allocate(byteSize);
             if (buf is null)
             {
-                onOutOfMemoryErrorNoGC();
+                onOutOfMemoryError();
             }
             scope (failure)
             {
@@ -708,9 +707,12 @@ struct Array(T)
     size_t insertBack(R)(ref R el) @trusted
         if (isImplicitlyConvertible!(R, T))
     {
-        reserve(this.length_ + 1);
-        emplace(this.data + this.length_, el);
-        ++this.length_;
+        this.length = this.length + 1;
+        scope (failure)
+        {
+            this.length = this.length - 1;
+        }
+        opIndex(this.length - 1) = el;
         return 1;
     }
 

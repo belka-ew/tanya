@@ -14,10 +14,10 @@
  */
 module tanya.memory;
 
-import core.exception;
 import std.algorithm.iteration;
 import std.algorithm.mutation;
-import std.conv;
+import tanya.conv;
+import tanya.exception;
 public import tanya.memory.allocator;
 import tanya.memory.mmappool;
 import tanya.meta.trait;
@@ -229,14 +229,14 @@ package(tanya) T[] resize(T)(shared Allocator allocator,
         }
         else
         {
-            onOutOfMemoryErrorNoGC();
+            onOutOfMemoryError();
         }
     }
 
     void[] buf = array;
     if (!allocator.reallocate(buf, length * T.sizeof))
     {
-        onOutOfMemoryErrorNoGC();
+        onOutOfMemoryError();
     }
     // Casting from void[] is unsafe, but we know we cast to the original type.
     array = cast(T[]) buf;
@@ -453,9 +453,7 @@ body
     {
         () @trusted { allocator.deallocate(mem); }();
     }
-
-    auto ptr = (() @trusted => (cast(T*) mem[0 .. stateSize!T].ptr))();
-    return emplace!T(ptr, args);
+    return emplace!T(mem[0 .. stateSize!T], args);
 }
 
 ///

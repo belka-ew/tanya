@@ -6,7 +6,13 @@
  * Smart pointers.
  *
  * A smart pointer is an object that wraps a raw pointer or a reference
- * (class, array) to manage its lifetime.
+ * (class, dynamic array) to manage its lifetime.
+ *
+ * This module provides two kinds of lifetime management strategies:
+ * $(UL
+ *  $(LI Reference counting)
+ *  $(LI Unique ownership)
+ * )
  *
  * Copyright: Eugene Wissner 2016-2017.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
@@ -17,17 +23,17 @@
  */
 module tanya.memory.smartref;
 
-import core.exception;
 import std.algorithm.comparison;
 import std.algorithm.mutation;
-import std.conv;
+import tanya.conv;
+import tanya.exception;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.range.primitive;
 
 private template Payload(T)
 {
-    static if (is(T == class) || is(T == interface) || isArray!T)
+    static if (isPolymorphicType!T || isArray!T)
     {
         alias Payload = T;
     }
@@ -202,13 +208,6 @@ struct RefCounted(T)
         return this;
     }
 
-    private @nogc unittest
-    {
-        auto rc = defaultAllocator.refCounted!int(5);
-        rc = defaultAllocator.make!int(7);
-        assert(*rc == 7);
-    }
-
     /// ditto
     ref typeof(this) opAssign(typeof(null))
     {
@@ -227,14 +226,6 @@ struct RefCounted(T)
         this.storage = null;
 
         return this;
-    }
-
-    private @nogc unittest
-    {
-        RefCounted!int rc;
-        assert(!rc.isInitialized);
-        rc = null;
-        assert(!rc.isInitialized);
     }
 
     /// ditto
@@ -308,7 +299,7 @@ struct RefCounted(T)
 }
 
 ///
-unittest
+@nogc @system unittest
 {
     auto rc = RefCounted!int(defaultAllocator.make!int(5), defaultAllocator);
     auto val = rc.get();
@@ -324,7 +315,22 @@ unittest
     assert(*rc.storage.payload == 9);
 }
 
-private @nogc unittest
+@nogc @system unittest
+{
+    auto rc = defaultAllocator.refCounted!int(5);
+    rc = defaultAllocator.make!int(7);
+    assert(*rc == 7);
+}
+
+@nogc @system unittest
+{
+    RefCounted!int rc;
+    assert(!rc.isInitialized);
+    rc = null;
+    assert(!rc.isInitialized);
+}
+
+@nogc @system unittest
 {
     auto rc = defaultAllocator.refCounted!int(5);
 
@@ -340,7 +346,7 @@ private @nogc unittest
     assert(*rc == 5);
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     RefCounted!int rc;
 
@@ -355,7 +361,7 @@ private @nogc unittest
     assert(rc.count == 0);
 }
 
-private unittest
+@nogc @system unittest
 {
     RefCounted!int rc1, rc2;
     static assert(is(typeof(rc1 = rc2)));
@@ -389,7 +395,7 @@ version (unittest)
     }
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     uint destroyed;
     auto a = defaultAllocator.make!A(destroyed);
@@ -399,7 +405,7 @@ private @nogc unittest
         auto rc = RefCounted!A(a, defaultAllocator);
         assert(rc.count == 1);
 
-        void func(RefCounted!A rc) @nogc
+        void func(RefCounted!A rc) @nogc @system
         {
             assert(rc.count == 2);
         }
@@ -415,14 +421,14 @@ private @nogc unittest
     assert(rc.count == 1);
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     auto rc = RefCounted!int(defaultAllocator);
     assert(!rc.isInitialized);
     assert(rc.allocator is defaultAllocator);
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     auto rc = defaultAllocator.refCounted!int(5);
     assert(rc.count == 1);
@@ -444,7 +450,7 @@ private @nogc unittest
     assert(rc.count == 0);
 }
 
-private unittest
+@nogc @system unittest
 {
     auto rc = defaultAllocator.refCounted!int(5);
     assert(*rc == 5);
@@ -460,7 +466,7 @@ private unittest
     assert(*rc == 5);
 }
 
-private unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(typeof(RefCounted!int.storage.payload) == int*));
     static assert(is(typeof(RefCounted!A.storage.payload) == A));
@@ -511,17 +517,9 @@ body
     {
         () @trusted { allocator.deallocate(mem); }();
     }
-    rc.storage = emplace!((RefCounted!T.Storage))(mem[0 .. storageSize]);
+    rc.storage = emplace!(RefCounted!T.Storage)(mem[0 .. storageSize]);
+    rc.storage.payload = emplace!T(mem[storageSize .. $], args);
 
-    static if (is(T == class))
-    {
-        rc.storage.payload = emplace!T(mem[storageSize .. $], args);
-    }
-    else
-    {
-        auto ptr = (() @trusted => (cast(T*) mem[storageSize .. $].ptr))();
-        rc.storage.payload = emplace!T(ptr, args);
-    }
     rc.deleter = &unifiedDeleter!(Payload!T);
     return rc;
 }
@@ -554,7 +552,7 @@ body
 }
 
 ///
-unittest
+@nogc @system unittest
 {
     auto rc = defaultAllocator.refCounted!int(5);
     assert(rc.count == 1);
@@ -575,7 +573,7 @@ unittest
     assert(rc.count == 1);
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     struct E
     {
@@ -597,13 +595,13 @@ private @nogc unittest
     }
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     auto rc = defaultAllocator.refCounted!(int[])(5);
     assert(rc.length == 5);
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     auto p1 = defaultAllocator.make!int(5);
     auto p2 = p1;
@@ -611,13 +609,13 @@ private @nogc unittest
     assert(rc.get() is p2);
 }
 
-private @nogc unittest
+@nogc @system unittest
 {
     static bool destroyed = false;
 
-    struct F
+    static struct F
     {
-        ~this() @nogc
+        ~this() @nogc nothrow @safe
         {
             destroyed = true;
         }
@@ -723,7 +721,7 @@ struct Unique(T)
     }
 
     ///
-    @nogc unittest
+    @nogc nothrow pure @system unittest
     {
         auto rc = defaultAllocator.unique!int(5);
         rc = defaultAllocator.make!int(7);
@@ -770,7 +768,7 @@ struct Unique(T)
     }
 
     ///
-    @nogc unittest
+    @nogc nothrow pure @system unittest
     {
         Unique!int u;
         assert(!u.isInitialized);
@@ -789,7 +787,7 @@ struct Unique(T)
     }
 
     ///
-    @nogc unittest
+    @nogc nothrow pure @system unittest
     {
         auto u = defaultAllocator.unique!int(5);
         assert(u.isInitialized);
@@ -804,7 +802,7 @@ struct Unique(T)
 }
 
 ///
-@nogc unittest
+@nogc nothrow pure @system unittest
 {
     auto p = defaultAllocator.make!int(5);
     auto s = Unique!int(p, defaultAllocator);
@@ -812,13 +810,13 @@ struct Unique(T)
 }
 
 ///
-@nogc unittest
+@nogc nothrow @system unittest
 {
     static bool destroyed = false;
 
-    struct F
+    static struct F
     {
-        ~this() @nogc
+        ~this() @nogc nothrow @safe
         {
             destroyed = true;
         }
@@ -885,13 +883,13 @@ body
     return Unique!T(payload, allocator);
 }
 
-private unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(typeof(defaultAllocator.unique!B(5))));
     static assert(is(typeof(defaultAllocator.unique!(int[])(5))));
 }
 
-private unittest
+@nogc nothrow pure @system unittest
 {
     auto s = defaultAllocator.unique!int(5);
     assert(*s == 5);
@@ -900,7 +898,7 @@ private unittest
     assert(s is null);
 }
 
-private unittest
+@nogc nothrow pure @system unittest
 {
     auto s = defaultAllocator.unique!int(5);
     assert(*s == 5);
@@ -909,7 +907,7 @@ private unittest
     assert(*s == 4);
 }
 
-private @nogc unittest
+@nogc nothrow pure @system unittest
 {
     auto p1 = defaultAllocator.make!int(5);
     auto p2 = p1;
@@ -918,7 +916,7 @@ private @nogc unittest
     assert(rc.get() is p2);
 }
 
-private @nogc unittest
+@nogc nothrow pure @system unittest
 {
     auto rc = Unique!int(defaultAllocator);
     assert(rc.allocator is defaultAllocator);

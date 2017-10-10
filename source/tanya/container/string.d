@@ -361,14 +361,14 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("\u10437"w);
         assert(s == "\u10437");
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Отказаться от вина - в этом страшная вина."d);
         assert(s == "Отказаться от вина - в этом страшная вина.");
@@ -392,8 +392,7 @@ struct String
      *
      * Precondition: $(D_INLINECODE allocator is null).
      */
-    this(S)(S init, shared Allocator allocator = defaultAllocator)
-    nothrow @trusted @nogc
+    this(S)(S init, shared Allocator allocator = defaultAllocator) @trusted
     if (is(S == String))
     {
         this(allocator);
@@ -417,8 +416,7 @@ struct String
     }
 
     /// ditto
-    this(S)(ref S init, shared Allocator allocator = defaultAllocator)
-    nothrow @trusted @nogc
+    this(S)(ref S init, shared Allocator allocator = defaultAllocator) @trusted
     if (is(Unqual!S == String))
     {
         this(allocator);
@@ -428,7 +426,7 @@ struct String
     }
 
     /// ditto
-    this(shared Allocator allocator) pure nothrow @safe @nogc
+    this(shared Allocator allocator) @nogc nothrow pure @safe
     in
     {
         assert(allocator !is null);
@@ -478,7 +476,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         {
             auto s = String(1, 'О');
@@ -494,13 +492,13 @@ struct String
         }
     }
 
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String(0, 'K');
         assert(s.length == 0);
     }
 
-    this(this) @nogc nothrow @trusted
+    this(this) @nogc nothrow pure @trusted
     {
         auto buf = this.data[0 .. this.length_];
         this.length_ = capacity_ = 0;
@@ -511,13 +509,13 @@ struct String
     /**
      * Destroys the string.
      */
-    ~this() nothrow @trusted @nogc
+    ~this() @nogc nothrow pure @trusted
     {
         allocator.resize(this.data[0 .. this.capacity_], 0);
     }
 
     private void write4Bytes(ref const dchar src)
-    pure nothrow @trusted @nogc
+    @nogc nothrow pure @trusted
     in
     {
         assert(capacity - length >= 4);
@@ -578,7 +576,7 @@ struct String
      *
      * Throws: $(D_PSYMBOL UTFException).
      */
-    size_t insertBack(const char chr) @trusted @nogc
+    size_t insertBack(const char chr) @nogc pure @trusted
     {
         if ((chr & 0x80) != 0)
         {
@@ -593,7 +591,7 @@ struct String
     }
 
     /// ditto
-    size_t insertBack(const wchar chr) @trusted @nogc
+    size_t insertBack(const wchar chr) @nogc pure @trusted
     {
         reserve(length + 3);
 
@@ -606,13 +604,13 @@ struct String
     }
 
     // Allocates enough space for 3-byte character.
-    private @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         String s;
         s.insertBack('\u8100');
     }
 
-    private @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         UTFException exception;
         try
@@ -628,7 +626,7 @@ struct String
     }
 
     /// ditto
-    size_t insertBack(const dchar chr) @trusted @nogc
+    size_t insertBack(const dchar chr) @nogc pure @trusted
     {
         reserve(length + dchar.sizeof);
 
@@ -648,7 +646,7 @@ struct String
         }
     }
 
-    private @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         UTFException exception;
         try
@@ -835,7 +833,7 @@ struct String
      * Params:
      *  size = Desired size in bytes.
      */
-    void reserve(const size_t size) nothrow @trusted @nogc
+    void reserve(const size_t size) @nogc nothrow pure @trusted
     {
         if (this.capacity_ >= size)
         {
@@ -847,7 +845,7 @@ struct String
     }
 
     ///
-    @nogc @safe unittest
+    @nogc pure @safe unittest
     {
         String s;
         assert(s.capacity == 0);
@@ -871,7 +869,7 @@ struct String
      * Params:
      *  size = Desired size.
      */
-    void shrink(const size_t size) nothrow @trusted @nogc
+    void shrink(const size_t size) @nogc nothrow pure @trusted
     {
         if (this.capacity_ <= size)
         {
@@ -888,7 +886,7 @@ struct String
     }
 
     ///
-    @nogc @safe unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Die Alten lasen laut.");
         assert(s.capacity == 21);
@@ -907,13 +905,13 @@ struct String
     /**
      * Returns: String capacity in bytes.
      */
-    @property size_t capacity() const pure nothrow @safe @nogc
+    @property size_t capacity() const @nogc nothrow pure @safe
     {
         return this.capacity_;
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("In allem Schreiben ist Schamlosigkeit.");
         assert(s.capacity == 38);
@@ -935,7 +933,7 @@ struct String
      */
     ByCodeUnit!char opSliceAssign(R)(ByCodeUnit!R value,
                                      const size_t i,
-                                     const size_t j) @trusted
+                                     const size_t j)
     if (is(Unqual!R == char))
     in
     {
@@ -954,7 +952,7 @@ struct String
     ByCodeUnit!char opSliceAssign(const char[] value,
                                   const size_t i,
                                   const size_t j)
-    pure nothrow @trusted @nogc
+    @nogc nothrow pure @trusted
     in
     {
         assert(i <= j);
@@ -970,7 +968,7 @@ struct String
     ByCodeUnit!char opSliceAssign(const char value,
                                   const size_t i,
                                   const size_t j)
-    pure nothrow @trusted @nogc
+    @nogc nothrow pure @trusted
     in
     {
         assert(i <= j);
@@ -992,13 +990,13 @@ struct String
      *
      * Returns: The array representing the string.
      */
-    inout(char)[] get() inout pure nothrow @trusted @nogc
+    inout(char)[] get() inout @nogc nothrow pure @trusted
     {
         return this.data[0 .. this.length_];
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Char array.");
         assert(s.get().length == 11);
@@ -1010,7 +1008,7 @@ struct String
      *
      * Returns: Null-terminated string.
      */
-    const(char)* toStringz() nothrow @nogc
+    const(char)* toStringz() @nogc nothrow pure
     {
         reserve(length + 1);
         this.data[length] = '\0';
@@ -1018,7 +1016,7 @@ struct String
     }
 
     ///
-    @nogc unittest
+    @nogc pure unittest
     {
         auto s = String("C string.");
         assert(s.toStringz()[0] == 'C');
@@ -1028,7 +1026,7 @@ struct String
     /**
      * Returns: The number of code units that are required to encode the string.
      */
-    @property size_t length() const pure nothrow @safe @nogc
+    @property size_t length() const @nogc nothrow pure @safe
     {
         return this.length_;
     }
@@ -1037,7 +1035,7 @@ struct String
     alias opDollar = length;
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Piscis primuin a capite foetat.");
         assert(s.length == 31);
@@ -1052,7 +1050,7 @@ struct String
      *
      * Precondition: $(D_INLINECODE length > pos).
      */
-    ref inout(char) opIndex(const size_t pos) inout pure nothrow @trusted @nogc
+    ref inout(char) opIndex(const size_t pos) inout @nogc nothrow pure @trusted
     in
     {
         assert(length > pos);
@@ -1063,7 +1061,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Alea iacta est.");
         assert(s[0] == 'A');
@@ -1074,7 +1072,7 @@ struct String
      * Returns: Random access range that iterates over the string by bytes, in
      *          forward order.
      */
-    ByCodeUnit!char opIndex() pure nothrow @trusted @nogc
+    ByCodeUnit!char opIndex() @nogc nothrow pure @trusted
     {
         return typeof(return)(this, this.data, this.data + length);
     }
@@ -1086,7 +1084,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Plutarchus");
         auto r = s[];
@@ -1104,22 +1102,35 @@ struct String
         assert(r.length == 8);
     }
 
+    ///
+    @nogc pure @safe unittest
+    {
+        auto s = const String("Was ich vermag, soll gern geschehen. Goethe");
+        auto r1 = s[];
+        assert(r1.front == 'W');
+
+        auto r2 = r1[];
+        r1.popFront();
+        assert(r1.front == 'a');
+        assert(r2.front == 'W');
+    }
+
     /**
      * Returns: Forward range that iterates over the string by code points.
      */
-    ByCodePoint!char byCodePoint() pure nothrow @trusted @nogc
+    ByCodePoint!char byCodePoint() @nogc nothrow pure @trusted
     {
         return typeof(return)(this, this.data, this.data + length);
     }
 
     /// ditto
-    ByCodePoint!(const char) byCodePoint() const pure nothrow @trusted @nogc
+    ByCodePoint!(const char) byCodePoint() const @nogc nothrow pure @trusted
     {
         return typeof(return)(this, this.data, this.data + length);
     }
 
     ///
-    @nogc @safe unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Мне есть, что спеть, представ перед Всевышним.");
         auto cp = s.byCodePoint();
@@ -1139,7 +1150,7 @@ struct String
     }
 
     ///
-    @nogc @safe unittest
+    @nogc pure @safe unittest
     {
         auto s = const String("Высоцкий");
         auto cp1 = s.byCodePoint();
@@ -1157,15 +1168,18 @@ struct String
     }
 
     /**
-     * Returns: $(D_KEYWORD true) if the string is empty.
+     * Returns whether the string is empty.
+     *
+     * Returns: $(D_KEYWORD true) if the string is empty, $(D_KEYWORD false)
+     *          otherwise.
      */
-    @property bool empty() const pure nothrow @safe @nogc
+    @property bool empty() const @nogc nothrow pure @safe
     {
         return length == 0;
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         String s;
         assert(s.empty);
@@ -1185,7 +1199,7 @@ struct String
      * Precondition: $(D_INLINECODE i <= j && j <= length).
      */
     ByCodeUnit!char opSlice(const size_t i, const size_t j)
-    pure nothrow @trusted @nogc
+    @nogc nothrow pure @trusted
     in
     {
         assert(i <= j);
@@ -1198,7 +1212,7 @@ struct String
 
     /// ditto
     ByCodeUnit!(const char) opSlice(const size_t i, const size_t j)
-    const pure nothrow @trusted @nogc
+    const @nogc nothrow pure @trusted
     in
     {
         assert(i <= j);
@@ -1210,7 +1224,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Vladimir Soloviev");
         auto r = s[9 .. $];
@@ -1274,7 +1288,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Черная, потом пропахшая выть!");
         s = String("Как мне тебя не ласкать, не любить?");
@@ -1291,7 +1305,7 @@ struct String
      *
      * Throws: $(D_PSYMBOL UTFException).
      */
-    ref String opAssign(S)(S that) nothrow
+    ref String opAssign(S)(S that)
     if (!isInfinite!S
      && isInputRange!S
      && isSomeChar!(ElementType!S))
@@ -1302,7 +1316,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Оловом светится лужная голь...");
         s = "Грустная песня, ты - русская боль.";
@@ -1347,7 +1361,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         assert(String("Голубая кофта.") < String("Синие глаза."));
         assert(String("Никакой я правды") < String("милой не сказал")[]);
@@ -1400,7 +1414,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         assert(String("Милая спросила:") != String("Крутит ли метель?"));
         assert(String("Затопить бы печку,") != String("постелить постель.")[]);
@@ -1427,13 +1441,13 @@ struct String
      * Precondition: $(D_INLINECODE length > pos).
      */
     ref char opIndexAssign(const char value, const size_t pos)
-    pure nothrow @safe @nogc
+    @nogc nothrow pure @safe
     {
         return opIndex(pos) = value;
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("alea iacta est.");
 
@@ -1458,7 +1472,7 @@ struct String
         return opSliceAssign(value, 0, length);
     }
 
-    private unittest
+    @nogc pure @safe unittest
     {
         auto s1 = String("Buttercup");
         auto s2 = String("Cap");
@@ -1467,12 +1481,12 @@ struct String
     }
 
     /// ditto
-    ByCodeUnit!char opIndexAssign(const char value) pure nothrow @safe @nogc
+    ByCodeUnit!char opIndexAssign(const char value) @nogc nothrow pure @safe
     {
         return opSliceAssign(value, 0, length);
     }
 
-    private unittest
+    @nogc pure @safe unittest
     {
         auto s1 = String("Wow");
         s1[] = 'a';
@@ -1480,12 +1494,12 @@ struct String
     }
 
     /// ditto
-    ByCodeUnit!char opIndexAssign(const char[] value) pure nothrow @safe @nogc
+    ByCodeUnit!char opIndexAssign(const char[] value) @nogc nothrow pure @safe
     {
         return opSliceAssign(value, 0, length);
     }
 
-    private unittest
+    @nogc pure @safe unittest
     {
         auto s1 = String("ö");
         s1[] = "oe";
@@ -1521,7 +1535,7 @@ struct String
     }
 
     ///
-    @nogc @safe unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Из пословицы слова не выкинешь.");
 
@@ -1575,7 +1589,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Казнить нельзя помиловать.");
         s.insertAfter(s[0 .. 27], ",");
@@ -1604,7 +1618,7 @@ struct String
     }
 
     ///
-    @safe @nogc unittest
+    @nogc pure @safe unittest
     {
         auto s = String("Казнить нельзя помиловать.");
         s.insertBefore(s[27 .. $], ",");
@@ -1619,7 +1633,7 @@ struct String
 }
 
 // Postblit works.
-@nogc @safe unittest
+@nogc pure @safe unittest
 {
     void internFunc(String arg)
     {
