@@ -44,6 +44,7 @@ After finishing the new socket implementation will land in the `net` package and
 `network` will be deprecated.
 * `os`: Platform-independent interfaces to operating system functionality.
 * `range`: Generic functions and templates for D ranges.
+* `test`: Test suite for unittest-blocks.
 * `typecons`: Templates that allow to build new types based on the available
 ones.
 

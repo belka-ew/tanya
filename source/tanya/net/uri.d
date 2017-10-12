@@ -17,6 +17,11 @@ module tanya.net.uri;
 import tanya.encoding.ascii;
 import tanya.memory;
 
+version (unittest)
+{
+    import tanya.test.assertion;
+}
+
 /**
  * Thrown if an invalid URI was specified.
  */
@@ -324,7 +329,7 @@ struct URL
 }
 
 ///
-@nogc unittest
+@nogc pure @system unittest
 {
     auto u = URL("example.org");
     assert(u.path == "example.org"); 
@@ -377,7 +382,7 @@ struct URL
     assert(u.fragment == "fragment");
 }
 
-private @nogc unittest
+@nogc pure @system unittest
 {
     auto u = URL("127.0.0.1");
     assert(u.path == "127.0.0.1");
@@ -446,83 +451,17 @@ private @nogc unittest
     assert(u.path == "h_tp:asdf");
 }
 
-private @nogc unittest
+@nogc pure @system unittest
 {
-    URIException exception;
-    try
-    {
-        auto u = URL("http://:80");
-    }
-    catch (URIException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    URIException exception;
-    try
-    {
-        auto u = URL(":80");
-    }
-    catch (URIException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    URIException exception;
-    try
-    {
-        auto u = URL("http://user1:pass1@user2:pass2@example.org");
-    }
-    catch (URIException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    URIException exception;
-    try
-    {
-        auto u = URL("http://blah.com:port");
-    }
-    catch (URIException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    URIException exception;
-    try
-    {
-        auto u = URL("http://blah.com:66000");
-    }
-    catch (URIException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
+    assertThrown!URIException(() => URL("http://:80"));
+    assertThrown!URIException(() => URL(":80"));
+    assertThrown!URIException(() => URL("http://u1:p1@u2:p2@example.org"));
+    assertThrown!URIException(() => URL("http://blah.com:port"));
+    assertThrown!URIException(() => URL("http://blah.com:66000"));
 }
 
 // Issue 254: https://issues.caraus.io/issues/254.
-private @system @nogc unittest
+@nogc pure @system unittest
 {
     auto u = URL("ftp://");
     assert(u.scheme == "ftp");
@@ -554,13 +493,13 @@ if (T == "scheme"
 }
 
 /// ditto
-URL parseURL(const char[] source) @nogc
+URL parseURL(const char[] source) @nogc pure
 {
     return URL(source);
 }
 
 ///
-@nogc unittest
+@nogc pure @system unittest
 {
     auto u = parseURL("http://example.org:5326");
     assert(u.scheme == parseURL!"scheme"("http://example.org:5326"));

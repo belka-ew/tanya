@@ -36,6 +36,11 @@ import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
 
+version (unittest)
+{
+    import tanya.test.assertion;
+}
+
 /**
  * Thrown on encoding errors.
  */
@@ -612,17 +617,7 @@ struct String
 
     @nogc pure @safe unittest
     {
-        UTFException exception;
-        try
-        {
-            auto s = String(1, cast(wchar) 0xd900);
-        }
-        catch (UTFException e)
-        {
-            exception = e;
-        }
-        assert(exception !is null);
-        defaultAllocator.dispose(exception);
+        assertThrown!UTFException(() => String(1, cast(wchar) 0xd900));
     }
 
     /// ditto
@@ -648,17 +643,7 @@ struct String
 
     @nogc pure @safe unittest
     {
-        UTFException exception;
-        try
-        {
-            auto s = String(1, cast(dchar) 0xd900);
-        }
-        catch (UTFException e)
-        {
-            exception = e;
-        }
-        assert(exception !is null);
-        defaultAllocator.dispose(exception);
+        assertThrown!UTFException(() => String(1, cast(dchar) 0xd900));
     }
 
     /**
