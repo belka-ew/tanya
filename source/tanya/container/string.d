@@ -296,21 +296,21 @@ if (is(Unqual!E == char))
     body
     {
         ubyte units;
-        if ((*begin & 0x80) == 0)
+        if ((*begin & 0xf0) == 0xf0)
         {
-            units = 1;
-        }
-        else if ((*begin & 0xc0) == 0xc0)
-        {
-            units = 2;
+            units = 4;
         }
         else if ((*begin & 0xe0) == 0xe0)
         {
             units = 3;
         }
-        else if ((*begin & 0xf0) == 0xf0)
+        else if ((*begin & 0xc0) == 0xc0)
         {
-            units = 4;
+            units = 2;
+        }
+        else if ((*begin & 0x80) == 0)
+        {
+            units = 1;
         }
         if (units == 0 || this.begin + units > this.end)
         {
@@ -615,11 +615,6 @@ struct String
         s.insertBack('\u8100');
     }
 
-    @nogc pure @safe unittest
-    {
-        assertThrown!UTFException(() => String(1, cast(wchar) 0xd900));
-    }
-
     /// ditto
     size_t insertBack(const dchar chr) @nogc pure @trusted
     {
@@ -644,6 +639,7 @@ struct String
     @nogc pure @safe unittest
     {
         assertThrown!UTFException(() => String(1, cast(dchar) 0xd900));
+        assertThrown!UTFException(() => String(1, cast(wchar) 0xd900));
     }
 
     /**
@@ -1635,4 +1631,48 @@ struct String
         middleFunc(args);
     }
     topFunc(String("asdf"));
+}
+
+// Const range produces mutable ranges.
+@nogc pure @safe unittest
+{
+    auto s = const String("И снизу лед, и сверху - маюсь между.");
+    {
+        const constRange = s[];
+
+        auto fromConstRange = constRange[];
+        fromConstRange.popFront();
+        assert(fromConstRange.front == s[1]);
+
+        fromConstRange = constRange[0 .. $];
+        fromConstRange.popFront();
+        assert(fromConstRange.front == s[1]);
+
+        assert(constRange.get() is s.get());
+    }
+    {
+        const constRange = s.byCodePoint();
+
+        auto fromConstRange = constRange[];
+        fromConstRange.popFront();
+        assert(fromConstRange.front == ' ');
+    }
+}
+
+// Can pop multibyte characters.
+@nogc pure @safe unittest
+{
+    auto s = String("\U00024B62\U00002260");
+    auto range = s.byCodePoint();
+
+    range.popFront();
+    assert(!range.empty);
+
+    range.popFront();
+    assert(range.empty);
+
+    range = s.byCodePoint();
+    range.popFront();
+    s[$ - 3] = 0xf0;
+    assertThrown!UTFException(&(range.popFront));
 }
