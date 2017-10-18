@@ -21,7 +21,7 @@ import tanya.meta.trait;
 
 const string fullHexDigits = "0123456789ABCDEFabcdef"; /// 0..9A..Fa..f.
 const string hexDigits = "0123456789ABCDEF"; /// 0..9A..F.
-const string lowerHexDigits = "0123456789ABCDEF"; /// 0..9a..f.
+const string lowerHexDigits = "0123456789abcdef"; /// 0..9a..f.
 const string digits = "0123456789"; /// 0..9.
 const string octalDigits = "01234567"; /// 0..7.
 
