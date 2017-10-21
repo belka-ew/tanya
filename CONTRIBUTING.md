@@ -1,3 +1,4 @@
+
 # Contributing
 
 Tanya is a project in active development, therefore any help is appreciated. Thank you for considering contributing
@@ -7,9 +8,9 @@ These guidelines describe ways to get started.
 
 ## Ways to get involved
 
-* **Reporting a problem**: [Report](https://issues.caraus.io/projects/tanya/issues) bugs and usage problems you
+* **Reporting a problem**: [Report](https://github.com/caraus-ecms/tanya/issues) bugs and usage problems you
 encounter.
-* **Fixing issues**: [The bug tracker](https://issues.caraus.io/projects/tanya/issues) contains a list of issues you
+* **Fixing issues**: [The bug tracker](https://github.com/caraus-ecms/tanya/issues) contains a list of issues you
 can work on.
 * **Documentation**: You can improve API documentation by correcting grammar errors, completing existing texts and
 writing new ones, or providing usage examples.
@@ -21,21 +22,14 @@ and implement this.
 
 ## Opening an issue
 
-If you have found a bug, an error, have some question, or suggestion, open in issue. I'll try to answer as soon
-as I can. Tanya uses an external
-[bug tracker](https://issues.caraus.io/projects/tanya/issues). You should
-[register](https://issues.caraus.io/account/register) before you can report your issue. There is also a list
-of open issues that mirror the current development process and progress. If you're looking for a challenge, just
+If you have found a bug, an error, have some question, or suggestion,
+[Open an issue](https://github.com/caraus-ecms/tanya/issues). I'll try to answer as soon as I can. There is also a
+list of open issues that mirror the current development process and progress. If you're looking for a challenge, just
 pick an issue you are interested in and start working on it. Fill free to comment on the issue to get more
 information.
 
-Some issues have a category assigned to them. Such issues belong mostly to a larger part of the library that is
-currently in development. The category specifies then the git branch development happens on. The remaining issues
-can be fixed directly in master.
-
-In the [roadmap](https://issues.caraus.io/projects/tanya/roadmap) you can find a list of issues that are planned
-to be fixed till a specific release. Version numbers refer to the versions in the
-[git repository](https://github.com/caraus-ecms/tanya/releases).
+You can also look at the [milestones](https://github.com/Dlackware/gnome/milestones) to see what is planned for a
+specific release.
 
 
 ## Contribution process
@@ -44,7 +38,7 @@ to be fixed till a specific release. Version numbers refer to the versions in th
 
 I accept GitHub pull requests. Creating a pull request is like sending a patch with the suggested change.
 First you have to [fork](https://guides.github.com/activities/forking/) the repository. Clone your fork locally
-with `git clone` and create a new branch where you want to work, for example:
+with `git clone` and create a new branch where you want to work. For example:
 
 ```shell
 git checkout -b bugfix-x
@@ -61,32 +55,53 @@ described on GitHub to finish the process. See
 [Using Pull Requests](https://help.github.com/articles/about-pull-requests/) for more information.
 
 Please ensure that your fork is even with the upstream (original) repository. If not, you have to rebase your branch
-on upstream/master before submitting a pull request. See https://help.github.com/articles/syncing-a-fork/ for a
+on upstream/master before submitting the pull request. See [Syncing a fork](https://help.github.com/articles/syncing-a-fork/) for a
 step-by-step guide.
 
 ### Fixing a bug
 
-Add an unittest that demonstrates the bug along with a short description:
-
-```d
-// Issue ###: https://issues.caraus.io/issues/###.
-private unittest
-{
-}
-```
+Add a unit test that demonstrates the bug along with a short description or link to the original bug.
 
 ### Adding new features
 
 * Use Ddoc to document the feature.
-* Add some unittests that prevent new bugs and demonstrate how the feature is supposed to work.
+* Add some unit tests to prevent bugs.
+* [Documented D unit tests](https://dlang.org/spec/ddoc.html#using_ddoc_to_generate_examples) go into the documentation and can be used as an usage
+example. These tests should be readable and not complicated since they demonstrate how the feature is supposed to work.
+* More advanced tests should be put into a separate not documented unittest block.
+
+### Writing unit tests
+
+```d
+///
+unittest
+{
+    // A documented unit test has three slashes in front of it.
+}
+
+// Issue ##: https://github.com/caraus-ecms/tanya/issues/##.
+unittest
+{
+    // Not documented unit test may still have a description.
+}
+```
 
 ### Style guide
 
 Make sure your changes follow [The D Style](https://dlang.org/dstyle.html) (including
-[Additional Requirements for Phobos](https://dlang.org/dstyle.html#phobos).
+[Additional Requirements for Phobos](https://dlang.org/dstyle.html#phobos)).
 
+You can also use [dscanner](https://github.com/dlang-community/D-Scanner) to test the new code against the
+most guidlines. The root of this repository contains
+[dscanner.ini](https://github.com/caraus-ecms/tanya/blob/master/dscanner.ini), configuration file with settings for an
+automatic style check. Just go to the top-level directory and issue (this assumes `dscanner` is installed in your
+system):
+
+```shell
+dscanner --styleCheck source
+```
 
 ## Questions and suggestions
 
-* [Open an issue](https://issues.caraus.io/projects/tanya/issues)
+* [Open an issue](https://github.com/caraus-ecms/tanya/issues)
 * [Send an email](mailto:info@caraus.de)
