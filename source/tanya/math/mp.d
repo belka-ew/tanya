@@ -104,7 +104,7 @@ struct Integer
     }
 
     /// ditto
-    this(shared Allocator allocator) pure nothrow @safe @nogc
+    this(shared Allocator allocator) @nogc nothrow pure @safe
     in
     {
         assert(allocator !is null);
@@ -156,7 +156,7 @@ struct Integer
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         ubyte[8] range = [ 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xdd, 0xee ];
         auto integer = Integer(Sign.positive, range[]);
@@ -187,7 +187,7 @@ struct Integer
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         {
             ubyte[8] range = [ 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xdd, 0xee ];
@@ -204,7 +204,7 @@ struct Integer
     /**
      * Copies the integer.
      */
-    this(this) nothrow @trusted @nogc
+    this(this) @nogc nothrow pure @safe
     {
         auto tmp = allocator.resize!digit(null, this.size);
         this.rep[0 .. this.size].copy(tmp);
@@ -214,7 +214,7 @@ struct Integer
     /**
      * Destroys the integer.
      */
-    ~this() nothrow @trusted @nogc
+    ~this() @nogc nothrow pure @safe
     {
         allocator.resize(this.rep, 0);
     }
@@ -224,7 +224,7 @@ struct Integer
     ];
 
     // Counts the number of LSBs before the first non-zero bit.
-    private ptrdiff_t countLSBs() const pure nothrow @safe @nogc
+    private ptrdiff_t countLSBs() const @nogc nothrow pure @safe
     {
         if (this.size == 0)
         {
@@ -256,7 +256,7 @@ struct Integer
     /**
      * Returns: Number of bytes in the two's complement representation.
      */
-    @property size_t length() const pure nothrow @safe @nogc
+    @property size_t length() const @nogc nothrow pure @safe
     {
         if (this.sign)
         {
@@ -280,7 +280,7 @@ struct Integer
     }
 
     ///
-    private nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         {
             Integer i;
@@ -336,7 +336,7 @@ struct Integer
     }
 
     /// ditto
-    ref Integer opAssign(T)(ref T value) @trusted
+    ref Integer opAssign(T)(ref T value)
     if (is(Unqual!T == Integer))
     {
         this.rep = allocator.resize(this.rep, value.size);
@@ -348,7 +348,7 @@ struct Integer
     }
 
     /// ditto
-    ref Integer opAssign(T)(T value) nothrow @safe @nogc
+    ref Integer opAssign(T)(T value)
     if (is(T == Integer))
     {
         swap(this.rep, value.rep);
@@ -393,7 +393,7 @@ struct Integer
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto integer = Integer(79);
         assert(cast(ushort) integer == 79);
@@ -424,7 +424,7 @@ struct Integer
      * Typically very fast.  Also fixes the sign if there
      * are no more leading digits
      */
-    void contract() nothrow @safe @nogc
+    void contract() @nogc nothrow pure @safe
     {
         /* decrease size while the most significant digit is
          * zero.
@@ -441,7 +441,7 @@ struct Integer
         }
     }
 
-    private void grow(const size_t size) nothrow @trusted @nogc
+    private void grow(const size_t size) @nogc nothrow pure @safe
     {
         if (this.rep.length >= size)
         {
@@ -452,7 +452,7 @@ struct Integer
         this.rep[oldLength .. $].fill(digit.init);
     }
 
-    private size_t countBits() const pure nothrow @safe @nogc
+    private size_t countBits() const @nogc nothrow pure @safe
     {
         if (this.size == 0)
         {
@@ -470,7 +470,7 @@ struct Integer
     }
 
     private void add(ref const Integer summand, ref Integer sum)
-    const nothrow @safe @nogc
+    const @nogc nothrow pure @safe
     {
         const(digit)[] max, min;
 
@@ -521,7 +521,7 @@ struct Integer
     }
 
     private void add(const digit summand, ref Integer sum)
-    const nothrow @safe @nogc
+    const @nogc nothrow pure @safe
     {
         sum.grow(this.size + 2);
 
@@ -547,7 +547,7 @@ struct Integer
     }
 
     private void subtract(ref const Integer subtrahend, ref Integer difference)
-    const nothrow @safe @nogc
+    const @nogc nothrow pure @safe
     {
         difference.grow(this.size);
 
@@ -583,7 +583,7 @@ struct Integer
     }
 
     private void subtract(const digit subtrahend, ref Integer difference)
-    const nothrow @safe @nogc
+    const @nogc nothrow pure @safe
     {
         difference.grow(this.size);
 
@@ -612,7 +612,7 @@ struct Integer
     }
 
     // Compare the magnitude.
-    private int compare(ref const Integer that) const pure nothrow @safe @nogc
+    private int compare(ref const Integer that) const @nogc nothrow pure @safe
     {
         if (this.size > that.size)
         {
@@ -661,7 +661,7 @@ struct Integer
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto integer1 = Integer(1019);
         auto integer2 = Integer(1019);
@@ -707,7 +707,7 @@ struct Integer
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto integer = Integer(1019);
 
@@ -731,7 +731,7 @@ struct Integer
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto integer = Integer(1019);
 
@@ -767,7 +767,7 @@ struct Integer
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         {
             auto h1 = Integer(1019);
@@ -809,7 +809,7 @@ struct Integer
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         {
             auto h1 = Integer(3);
@@ -853,7 +853,7 @@ struct Integer
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto h1 = Integer(123);
         auto h2 = Integer(456);
@@ -885,7 +885,7 @@ struct Integer
         return this;
     }
 
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto h1 = Integer(18);
         auto h2 = Integer(4);
@@ -937,7 +937,7 @@ struct Integer
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto integer = Integer(4294967294);
         integer >>= 10;
@@ -1005,7 +1005,7 @@ struct Integer
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto integer = Integer(4294967295);
         integer <<= 1;
@@ -1049,7 +1049,7 @@ struct Integer
     }
 
     //
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto h1 = Integer(79);
         Integer h2;
@@ -1102,7 +1102,7 @@ struct Integer
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         Integer integer;
 
@@ -1172,7 +1172,7 @@ struct Integer
     }
 
     // Shift right a certain amount of digits.
-    private void shiftRight(const size_t operand) nothrow @safe @nogc
+    private void shiftRight(const size_t operand) @nogc nothrow pure @safe
     {
         if (operand == 0)
         {
@@ -1191,7 +1191,7 @@ struct Integer
     }
 
     // Shift left a certain amount of digits.
-    private void shiftLeft(const size_t operand) nothrow @safe @nogc
+    private void shiftLeft(const size_t operand) @nogc nothrow pure @safe
     {
         if (operand == 0)
         {
@@ -1213,7 +1213,7 @@ struct Integer
     }
 
     private void multiply(const digit factor, ref Integer product)
-    const nothrow @safe @nogc
+    const @nogc nothrow pure @safe
     {
         product.grow(this.size + 1);
         product.sign = this.sign;
@@ -1239,7 +1239,7 @@ struct Integer
 
     private void multiply(ref const Integer factor,
                           ref Integer product,
-                          const size_t digits) const nothrow @safe @nogc
+                          const size_t digits) const @nogc nothrow pure @safe
     {
         Integer intermediate;
         intermediate.grow(digits);
@@ -1270,8 +1270,7 @@ struct Integer
 
     private void divide(Q, ARGS...)(ref const Integer divisor,
                                     auto ref Q quotient,
-                                    ref ARGS args)
-    const nothrow @safe @nogc
+                                    ref ARGS args) const
     if ((is(Q : typeof(null))
      || (is(Q : Integer) && __traits(isRef, quotient)))
      && (ARGS.length == 0 || (ARGS.length == 1 && is(ARGS[0] : Integer))))
@@ -1404,7 +1403,7 @@ struct Integer
         }
     }
 
-    private Integer square() nothrow @safe @nogc
+    private Integer square() @nogc nothrow pure @safe
     {
         Integer result;
         const resultSize = 2 * this.size + 1;
@@ -1444,7 +1443,7 @@ struct Integer
     }
 
     // Returns 2^^n.
-    private Integer exp2(size_t n) const nothrow @safe @nogc
+    private Integer exp2(size_t n) const @nogc nothrow pure @safe
     {
         auto ret = Integer(allocator);
         const bytes = n / digitBitCount;
@@ -1459,7 +1458,7 @@ struct Integer
     /**
      * Returns: Two's complement representation of the integer.
      */
-    Array!ubyte toArray() const nothrow @safe @nogc
+    Array!ubyte toArray() const @nogc nothrow pure @safe
     out (array)
     {
         assert(array.length == length);
@@ -1512,7 +1511,7 @@ struct Integer
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         {
             auto integer = Integer(0x66778899aabbddee);
@@ -1520,6 +1519,14 @@ struct Integer
 
             auto array = integer.toArray();
             assert(equal(array[], expected[]));
+        }
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        {
+            Integer integer;
+            assert(integer.toArray().length == 0);
         }
         {
             auto integer = Integer(0x03);
