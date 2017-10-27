@@ -1758,6 +1758,10 @@ template isMutable(T)
 }
 
 /**
+ * Determines whether $(D_PARAM T) is a nested type, i.e. $(D_KEYWORD class),
+ * $(D_KEYWORD struct) or $(D_KEYWORD union), which internally stores a context
+ * pointer.
+ *
  * Params:
  *  T = $(D_KEYWORD class), $(D_KEYWORD struct) or $(D_KEYWORD union) type.
  *
@@ -1788,6 +1792,8 @@ pure nothrow @safe unittest
 }
 
 /**
+ * Determines whether $(D_PARAM T) is a nested function.
+ *
  * Params:
  *  F = A function.
  *
@@ -1809,6 +1815,8 @@ enum bool isNestedFunction(alias F) = __traits(isNested, F);
 }
 
 /**
+ * Determines the type of the callable $(D_PARAM F).
+ *
  * Params:
  *  F = A function.
  *
@@ -1898,6 +1906,8 @@ if (isCallable!F)
 }
 
 /**
+ * Determines the return type of the callable $(D_PARAM F).
+ *
  * Params:
  *  F = A callable object.
  *
@@ -3054,4 +3064,61 @@ template isInnerClass(T)
     {
     }
     static assert(!isInnerClass!(RefCountedStore!int));
+}
+
+/**
+ * Returns the types of all members of $(D_PARAM T).
+ *
+ * If $(D_PARAM T) is a $(D_KEYWORD struct) or $(D_KEYWORD union) or
+ * $(D_KEYWORD class), returns the types of all its fields. It is actually the
+ * same as `T.tupleof`, but the content pointer for the nested type isn't
+ * included.
+ *
+ * If $(D_PARAM T) is neither a $(D_KEYWORD struct) nor $(D_KEYWORD union) nor
+ * $(D_KEYWORD class), $(D_PSYMBOL Fields) returns an $(D_PSYMBOL AliasSeq)
+ * with the single element $(D_PARAM T).
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_PARAM T)'s fields.
+ */
+template Fields(T)
+{
+    static if ((is(T == struct) || is(T == union)) && isNested!T)
+    {
+        // The last element of .tupleof of a nested struct or union is "this",
+        // the context pointer, type "void*".
+        alias Fields = typeof(T.tupleof[0 .. $ - 1]);
+    }
+    else static if (is(T == class) || is(T == struct) || is(T == union))
+    {
+        alias Fields = typeof(T.tupleof);
+    }
+    else
+    {
+        alias Fields = AliasSeq!T;
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    struct Nested
+    {
+        int i;
+
+        void func()
+        {
+        }
+    }
+    static assert(is(Fields!Nested == AliasSeq!int));
+
+    class C
+    {
+        uint u;
+    }
+    static assert(is(Fields!C == AliasSeq!uint));
+
+    static assert(is(Fields!short == AliasSeq!short));
 }
