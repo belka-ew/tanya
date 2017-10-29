@@ -14,11 +14,13 @@
  */
 module tanya.math.mp;
 
-import std.algorithm;
+import std.algorithm.comparison;
+import std.algorithm.mutation;
 import std.range;
 import tanya.container.array;
 import tanya.encoding.ascii;
 import tanya.memory;
+static import tanya.memory.op;
 import tanya.meta.trait;
 import tanya.meta.transform;
 
@@ -207,7 +209,7 @@ struct Integer
     this(this) @nogc nothrow pure @safe
     {
         auto tmp = allocator.resize!digit(null, this.size);
-        this.rep[0 .. this.size].copy(tmp);
+        tanya.memory.op.copy(this.rep[0 .. this.size], tmp);
         this.rep = tmp;
     }
 
@@ -340,7 +342,8 @@ struct Integer
     if (is(Unqual!T == Integer))
     {
         this.rep = allocator.resize(this.rep, value.size);
-        value.rep[0 .. value.size].copy(this.rep[0 .. value.size]);
+        tanya.memory.op.copy(value.rep[0 .. value.size],
+                             this.rep[0 .. value.size]);
         this.size = value.size;
         this.sign = value.sign;
 
@@ -1023,7 +1026,10 @@ struct Integer
     Integer opUnary(string op : "~")() const
     {
         auto ret = Integer(this, allocator);
-        ret.rep[0 .. ret.size].each!((ref a) => a = ~a & mask);
+        foreach (ref a; ret.rep[0 .. ret.size])
+        {
+            a = ~a & mask;
+        }
         return ret;
     }
 

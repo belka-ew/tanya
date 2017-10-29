@@ -15,7 +15,6 @@ Garbage Collector heap. Everything in the library is usable in @nogc code.
 Tanya extends Phobos functionality and provides alternative implementations for
 data structures and utilities that depend on the Garbage Collector in Phobos.
 
-* [Bug tracker](https://issues.caraus.io/projects/tanya/issues)
 * [API Documentation](https://docs.caraus.io/tanya)
 * [Contribution guidelines](CONTRIBUTING.md)
 
@@ -24,6 +23,7 @@ data structures and utilities that depend on the Garbage Collector in Phobos.
 
 Tanya consists of the following packages and (top-level) modules:
 
+* `algorithm`: Collection of generic algorithms.
 * `async`: Event loop (epoll, kqueue and IOCP).
 * `container`: Queue, Array, Singly and doubly linked lists, Buffers, UTF-8
 string, Hash set.

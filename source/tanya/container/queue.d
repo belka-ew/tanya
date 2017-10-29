@@ -14,7 +14,7 @@
  */
 module tanya.container.queue;
 
-import std.algorithm.mutation;
+import tanya.algorithm.mutation;
 import tanya.container.entry;
 import tanya.exception;
 import tanya.memory;

@@ -1,0 +1,164 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/**
+ * Algorithms that modify its arguments.
+ *
+ * Copyright: Eugene Wissner 2017.
+ * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
+ *                  Mozilla Public License, v. 2.0).
+ * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/algorithm/mutation.d,
+ *                 tanya/algorithm/mutation.d)
+ */
+module tanya.algorithm.mutation;
+
+import tanya.memory.op;
+import tanya.meta.trait;
+
+/**
+ * Moves $(D_PARAM source) into $(D_PARAM target) assuming that
+ * $(D_PARAM target) isn't initialized.
+ *
+ * Moving the $(D_PARAM source) copies it into the $(D_PARAM target) and places
+ * the $(D_PARAM source) into a valid but unspecified state, which means that
+ * after moving $(D_PARAM source) can be destroyed or assigned a new value, but
+ * accessing it yields an unspecified value. No postblits or destructors are
+ * called. If the $(D_PARAM target) should be destroyed before, use
+ * $(D_PSYMBOL move).
+ *
+ * $(D_PARAM source) and $(D_PARAM target) must be different objects.
+ *
+ * Params:
+ *  T      = Object type.
+ *  source = Source object.
+ *  target = Target object.
+ *
+ * See_Also: $(D_PSYMBOL move),
+ *           $(D_PSYMBOL hasElaborateCopyConstructor),
+ *           $(D_PSYMBOL hasElaborateDestructor).
+ *
+ * Precondition: `&source !is &target`.
+ */
+void moveEmplace(T)(ref T source, ref T target) @system
+in
+{
+    assert(&source !is &target, "Source and target must be different");
+}
+body
+{
+    static if (is(T == struct))
+    {
+        copy((&source)[0 .. 1], (&target)[0 .. 1]);
+
+        static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
+        {
+            static const T init = T.init;
+
+            static if (isNested!T)
+            {
+                // Don't override the context pointer.
+                enum size_t size = T.sizeof - (void*).sizeof;
+                copy((cast(void*) &init)[0 .. size], (&source)[0 .. 1]);
+            }
+            else
+            {
+                copy((&init)[0 .. 1], (&source)[0 .. 1]);
+            }
+        }
+    }
+    else
+    {
+        target = source;
+    }
+}
+
+///
+@nogc nothrow pure @system unittest
+{
+    static struct S
+    {
+        int member = 5;
+
+        this(this) @nogc nothrow pure @safe
+        {
+            assert(false);
+        }
+    }
+    S source, target = void;
+    moveEmplace(source, target);
+    assert(target.member == 5);
+
+    int x1 = 5, x2;
+    moveEmplace(x1, x2);
+    assert(x2 == 5);
+}
+
+/**
+ * Moves $(D_PARAM source) into $(D_PARAM target) assuming that
+ * $(D_PARAM target) isn't initialized.
+ *
+ * Moving the $(D_PARAM source) copies it into the $(D_PARAM target) and places
+ * the $(D_PARAM source) into a valid but unspecified state, which means that
+ * after moving $(D_PARAM source) can be destroyed or assigned a new value, but
+ * accessing it yields an unspecified value. $(D_PARAM target) is destroyed before
+ * the new value is assigned. If $(D_PARAM target) isn't initialized and
+ * therefore shouldn't be destroyed, $(D_PSYMBOL moveEmplace) can be used.
+ *
+ * If $(D_PARAM target) isn't specified, $(D_PSYMBOL move) returns the source
+ * as rvalue without calling its copy constructor or destructor.
+ *
+ * $(D_PARAM source) and $(D_PARAM target) are the same object,
+ * $(D_PSYMBOL move) does nothing.
+ *
+ * Params:
+ *  T      = Object type.
+ *  source = Source object.
+ *  target = Target object.
+ *
+ * See_Also: $(D_PSYMBOL moveEmplace).
+ */
+void move(T)(ref T source, ref T target)
+{
+    if ((() @trusted => &source is &target)())
+    {
+        return;
+    }
+    static if (hasElaborateDestructor!T)
+    {
+        target.__xdtor();
+    }
+    (() @trusted => moveEmplace(source, target))();
+}
+
+/// ditto
+T move(T)(ref T source)
+{
+    T target = void;
+    (() @trusted => moveEmplace(source, target))();
+    return target;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct S
+    {
+        int member = 5;
+
+        this(this) @nogc nothrow pure @safe
+        {
+            assert(false);
+        }
+    }
+    S source, target = void;
+    move(source, target);
+    assert(target.member == 5);
+    assert(move(target).member == 5);
+
+    int x1 = 5, x2;
+    move(x1, x2);
+    assert(x2 == 5);
+    assert(move(x2) == 5);
+}

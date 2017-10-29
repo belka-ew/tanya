@@ -15,11 +15,13 @@
 module tanya.container.list;
 
 import std.algorithm.comparison;
-import std.algorithm.mutation;
+import std.algorithm.mutation : swap;
 import std.algorithm.searching;
+import tanya.algorithm.mutation;
 import tanya.container.entry;
 import tanya.memory;
 import tanya.meta.trait;
+import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
 

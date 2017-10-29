@@ -16,8 +16,16 @@ module tanya.container.array;
 
 import core.checkedint;
 import std.algorithm.comparison;
-import std.algorithm.mutation;
+import std.algorithm.mutation : bringToFront,
+                                copy,
+                                fill,
+                                initializeAll,
+                                moveEmplaceAll,
+                                moveAll,
+                                swap,
+                                uninitializedFill;
 import std.meta;
+import tanya.algorithm.mutation;
 import tanya.exception;
 import tanya.memory;
 import tanya.meta.trait;
