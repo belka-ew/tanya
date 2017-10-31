@@ -51,10 +51,12 @@ private enum alignMask = size_t.sizeof - 1;
  *
  * Precondition: $(D_INLINECODE source.length <= target.length).
  */
-void copy(const void[] source, void[] target) pure nothrow @trusted @nogc
+void copy(const void[] source, void[] target) @nogc nothrow pure @trusted
 in
 {
     assert(source.length <= target.length);
+    assert(source.length == 0 || source.ptr !is null);
+    assert(target.length == 0 || target.ptr !is null);
 }
 body
 {
@@ -69,7 +71,7 @@ body
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[9] source = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     ubyte[9] target;
@@ -77,7 +79,7 @@ pure nothrow @safe @nogc unittest
     assert(cmp(source, target) == 0);
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     {
         ubyte[0] source, target;
@@ -120,6 +122,11 @@ private template filledBytes(ubyte Byte, ubyte I = 0)
  *  memory = Memory block.
  */
 void fill(ubyte c = 0)(void[] memory) @trusted
+in
+{
+    assert(memory.length == 0 || memory.ptr !is null);
+}
+body
 {
     version (TanyaNative)
     {
@@ -132,7 +139,7 @@ void fill(ubyte c = 0)(void[] memory) @trusted
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[9] memory = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     memory.fill!0();
@@ -144,7 +151,7 @@ pure nothrow @safe @nogc unittest
 
 // Stress test. Checks that `fill` can handle unaligned pointers and different
 // lengths.
-pure nothrow @safe @nogc private unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[192] memory;
 
@@ -189,10 +196,12 @@ pure nothrow @safe @nogc private unittest
  *
  * Precondition: $(D_INLINECODE source.length <= target.length).
  */
-void copyBackward(const void[] source, void[] target) pure nothrow @trusted @nogc
+void copyBackward(const void[] source, void[] target) @nogc nothrow pure @trusted
 in
 {
     assert(source.length <= target.length);
+    assert(source.length == 0 || source.ptr !is null);
+    assert(target.length == 0 || target.ptr !is null);
 }
 body
 {
@@ -207,7 +216,7 @@ body
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[6] mem = [ 'a', 'a', 'b', 'b', 'c', 'c' ];
     ubyte[6] expected = [ 'a', 'a', 'a', 'a', 'b', 'b' ];
@@ -216,7 +225,7 @@ pure nothrow @safe @nogc unittest
     assert(cmp(expected, mem) == 0);
 }
 
-private nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[9] r1 = [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i' ];
     ubyte[9] r2;
@@ -242,7 +251,13 @@ private nothrow @safe @nogc unittest
  *          negative integer if $(D_INLINECODE r2 > r1),
  *          `0` if $(D_INLINECODE r1 == r2).
  */
-int cmp(const void[] r1, const void[] r2) pure nothrow @trusted @nogc
+int cmp(const void[] r1, const void[] r2) @nogc nothrow pure @trusted
+in
+{
+    assert(r1.length == 0 || r1.ptr !is null);
+    assert(r2.length == 0 || r2.ptr !is null);
+}
+body
 {
     version (TanyaNative)
     {
@@ -259,7 +274,7 @@ int cmp(const void[] r1, const void[] r2) pure nothrow @trusted @nogc
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[4] r1 = [ 'a', 'b', 'c', 'd' ];
     ubyte[3] r2 = [ 'c', 'a', 'b' ];
@@ -271,7 +286,7 @@ pure nothrow @safe @nogc unittest
     assert(cmp(r2, r1) < 0);
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[16] r1 = [
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
@@ -301,7 +316,12 @@ private pure nothrow @safe @nogc unittest
  *          couldn't be found, an empty `inout void[]` is returned.
  */
 inout(void[]) find(return inout void[] haystack, const ubyte needle)
-pure nothrow @trusted @nogc
+@nogc nothrow pure @trusted
+in
+{
+    assert(haystack.length == 0 || haystack.ptr !is null);
+}
+body
 {
     auto length = haystack.length;
     const size_t needleWord = size_t.max * needle;
@@ -348,7 +368,7 @@ pure nothrow @trusted @nogc
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     const ubyte[9] haystack = ['a', 'b', 'c', 'd', 'e', 'f', 'b', 'g', 'h'];
 
