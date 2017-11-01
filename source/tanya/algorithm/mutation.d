@@ -17,6 +17,37 @@ module tanya.algorithm.mutation;
 import tanya.memory.op;
 import tanya.meta.trait;
 
+private void deinitialize(bool zero, T)(ref T value)
+{
+    static if (is(T == U[S], U, size_t S))
+    {
+        foreach (ref e; value)
+        {
+            deinitialize!zero(e);
+        }
+    }
+    else
+    {
+        static if (isNested!T)
+        {
+            // Don't override the context pointer.
+            enum size_t size = T.sizeof - (void*).sizeof;
+        }
+        else
+        {
+            enum size_t size = T.sizeof;
+        }
+        static if (zero)
+        {
+            fill!0((cast(void*) &value)[0 .. size]);
+        }
+        else
+        {
+            copy(typeid(T).initializer()[0 .. size], (&value)[0 .. 1]);
+        }
+    }
+}
+
 /**
  * Moves $(D_PARAM source) into $(D_PARAM target) assuming that
  * $(D_PARAM target) isn't initialized.
@@ -48,30 +79,19 @@ in
 }
 body
 {
-    static if (is(T == struct))
+    static if (is(T == struct) || isStaticArray!T)
     {
         copy((&source)[0 .. 1], (&target)[0 .. 1]);
 
         static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
         {
-            static if (isNested!T)
+            if (typeid(T).initializer().ptr is null)
             {
-                // Don't override the context pointer.
-                enum size_t size = T.sizeof - (void*).sizeof;
+                deinitialize!true(source);
             }
             else
             {
-                enum size_t size = T.sizeof;
-            }
-
-            const(void)[] init = typeid(T).initializer();
-            if (init.ptr is null)
-            {
-                fill!0((cast(void*) &source)[0 .. size]);
-            }
-            else
-            {
-                copy(init[0 .. size], (&source)[0 .. 1]);
+                deinitialize!false(source);
             }
         }
     }
@@ -127,6 +147,28 @@ body
     Nested source, target = void;
     moveEmplace(source, target);
     assert(source == target);
+}
+
+// Emplaces static arrays.
+@nogc nothrow pure @system unittest
+{
+    static struct S
+    {
+        size_t member;
+        this(size_t i) @nogc nothrow pure @safe
+        {
+            this.member = i;
+        }
+        ~this() @nogc nothrow pure @safe
+        {
+        }
+    }
+    S[2] source = [ S(5), S(5) ], target = void;
+    moveEmplace(source, target);
+    assert(source[0].member == 0);
+    assert(target[0].member == 5);
+    assert(source[1].member == 0);
+    assert(target[1].member == 5);
 }
 
 /**

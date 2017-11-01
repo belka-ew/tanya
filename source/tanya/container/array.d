@@ -514,7 +514,6 @@ struct Array(T)
             {
                 allocator.deallocate(buf);
             }
-            const T* end = this.data + this.length_;
             for (T* src = this.data, dest = cast(T*) buf; src != end; ++src, ++dest)
             {
                 moveEmplace(*src, *dest);
@@ -640,6 +639,11 @@ struct Array(T)
         assert(v.removeBack(3) == 0);
     }
 
+    private @property inout(T)* end() inout
+    {
+        return this.data + this.length_;
+    }
+
     /**
      * Remove all elements beloning to $(D_PARAM r).
      *
@@ -660,12 +664,10 @@ struct Array(T)
     }
     body
     {
-        auto end = this.data + this.length;
-        auto source = Range(this, r.end, end);
-        auto target = Range(this, r.begin, end);
-        for (; !source.empty; source.popFront(), target.popFront())
+        auto target = r.begin;
+        for (auto source = r.end; source != end; ++source, ++target)
         {
-            move(source.front, target.front);
+            move(*source, *target);
         }
         length = length - r.length;
         return Range(this, r.begin, this.data + length);
@@ -696,7 +698,7 @@ struct Array(T)
         if (isImplicitlyConvertible!(R, T))
     {
         reserve(this.length + 1);
-        moveEmplace(el, *(this.data + this.length_));
+        moveEmplace(el, *end);
         ++this.length_;
     }
 
