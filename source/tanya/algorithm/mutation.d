@@ -54,17 +54,24 @@ body
 
         static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
         {
-            static const T init = T.init;
-
             static if (isNested!T)
             {
                 // Don't override the context pointer.
                 enum size_t size = T.sizeof - (void*).sizeof;
-                copy((cast(void*) &init)[0 .. size], (&source)[0 .. 1]);
             }
             else
             {
-                copy((&init)[0 .. 1], (&source)[0 .. 1]);
+                enum size_t size = T.sizeof;
+            }
+
+            const(void)[] init = typeid(T).initializer();
+            if (init.ptr is null)
+            {
+                fill!0((cast(void*) &source)[0 .. size]);
+            }
+            else
+            {
+                copy(init[0 .. size], (&source)[0 .. 1]);
             }
         }
     }
@@ -93,6 +100,33 @@ body
     int x1 = 5, x2;
     moveEmplace(x1, x2);
     assert(x2 == 5);
+}
+
+// Is pure.
+@nogc nothrow pure @system unittest
+{
+    struct S
+    {
+        this(this)
+        {
+        }
+    }
+    S source, target = void;
+    static assert(is(typeof({ moveEmplace(source, target); })));
+}
+
+// Moves nested.
+@nogc nothrow pure @system unittest
+{
+    struct Nested
+    {
+        void method() @nogc nothrow pure @safe
+        {
+        }
+    }
+    Nested source, target = void;
+    moveEmplace(source, target);
+    assert(source == target);
 }
 
 /**
@@ -161,4 +195,12 @@ T move(T)(ref T source)
     move(x1, x2);
     assert(x2 == 5);
     assert(move(x2) == 5);
+}
+
+// Moves if source is target.
+@nogc nothrow pure @safe unittest
+{
+    int x = 5;
+    move(x, x);
+    assert(x == 5);
 }
