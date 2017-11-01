@@ -27,7 +27,7 @@
 module tanya.container.string;
 
 import std.algorithm.comparison;
-import std.algorithm.mutation : bringToFront, copy, swap;
+import std.algorithm.mutation : bringToFront, copy;
 import std.algorithm.searching;
 static import std.range;
 import tanya.algorithm.mutation;

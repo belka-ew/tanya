@@ -20,9 +20,6 @@ import std.algorithm.mutation : bringToFront,
                                 copy,
                                 fill,
                                 initializeAll,
-                                moveEmplaceAll,
-                                moveAll,
-                                swap,
                                 uninitializedFill;
 import std.meta;
 import tanya.algorithm.mutation;
@@ -272,7 +269,10 @@ struct Array(T)
         {
             // Move each element.
             reserve(init.length_);
-            moveEmplaceAll(init.data[0 .. init.length_], this.data[0 .. init.length_]);
+            foreach (ref target; this.data[0 .. init.length_])
+            {
+                moveEmplace(*init.data++, target);
+            }
             this.length_ = init.length_;
             // Destructor of init should destroy it here.
         }
@@ -661,7 +661,12 @@ struct Array(T)
     body
     {
         auto end = this.data + this.length;
-        moveAll(Range(this, r.end, end), Range(this, r.begin, end));
+        auto source = Range(this, r.end, end);
+        auto target = Range(this, r.begin, end);
+        for (; !source.empty; source.popFront(), target.popFront())
+        {
+            move(source.front, target.front);
+        }
         length = length - r.length;
         return Range(this, r.begin, this.data + length);
     }

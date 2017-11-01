@@ -24,7 +24,7 @@
 module tanya.memory.smartref;
 
 import std.algorithm.comparison;
-import std.algorithm.mutation;
+import tanya.algorithm.mutation;
 import tanya.conv;
 import tanya.exception;
 import tanya.memory;

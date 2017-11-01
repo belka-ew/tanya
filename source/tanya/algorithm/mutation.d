@@ -204,3 +204,30 @@ T move(T)(ref T source)
     move(x, x);
     assert(x == 5);
 }
+
+/**
+ * Exchanges the values of $(D_PARAM a) and $(D_PARAM b).
+ *
+ * $(D_PSYMBOL swap) moves the contents of $(D_PARAM a) and $(D_PARAM b)
+ * without calling its postblits or destructors.
+ *
+ * Params:
+ *  a = The first object.
+ *  a = The second object.
+ */
+void swap(T)(ref T a, ref T b) @trusted
+{
+    T tmp = void;
+    moveEmplace(a, tmp);
+    moveEmplace(b, a);
+    moveEmplace(tmp, b);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int a = 3, b = 5;
+    swap(a, b);
+    assert(a == 5);
+    assert(b == 3);
+}

@@ -15,7 +15,6 @@
  */
 module tanya.container.set;
 
-import std.algorithm.mutation : swap;
 import tanya.algorithm.mutation;
 import tanya.container;
 import tanya.container.entry;
