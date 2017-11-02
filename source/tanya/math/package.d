@@ -21,9 +21,11 @@
  */
 module tanya.math;
 
+import tanya.algorithm.mutation;
 import tanya.math.mp;
 import tanya.math.nbtheory;
 import tanya.meta.trait;
+import tanya.meta.transform;
 
 /// Floating-point number precisions according to IEEE-754.
 enum IEEEPrecision : ubyte
@@ -79,7 +81,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(ieeePrecision!float == IEEEPrecision.single);
     static assert(ieeePrecision!double == IEEEPrecision.double_);
@@ -231,7 +233,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(classify(0.0) == FloatingPointClass.zero);
     assert(classify(double.nan) == FloatingPointClass.nan);
@@ -253,7 +255,7 @@ pure nothrow @safe @nogc unittest
     assert(classify(-real.infinity) == FloatingPointClass.infinite);
 }
 
-private pure nothrow @nogc @safe unittest
+@nogc nothrow pure @safe unittest
 {
     static if (ieeePrecision!float == IEEEPrecision.doubleExtended)
     {
@@ -300,7 +302,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(!isFinite(float.infinity));
     assert(!isFinite(-double.infinity));
@@ -345,7 +347,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isNaN(float.init));
     assert(isNaN(double.init));
@@ -382,7 +384,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isInfinity(float.infinity));
     assert(isInfinity(-float.infinity));
@@ -436,7 +438,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(!isSubnormal(0.0f));
     assert(!isSubnormal(float.nan));
@@ -496,7 +498,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(!isNormal(0.0f));
     assert(!isNormal(float.nan));
@@ -547,7 +549,7 @@ if (isFloatingPoint!F)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(signBit(-1.0f));
     assert(!signBit(1.0f));
@@ -659,7 +661,7 @@ body
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(pow(3, 5, 7) == 5);
     assert(pow(2, 2, 1) == 0);
@@ -673,7 +675,7 @@ pure nothrow @safe @nogc unittest
 }
 
 ///
-nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(pow(Integer(3), Integer(5), Integer(7)) == 5);
     assert(pow(Integer(2), Integer(2), Integer(1)) == 0);
@@ -695,13 +697,13 @@ nothrow @safe @nogc unittest
  * Returns: $(D_KEYWORD true) if $(D_PARAM x) is a prime number,
  *          $(D_KEYWORD false) otherwise.
  */
-bool isPseudoprime(ulong x) nothrow pure @safe @nogc
+bool isPseudoprime(ulong x) @nogc nothrow pure @safe
 {
     return pow(2, x - 1, x) == 1;
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(74623.isPseudoprime);
     assert(104729.isPseudoprime);
@@ -709,7 +711,7 @@ pure nothrow @safe @nogc unittest
     assert(!15485868.isPseudoprime);
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(74653.isPseudoprime);
     assert(74687.isPseudoprime);
@@ -737,4 +739,159 @@ private pure nothrow @safe @nogc unittest
     assert(593441861.isPseudoprime);
     assert(899809363.isPseudoprime);
     assert(982451653.isPseudoprime);
+}
+
+/**
+ * Determines minimum of two numbers.
+ *
+ * Params:
+ *  x = First number.
+ *  y = Second number.
+ *
+ * Returns: $(D_PARAM x) if $(D_PARAM x) is smaller than $(D_PSYMBOL y),
+ *          $(D_PARAM y) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL max).
+ */
+T min(T)(T x, T y)
+if (isIntegral!T)
+{
+    return x < y ? x : y;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(min(5, 3) == 3);
+    assert(min(4, 4) == 4);
+}
+
+/// ditto
+T min(T)(T x, T y)
+if (isFloatingPoint!T && isFloatingPoint!T)
+{
+    if (isNaN(x))
+    {
+        return y;
+    }
+    if (isNaN(y))
+    {
+        return x;
+    }
+    return x < y ? x : y;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(min(5.2, 3.0) == 3.0);
+
+    assert(min(5.2, double.nan) == 5.2);
+    assert(min(double.nan, 3.0) == 3.0);
+    assert(isNaN(min(double.nan, double.nan)));
+}
+
+/// ditto
+ref T min(T)(ref T x, ref T y)
+if (is(Unqual!T == Integer))
+{
+    return x < y ? x : y;
+}
+
+/// ditto
+T min(T)(T x, T y)
+if (is(T == Integer))
+{
+    return x < y ? move(x) : move(y);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(min(Integer(5), Integer(3)) == 3);
+}
+
+/**
+ * Determines maximum of two numbers.
+ *
+ * Params:
+ *  x = First number.
+ *  y = Second number.
+ *
+ * Returns: $(D_PARAM x) if $(D_PARAM x) is larger than $(D_PSYMBOL y),
+ *          $(D_PARAM y) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL min).
+ */
+T max(T)(T x, T y)
+if (isIntegral!T)
+{
+    return x > y ? x : y;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(max(5, 3) == 5);
+    assert(max(4, 4) == 4);
+}
+
+/// ditto
+T max(T)(T x, T y)
+if (isFloatingPoint!T && isFloatingPoint!T)
+{
+    if (isNaN(x))
+    {
+        return y;
+    }
+    if (isNaN(y))
+    {
+        return x;
+    }
+    return x > y ? x : y;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(max(5.2, 3.0) == 5.2);
+
+    assert(max(5.2, double.nan) == 5.2);
+    assert(max(double.nan, 3.0) == 3.0);
+    assert(isNaN(max(double.nan, double.nan)));
+}
+
+/// ditto
+ref T max(T)(ref T x, ref T y)
+if (is(Unqual!T == Integer))
+{
+    return x > y ? x : y;
+}
+
+/// ditto
+T max(T)(T x, T y)
+if (is(T == Integer))
+{
+    return x > y ? move(x) : move(y);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(max(Integer(5), Integer(3)) == 5);
+}
+
+// min/max accept const and mutable references.
+@nogc nothrow pure @safe unittest
+{
+    {
+        Integer i1 = 5, i2 = 3;
+        assert(min(i1, i2) == 3);
+        assert(max(i1, i2) == 5);
+    }
+    {
+        const Integer i1 = 5, i2 = 3;
+        assert(min(i1, i2) == 3);
+        assert(max(i1, i2) == 5);
+    }
 }

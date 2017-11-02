@@ -209,10 +209,10 @@ void move(T)(ref T source, ref T target)
 }
 
 /// ditto
-T move(T)(ref T source)
+T move(T)(ref T source) @trusted
 {
     T target = void;
-    (() @trusted => moveEmplace(source, target))();
+    moveEmplace(source, target);
     return target;
 }
 
