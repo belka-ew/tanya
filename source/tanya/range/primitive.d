@@ -14,14 +14,17 @@
  */
 module tanya.range.primitive;
 
+import tanya.math;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.range.array;
 
 /**
  * Returns the element type of the range $(D_PARAM R).
  *
  * Element type is the return type of such primitives like
  * $(D_INLINECODE R.front) and (D_INLINECODE R.back) or the array base type.
+ * If $(D_PARAM R) is not a range, its element type is $(D_KEYWORD void).
  *
  * If $(D_PARAM R) is a string, $(D_PSYMBOL ElementType) doesn't distinguish
  * between narrow and wide strings, it just returns the base type of the
@@ -29,20 +32,23 @@ import tanya.meta.transform;
  * $(D_KEYWORD dchar)).
  *
  * Params:
- *  R = Any range type.
+ *  R = Range type.
  *
  * Returns: Element type of the range $(D_PARAM R).
  */
 template ElementType(R)
-if (isInputRange!R)
 {
     static if (is(R U : U[]))
     {
         alias ElementType = U;
     }
-    else
+    else static if (isInputRange!R)
     {
         alias ElementType = ReturnType!((R r) => r.front());
+    }
+    else
+    {
+        alias ElementType = void;
     }
 }
 
@@ -68,12 +74,11 @@ if (isInputRange!R)
  */
 template hasLength(R)
 {
-    enum bool hasLength = is(ReturnType!((R r) => r.length) == size_t)
-                       && !is(ElementType!R == void);
+    enum bool hasLength = is(ReturnType!((R r) => r.length) == size_t);
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(hasLength!(char[]));
     static assert(hasLength!(int[]));
@@ -87,7 +92,7 @@ pure nothrow @safe @nogc unittest
 
     struct B
     {
-        @property size_t length() const pure nothrow @safe @nogc
+        @property size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -96,12 +101,12 @@ pure nothrow @safe @nogc unittest
 
     struct C
     {
-        @property const(size_t) length() const pure nothrow @safe @nogc
+        @property const(size_t) length() const @nogc nothrow pure @safe
         {
             return 0;
         }
     }
-    static assert(!hasLength!(C));
+    static assert(!hasLength!C);
 }
 
 /**
@@ -147,7 +152,7 @@ template hasSlicing(R)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(hasSlicing!(int[]));
     static assert(hasSlicing!(const(int)[]));
@@ -158,22 +163,22 @@ pure nothrow @safe @nogc unittest
 
     struct A
     {
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        bool empty() const pure nothrow @safe @nogc
+        bool empty() const  @nogc nothrow pure @safe
         {
             return false;
         }
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
-        @property size_t length() const pure nothrow @safe @nogc
+        @property size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -190,26 +195,26 @@ pure nothrow @safe @nogc unittest
         struct Dollar
         {
         }
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        bool empty() const pure nothrow @safe @nogc
+        bool empty() const @nogc nothrow pure @safe
         {
             return false;
         }
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
-        @property size_t length() const pure nothrow @safe @nogc
+        @property size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
-        @property Dollar opDollar() const pure nothrow @safe @nogc
+        @property Dollar opDollar() const @nogc nothrow pure @safe
         {
             return Dollar();
         }
@@ -223,15 +228,15 @@ pure nothrow @safe @nogc unittest
 
     struct C
     {
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
         enum bool empty = false;
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
@@ -247,35 +252,35 @@ pure nothrow @safe @nogc unittest
     {
         struct Range
         {
-            int front() pure nothrow @safe @nogc
+            int front() @nogc nothrow pure @safe
             {
                 return 0;
             }
-            void popFront() pure nothrow @safe @nogc
+            void popFront() @nogc nothrow pure @safe
             {
             }
-            bool empty() const pure nothrow @safe @nogc
+            bool empty() const @nogc nothrow pure @safe
             {
                 return true;
             }
-            typeof(this) save() pure nothrow @safe @nogc
+            typeof(this) save() @nogc nothrow pure @safe
             {
                 return this;
             }
-            @property size_t length() const pure nothrow @safe @nogc
+            @property size_t length() const @nogc nothrow pure @safe
             {
                 return 0;
             }
         }
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
         enum bool empty = false;
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
@@ -292,25 +297,25 @@ version (unittest)
 {
     mixin template InputRangeStub()
     {
-        @property int front() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        @property bool empty() const pure nothrow @safe @nogc
+        @property bool empty() const @nogc nothrow pure @safe
         {
             return false;
         }
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
     }
     mixin template BidirectionalRangeStub()
     {
-        @property int back() pure nothrow @safe @nogc
+        @property int back() @nogc nothrow pure @safe
         {
             return 0;
         }
-        void popBack() pure nothrow @safe @nogc
+        void popBack() @nogc nothrow pure @safe
         {
         }
     }
@@ -348,10 +353,10 @@ private template isDynamicArrayRange(R)
 template isInputRange(R)
 {
     static if (is(ReturnType!((R r) => r.front()) U)
-            && is(ReturnType!((R r) => r.empty) == bool))
+            && is(ReturnType!((R r) => r.empty) == bool)
+            && is(typeof(R.popFront())))
     {
-        enum bool isInputRange = !is(U == void)
-                              && is(typeof(R.popFront()));
+        enum bool isInputRange = !is(U == void);
     }
     else
     {
@@ -360,18 +365,18 @@ template isInputRange(R)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct Range
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        bool empty() const pure nothrow @safe @nogc
+        bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
@@ -381,7 +386,7 @@ pure nothrow @safe @nogc unittest
     static assert(!isInputRange!(void[]));
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct Range1(T)
     {
@@ -402,15 +407,15 @@ private pure nothrow @safe @nogc unittest
 
     static struct Range2
     {
-        int popFront() pure nothrow @safe @nogc
+        int popFront() @nogc nothrow pure @safe
         {
             return 100;
         }
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 100;
         }
-        bool empty() const pure nothrow @safe @nogc
+        bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
@@ -419,13 +424,13 @@ private pure nothrow @safe @nogc unittest
 
     static struct Range3
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        void front() pure nothrow @safe @nogc
+        void front() @nogc nothrow pure @safe
         {
         }
-        bool empty() const pure nothrow @safe @nogc
+        bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
@@ -434,10 +439,10 @@ private pure nothrow @safe @nogc unittest
 
     static struct Range4
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -471,27 +476,27 @@ template isForwardRange(R)
     }
     else
     {
-        enum bool isForwardRange = isDynamicArrayRange!R;
+        enum bool isForwardRange = false;
     }
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct Range
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        int front() pure nothrow @safe @nogc
+        int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        bool empty() const pure nothrow @safe @nogc
+        bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
@@ -501,7 +506,7 @@ pure nothrow @safe @nogc unittest
     static assert(!isForwardRange!(void[]));
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct Range1
     {
@@ -509,7 +514,7 @@ private pure nothrow @safe @nogc unittest
     static struct Range2
     {
         mixin InputRangeStub;
-        Range1 save() pure nothrow @safe @nogc
+        Range1 save() @nogc nothrow pure @safe
         {
             return Range1();
         }
@@ -519,7 +524,7 @@ private pure nothrow @safe @nogc unittest
     static struct Range3
     {
         mixin InputRangeStub;
-        const(typeof(this)) save() const pure nothrow @safe @nogc
+        const(typeof(this)) save() const @nogc nothrow pure @safe
         {
             return this;
         }
@@ -547,11 +552,11 @@ private pure nothrow @safe @nogc unittest
  */
 template isBidirectionalRange(R)
 {
-    static if (is(ReturnType!((R r) => r.back()) U))
+    static if (is(ReturnType!((R r) => r.back()) U)
+            && is(typeof(R.popBack())))
     {
         enum bool isBidirectionalRange = isForwardRange!R
-                                      && is(U == ReturnType!((R r) => r.front()))
-                                      && is(typeof(R.popBack()));
+                                      && is(U == ReturnType!((R r) => r.front()));
     }
     else
     {
@@ -560,29 +565,29 @@ template isBidirectionalRange(R)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct Range
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        void popBack() pure nothrow @safe @nogc
+        void popBack() @nogc nothrow pure @safe
         {
         }
-        @property int front() pure nothrow @safe @nogc
-        {
-            return 0;
-        }
-        @property int back() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        bool empty() const pure nothrow @safe @nogc
+        @property int back() @nogc nothrow pure @safe
+        {
+            return 0;
+        }
+        bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
-        Range save() pure nothrow @safe @nogc
+        Range save() @nogc nothrow pure @safe
         {
             return this;
         }
@@ -592,29 +597,29 @@ pure nothrow @safe @nogc unittest
     static assert(!isBidirectionalRange!(void[]));
 }
 
-private nothrow  @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct Range(T, U)
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        void popBack() pure nothrow @safe @nogc
+        void popBack() @nogc nothrow pure @safe
         {
         }
-        @property T front() pure nothrow @safe @nogc
+        @property T front() @nogc nothrow pure @safe
         {
             return T.init;
         }
-        @property U back() pure nothrow @safe @nogc
+        @property U back() @nogc nothrow pure @safe
         {
             return U.init;
         }
-        bool empty() const pure nothrow @safe @nogc
+        bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
-        Range save() pure nothrow @safe @nogc
+        Range save() @nogc nothrow pure @safe
         {
             return this;
         }
@@ -659,37 +664,37 @@ template isRandomAccessRange(R)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct A
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        void popBack() pure nothrow @safe @nogc
+        void popBack() @nogc nothrow pure @safe
         {
         }
-        @property int front() pure nothrow @safe @nogc
-        {
-            return 0;
-        }
-        @property int back() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        bool empty() const pure nothrow @safe @nogc
+        @property int back() @nogc nothrow pure @safe
+        {
+            return 0;
+        }
+        bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
-        int opIndex(const size_t pos) pure nothrow @safe @nogc
+        int opIndex(const size_t pos) @nogc nothrow pure @safe
         {
             return 0;
         }
-        size_t length() const pure nothrow @safe @nogc
+        size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -700,19 +705,19 @@ pure nothrow @safe @nogc unittest
 
     static struct B
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        @property int front() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
         enum bool empty = false;
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
-        int opIndex(const size_t pos) pure nothrow @safe @nogc
+        int opIndex(const size_t pos) @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -720,18 +725,18 @@ pure nothrow @safe @nogc unittest
     static assert(isRandomAccessRange!B);
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct Range1
     {
         mixin InputRangeStub;
         mixin BidirectionalRangeStub;
 
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
-        int opIndex(const size_t pos) pure nothrow @safe @nogc
+        int opIndex(const size_t pos) @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -743,15 +748,15 @@ private pure nothrow @safe @nogc unittest
         mixin InputRangeStub;
         mixin BidirectionalRangeStub;
 
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
-        int opIndex(Args) pure nothrow @safe @nogc
+        int opIndex(Args) @nogc nothrow pure @safe
         {
             return 0;
         }
-        size_t length() const pure nothrow @safe @nogc
+        size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -765,16 +770,16 @@ private pure nothrow @safe @nogc unittest
         mixin InputRangeStub;
         mixin BidirectionalRangeStub;
 
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
         int opIndex(const size_t pos1, const size_t pos2 = 0)
-        pure nothrow @safe @nogc
+        @nogc nothrow pure @safe
         {
             return 0;
         }
-        size_t length() const pure nothrow @safe @nogc
+        size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -786,20 +791,143 @@ private pure nothrow @safe @nogc unittest
         mixin InputRangeStub;
         mixin BidirectionalRangeStub;
 
-        typeof(this) save() pure nothrow @safe @nogc
+        typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
         }
-        int opIndex(const size_t pos1) pure nothrow @safe @nogc
+        int opIndex(const size_t pos1) @nogc nothrow pure @safe
         {
             return 0;
         }
-        size_t opDollar() const pure nothrow @safe @nogc
+        size_t opDollar() const @nogc nothrow pure @safe
         {
             return 0;
         }
     }
     static assert(!isRandomAccessRange!Range4);
+}
+
+/**
+ * Determines whether $(D_PARAM R) is an output range for the elemens of type
+ * $(D_PARAM E).
+ *
+ * If $(D_PARAM R) is an output range for the elements of type $(D_PARAM E)
+ * if an element `e` of type $(D_PARAM E) can be put into the range instance
+ * `r` in one of the following ways:
+ *
+ * $(TABLE
+ *  $(TR
+ *      $(TH Code)
+ *      $(TH Scenario)
+ *  )
+ *  $(TR
+ *      $(TD r.put(e))
+ *      $(TD $(D_PARAM R) defines `put` for $(D_PARAM E).)
+ *  )
+ *  $(TR
+ *      $(TD r.front = e)
+ *      $(TD $(D_PARAM R) is an input range, whose element type is
+ *      $(D_PARAM E) and `front` is an lvalue.)
+ *  )
+ *  $(TR
+ *      $(TD r(e))
+ *      $(TD $(D_PARAM R) defines `opCall` for $(D_PARAM E).)
+ *  )
+ *  $(TR
+ *      $(TD for (; !e.empty; e.popFront()) r.put(e.front) $(BR)
+ *           for (; !e.empty; e.popFront(), r.popFront())
+ *           r.front = e.front $(BR)
+ *           for (; !e.empty; e.popFront()) r(e.front)
+ *      )
+ *      $(TD $(D_PARAM E) is input range, whose elements can be put into
+ *           $(D_PARAM R) according to the rules described above in this table.
+ *      )
+ *  )
+ * )
+ *
+ * Params:
+ *  R = The type to be tested.
+ *  E = Element type should be tested for.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM R) is an output range for the
+ *          elements of the type $(D_PARAM E), $(D_KEYWORD false) otherwise.
+ */
+template isOutputRange(R, E)
+{
+    private enum bool doPut(E) = is(typeof((R r, E e) => r.put(e)))
+                              || (isInputRange!R
+                              && is(typeof((R r, E e) => r.front = e)))
+                              || is(typeof((R r, E e) => r(e)));
+
+    static if (doPut!E)
+    {
+        enum bool isOutputRange = true;
+    }
+    else static if (isInputRange!E)
+    {
+        enum bool isOutputRange = doPut!(ElementType!E);
+    }
+    else
+    {
+        enum bool isOutputRange = false;
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct R1
+    {
+        void put(int) @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(isOutputRange!(R1, int));
+
+    static struct R2
+    {
+        int value;
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+        ref int front() @nogc nothrow pure @safe
+        {
+            return value;
+        }
+        bool empty() const @nogc nothrow pure @safe
+        {
+            return true;
+        }
+    }
+    static assert(isOutputRange!(R2, int));
+
+    static struct R3
+    {
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+        int front() @nogc nothrow pure @safe
+        {
+            return 0;
+        }
+        bool empty() const @nogc nothrow pure @safe
+        {
+            return true;
+        }
+    }
+    static assert(!isOutputRange!(R3, int));
+
+    static struct R4
+    {
+        void opCall(int) @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(isOutputRange!(R4, int));
+
+    static assert(isOutputRange!(R1, R3));
+    static assert(isOutputRange!(R2, R3));
+    static assert(isOutputRange!(R4, R3));
 }
 
 /**
@@ -827,7 +955,7 @@ template isInfinite(R)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(!isInfinite!int);
 
@@ -839,10 +967,10 @@ pure nothrow @safe @nogc unittest
 
     static struct InfiniteRange
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        @property int front() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -852,14 +980,14 @@ pure nothrow @safe @nogc unittest
 
     static struct InputRange
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        @property int front() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        @property bool empty() const pure nothrow @safe @nogc
+        @property bool empty() const @nogc nothrow pure @safe
         {
             return false;
         }
@@ -867,14 +995,14 @@ pure nothrow @safe @nogc unittest
     static assert(!isInfinite!InputRange);
 }
 
-private pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static struct StaticConstRange
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        @property int front() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -884,14 +1012,344 @@ private pure nothrow @safe @nogc unittest
 
     static struct TrueRange
     {
-        void popFront() pure nothrow @safe @nogc
+        void popFront() @nogc nothrow pure @safe
         {
         }
-        @property int front() pure nothrow @safe @nogc
+        @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
         static const bool empty = true;
     }
     static assert(!isInfinite!TrueRange);
+}
+
+/**
+ * Removes exactly $(D_PARAM count) first elements from the input range
+ * $(D_PARAM range).
+ *
+ * $(D_PARAM R) must have length or be infinite.
+ *
+ * Params:
+ *  R     = Range type.
+ *  range = Some input range.
+ *  count = Number of elements to remove.
+ *
+ * See_Also: $(D_PSYMBOL popBackExactly),
+ *           $(D_PSYMBOL popFrontN),
+ *           $(D_PSYMBOL isInputRange),
+ *           $(D_PSYMBOL hasLength),
+ *           $(D_PSYMBOL isInfinite).
+ *
+ * Precondition: If $(D_PARAM R) has length, it must be less than or equal to
+ *               $(D_PARAM count).
+ */
+void popFrontExactly(R)(ref R range, size_t count)
+if (isInputRange!R && (hasLength!R || isInfinite!R))
+in
+{
+    static if (hasLength!R)
+    {
+        assert(count <= range.length);
+    }
+}
+do
+{
+    static if (hasSlicing!R)
+    {
+        range = range[count .. $];
+    }
+    else
+    {
+        while (count-- != 0)
+        {
+            range.popFront();
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[5] a = [1, 2, 3, 4, 5];
+    auto slice = a[];
+
+    popFrontExactly(slice, 3);
+    assert(slice.length == 2);
+    assert(slice[0] == 4);
+    assert(slice[$ - 1] == 5);
+
+    popFrontExactly(slice, 2);
+    assert(slice.length == 0);
+}
+
+/**
+ * Removes exactly $(D_PARAM count) last elements from the bidirectional range
+ * $(D_PARAM range).
+ *
+ * $(D_PARAM R) must have length or be infinite.
+ *
+ * Params:
+ *  R     = Range type.
+ *  range = Some bidirectional range.
+ *  count = Number of elements to remove.
+ *
+ * See_Also: $(D_PSYMBOL popFrontExactly),
+ *           $(D_PSYMBOL popBackN),
+ *           $(D_PSYMBOL isBidirectionalRange),
+ *           $(D_PSYMBOL hasLength),
+ *           $(D_PSYMBOL isInfinite).
+ *
+ * Precondition: If $(D_PARAM R) has length, it must be less than or equal to
+ *               $(D_PARAM count).
+ */
+void popBackExactly(R)(ref R range, size_t count)
+if (isBidirectionalRange!R && (hasLength!R || isInfinite!R))
+in
+{
+    static if (hasLength!R)
+    {
+        assert(count <= range.length);
+    }
+}
+do
+{
+    static if (hasSlicing!R)
+    {
+        range = range[0 .. $ - count];
+    }
+    else
+    {
+        while (count-- != 0)
+        {
+            range.popBack();
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[5] a = [1, 2, 3, 4, 5];
+    auto slice = a[];
+
+    popBackExactly(slice, 3);
+    assert(slice.length == 2);
+    assert(slice[0] == 1);
+    assert(slice[$ - 1] == 2);
+
+    popBackExactly(slice, 2);
+    assert(slice.length == 0);
+}
+
+/**
+ * Removes maximum $(D_PARAM count) first elements from the input range
+ * $(D_PARAM range).
+ *
+ * Params:
+ *  R     = Range type.
+ *  range = Some input range.
+ *  count = Number of elements to remove.
+ *
+ * See_Also: $(D_PSYMBOL popBackN),
+ *           $(D_PSYMBOL popFrontExactly),
+ *           $(D_PSYMBOL isInputRange).
+ */
+void popFrontN(R)(ref R range, size_t count)
+if (isInputRange!R)
+{
+    static if (hasLength!R && hasSlicing!R)
+    {
+        range = range[min(count, range.length) .. $];
+    }
+    else static if (hasLength!R)
+    {
+        size_t length = min(count, range.length);
+        while (length--)
+        {
+            range.popFront();
+        }
+    }
+    else
+    {
+        while (count-- != 0 && !range.empty)
+        {
+            range.popFront();
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[5] a = [1, 2, 3, 4, 5];
+    auto slice = a[];
+
+    popFrontN(slice, 3);
+    assert(slice.length == 2);
+    assert(slice[0] == 4);
+    assert(slice[$ - 1] == 5);
+
+    popFrontN(slice, 20);
+    assert(slice.length == 0);
+}
+
+/**
+ * Removes maximum $(D_PARAM count) last elements from the bidirectional range
+ * $(D_PARAM range).
+ *
+ * Params:
+ *  R     = Range type.
+ *  range = Some bidirectional range.
+ *  count = Number of elements to remove.
+ *
+ * See_Also: $(D_PSYMBOL popFrontN),
+ *           $(D_PSYMBOL popBackExactly),
+ *           $(D_PSYMBOL isBidirectionalRange).
+ */
+void popBackN(R)(ref R range, size_t count)
+if (isBidirectionalRange!R)
+{
+    static if (hasLength!R && hasSlicing!R)
+    {
+        range = range[0 .. $ - min(count, range.length)];
+    }
+    else static if (hasLength!R)
+    {
+        size_t length = min(count, range.length);
+        while (length--)
+        {
+            range.popBack();
+        }
+    }
+    else
+    {
+        while (count-- != 0 && !range.empty)
+        {
+            range.popBack();
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[5] a = [1, 2, 3, 4, 5];
+    auto slice = a[];
+
+    popBackN(slice, 3);
+    assert(slice.length == 2);
+    assert(slice[0] == 1);
+    assert(slice[$ - 1] == 2);
+
+    popBackN(slice, 20);
+    assert(slice.length == 0);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct InfiniteRange
+    {
+        private int i;
+
+        InfiniteRange save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            ++this.i;
+        }
+
+        void popBack() @nogc nothrow pure @safe
+        {
+            --this.i;
+        }
+
+        @property int front() const @nogc nothrow pure @safe
+        {
+            return this.i;
+        }
+
+        @property int back() const @nogc nothrow pure @safe
+        {
+            return this.i;
+        }
+
+        enum bool empty = false;
+    }
+    {
+        InfiniteRange range;
+        popFrontExactly(range, 2);
+        assert(range.front == 2);
+        popFrontN(range, 2);
+        assert(range.front == 4);
+    }
+    {
+        InfiniteRange range;
+        popBackExactly(range, 2);
+        assert(range.back == -2);
+        popBackN(range, 2);
+        assert(range.back == -4);
+    }
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct Range
+    {
+        private int[5] a = [1, 2, 3, 4, 5];
+        private size_t begin = 0, end = 5;
+
+        Range save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            ++this.begin;
+        }
+
+        void popBack() @nogc nothrow pure @safe
+        {
+            --this.end;
+        }
+
+        @property int front() const @nogc nothrow pure @safe
+        {
+            return this.a[this.begin];
+        }
+
+        @property int back() const @nogc nothrow pure @safe
+        {
+            return this.a[this.end - 1];
+        }
+
+        @property bool empty() const @nogc nothrow pure @safe
+        {
+            return this.begin >= this.end;
+        }
+    }
+    {
+        Range range;
+
+        popFrontN(range, 3);
+        assert(range.front == 4);
+        assert(range.back == 5);
+
+        popFrontN(range, 20);
+        assert(range.empty);
+    }
+    {
+        Range range;
+
+        popBackN(range, 3);
+        assert(range.front == 1);
+        assert(range.back == 2);
+
+        popBackN(range, 20);
+        assert(range.empty);
+    }
 }

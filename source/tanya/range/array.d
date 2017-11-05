@@ -59,13 +59,13 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     return array[0];
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     string s = "Wenn die Wunde nicht mehr wehtut, schmerzt die Narbe";
     static assert(is(typeof(s.front) == immutable char));
@@ -99,13 +99,13 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     return array[$ - 1];
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     string s = "Brecht";
     static assert(is(typeof(s.back) == immutable char));
@@ -138,7 +138,7 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     array = array[1 .. $];
 }
@@ -149,13 +149,13 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     array = array[0 .. $ - 1];
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     wstring array = "Der finstere Ozean der Metaphysik. Nietzsche";
 
@@ -184,7 +184,7 @@ pure nothrow @safe @nogc unittest
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     int[1] array;
     assert(!array.empty);
@@ -209,7 +209,7 @@ pure nothrow @safe @nogc unittest
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     ubyte[8] array;
     auto slice = array.save;
