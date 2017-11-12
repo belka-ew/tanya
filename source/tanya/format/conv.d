@@ -20,6 +20,11 @@ import tanya.memory.op;
 import tanya.meta.trait;
 import tanya.meta.transform;
 
+version (unittest)
+{
+    import tanya.test.assertion;
+}
+
 /**
  * Thrown if a type conversion fails.
  */
@@ -51,6 +56,7 @@ final class ConvException : Exception
  *
  * Returns: $(D_PARAM from).
  */
+deprecated("Use tanya.conv.to instead")
 template to(To)
 {
     /**
@@ -72,20 +78,6 @@ template to(To)
     }
 }
 
-///
-pure nothrow @safe @nogc unittest
-{
-    auto val = 5.to!int();
-    assert(val == 5);
-    static assert(is(typeof(val) == int));
-}
-
-private pure nothrow @safe @nogc unittest
-{
-    int val = 5;
-    assert(val.to!int() == 5);
-}
-
 /**
  * Performs checked conversion from an integral type $(D_PARAM From) to an
  * integral type $(D_PARAM To).
@@ -100,6 +92,7 @@ private pure nothrow @safe @nogc unittest
  * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is too small or too
  *         large to be represented by $(D_PARAM To).
  */
+deprecated("Use tanya.conv.to instead")
 To to(To, From)(From from)
 if (isIntegral!From
  && isIntegral!To
@@ -148,135 +141,6 @@ if (isIntegral!From
     }
 }
 
-private pure nothrow @safe @nogc unittest
-{
-    // ubyte -> ushort
-    assert((cast(ubyte) 0).to!ushort == 0);
-    assert((cast(ubyte) 1).to!ushort == 1);
-    assert((cast(ubyte) (ubyte.max - 1)).to!ushort == ubyte.max - 1);
-    assert((cast(ubyte) ubyte.max).to!ushort == ubyte.max);
-
-    // ubyte -> short
-    assert((cast(ubyte) 0).to!short == 0);
-    assert((cast(ubyte) 1).to!short == 1);
-    assert((cast(ubyte) (ubyte.max - 1)).to!short == ubyte.max - 1);
-    assert((cast(ubyte) ubyte.max).to!short == ubyte.max);
-}
-
-private unittest
-{
-    // ubyte <- ushort
-    assert((cast(ushort) 0).to!ubyte == 0);
-    assert((cast(ushort) 1).to!ubyte == 1);
-    assert((cast(ushort) (ubyte.max - 1)).to!ubyte == ubyte.max - 1);
-    assert((cast(ushort) ubyte.max).to!ubyte == ubyte.max);
-
-    // ubyte <- short
-    assert((cast(short) 0).to!ubyte == 0);
-    assert((cast(short) 1).to!ubyte == 1);
-    assert((cast(short) (ubyte.max - 1)).to!ubyte == ubyte.max - 1);
-    assert((cast(short) ubyte.max).to!ubyte == ubyte.max);
-
-    // short <-> int
-    assert(short.min.to!int == short.min);
-    assert((short.min + 1).to!int == short.min + 1);
-    assert((cast(short) -1).to!int == -1);
-    assert((cast(short) 0).to!int == 0);
-    assert((cast(short) 1).to!int == 1);
-    assert((short.max - 1).to!int == short.max - 1);
-    assert(short.max.to!int == short.max);
-
-    assert((cast(int) short.min).to!short == short.min);
-    assert((cast(int) short.min + 1).to!short == short.min + 1);
-    assert((cast(int) -1).to!short == -1);
-    assert((cast(int) 0).to!short == 0);
-    assert((cast(int) 1).to!short == 1);
-    assert((cast(int) short.max - 1).to!short == short.max - 1);
-    assert((cast(int) short.max).to!short == short.max);
-
-    // uint <-> int
-    assert((cast(uint) 0).to!int == 0);
-    assert((cast(uint) 1).to!int == 1);
-    assert((cast(uint) (int.max - 1)).to!int == int.max - 1);
-    assert((cast(uint) int.max).to!int == int.max);
-
-    assert((cast(int) 0).to!uint == 0);
-    assert((cast(int) 1).to!uint == 1);
-    assert((cast(int) (int.max - 1)).to!uint == int.max - 1);
-    assert((cast(int) int.max).to!uint == int.max);
-}
-
-private unittest
-{
-    ConvException exception;
-    try
-    {
-        assert(int.min.to!short == int.min);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private unittest
-{
-    ConvException exception;
-    try
-    {
-        assert(int.max.to!short == int.max);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private unittest
-{
-    ConvException exception;
-    try
-    {
-        assert(uint.max.to!ushort == ushort.max);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private unittest
-{
-    ConvException exception;
-    try
-    {
-        assert((-1).to!uint == -1);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    enum Test : int
-    {
-        one,
-        two,
-    }
-    assert(Test.one.to!int == 0);
-    assert(Test.two.to!int == 1);
-}
-
 /**
  * Converts $(D_PARAM from) to a boolean.
  *
@@ -317,7 +181,7 @@ if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
 }
 
 ///
-@nogc unittest
+@nogc pure @safe unittest
 {
     assert(!0.0.to!bool);
     assert(0.2.to!bool);
@@ -328,34 +192,10 @@ if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
     assert(1.to!bool);
 }
 
-private @nogc unittest
+@nogc pure @safe unittest
 {
-    ConvException exception;
-    try
-    {
-        assert((-1).to!bool);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    ConvException exception;
-    try
-    {
-        assert(2.to!bool);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
+    assertThrown!ConvException(&to!(bool, int), -1);
+    assertThrown!ConvException(&to!(bool, int), 2);
 }
 
 /// ditto
@@ -375,7 +215,7 @@ if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
 }
 
 ///
-@nogc unittest
+@nogc pure @safe unittest
 {
     assert("true".to!bool);
     assert(!"false".to!bool);
@@ -384,19 +224,9 @@ if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
 
 }
 
-private @nogc unittest
+@nogc pure @safe unittest
 {
-    ConvException exception;
-    try
-    {
-        assert("1".to!bool);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
+    assertThrown!ConvException(() => "1".to!bool);
 }
 
 /**
@@ -422,7 +252,7 @@ if (is(Unqual!From == bool) && isNumeric!To && !is(Unqual!To == Unqual!From))
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(true.to!float == 1.0);
     assert(true.to!double == 1.0);
@@ -451,13 +281,13 @@ if (is(Unqual!From == bool) && is(Unqual!To == String))
 }
 
 ///
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(true.to!String == "true");
     assert(false.to!String == "false");
 }
 
-private @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(typeof((const String("true")).to!bool)));
     static assert(is(typeof(false.to!(const String) == "false")));
@@ -477,6 +307,7 @@ private @nogc unittest
  * Throws: $(D_PSYMBOL ConvException) if
  *         $(D_INLINECODE from < To.min || from > To.max).
  */
+deprecated("Use tanya.conv.to instead")
 To to(To, From)(From from)
 if (isFloatingPoint!From
  && isIntegral!To
@@ -496,60 +327,6 @@ if (isFloatingPoint!From
     return cast(To) from;
 }
 
-///
-@nogc unittest
-{
-    assert(1.5.to!int == 1);
-    assert(2147483646.5.to!int == 2147483646);
-    assert((-2147483647.5).to!int == -2147483647);
-    assert(2147483646.5.to!uint == 2147483646);
-}
-
-private @nogc unittest
-{
-    ConvException exception;
-    try
-    {
-        assert(2147483647.5.to!int == 2147483647);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    ConvException exception;
-    try
-    {
-        assert((-2147483648.5).to!int == -2147483648);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
-private @nogc unittest
-{
-    ConvException exception;
-    try
-    {
-        assert((-21474.5).to!uint == -21474);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
-}
-
 /**
  * Performs checked conversion from an integral type $(D_PARAM From) to an
  * $(D_KEYWORD enum).
@@ -564,6 +341,7 @@ private @nogc unittest
  * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is not a member of
  *         $(D_PSYMBOL To).
  */
+deprecated("Use tanya.conv.to instead")
 To to(To, From)(From from)
 if (isIntegral!From && is(To == enum))
 {
@@ -576,40 +354,6 @@ if (isIntegral!From && is(To == enum))
     }
     throw make!ConvException(defaultAllocator,
                              "Value not found in enum '" ~ To.stringof ~ "'");
-}
-
-///
-@nogc unittest
-{
-    enum Test : int
-    {
-        one,
-        two,
-    }
-    static assert(is(typeof(1.to!Test) == Test));
-    assert(0.to!Test == Test.one);
-    assert(1.to!Test == Test.two);
-}
-
-private @nogc unittest
-{
-    enum Test : uint
-    {
-        one,
-        two,
-    }
-
-    ConvException exception;
-    try
-    {
-        assert(5.to!Test == Test.one);
-    }
-    catch (ConvException e)
-    {
-        exception = e;
-    }
-    assert(exception !is null);
-    defaultAllocator.dispose(exception);
 }
 
 // Returns the last part of buffer with converted number.
@@ -679,7 +423,7 @@ if (isIntegral!T)
 }
 
 // Converting an integer to string.
-private pure nothrow @system @nogc unittest
+@nogc nothrow pure @system unittest
 {
     char[21] buf;
 

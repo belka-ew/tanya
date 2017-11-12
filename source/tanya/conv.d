@@ -18,6 +18,11 @@ import tanya.memory;
 import tanya.memory.op;
 import tanya.meta.trait;
 
+version (unittest)
+{
+    import tanya.test.assertion;
+}
+
 /**
  * Constructs a new object of type $(D_PARAM T) in $(D_PARAM memory) with the
  * given arguments.
@@ -232,4 +237,309 @@ body
         }
     }
     static assert(is(typeof(emplace!F((void[]).init))));
+}
+
+/**
+ * Thrown if a type conversion fails.
+ */
+final class ConvException : Exception
+{
+    /**
+     * Params:
+     *  msg  = The message for the exception.
+     *  file = The file where the exception occurred.
+     *  line = The line number where the exception occurred.
+     *  next = The previous exception in the chain of exceptions, if any.
+     */
+    this(string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null) @nogc @safe pure nothrow
+    {
+        super(msg, file, line, next);
+    }
+}
+
+/**
+ * If the source type $(D_PARAM From) and the target type $(D_PARAM To) are
+ * equal, does nothing. If $(D_PARAM From) can be implicitly converted to
+ * $(D_PARAM To), just returns $(D_PARAM from).
+ *
+ * Params:
+ *  To = Target type.
+ *
+ * Returns: $(D_PARAM from).
+ */
+template to(To)
+{
+    /**
+     * Params:
+     *  From = Source type.
+     *  from = Source value.
+     */
+    ref To to(From)(ref From from)
+    if (is(To == From))
+    {
+        return from;
+    }
+
+    /// ditto
+    To to(From)(From from)
+    if (is(Unqual!To == Unqual!From) || (isNumeric!From && isFloatingPoint!To))
+    {
+        return from;
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    auto val = 5.to!int();
+    assert(val == 5);
+    static assert(is(typeof(val) == int));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    int val = 5;
+    assert(val.to!int() == 5);
+}
+
+/**
+ * Performs checked conversion from an integral type $(D_PARAM From) to an
+ * integral type $(D_PARAM To).
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_PARAM from) converted to $(D_PARAM To).
+ *
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is too small or too
+ *         large to be represented by $(D_PARAM To).
+ */
+To to(To, From)(From from)
+if (isIntegral!From
+ && isIntegral!To
+ && !is(Unqual!To == Unqual!From)
+ && !is(To == enum))
+{
+    static if ((isUnsigned!From && isSigned!To && From.sizeof == To.sizeof)
+            || From.sizeof > To.sizeof)
+    {
+        if (from > To.max)
+        {
+            throw make!ConvException(defaultAllocator,
+                                     "Positive integer overflow");
+        }
+    }
+    static if (isSigned!From)
+    {
+        static if (isUnsigned!To)
+        {
+            if (from < 0)
+            {
+                throw make!ConvException(defaultAllocator,
+                                         "Negative integer overflow");
+            }
+        }
+        else static if (From.sizeof > To.sizeof)
+        {
+            if (from < To.min)
+            {
+                throw make!ConvException(defaultAllocator,
+                                         "Negative integer overflow");
+            }
+        }
+    }
+    static if (From.sizeof <= To.sizeof)
+    {
+        return from;
+    }
+    else static if (isSigned!To)
+    {
+        return cast(To) from;
+    }
+    else
+    {
+        return from & To.max;
+    }
+}
+
+@nogc nothrow pure @safe unittest
+{
+    // ubyte -> ushort
+    assert((cast(ubyte) 0).to!ushort == 0);
+    assert((cast(ubyte) 1).to!ushort == 1);
+    assert((cast(ubyte) (ubyte.max - 1)).to!ushort == ubyte.max - 1);
+    assert((cast(ubyte) ubyte.max).to!ushort == ubyte.max);
+
+    // ubyte -> short
+    assert((cast(ubyte) 0).to!short == 0);
+    assert((cast(ubyte) 1).to!short == 1);
+    assert((cast(ubyte) (ubyte.max - 1)).to!short == ubyte.max - 1);
+    assert((cast(ubyte) ubyte.max).to!short == ubyte.max);
+}
+
+@nogc pure @safe unittest
+{
+    // ubyte <- ushort
+    assert((cast(ushort) 0).to!ubyte == 0);
+    assert((cast(ushort) 1).to!ubyte == 1);
+    assert((cast(ushort) (ubyte.max - 1)).to!ubyte == ubyte.max - 1);
+    assert((cast(ushort) ubyte.max).to!ubyte == ubyte.max);
+
+    // ubyte <- short
+    assert((cast(short) 0).to!ubyte == 0);
+    assert((cast(short) 1).to!ubyte == 1);
+    assert((cast(short) (ubyte.max - 1)).to!ubyte == ubyte.max - 1);
+    assert((cast(short) ubyte.max).to!ubyte == ubyte.max);
+
+    // short <-> int
+    assert(short.min.to!int == short.min);
+    assert((short.min + 1).to!int == short.min + 1);
+    assert((cast(short) -1).to!int == -1);
+    assert((cast(short) 0).to!int == 0);
+    assert((cast(short) 1).to!int == 1);
+    assert((short.max - 1).to!int == short.max - 1);
+    assert(short.max.to!int == short.max);
+
+    assert((cast(int) short.min).to!short == short.min);
+    assert((cast(int) short.min + 1).to!short == short.min + 1);
+    assert((cast(int) -1).to!short == -1);
+    assert((cast(int) 0).to!short == 0);
+    assert((cast(int) 1).to!short == 1);
+    assert((cast(int) short.max - 1).to!short == short.max - 1);
+    assert((cast(int) short.max).to!short == short.max);
+
+    // uint <-> int
+    assert((cast(uint) 0).to!int == 0);
+    assert((cast(uint) 1).to!int == 1);
+    assert((cast(uint) (int.max - 1)).to!int == int.max - 1);
+    assert((cast(uint) int.max).to!int == int.max);
+
+    assert((cast(int) 0).to!uint == 0);
+    assert((cast(int) 1).to!uint == 1);
+    assert((cast(int) (int.max - 1)).to!uint == int.max - 1);
+    assert((cast(int) int.max).to!uint == int.max);
+}
+
+@nogc pure @safe unittest
+{
+    assertThrown!ConvException(&to!(short, int), int.min);
+    assertThrown!ConvException(&to!(short, int), int.max);
+    assertThrown!ConvException(&to!(ushort, uint), uint.max);
+    assertThrown!ConvException(&to!(uint, int), -1);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    enum Test : int
+    {
+        one,
+        two,
+    }
+    assert(Test.one.to!int == 0);
+    assert(Test.two.to!int == 1);
+}
+
+/**
+ * Converts a floating point number to an integral type.
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: Truncated $(D_PARAM from) (everything after the decimal point is
+ *          dropped).
+ *
+ * Throws: $(D_PSYMBOL ConvException) if
+ *         $(D_INLINECODE from < To.min || from > To.max).
+ */
+To to(To, From)(From from)
+if (isFloatingPoint!From
+ && isIntegral!To
+ && !is(Unqual!To == Unqual!From)
+ && !is(To == enum))
+{
+    if (from > To.max)
+    {
+        throw make!ConvException(defaultAllocator,
+                                 "Positive number overflow");
+    }
+    else if (from < To.min)
+    {
+        throw make!ConvException(defaultAllocator,
+                                 "Negative number overflow");
+    }
+    return cast(To) from;
+}
+
+///
+@nogc pure @safe unittest
+{
+    assert(1.5.to!int == 1);
+    assert(2147483646.5.to!int == 2147483646);
+    assert((-2147483647.5).to!int == -2147483647);
+    assert(2147483646.5.to!uint == 2147483646);
+}
+
+@nogc pure @safe unittest
+{
+    assertThrown!ConvException(&to!(int, double), 2147483647.5);
+    assertThrown!ConvException(&to!(int, double), -2147483648.5);
+    assertThrown!ConvException(&to!(uint, double), -21474.5);
+}
+
+/**
+ * Performs checked conversion from an integral type $(D_PARAM From) to an
+ * $(D_KEYWORD enum).
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_KEYWORD enum) value.
+ *
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) is not a member of
+ *         $(D_PSYMBOL To).
+ */
+To to(To, From)(From from)
+if (isIntegral!From && is(To == enum))
+{
+    foreach (m; EnumMembers!To)
+    {
+        if (from == m)
+        {
+            return m;
+        }
+    }
+    throw make!ConvException(defaultAllocator,
+                             "Value not found in enum '" ~ To.stringof ~ "'");
+}
+
+///
+@nogc pure @safe unittest
+{
+    enum Test : int
+    {
+        one,
+        two,
+    }
+    static assert(is(typeof(1.to!Test) == Test));
+    assert(0.to!Test == Test.one);
+    assert(1.to!Test == Test.two);
+}
+
+@nogc pure @safe unittest
+{
+    enum Test : uint
+    {
+        one,
+        two,
+    }
+    assertThrown!ConvException(&to!(Test, int), 5);
 }
