@@ -1053,7 +1053,7 @@ in
         assert(count <= range.length);
     }
 }
-do
+body
 {
     static if (hasSlicing!R)
     {
@@ -1112,7 +1112,7 @@ in
         assert(count <= range.length);
     }
 }
-do
+body
 {
     static if (hasSlicing!R)
     {
