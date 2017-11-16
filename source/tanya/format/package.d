@@ -125,20 +125,24 @@ private struct HP
     private void multiply(ref const HP x, ref const HP y)
     @nogc nothrow pure @safe
     {
-        double ahi, bhi;
+        HP a, b;
         long bt;
+
         this.base = x.base * y.base;
         copyFp(x.base, bt);
-        bt &= (~cast(ulong) 0) << 27;
-        copyFp(bt, ahi);
+        bt &= ulong.max << 27;
+        copyFp(bt, a.base);
 
-        double alo = x.base - ahi;
+        a.offset = x.base - a.base;
         copyFp(y.base, bt);
-        bt &= (~cast(ulong) 0) << 27;
-        copyFp(bt, bhi);
+        bt &= ulong.max << 27;
+        copyFp(bt, b.base);
 
-        double blo = y.base - bhi;
-        this.offset = ahi * bhi - this.base + ahi * blo + alo * bhi + alo * blo;
+        b.offset = y.base - b.base;
+        this.offset = a.base * b.base - this.base
+                    + a.base * b.offset
+                    + a.offset * b.base
+                    + a.offset * b.offset;
         this.offset += x.base * y.offset + x.offset * y.base;
     }
 }
@@ -321,8 +325,8 @@ private HP raise2Power10(const HP value, int power)
 
 /*
  * Given a float value, returns the significant bits in bits, and the position
- * of the decimal point in $(D_PARAM decimalPos). +/-Inf and NaN are specified
- * by special values returned in the $(D_PARAM decimalPos). Sing bit is set in
+ * of the decimal point in $(D_PARAM exponent). +/-Inf and NaN are specified
+ * by special values returned in the $(D_PARAM exponent). Sing bit is set in
  * $(D_PARAM sign).
  */
 private const(char)[] real2String(double value,
@@ -383,10 +387,10 @@ private const(char)[] real2String(double value,
     // Get full as much precision from double-double as possible.
     bits = cast(long) p.base;
     double vh = cast(double) bits;
-    double ahi = p.base - vh;
-    double t = ahi - p.base;
-    double alo = p.base - ahi + t - vh - t;
-    bits += cast(long) (ahi + alo + p.offset);
+    auto a = HP(p.base - vh);
+    double t = a.base - p.base;
+    a.offset = p.base - a.base + t - vh - t;
+    bits += cast(long) (a.base + a.offset + p.offset);
 
     // Check if we undershot (bits >= 10 ^ 19).
     if ((cast(ulong) bits) >= 1000000000000000000UL)
