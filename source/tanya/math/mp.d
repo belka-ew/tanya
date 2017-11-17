@@ -15,7 +15,7 @@
 module tanya.math.mp;
 
 import std.algorithm.comparison;
-import std.algorithm.mutation : fill, copy, reverse;
+import std.algorithm.mutation : copy, fill, reverse;
 import std.range;
 import tanya.algorithm.mutation;
 import tanya.container.array;

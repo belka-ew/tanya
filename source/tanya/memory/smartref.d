@@ -611,7 +611,7 @@ body
 
 @nogc @system unittest
 {
-    static bool destroyed = false;
+    static bool destroyed;
 
     static struct F
     {
@@ -812,7 +812,7 @@ struct Unique(T)
 ///
 @nogc nothrow @system unittest
 {
-    static bool destroyed = false;
+    static bool destroyed;
 
     static struct F
     {

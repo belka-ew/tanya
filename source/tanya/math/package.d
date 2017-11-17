@@ -768,7 +768,7 @@ if (isIntegral!T)
 
 /// ditto
 T min(T)(T x, T y)
-if (isFloatingPoint!T && isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     if (isNaN(x))
     {
@@ -838,7 +838,7 @@ if (isIntegral!T)
 
 /// ditto
 T max(T)(T x, T y)
-if (isFloatingPoint!T && isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     if (isNaN(x))
     {
