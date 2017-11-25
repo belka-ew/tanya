@@ -501,6 +501,19 @@ Zeroed:
     return result[0 .. length];
 }
 
+private void leadSign(bool negative, ref char[8] sign)
+{
+    if (negative)
+    {
+        sign[0] = 1;
+        sign[1] = '-';
+    }
+    else
+    {
+        sign[0] = 0;
+    }
+}
+
 package(tanya) String format(string fmt, Args...)(Args args)
 {
     String ret;
@@ -535,12 +548,56 @@ package(tanya) String format(string fmt, Args...)(Args args)
         {
             int precision = 6;
             bool negative;
-            int decimalPos;
-            uint l;
+            int decimalPoint;
             char[512] num;
+            char[8] tail;
+            char[8] lead;
 
             // Read the double into a string
-            const(char)[] sn = real2String(args[0], num, decimalPos, negative);
+            const(char)[] sn = real2String(args[0], num, decimalPoint, negative);
+
+            uint n = precision;
+
+            // Clamp the precision and delete extra zeros after clamp.
+            if (sn.length > (cast(uint) precision))
+            {
+                sn = sn[0 .. precision];
+            }
+            while (sn.length > 1 && precision != 0 && sn[$ - 1] == '0')
+            {
+                --precision;
+                sn = sn[0 .. $ - 1];
+            }
+
+            // Should the scientific notation be used?
+            if (decimalPoint <= -4 || decimalPoint > (cast(int) n))
+            {
+                if (precision > (cast(int) sn.length))
+                {
+                    precision = cast(int) (sn.length - 1);
+                }
+                else if (precision != 0)
+                {
+                    --precision; // There is 1 digit before the decimal point.
+                }
+            }
+            else
+            {
+                if (decimalPoint > 0)
+                {
+                    precision = decimalPoint < (cast(int) sn.length)
+                              ? cast(int) (sn.length - decimalPoint)
+                              : 0;
+                }
+                else if (precision > (cast(int) sn.length))
+                {
+                    precision = -decimalPoint + cast(int) sn.length;
+                }
+                else
+                {
+                    precision = -decimalPoint + precision;
+                }
+            }
         }
         else
         {
