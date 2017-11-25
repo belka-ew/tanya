@@ -840,7 +840,7 @@ pure nothrow @nogc
                 {
                     tail[2] = '+';
                 }
-                n = (decimalPos>= 1000) ? 6 : ((decimalPos >= 100) ? 5 : ((decimalPos >= 10) ? 4 : 3));
+                n = (decimalPos >= 1000) ? 6 : ((decimalPos >= 100) ? 5 : ((decimalPos >= 10) ? 4 : 3));
                 tail[0] = cast(char) n;
                 for (;;)
                 {
@@ -1081,7 +1081,7 @@ pure nothrow @nogc
                 else
                 {
                     cs = (fl & Modifier.tripletComma) ? ((600 - cast(uint) decimalPos) % 3) : 0;
-                    if (cast(uint) decimalPos>= l)
+                    if (cast(uint) decimalPos >= l)
                     {
                         // Handle xxxx000*000.0.
                         n = 0;
@@ -1637,7 +1637,7 @@ pure nothrow @nogc
     return buf[0 .. tlen + cast(int) (bf - buf.ptr)];
 }
 
-package(tanya) char[] format(string fmt)(return char[] buf, ...)
+char[] format(string fmt)(return char[] buf, ...)
 nothrow
 {
     va_list va;
@@ -1758,56 +1758,13 @@ private nothrow unittest
     assert(format!"%%k"(buffer) == "%k");
 }
 
-private template FmtSpec(string spec)
+private struct FormatSpec
 {
-    template getModifier(char modifier)
-    {
-        static if (modifier == '+')
-        {
-            enum Modifier getModifier = Modifier.leadingPlus;
-        }
-        else static if (modifier == ' ')
-        {
-            enum Modifier getModifier = Modifier.leadingSpace;
-        }
-        else static if (modifier = '#')
-        {
-            enum Modifier getModifier = Modifier.leading0x;
-        }
-        else static if (modifier == '\'')
-        {
-            enum Modifier getModifier = Modifier.tripletComma;
-        }
-        else static if (modifier == '0')
-        {
-            enum Modifier getModifier = Modifier.leadingZero;
-        }
-        else
-        {
-            static assert(false, "Unknown modifier " ~ modifier);
-        }
-    }
-
-    template parseModifiers(string modifiers)
-    {
-        static if (modifiers.length == 0)
-        {
-            enum uint parseModifiers = 0;
-        }
-        else
-        {
-            enum uint parseModifiers = getModifier!(modifiers[0])
-                                     | parseModifiers!(modifiers[1 .. $]);
-        }
-    }
-
-    struct FmtSpec
-    {
-        enum uint modifiers = parseModifiers!spec;
-    }
 }
 
-private enum size_t specPosition(string fmt, char tag)()
+// Returns the position of `tag` in `fmt`. If `tag` can't be found, returns the
+// length of  `fmt`.
+private size_t specPosition(string fmt, char tag)()
 {
     foreach (i, c; fmt)
     {
@@ -1819,7 +1776,7 @@ private enum size_t specPosition(string fmt, char tag)()
     return fmt.length;
 }
 
-private template ParseFmt(string fmt)
+private template ParseFmt(string fmt, size_t pos = 0)
 {
     static if (fmt.length == 0)
     {
@@ -1827,33 +1784,40 @@ private template ParseFmt(string fmt)
     }
     else static if (fmt[0] == '{')
     {
-        enum size_t pos = specPosition!(fmt[1 .. $], '}');
-        static if (pos < fmt.length - 1)
+        static if (fmt.length > 1 && fmt[1] == '{')
         {
-            alias ParseFmt = AliasSeq!(FmtSpec!(fmt[1 .. pos + 1]),
-                                       ParseFmt!(fmt[pos + 2 .. $]));
+            enum size_t pos = specPosition!(fmt[2 .. $], '{') + 2;
+            alias ParseFmt = AliasSeq!(fmt[1 .. pos],
+                                       ParseFmt!(fmt[pos .. $], pos));
         }
         else
         {
-            static assert(false, "Enclosing '}' is missing");
+            enum size_t pos = specPosition!(fmt[1 .. $], '}') + 1;
+            static if (pos < fmt.length)
+            {
+                alias ParseFmt = AliasSeq!(FormatSpec(),
+                                           ParseFmt!(fmt[pos + 1 .. $], pos + 1));
+            }
+            else
+            {
+                static assert(false, "Enclosing '}' is missing");
+            }
         }
     }
     else
     {
         enum size_t pos = specPosition!(fmt, '{');
-        alias ParseFmt = AliasSeq!(fmt[0 .. pos], ParseFmt!(fmt[pos .. $]));
+        alias ParseFmt = AliasSeq!(fmt[0 .. pos],
+                                   ParseFmt!(fmt[pos .. $], pos));
     }
 }
 
-void fmt(string format)()
+@nogc nothrow pure @safe unittest
 {
-    foreach (e; ParseFmt!format)
-    {
-        static if (is(typeof(e) == string))
-        {
-        }
-        else
-        {
-        }
-    }
+    static assert(ParseFmt!"".length == 0);
+
+    static assert(ParseFmt!"asdf".length == 1);
+    static assert(ParseFmt!"asdf"[0] == "asdf");
+
+    static assert(ParseFmt!"{}".length == 1);
 }
