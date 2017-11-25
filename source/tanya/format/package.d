@@ -107,7 +107,6 @@ private static const double[13] negativeTopError = [
 private enum ulong tenTo19th = 1000000000000000000UL;
 
 package static const string hex = "0123456789abcdefxp";
-package static const string hexu = "0123456789ABCDEFXP";
 
 private void ddmultlo(A, B, C, D, E, F)(ref A oh,
                                         ref B ol,
@@ -435,25 +434,10 @@ pure nothrow @nogc
         sign[0] = 1;
         sign[1] = '-';
     }
-    else if (fl & Modifier.leadingSpace)
-    {
-        sign[0] = 1;
-        sign[1] = ' ';
-    }
-    else if (fl & Modifier.leadingPlus)
-    {
-        sign[0] = 1;
-        sign[1] = '+';
-    }
 }
 
 private enum Modifier : uint
 {
-    leftJust = 1,
-    leadingPlus = 2,
-    leadingSpace = 4,
-    leading0x = 8,
-    leadingZero = 16,
     intMax = 32,
     negative = 128,
     halfWidth = 512,
@@ -515,7 +499,7 @@ pure nothrow @nogc
 {
     char* bf = buf.ptr;
     string f = fmt;
-    int tlen = 0;
+    int tlen;
 
     FmtLoop: while (true)
     {
@@ -561,42 +545,6 @@ pure nothrow @nogc
         int tz = 0;
         uint fl = 0;
 
-        // Flags.
-        for (;;)
-        {
-            switch (f[0])
-            {
-                // If we have left justify.
-                case '-':
-                    fl |= Modifier.leftJust;
-                    f.popFront();
-                    continue;
-                // If we have leading plus.
-                case '+':
-                    fl |= Modifier.leadingPlus;
-                    f.popFront();
-                    continue;
-                // If we have leading space.
-                case ' ':
-                    fl |= Modifier.leadingSpace;
-                    f.popFront();
-                    continue;
-                // If we have leading 0x.
-                case '#':
-                    fl |= Modifier.leading0x;
-                    f.popFront();
-                    continue;
-                // If we have leading zero.
-                case '0':
-                    fl |= Modifier.leadingZero;
-                    f.popFront();
-                    goto flags_done;
-                default:
-                    goto flags_done;
-            }
-        }
-    flags_done:
-
         // Get the field width.
         if (f[0] == '*')
         {
@@ -639,27 +587,9 @@ pure nothrow @nogc
                 fl |= Modifier.halfWidth;
                 f.popFront();
                 break;
-            // are we 64-bit (unix style)
+            // are we 64-bit?
             case 'l':
-                f.popFront();
-                if (f[0] == 'l')
-                {
-                    fl |= Modifier.intMax;
-                    f.popFront();
-                }
-                break;
-            // are we 64-bit on intmax? (c99)
-            case 'j':
                 fl |= Modifier.intMax;
-                f.popFront();
-                break;
-            // are we 64-bit on size_t or ptrdiff_t? (c99)
-            case 'z':
-            case 't':
-                static if (size_t.sizeof == 8)
-                {
-                    fl |= Modifier.intMax;
-                }
                 f.popFront();
                 break;
             default:
@@ -672,7 +602,6 @@ pure nothrow @nogc
         char[8] lead;
         char[8] tail;
         char *s;
-        const(char)* h;
         uint l, n;
         ulong n64;
 
@@ -752,106 +681,7 @@ pure nothrow @nogc
                 decimalPos = 0;
                 goto scopy;
 
-            case 'n': // Weird write-bytes specifier.
-                {
-                    int* d = va_arg!(int*)(va);
-                    *d = tlen + cast(int) (bf - buf.ptr);
-                }
-                break;
-
-            case 'A': // Hex float.
-            case 'a': // Hex float.
-                h = (f[0] == 'A') ? hexu.ptr : hex.ptr;
-                fv = va_arg!double(va);
-                if (precision == -1)
-                {
-                    precision = 6; // Default is 6.
-                }
-                // Read the double into a string.
-                if (real2Parts(cast(long*) &n64, decimalPos, fv))
-                {
-                    fl |= Modifier.negative;
-                }
-                s = num.ptr + 64;
-
-                leadSign(fl, lead.ptr);
-
-                if (decimalPos == -1023)
-                {
-                    decimalPos = n64 ? -1022 : 0;
-                }
-                else
-                {
-                    n64 |= (cast(ulong) 1) << 52;
-                }
-                n64 <<= (64 - 56);
-                if (precision < 15)
-                {
-                    n64 += (((cast(ulong) 8) << 56) >> (precision * 4));
-                }
-                // add leading chars
-
-                lead[1 + lead[0]] = '0';
-                lead[2 + lead[0]] = 'x';
-                lead[0] += 2;
-
-                *s++ = h[(n64 >> 60) & 15];
-                n64 <<= 4;
-                if (precision)
-                {
-                    *s++ = period;
-                }
-                sn = s;
-
-                // Print the bits.
-                n = precision;
-                if (n > 13)
-                {
-                    n = 13;
-                }
-                if (precision > cast(int) n)
-                {
-                    tz = precision - n;
-                }
-                precision = 0;
-                while (n--)
-                {
-                    *s++ = h[(n64 >> 60) & 15];
-                    n64 <<= 4;
-                }
-
-                // Print the exponent.
-                tail[1] = h[17];
-                if (decimalPos < 0)
-                {
-                    tail[2] = '-';
-                    decimalPos = -decimalPos;
-                }
-                else
-                {
-                    tail[2] = '+';
-                }
-                n = (decimalPos >= 1000) ? 6 : ((decimalPos >= 100) ? 5 : ((decimalPos >= 10) ? 4 : 3));
-                tail[0] = cast(char) n;
-                for (;;)
-                {
-                    tail[n] = '0' + decimalPos % 10;
-                    if (n <= 3)
-                    {
-                        break;
-                    }
-                    --n;
-                    decimalPos /= 10;
-                }
-
-                decimalPos = cast(int) (s - sn);
-                l = cast(int) (s - (num.ptr + 64));
-                s = num.ptr + 64;
-                goto scopy;
-
-            case 'G': // Float.
             case 'g': // Float.
-                h = (f[0] == 'G') ? hexu.ptr : hex.ptr;
                 fv = va_arg!double(va);
                 if (precision == -1)
                 {
@@ -917,9 +747,7 @@ pure nothrow @nogc
                 }
                 goto dofloatfromg;
 
-            case 'E': // Float.
             case 'e': // Float.
-                h = (f[0] == 'E') ? hexu.ptr : hex.ptr;
                 fv = va_arg!double(va);
                 if (precision == -1)
                 {
@@ -966,7 +794,7 @@ pure nothrow @nogc
                 tz = precision - (l - 1);
                 precision = 0;
                 // Dump the exponent.
-                tail[1] = h[0xe];
+                tail[1] = hex[0xe];
                 decimalPos -= 1;
                 if (decimalPos < 0)
                 {
@@ -1145,52 +973,16 @@ pure nothrow @nogc
                 s = num.ptr + 64;
                 goto scopy;
 
-            case 'B': // Upper binary.
-            case 'b': // Lower binary.
-                h = (f[0] == 'B') ? hexu.ptr : hex.ptr;
-                lead[0] = 0;
-                if (fl & Modifier.leading0x)
-                {
-                    lead[0] = 2;
-                    lead[1] = '0';
-                    lead[2] = h[0xb];
-                }
-                l = (8 << 4) | (1 << 8);
-                {
-                    goto radixnum;
-                }
-
-            case 'o': // octal
-                h = hexu.ptr;
-                lead[0] = 0;
-                if (fl & Modifier.leading0x)
-                {
-                    lead[0] = 1;
-                    lead[1] = '0';
-                }
-                l = (3 << 4) | (3 << 8);
-                goto radixnum;
-
-            case 'p': // pointer
+            case 'p': // Pointer
                 static if (size_t.sizeof == 8)
                 {
                     fl |= Modifier.intMax;
                 }
-                precision = (void*).sizeof * 2;
-                // 'p' only prints the pointer with zeros.
-                fl &= ~Modifier.leadingZero;
-                goto case;
-            case 'X': // Upper hex.
-            case 'x': // Lower hex.
-                h = (f[0] == 'X') ? hexu.ptr : hex.ptr;
+
                 l = (4 << 4) | (4 << 8);
-                lead[0] = 0;
-                if (fl & Modifier.leading0x)
-                {
-                    lead[0] = 2;
-                    lead[1] = '0';
-                    lead[2] = h[16];
-                }
+                lead[0] = 2;
+                lead[1] = '0';
+                lead[2] = 'x';
             radixnum:
                 // Get the number.
                 if (fl & Modifier.intMax)
@@ -1218,7 +1010,7 @@ pure nothrow @nogc
                 // Convert to string.
                 for (;;)
                 {
-                    *--s = h[cast(size_t) (n64 & ((1 << (l >> 8)) - 1))];
+                    *--s = hex[cast(size_t) (n64 & ((1 << (l >> 8)) - 1))];
                     n64 >>= (l >> 8);
                     if (!((n64) || (cast(int) ((num.ptr + NUMSZ) - s) < precision)))
                     {
@@ -1231,8 +1023,7 @@ pure nothrow @nogc
                 goto scopy;
 
             case 'u': // Unsigned.
-            case 'i':
-            case 'd': // Integer.
+            case 'i': // Signed.
                 // Get the integer and abs it.
                 if (fl & Modifier.intMax)
                 {
@@ -1328,49 +1119,35 @@ pure nothrow @nogc
                 fw -= n;
                 precision -= l;
 
-                // Handle right justify and leading zeros.
-                if ((fl & Modifier.leftJust) == 0)
-                {
-                    // If leading zeros, everything is in precision.
-                    if (fl & Modifier.leadingZero)
-                    {
-                        precision = (fw > precision) ? fw : precision;
-                        fw = 0;
-                    }
-                }
-
                 // Copy the spaces and/or zeros.
                 if (fw + precision)
                 {
                     int i;
 
                     // copy leading spaces (or when doing %8.4d stuff)
-                    if ((fl & Modifier.leftJust) == 0)
+                    while (fw > 0)
                     {
-                        while (fw > 0)
+                        i = fw;
+                        fw -= i;
+                        while (i)
                         {
-                            i = fw;
-                            fw -= i;
-                            while (i)
+                            if (((cast(size_t) bf) & 3) == 0)
                             {
-                                if (((cast(size_t) bf) & 3) == 0)
-                                {
-                                    break;
-                                }
-                                *bf++ = ' ';
-                                --i;
+                                break;
                             }
-                            while (i >= 4)
-                            {
-                                *cast(uint*) bf = 0x20202020;
-                                bf += 4;
-                                i -= 4;
-                            }
-                            while (i)
-                            {
-                                *bf++ = ' ';
-                                --i;
-                            }
+                            *bf++ = ' ';
+                            --i;
+                        }
+                        while (i >= 4)
+                        {
+                            *cast(uint*) bf = 0x20202020;
+                            bf += 4;
+                            i -= 4;
+                        }
+                        while (i)
+                        {
+                            *bf++ = ' ';
+                            --i;
                         }
                     }
 
@@ -1481,35 +1258,6 @@ pure nothrow @nogc
                         --i;
                     }
                 }
-
-                // handle the left justify
-                if (fl & Modifier.leftJust && fw > 0)
-                {
-                    while (fw)
-                    {
-                        int i = fw;
-                        fw -= i;
-                        while (i)
-                        {
-                            if (((cast(size_t) bf) & 3) == 0)
-                            {
-                                break;
-                            }
-                            *bf++ = ' ';
-                            --i;
-                        }
-                        while (i >= 4)
-                        {
-                            *cast(uint*) bf = 0x20202020;
-                            bf += 4;
-                            i -= 4;
-                        }
-                        while (i--)
-                        {
-                            *bf++ = ' ';
-                        }
-                    }
-                }
                 break;
 
             default: // Unknown, just copy code.
@@ -1549,27 +1297,19 @@ nothrow unittest
     assert(format!"asdfqweryxcvz"(buffer) == "asdfqweryxcvz");
 
     // Modifiers.
-    assert(format!"%-5g"(buffer, 8.5) == "8.5  ");
-    assert(format!"%05g"(buffer, 8.6) == "008.6");
-    assert(format!"% 5g"(buffer, 8.6) == "  8.6");
-    assert(format!"%+d"(buffer, 8) == "+8");
-    assert(format!"%#x"(buffer, 20) == "0x14");
-    assert(format!"%#o"(buffer, 8) == "010");
-    assert(format!"%#b"(buffer, 3) == "0b11");
-    assert(format!"%d"(buffer, 1000) == "1000");
-    assert(format!"%*d"(buffer, 5, 1) == "    1");
+    assert(format!"%g"(buffer, 8.5) == "8.5");
+    assert(format!"%5g"(buffer, 8.6) == "  8.6");
+    assert(format!"%i"(buffer, 1000) == "1000");
+    assert(format!"%*i"(buffer, 5, 1) == "    1");
     assert(format!"%.1f"(buffer, 10.25) == "10.3");
     assert(format!"%.*f"(buffer, 1, 10.25) == "10.3");
-    assert(format!"%-9i"(buffer, 1) == "1        ");
-    assert(format!"%07.3g"(buffer, 0.01) == "0000.01");
+    assert(format!"%i"(buffer, 1) == "1");
+    assert(format!"%7.3g"(buffer, 0.01) == "   0.01");
 
     // Integer size.
-    assert(format!"%hd"(buffer, 10) == "10");
-    assert(format!"%ld"(buffer, 10) == "10");
-    assert(format!"%lld"(buffer, 10L) == "10");
-    assert(format!"%jd"(buffer, 10L) == "10");
-    assert(format!"%zd"(buffer, 10) == "10");
-    assert(format!"%td"(buffer, 10) == "10");
+    assert(format!"%hi"(buffer, 10) == "10");
+    assert(format!"%li"(buffer, 10) == "10");
+    assert(format!"%li"(buffer, 10L) == "10");
 
     // String printing.
     assert(format!"%s"(buffer, "Some weired string") == "Some weired string");
@@ -1578,46 +1318,24 @@ nothrow unittest
     assert(format!"%c"(buffer, 'c') == "c");
 
     // Integer conversions.
-    assert(format!"%d"(buffer, 8) == "8");
+    assert(format!"%i"(buffer, 8) == "8");
     assert(format!"%i"(buffer, 8) == "8");
     assert(format!"%i"(buffer, -8) == "-8");
-    assert(format!"%lli"(buffer, -8L) == "-8");
+    assert(format!"%li"(buffer, -8L) == "-8");
     assert(format!"%u"(buffer, 8) == "8");
-    assert(format!"%o"(buffer, 8) == "10");
-    assert(format!"%b"(buffer, 3) == "11");
-    assert(format!"%B"(buffer, 3) == "11");
-    assert(format!"%.0x"(buffer, 0) == "");
-    assert(format!"%x"(buffer, 11111111) == "a98ac7");
-    assert(format!"%d"(buffer, 100000001) == "100000001");
-    assert(format!"%.12d"(buffer, 99999999L) == "000099999999");
-    assert(format!"%d"(buffer, 100000001) == "100000001");
-
-    // Count of bytes written so far.
-    {
-        int written;
-        format!"asd%nf"(buffer, &written);
-        assert(written == 3);
-    }
+    assert(format!"%i"(buffer, 100000001) == "100000001");
+    assert(format!"%.12i"(buffer, 99999999L) == "000099999999");
+    assert(format!"%i"(buffer, 100000001) == "100000001");
 
     // Floating point conversions.
     assert(format!"%g"(buffer, 0.1234) == "0.1234");
-    assert(format!"%G"(buffer, 0.3) == "0.3");
+    assert(format!"%g"(buffer, 0.3) == "0.3");
     assert(format!"%g"(buffer, 0.333333333333) == "0.333333");
     assert(format!"%g"(buffer, 38234.1234) == "38234.1");
     assert(format!"%g"(buffer, -0.3) == "-0.3");
-    assert(format!"%f"(buffer, -0.3) == "-0.300000");
     assert(format!"%g"(buffer, 0.000000000000000006) == "6e-18");
     assert(format!"%g"(buffer, 0.0) == "0");
     assert(format!"%f"(buffer, 0.0) == "0.000000");
-    assert(format!"%e"(buffer, 0.3) == "3.000000e-01");
-    assert(format!"%E"(buffer, 0.3) == "3.000000E-01");
-    assert(format!"%e"(buffer, -0.3) == "-3.000000e-01");
-    assert(format!"%a"(buffer, 3.5) == "0x1.c00000p+1");
-    assert(format!"%A"(buffer, 3.5) == "0x1.C00000P+1");
-    assert(format!"%a"(buffer, -3.5) == "-0x1.c00000p+1");
-    assert(format!"%.14a"(buffer, -3.5) == "-0x1.c0000000000000p+1");
-    assert(format!"%a"(buffer, 0.0) == "0x0.000000p+0");
-    assert(format!"%a"(buffer, 1e-300) == "0x1.56e1fcp-997");
     assert(format!"%f"(buffer, double.init) == "NaN");
     assert(format!"%f"(buffer, double.infinity) == "Inf");
     assert(format!"%.0g"(buffer, 0.0) == "0");
@@ -1637,14 +1355,8 @@ nothrow unittest
     assert(format!"%g"(buffer, 38234.1234) == "38234.1");
 
     // Pointer conversions.
-    {
-        auto p = format!"%p"(buffer, cast(void*) 1);
-        assert(p[$ - 1] == '1');
-        foreach (e; p[0 .. $ - 1])
-        {
-            assert(e == '0');
-        }
-    }
+    assert(format!"%p"(buffer, cast(void*) 1) == "0x1");
+    assert(format!"%p"(buffer, cast(void*) 20) == "0x14");
 
     // Unknown specifier.
     assert(format!"%k"(buffer) == "k");
