@@ -225,7 +225,7 @@ private void raise2Power10(double* ohi,
  * of the decimal point in decimalPos. +/-Inf and NaN are specified by special
  * values returned in the decimalPos parameter.
  * fracDigits is absolute normally, but if you want from first significant
- * digits (got %g and %e), or in 0x80000000
+ * digits (got %g), or in 0x80000000
  */
 private int real2String(ref const(char)* start,
                         ref uint len,
@@ -425,22 +425,15 @@ private int real2String(ref const(char)* start,
     return ng;
 }
 
-private void leadSign(uint fl, char* sign)
+private void leadSign(bool negative, ref char[8] sign)
 pure nothrow @nogc
 {
     sign[0] = 0;
-    if (fl & Modifier.negative)
+    if (negative)
     {
         sign[0] = 1;
         sign[1] = '-';
     }
-}
-
-private enum Modifier : uint
-{
-    intMax = 32,
-    negative = 128,
-    halfWidth = 512,
 }
 
 // Copies d to bits w/ strict aliasing (this compiles to nothing on /Ox).
@@ -471,819 +464,608 @@ private void ddmulthi(ref double oh,
     ol = ((ahi * bhi - oh) + ahi * blo + alo * bhi) + alo * blo;
 }
 
-/*
- * Get float info.
- *
- * Returns: Sign bit.
- */
-private int real2Parts(long* bits, out int exponent, const double value)
-pure nothrow @nogc
-{
-    long b;
-
-    // Load value and round at the fracDigits.
-    double d = value;
-
-    copyFp(b, d);
-
-    *bits = b & (((cast(ulong) 1) << 52) - 1);
-    // 1023 is the exponent bias, calculated as 2^(k - 1) - 1, where k is the
-    // number of bits used to represent the exponent, 11 bit for double.
-    exponent = cast(int) (((b >> 52) & 0x7ff) - 1023);
-
-    return cast(int) (b >> 63);
-}
-
-private char[] vsprintf(string fmt)(return char[] buf, va_list va)
+private char[] vsprintf(string fmt, Args...)(return char[] buf, va_list va)
 pure nothrow @nogc
 {
     char* bf = buf.ptr;
-    string f = fmt;
     int tlen;
 
-    FmtLoop: while (true)
+    // Ok, we have a percent, read the modifiers first.
+    int precision = -1;
+    int tz = 0;
+    bool negative;
+
+    // Handle each replacement.
+    char[512] num; // Big enough for e308 (with commas) or e-307.
+    char[8] lead;
+    char[8] tail;
+    char *s;
+    uint l, n;
+    ulong n64;
+
+    double fv;
+
+    int decimalPos;
+    const(char)* sn;
+
+    static if (fmt[0] == 's') // String
     {
-        // Fast copy everything up to the next % (or end of string).
-        while ((cast(size_t) f.ptr) & 3)
+        // Get the string.
+        s = va_arg!(char[])(va).ptr;
+        if (s is null)
         {
-        schk:
-            if (f.length == 0)
-            {
-                break FmtLoop;
-            }
-            if (f[0] == '%')
-            {
-                goto scandd;
-            }
-
-            *bf++ = f[0];
-            f.popFront();
+            s = cast(char*) "null";
         }
-        while (true)
+        // Get the length.
+        sn = s;
+        for (;;)
         {
-            // Check if the next 4 bytes contain %(0x25) or end of string.
-            // Using the 'hasless' trick:
-            // https://graphics.stanford.edu/~seander/bithacks.html#HasLessInWord
-            uint v = *cast(uint*) f;
-            uint c = (~v) & 0x80808080;
-            if ((((v ^ 0x25252525) - 0x01010101) & c) || f.length <= 3)
+            if (((cast(size_t) sn) & 3) == 0)
             {
-                goto schk;
+                break;
             }
-
-            *cast(uint*) bf = v;
-            bf += 4;
-            f = f[4 .. $];
+        lchk:
+            if (sn[0] == 0)
+            {
+                goto ld;
+            }
+            ++sn;
         }
-    scandd:
-
-        f.popFront();
-
-        // Ok, we have a percent, read the modifiers first.
-        int fw = 0;
-        int precision = -1;
-        int tz = 0;
-        uint fl = 0;
-
-        // Get the field width.
-        if (f[0] == '*')
+        n = 0xffffffff;
+        while (n)
         {
-            fw = va_arg!uint(va);
-            f.popFront();
+            uint v = *cast(uint*) sn;
+            if ((v - 0x01010101) & (~v) & 0x80808080UL)
+            {
+                goto lchk;
+            }
+            sn += 4;
+            --n;
+        }
+        goto lchk;
+
+    ld:
+        l = cast(uint) (sn - s);
+
+        lead[0] = 0;
+        tail[0] = 0;
+        precision = 0;
+        decimalPos = 0;
+        // Copy the string in.
+    }
+    else static if (fmt[0] == 'c') // Char
+    {
+        // Get the character.
+        s = num.ptr + num.length - 1;
+        *s = cast(char) va_arg!int(va);
+        l = 1;
+        lead[0] = 0;
+        tail[0] = 0;
+        precision = 0;
+        decimalPos = 0;
+    }
+    else static if (fmt[0] == 'g') // Float
+    {
+        fv = va_arg!double(va);
+        if (precision == -1)
+        {
+            precision = 6;
+        }
+        else if (precision == 0)
+        {
+            precision = 1; // Default is 6.
+        }
+        // Read the double into a string.
+        if (real2String(sn,
+                        l,
+                        num.ptr,
+                        decimalPos,
+                        fv,
+                        (precision - 1) | 0x80000000))
+        {
+            negative = true;
+        }
+
+        // Clamp the precision and delete extra zeros after clamp.
+        n = precision;
+        if (l > cast(uint) precision)
+        {
+            l = precision;
+        }
+        while ((l > 1) && (precision) && (sn[l - 1] == '0'))
+        {
+            --precision;
+            --l;
+        }
+
+        // Should we use %e.
+        if ((decimalPos <= -4) || (decimalPos > cast(int) n))
+        {
+            if (precision > cast(int) l)
+            {
+                precision = l - 1;
+            }
+            else if (precision)
+            {
+               // When using %e, there is one digit before the decimal.
+               --precision;
+            }
+            goto doexpfromg;
+        }
+        // This is the insane action to get the pr to match %g sematics
+        // for %f
+        if (decimalPos > 0)
+        {
+            precision = (decimalPos < cast(int) l) ? l - decimalPos : 0;
         }
         else
         {
-            while ((f[0] >= '0') && (f[0] <= '9'))
+            if (precision > cast(int) l)
             {
-                fw = fw * 10 + f[0] - '0';
-                f.popFront();
-            }
-        }
-        // Get the precision.
-        if (f[0] == '.')
-        {
-            f.popFront();
-            if (f[0] == '*')
-            {
-                precision = va_arg!uint(va);
-                f.popFront();
+                precision = -decimalPos + l;
             }
             else
             {
-                precision = 0;
-                while ((f[0] >= '0') && (f[0] <= '9'))
-                {
-                    precision = precision * 10 + f[0] - '0';
-                    f.popFront();
-                }
+                precision = -decimalPos + precision;
             }
         }
+        goto dofloatfromg;
 
-        // Handle integer size overrides.
-        switch (f[0])
+    doexpfromg:
+        tail[0] = 0;
+        leadSign(negative, lead);
+        if (decimalPos == special)
         {
-            // are we halfwidth?
-            case 'h':
-                fl |= Modifier.halfWidth;
-                f.popFront();
-                break;
-            // are we 64-bit?
-            case 'l':
-                fl |= Modifier.intMax;
-                f.popFront();
-                break;
-            default:
-                break;
+            s = cast(char*) sn;
+            precision = 0;
+            goto scopy;
+        }
+        s = num.ptr + 64;
+        // Handle leading chars.
+        *s++ = sn[0];
+
+        if (precision)
+        {
+            *s++ = period;
         }
 
-        // Handle each replacement.
-        enum NUMSZ = 512; // Big enough for e308 (with commas) or e-307.
-        char[NUMSZ] num;
-        char[8] lead;
-        char[8] tail;
-        char *s;
-        uint l, n;
-        ulong n64;
-
-        double fv;
-
-        int decimalPos;
-        const(char)* sn;
-
-        switch (f[0])
+        // Handle after decimal.
+        if ((l - 1) > cast(uint) precision)
         {
-            case 's':
-                // Get the string.
-                s = va_arg!(char[])(va).ptr;
-                if (s is null)
-                {
-                    s = cast(char*) "null";
-                }
-                // Get the length.
-                sn = s;
-                for (;;)
-                {
-                    if (((cast(size_t) sn) & 3) == 0)
-                    {
-                        break;
-                    }
-                lchk:
-                    if (sn[0] == 0)
-                    {
-                        goto ld;
-                    }
-                    ++sn;
-                }
-                n = 0xffffffff;
-                if (precision >= 0)
-                {
-                    n = cast(uint) (sn - s);
-                    if (n >= cast(uint) precision)
-                    {
-                        goto ld;
-                    }
-                    n = (cast(uint) (precision - n)) >> 2;
-                }
-                while (n)
-                {
-                    uint v = *cast(uint*) sn;
-                    if ((v - 0x01010101) & (~v) & 0x80808080UL)
-                    {
-                        goto lchk;
-                    }
-                    sn += 4;
-                    --n;
-                }
-                goto lchk;
-            ld:
+            l = precision + 1;
+        }
+        for (n = 1; n < l; n++)
+        {
+            *s++ = sn[n];
+        }
+        // Trailing zeros.
+        tz = precision - (l - 1);
+        precision = 0;
+        // Dump the exponent.
+        tail[1] = hex[0xe];
+        decimalPos -= 1;
+        if (decimalPos < 0)
+        {
+            tail[2] = '-';
+            decimalPos = -decimalPos;
+        }
+        else
+        {
+            tail[2] = '+';
+        }
 
-                l = cast(uint) (sn - s);
-                // Clamp to precision.
-                if (l > cast(uint) precision)
-                {
-                    l = precision;
-                }
-                lead[0] = 0;
-                tail[0] = 0;
-                precision = 0;
-                decimalPos = 0;
-                // Copy the string in.
-                goto scopy;
+        n = (decimalPos >= 100) ? 5 : 4;
 
-            case 'c': // Char.
-                // Get the character.
-                s = num.ptr + NUMSZ - 1;
-                *s = cast(char) va_arg!int(va);
-                l = 1;
-                lead[0] = 0;
-                tail[0] = 0;
-                precision = 0;
-                decimalPos = 0;
-                goto scopy;
+        tail[0] = cast(char) n;
+        for (;;)
+        {
+            tail[n] = '0' + decimalPos % 10;
+            if (n <= 3)
+            {
+                break;
+            }
+            --n;
+            decimalPos /= 10;
+        }
+        goto flt_lead;
 
-            case 'g': // Float.
-                fv = va_arg!double(va);
-                if (precision == -1)
-                {
-                    precision = 6;
-                }
-                else if (precision == 0)
-                {
-                    precision = 1; // Default is 6.
-                }
-                // Read the double into a string.
-                if (real2String(sn,
-                                l,
-                                num.ptr,
-                                decimalPos,
-                                fv,
-                                (precision - 1) | 0x80000000))
-                {
-                    fl |= Modifier.negative;
-                }
+    dofloatfromg:
+        tail[0] = 0;
+        leadSign(negative, lead);
+        if (decimalPos == special)
+        {
+            s = cast(char*) sn;
+            precision = 0;
+            goto scopy;
+        }
+        s = num.ptr + 64;
 
-                // Clamp the precision and delete extra zeros after clamp.
+        // Handle the three decimal varieties.
+        if (decimalPos <= 0)
+        {
+            // Handle 0.000*000xxxx.
+            *s++ = '0';
+            if (precision)
+            {
+                *s++ = period;
+            }
+            n = -decimalPos;
+            if (cast(int) n > precision)
+            {
                 n = precision;
-                if (l > cast(uint) precision)
+            }
+            int i = n;
+            while (i)
+            {
+                if (((cast(size_t) s) & 3) == 0)
                 {
-                    l = precision;
+                    break;
                 }
-                while ((l > 1) && (precision) && (sn[l - 1] == '0'))
-                {
-                    --precision;
-                    --l;
-                }
-
-                // Should we use %e.
-                if ((decimalPos <= -4) || (decimalPos > cast(int) n))
-                {
-                    if (precision > cast(int) l)
-                    {
-                        precision = l - 1;
-                    }
-                    else if (precision)
-                    {
-                       // When using %e, there is one digit before the decimal.
-                       --precision;
-                    }
-                    goto doexpfromg;
-                }
-                // This is the insane action to get the pr to match %g sematics
-                // for %f
-                if (decimalPos > 0)
-                {
-                    precision = (decimalPos < cast(int) l) ? l - decimalPos : 0;
-                }
-                else
-                {
-                    if (precision > cast(int) l)
-                    {
-                        precision = -decimalPos + l;
-                    }
-                    else
-                    {
-                        precision = -decimalPos + precision;
-                    }
-                }
-                goto dofloatfromg;
-
-            case 'e': // Float.
-                fv = va_arg!double(va);
-                if (precision == -1)
-                {
-                    precision = 6; // Default is 6.
-                }
-                // read the double into a string
-                if (real2String(sn,
-                                l,
-                                num.ptr,
-                                decimalPos,
-                                fv,
-                                precision | 0x80000000))
-                {
-                    fl |= Modifier.negative;
-                }
-            doexpfromg:
-                tail[0] = 0;
-                leadSign(fl, lead.ptr);
-                if (decimalPos == special)
-                {
-                    s = cast(char*) sn;
-                    precision = 0;
-                    goto scopy;
-                }
-                s = num.ptr + 64;
-                // Handle leading chars.
-                *s++ = sn[0];
-
-                if (precision)
-                {
-                    *s++ = period;
-                }
-
-                // Handle after decimal.
-                if ((l - 1) > cast(uint) precision)
-                {
-                    l = precision + 1;
-                }
-                for (n = 1; n < l; n++)
+                *s++ = '0';
+                --i;
+            }
+            while (i >= 4)
+            {
+                *cast(uint*) s = 0x30303030;
+                s += 4;
+                i -= 4;
+            }
+            while (i)
+            {
+                *s++ = '0';
+                --i;
+            }
+            if (cast(int) (l + n) > precision)
+            {
+                l = precision - n;
+            }
+            i = l;
+            while (i)
+            {
+                *s++ = *sn++;
+                --i;
+            }
+            tz = precision - (n + l);
+        }
+        else
+        {
+            if (cast(uint) decimalPos >= l)
+            {
+                // Handle xxxx000*000.0.
+                n = 0;
+                for (;;)
                 {
                     *s++ = sn[n];
-                }
-                // Trailing zeros.
-                tz = precision - (l - 1);
-                precision = 0;
-                // Dump the exponent.
-                tail[1] = hex[0xe];
-                decimalPos -= 1;
-                if (decimalPos < 0)
-                {
-                    tail[2] = '-';
-                    decimalPos = -decimalPos;
-                }
-                else
-                {
-                    tail[2] = '+';
-                }
-
-                n = (decimalPos >= 100) ? 5 : 4;
-
-                tail[0] = cast(char) n;
-                for (;;)
-                {
-                    tail[n] = '0' + decimalPos % 10;
-                    if (n <= 3)
+                    ++n;
+                    if (n >= l)
                     {
                         break;
                     }
-                    --n;
-                    decimalPos /= 10;
                 }
-                goto flt_lead;
-
-            case 'f': // Float.
-                fv = va_arg!double(va);
-            doafloat:
-                if (precision == -1)
+                if (n < cast(uint) decimalPos)
                 {
-                    precision = 6; // Default is 6.
-                }
-                // Read the double into a string.
-                if (real2String(sn, l, num.ptr, decimalPos, fv, precision))
-                {
-                    fl |= Modifier.negative;
-                }
-            dofloatfromg:
-                tail[0] = 0;
-                leadSign(fl, lead.ptr);
-                if (decimalPos == special)
-                {
-                    s = cast(char*) sn;
-                    precision = 0;
-                    goto scopy;
-                }
-                s = num.ptr + 64;
-
-                // Handle the three decimal varieties.
-                if (decimalPos <= 0)
-                {
-                    // Handle 0.000*000xxxx.
-                    *s++ = '0';
-                    if (precision)
-                    {
-                        *s++ = period;
-                    }
-                    n = -decimalPos;
-                    if (cast(int) n > precision)
-                    {
-                        n = precision;
-                    }
-                    int i = n;
-                    while (i)
+                    n = decimalPos - n;
+                    while (n)
                     {
                         if (((cast(size_t) s) & 3) == 0)
                         {
                             break;
                         }
                         *s++ = '0';
-                        --i;
+                        --n;
                     }
-                    while (i >= 4)
+                    while (n >= 4)
                     {
                         *cast(uint*) s = 0x30303030;
                         s += 4;
-                        i -= 4;
+                        n -= 4;
                     }
-                    while (i)
+                    while (n)
                     {
                         *s++ = '0';
-                        --i;
+                        --n;
                     }
-                    if (cast(int) (l + n) > precision)
-                    {
-                        l = precision - n;
-                    }
-                    i = l;
-                    while (i)
-                    {
-                        *s++ = *sn++;
-                        --i;
-                    }
-                    tz = precision - (n + l);
                 }
-                else
+                if (precision)
                 {
-                    if (cast(uint) decimalPos >= l)
-                    {
-                        // Handle xxxx000*000.0.
-                        n = 0;
-                        for (;;)
-                        {
-                            *s++ = sn[n];
-                            ++n;
-                            if (n >= l)
-                            {
-                                break;
-                            }
-                        }
-                        if (n < cast(uint) decimalPos)
-                        {
-                            n = decimalPos - n;
-                            while (n)
-                            {
-                                if (((cast(size_t) s) & 3) == 0)
-                                {
-                                    break;
-                                }
-                                *s++ = '0';
-                                --n;
-                            }
-                            while (n >= 4)
-                            {
-                                *cast(uint*) s = 0x30303030;
-                                s += 4;
-                                n -= 4;
-                            }
-                            while (n)
-                            {
-                                *s++ = '0';
-                                --n;
-                            }
-                        }
-                        if (precision)
-                        {
-                            *s++ = period;
-                            tz = precision;
-                        }
-                    }
-                    else
-                    {
-                        // Handle xxxxx.xxxx000*000.
-                        n = 0;
-                        for (;;)
-                        {
-                            *s++ = sn[n];
-                            ++n;
-                            if (n >= cast(uint) decimalPos)
-                            {
-                                break;
-                            }
-                        }
-                        if (precision)
-                        {
-                            *s++ = period;
-                        }
-                        if ((l - decimalPos) > cast(uint) precision)
-                        {
-                            l = precision + decimalPos;
-                        }
-                        while (n < l)
-                        {
-                            *s++ = sn[n];
-                            ++n;
-                        }
-                        tz = precision - (l - decimalPos);
-                    }
+                    *s++ = period;
+                    tz = precision;
                 }
-                precision = 0;
-
-            flt_lead:
-                // Get the length that we copied.
-                l = cast(uint) (s - (num.ptr + 64));
-                s = num.ptr + 64;
-                goto scopy;
-
-            case 'p': // Pointer
-                static if (size_t.sizeof == 8)
-                {
-                    fl |= Modifier.intMax;
-                }
-
-                l = (4 << 4) | (4 << 8);
-                lead[0] = 2;
-                lead[1] = '0';
-                lead[2] = 'x';
-            radixnum:
-                // Get the number.
-                if (fl & Modifier.intMax)
-                {
-                    n64 = va_arg!ulong(va);
-                }
-                else
-                {
-                    n64 = va_arg!uint(va);
-                }
-
-                s = num.ptr + NUMSZ;
-                decimalPos = 0;
-                // Clear tail, and clear leading if value is zero.
-                tail[0] = 0;
-                if (n64 == 0)
-                {
-                    lead[0] = 0;
-                    if (precision == 0)
-                    {
-                        l = 0;
-                        goto scopy;
-                    }
-                }
-                // Convert to string.
+            }
+            else
+            {
+                // Handle xxxxx.xxxx000*000.
+                n = 0;
                 for (;;)
                 {
-                    *--s = hex[cast(size_t) (n64 & ((1 << (l >> 8)) - 1))];
-                    n64 >>= (l >> 8);
-                    if (!((n64) || (cast(int) ((num.ptr + NUMSZ) - s) < precision)))
+                    *s++ = sn[n];
+                    ++n;
+                    if (n >= cast(uint) decimalPos)
                     {
                         break;
                     }
                 }
-                // Get the length that we copied.
-                l = cast(uint)((num.ptr + NUMSZ) - s);
-                // Copy it.
-                goto scopy;
-
-            case 'u': // Unsigned.
-            case 'i': // Signed.
-                // Get the integer and abs it.
-                if (fl & Modifier.intMax)
+                if (precision)
                 {
-                    long i64 = va_arg!long(va);
-                    n64 = cast(ulong) i64;
-                    if ((f[0] != 'u') && (i64 < 0))
-                    {
-                        n64 = cast(ulong) -i64;
-                        fl |= Modifier.negative;
-                    }
+                    *s++ = period;
                 }
-                else
+                if ((l - decimalPos) > cast(uint) precision)
                 {
-                    int i = va_arg!int(va);
-                    n64 = cast(uint) i;
-                    if ((f[0] != 'u') && (i < 0))
-                    {
-                        n64 = cast(uint) -i;
-                        fl |= Modifier.negative;
-                    }
+                    l = precision + decimalPos;
                 }
-
-                // Convert to string.
-                s = num.ptr + NUMSZ;
-                l = 0;
-
-                for (;;)
+                while (n < l)
                 {
-                    // Do in 32-bit chunks (avoid lots of 64-bit divides even
-                    // with constant denominators).
-                    char *o = s - 8;
-                    if (n64 >= 100000000)
-                    {
-                        n = cast(uint) (n64 % 100000000);
-                        n64 /= 100000000;
-                    }
-                    else
-                    {
-                        n = cast(uint) n64;
-                        n64 = 0;
-                    }
-                    while (n)
-                    {
-                        s -= 2;
-                        *cast(ushort*) s = *cast(ushort*) &digitpair[(n % 100) * 2];
-                        n /= 100;
-                    }
-                    while (n)
-                    {
-                        *--s = cast(char) (n % 10) + '0';
-                        n /= 10;
-                    }
-                    if (n64 == 0)
-                    {
-                        if ((s[0] == '0') && (s != (num.ptr + NUMSZ)))
-                        {
-                            ++s;
-                        }
-                        break;
-                    }
-                    while (s != o)
-                    {
-                        *--s = '0';
-                    }
+                    *s++ = sn[n];
+                    ++n;
                 }
+                tz = precision - (l - decimalPos);
+            }
+        }
+        precision = 0;
 
-                tail[0] = 0;
-                leadSign(fl, lead.ptr);
+    flt_lead:
+        // Get the length that we copied.
+        l = cast(uint) (s - (num.ptr + 64));
+        s = num.ptr + 64;
+    }
+    else static if (fmt[0] == 'p') // Pointer
+    {
+        l = (4 << 4) | (4 << 8);
+        lead[0] = 2;
+        lead[1] = '0';
+        lead[2] = 'x';
 
-                // Get the length that we copied.
-                l = cast(uint) ((num.ptr + NUMSZ) - s);
-                if (l == 0)
+        // Get the number.
+        static if (size_t.sizeof == 8)
+        {
+            n64 = va_arg!ulong(va);
+        }
+        else
+        {
+            n64 = va_arg!uint(va);
+        }
+
+        s = num.ptr + num.length;
+        decimalPos = 0;
+        // Clear tail, and clear leading if value is zero.
+        tail[0] = 0;
+        if (n64 == 0)
+        {
+            lead[0] = 0;
+        }
+        // Convert to string.
+        for (;;)
+        {
+            *--s = hex[cast(size_t) (n64 & ((1 << (l >> 8)) - 1))];
+            n64 >>= l >> 8;
+            if (n64 == 0)
+            {
+                break;
+            }
+        }
+        // Get the length that we copied.
+        l = cast(uint)((num.ptr + num.length) - s);
+    }
+    else static if (fmt[0] == 'u' || fmt[0] == 'i' || fmt[0] == 'l') // Integer
+    {
+        // Get the integer and abs it.
+        if (fmt[0] == 'l')
+        {
+            long i64 = va_arg!long(va);
+            n64 = cast(ulong) i64;
+            if ((fmt[0] != 'u') && (i64 < 0))
+            {
+                n64 = cast(ulong) -i64;
+                negative = true;
+            }
+        }
+        else
+        {
+            int i = va_arg!int(va);
+            n64 = cast(uint) i;
+            if ((fmt[0] != 'u') && (i < 0))
+            {
+                n64 = cast(uint) -i;
+                negative = true;
+            }
+        }
+
+        // Convert to string.
+        s = num.ptr + num.length;
+        l = 0;
+
+        for (;;)
+        {
+            // Do in 32-bit chunks (avoid lots of 64-bit divides even
+            // with constant denominators).
+            char *o = s - 8;
+            if (n64 >= 100000000)
+            {
+                n = cast(uint) (n64 % 100000000);
+                n64 /= 100000000;
+            }
+            else
+            {
+                n = cast(uint) n64;
+                n64 = 0;
+            }
+            while (n)
+            {
+                s -= 2;
+                *cast(ushort*) s = *cast(ushort*) &digitpair[(n % 100) * 2];
+                n /= 100;
+            }
+            while (n)
+            {
+                *--s = cast(char) (n % 10) + '0';
+                n /= 10;
+            }
+            if (n64 == 0)
+            {
+                if ((s[0] == '0') && (s != (num.ptr + num.length)))
                 {
-                    *--s = '0';
-                    l = 1;
-                }
-                if (precision < 0)
-                {
-                    precision = 0;
-                }
-
-            scopy:
-                // Get fw=leading/trailing space, precision=leading zeros.
-                if (precision < cast(int) l)
-                {
-                    precision = l;
-                }
-                n = precision + lead[0] + tail[0] + tz;
-                if (fw < cast(int) n)
-                {
-                    fw = n;
-                }
-                fw -= n;
-                precision -= l;
-
-                // Copy the spaces and/or zeros.
-                if (fw + precision)
-                {
-                    int i;
-
-                    // copy leading spaces (or when doing %8.4d stuff)
-                    while (fw > 0)
-                    {
-                        i = fw;
-                        fw -= i;
-                        while (i)
-                        {
-                            if (((cast(size_t) bf) & 3) == 0)
-                            {
-                                break;
-                            }
-                            *bf++ = ' ';
-                            --i;
-                        }
-                        while (i >= 4)
-                        {
-                            *cast(uint*) bf = 0x20202020;
-                            bf += 4;
-                            i -= 4;
-                        }
-                        while (i)
-                        {
-                            *bf++ = ' ';
-                            --i;
-                        }
-                    }
-
-                    // copy leader
-                    sn = lead.ptr + 1;
-                    while (lead[0])
-                    {
-                        i = lead[0];
-                        lead[0] -= cast(char) i;
-                        while (i)
-                        {
-                            *bf++ = *sn++;
-                            --i;
-                        }
-                    }
-
-                    // Copy leading zeros.
-                    while (precision > 0)
-                    {
-                        i = precision;
-                        precision -= i;
-                        while (i)
-                        {
-                            if (((cast(size_t) bf) & 3) == 0)
-                            {
-                                break;
-                            }
-                            *bf++ = '0';
-                            --i;
-                        }
-                        while (i >= 4)
-                        {
-                            *cast(uint*) bf = 0x30303030;
-                            bf += 4;
-                            i -= 4;
-                        }
-                        while (i)
-                        {
-                            *bf++ = '0';
-                            --i;
-                        }
-                    }
-                }
-
-                // copy leader if there is still one
-                sn = lead.ptr + 1;
-                while (lead[0])
-                {
-                    int i = lead[0];
-                    lead[0] -= cast(char) i;
-                    while (i)
-                    {
-                        *bf++ = *sn++;
-                        --i;
-                    }
-                }
-
-                // Copy the string.
-                n = l;
-                while (n)
-                {
-                    int i = n;
-                    n -= i;
-
-                    while (i)
-                    {
-                        *bf++ = *s++;
-                        --i;
-                    }
-                }
-
-                // Copy trailing zeros.
-                while (tz)
-                {
-                    int i = tz;
-                    tz -= i;
-                    while (i)
-                    {
-                        if (((cast(size_t) bf) & 3) == 0)
-                        {
-                            break;
-                        }
-                        *bf++ = '0';
-                        --i;
-                    }
-                    while (i >= 4)
-                    {
-                        *cast(uint*) bf = 0x30303030;
-                        bf += 4;
-                        i -= 4;
-                    }
-                    while (i)
-                    {
-                        *bf++ = '0';
-                        --i;
-                    }
-                }
-
-                // copy tail if there is one
-                sn = tail.ptr + 1;
-                while (tail[0])
-                {
-                    int i = tail[0];
-                    tail[0] -= cast(char) i;
-                    while (i)
-                    {
-                        *bf++ = *sn++;
-                        --i;
-                    }
+                    ++s;
                 }
                 break;
-
-            default: // Unknown, just copy code.
-                s = num.ptr + NUMSZ - 1;
-                *s = f[0];
-                l = 1;
-                fw = precision = fl = 0;
-                lead[0] = 0;
-                tail[0] = 0;
-                precision = 0;
-                decimalPos = 0;
-                goto scopy;
+            }
+            while (s != o)
+            {
+                *--s = '0';
+            }
         }
-        f.popFront();
+
+        tail[0] = 0;
+        leadSign(negative, lead);
+
+        // Get the length that we copied.
+        l = cast(uint) ((num.ptr + num.length) - s);
+        if (l == 0)
+        {
+            *--s = '0';
+            l = 1;
+        }
+        if (precision < 0)
+        {
+            precision = 0;
+        }
+    }
+    else
+    {
+        static assert(false);
+    }
+
+scopy:
+    // Get fw=leading/trailing space, precision=leading zeros.
+    if (precision < cast(int) l)
+    {
+        precision = l;
+    }
+    n = precision + lead[0] + tail[0] + tz;
+    precision -= l;
+
+    // Copy the spaces and/or zeros.
+    if (precision)
+    {
+        int i;
+
+        // copy leader
+        sn = lead.ptr + 1;
+        while (lead[0])
+        {
+            i = lead[0];
+            lead[0] -= cast(char) i;
+            while (i)
+            {
+                *bf++ = *sn++;
+                --i;
+            }
+        }
+
+        // Copy leading zeros.
+        while (precision > 0)
+        {
+            i = precision;
+            precision -= i;
+            while (i)
+            {
+                if (((cast(size_t) bf) & 3) == 0)
+                {
+                    break;
+                }
+                *bf++ = '0';
+                --i;
+            }
+            while (i >= 4)
+            {
+                *cast(uint*) bf = 0x30303030;
+                bf += 4;
+                i -= 4;
+            }
+            while (i)
+            {
+                *bf++ = '0';
+                --i;
+            }
+        }
+    }
+
+    // copy leader if there is still one
+    sn = lead.ptr + 1;
+    while (lead[0])
+    {
+        int i = lead[0];
+        lead[0] -= cast(char) i;
+        while (i)
+        {
+            *bf++ = *sn++;
+            --i;
+        }
+    }
+
+    // Copy the string.
+    n = l;
+    while (n)
+    {
+        int i = n;
+        n -= i;
+
+        while (i)
+        {
+            *bf++ = *s++;
+            --i;
+        }
+    }
+
+    // Copy trailing zeros.
+    while (tz)
+    {
+        int i = tz;
+        tz -= i;
+        while (i)
+        {
+            if (((cast(size_t) bf) & 3) == 0)
+            {
+                break;
+            }
+            *bf++ = '0';
+            --i;
+        }
+        while (i >= 4)
+        {
+            *cast(uint*) bf = 0x30303030;
+            bf += 4;
+            i -= 4;
+        }
+        while (i)
+        {
+            *bf++ = '0';
+            --i;
+        }
+    }
+
+    // copy tail if there is one
+    sn = tail.ptr + 1;
+    while (tail[0])
+    {
+        int i = tail[0];
+        tail[0] -= cast(char) i;
+        while (i)
+        {
+            *bf++ = *sn++;
+            --i;
+        }
     }
 
     *bf = 0;
     return buf[0 .. tlen + cast(int) (bf - buf.ptr)];
 }
 
-char[] format(string fmt)(return char[] buf, ...)
+char[] format(string fmt, Args...)(return char[] buf, ...)
 nothrow
 {
     va_list va;
     va_start(va, buf);
-    auto result = vsprintf!fmt(buf, va);
+    auto result = vsprintf!(fmt, Args)(buf, va);
     va_end(va);
     return result;
 }
@@ -1292,75 +1074,59 @@ nothrow unittest
 {
     char[318] buffer;
 
-    // Format without arguments.
-    assert(format!""(buffer) == "");
-    assert(format!"asdfqweryxcvz"(buffer) == "asdfqweryxcvz");
-
     // Modifiers.
-    assert(format!"%g"(buffer, 8.5) == "8.5");
-    assert(format!"%5g"(buffer, 8.6) == "  8.6");
-    assert(format!"%i"(buffer, 1000) == "1000");
-    assert(format!"%*i"(buffer, 5, 1) == "    1");
-    assert(format!"%.1f"(buffer, 10.25) == "10.3");
-    assert(format!"%.*f"(buffer, 1, 10.25) == "10.3");
-    assert(format!"%i"(buffer, 1) == "1");
-    assert(format!"%7.3g"(buffer, 0.01) == "   0.01");
+    assert(format!("g", double)(buffer, 8.5) == "8.5");
+    assert(format!("g", double)(buffer, 8.6) == "8.6");
+    assert(format!("i", int)(buffer, 1000) == "1000");
+    assert(format!("i", int)(buffer, 1) == "1");
+    assert(format!("g", double)(buffer, 10.25) == "10.25");
+    assert(format!("i", int)(buffer, 1) == "1");
+    assert(format!("g", double)(buffer, 0.01) == "0.01");
 
     // Integer size.
-    assert(format!"%hi"(buffer, 10) == "10");
-    assert(format!"%li"(buffer, 10) == "10");
-    assert(format!"%li"(buffer, 10L) == "10");
+    assert(format!("i", short)(buffer, 10) == "10");
+    assert(format!("l", long)(buffer, 10L) == "10");
 
     // String printing.
-    assert(format!"%s"(buffer, "Some weired string") == "Some weired string");
-    assert(format!"%s"(buffer, cast(string) null) == "null");
-    assert(format!"%.4s"(buffer, "Some weired string") == "Some");
-    assert(format!"%c"(buffer, 'c') == "c");
+    assert(format!("s", string)(buffer, "Some weired string") == "Some weired string");
+    assert(format!("s", string)(buffer, cast(string) null) == "null");
+    assert(format!("c", char)(buffer, 'c') == "c");
 
     // Integer conversions.
-    assert(format!"%i"(buffer, 8) == "8");
-    assert(format!"%i"(buffer, 8) == "8");
-    assert(format!"%i"(buffer, -8) == "-8");
-    assert(format!"%li"(buffer, -8L) == "-8");
-    assert(format!"%u"(buffer, 8) == "8");
-    assert(format!"%i"(buffer, 100000001) == "100000001");
-    assert(format!"%.12i"(buffer, 99999999L) == "000099999999");
-    assert(format!"%i"(buffer, 100000001) == "100000001");
+    assert(format!("i", int)(buffer, 8) == "8");
+    assert(format!("i", int)(buffer, 8) == "8");
+    assert(format!("i", int)(buffer, -8) == "-8");
+    assert(format!("l", long)(buffer, -8L) == "-8");
+    assert(format!("u", uint)(buffer, 8) == "8");
+    assert(format!("i", int)(buffer, 100000001) == "100000001");
+    assert(format!("i", int)(buffer, 99999999L) == "99999999");
 
     // Floating point conversions.
-    assert(format!"%g"(buffer, 0.1234) == "0.1234");
-    assert(format!"%g"(buffer, 0.3) == "0.3");
-    assert(format!"%g"(buffer, 0.333333333333) == "0.333333");
-    assert(format!"%g"(buffer, 38234.1234) == "38234.1");
-    assert(format!"%g"(buffer, -0.3) == "-0.3");
-    assert(format!"%g"(buffer, 0.000000000000000006) == "6e-18");
-    assert(format!"%g"(buffer, 0.0) == "0");
-    assert(format!"%f"(buffer, 0.0) == "0.000000");
-    assert(format!"%f"(buffer, double.init) == "NaN");
-    assert(format!"%f"(buffer, double.infinity) == "Inf");
-    assert(format!"%.0g"(buffer, 0.0) == "0");
-    assert(format!"%f"(buffer, 0.000000000000000000000000003) == "0.000000");
-    assert(format!"%g"(buffer, 0.23432e304) == "2.3432e+303");
-    assert(format!"%f"(buffer, -0.23432e8) == "-23432000.000000");
-    assert(format!"%e"(buffer, double.init) == "NaN");
-    assert(format!"%f"(buffer, 1e-307) == "0.000000");
-    assert(format!"%f"(buffer, 1e+8) == "100000000.000000");
-    assert(format!"%05g"(buffer, 111234.1) == "111234");
-    assert(format!"%.2g"(buffer, double.init) == "Na");
-    assert(format!"%.1e"(buffer, 0.999) == "1.0e+00");
-    assert(format!"%.0f"(buffer, 0.999) == "1");
-    assert(format!"%.9f"(buffer, 1e-307) == "0.000000000");
-    assert(format!"%g"(buffer, 0x1p-16382L)); // "6.95336e-310"
-    assert(format!"%f"(buffer, 1e+3) == "1000.000000");
-    assert(format!"%g"(buffer, 38234.1234) == "38234.1");
+    assert(format!("g", double)(buffer, 0.1234) == "0.1234");
+    assert(format!("g", double)(buffer, 0.3) == "0.3");
+    assert(format!("g", double)(buffer, 0.333333333333) == "0.333333");
+    assert(format!("g", double)(buffer, 38234.1234) == "38234.1");
+    assert(format!("g", double)(buffer, -0.3) == "-0.3");
+    assert(format!("g", double)(buffer, 0.000000000000000006) == "6e-18");
+    assert(format!("g", double)(buffer, 0.0) == "0");
+    assert(format!("g", double)(buffer, double.init) == "NaN");
+    assert(format!("g", double)(buffer, -double.init) == "-NaN");
+    assert(format!("g", double)(buffer, double.infinity) == "Inf");
+    assert(format!("g", double)(buffer, -double.infinity) == "-Inf");
+    assert(format!("g", double)(buffer, 0.000000000000000000000000003) == "3e-27");
+    assert(format!("g", double)(buffer, 0.23432e304) == "2.3432e+303");
+    assert(format!("g", double)(buffer, -0.23432e8) == "-2.3432e+07");
+    assert(format!("g", double)(buffer, 1e-307) == "1e-307");
+    assert(format!("g", double)(buffer, 1e+8) == "1e+08");
+    assert(format!("g", double)(buffer, 111234.1) == "111234");
+    assert(format!("g", double)(buffer, 0.999) == "0.999");
+    assert(format!("g", double)(buffer, 0x1p-16382L)); // "6.95336e-310"
+    assert(format!("g", double)(buffer, 1e+3) == "1000");
+    assert(format!("g", double)(buffer, 38234.1234) == "38234.1");
 
-    // Pointer conversions.
-    assert(format!"%p"(buffer, cast(void*) 1) == "0x1");
-    assert(format!"%p"(buffer, cast(void*) 20) == "0x14");
-
-    // Unknown specifier.
-    assert(format!"%k"(buffer) == "k");
-    assert(format!"%%k"(buffer) == "%k");
+    // Pointer convesions.
+    assert(format!("p", void*)(buffer, cast(void*) 1) == "0x1");
+    assert(format!("p", void*)(buffer, cast(void*) 20) == "0x14");
 }
 
 private struct FormatSpec
