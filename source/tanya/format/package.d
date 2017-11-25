@@ -21,7 +21,6 @@ import tanya.meta.metafunction;
 import tanya.range.array;
 
 private enum special = 0x7000;
-private enum char comma = ',';
 private enum char period = '.';
 
 private static const ulong[20] powersOf10 = [
@@ -456,7 +455,6 @@ private enum Modifier : uint
     leading0x = 8,
     leadingZero = 16,
     intMax = 32,
-    tripletComma = 64,
     negative = 128,
     halfWidth = 512,
 }
@@ -588,11 +586,6 @@ pure nothrow @nogc
                     fl |= Modifier.leading0x;
                     f.popFront();
                     continue;
-                // If we have thousand commas.
-                case '\'':
-                    fl |= Modifier.tripletComma;
-                    f.popFront();
-                    continue;
                 // If we have leading zero.
                 case '0':
                     fl |= Modifier.leadingZero;
@@ -680,7 +673,7 @@ pure nothrow @nogc
         char[8] tail;
         char *s;
         const(char)* h;
-        uint l, n, cs;
+        uint l, n;
         ulong n64;
 
         double fv;
@@ -745,7 +738,6 @@ pure nothrow @nogc
                 tail[0] = 0;
                 precision = 0;
                 decimalPos = 0;
-                cs = 0;
                 // Copy the string in.
                 goto scopy;
 
@@ -758,7 +750,6 @@ pure nothrow @nogc
                 tail[0] = 0;
                 precision = 0;
                 decimalPos = 0;
-                cs = 0;
                 goto scopy;
 
             case 'n': // Weird write-bytes specifier.
@@ -856,7 +847,6 @@ pure nothrow @nogc
                 decimalPos = cast(int) (s - sn);
                 l = cast(int) (s - (num.ptr + 64));
                 s = num.ptr + 64;
-                cs = 1 + (3 << 24);
                 goto scopy;
 
             case 'G': // Float.
@@ -951,7 +941,6 @@ pure nothrow @nogc
                 if (decimalPos == special)
                 {
                     s = cast(char*) sn;
-                    cs = 0;
                     precision = 0;
                     goto scopy;
                 }
@@ -1002,7 +991,6 @@ pure nothrow @nogc
                     --n;
                     decimalPos /= 10;
                 }
-                cs = 1 + (3 << 24); // How many tens.
                 goto flt_lead;
 
             case 'f': // Float.
@@ -1023,7 +1011,6 @@ pure nothrow @nogc
                 if (decimalPos == special)
                 {
                     s = cast(char*) sn;
-                    cs = 0;
                     precision = 0;
                     goto scopy;
                 }
@@ -1075,70 +1062,46 @@ pure nothrow @nogc
                         --i;
                     }
                     tz = precision - (n + l);
-                    // How many tens did we write (for commas below).
-                    cs = 1 + (3 << 24);
                 }
                 else
                 {
-                    cs = (fl & Modifier.tripletComma) ? ((600 - cast(uint) decimalPos) % 3) : 0;
                     if (cast(uint) decimalPos >= l)
                     {
                         // Handle xxxx000*000.0.
                         n = 0;
                         for (;;)
                         {
-                            if ((fl & Modifier.tripletComma) && (++cs == 4))
+                            *s++ = sn[n];
+                            ++n;
+                            if (n >= l)
                             {
-                                cs = 0;
-                                *s++ = comma;
-                            }
-                            else
-                            {
-                                *s++ = sn[n];
-                                ++n;
-                                if (n >= l)
-                                {
-                                    break;
-                                }
+                                break;
                             }
                         }
                         if (n < cast(uint) decimalPos)
                         {
                             n = decimalPos - n;
-                            if ((fl & Modifier.tripletComma) == 0)
+                            while (n)
                             {
-                                while (n)
+                                if (((cast(size_t) s) & 3) == 0)
                                 {
-                                    if (((cast(size_t) s) & 3) == 0)
-                                    {
-                                        break;
-                                    }
-                                    *s++ = '0';
-                                    --n;
+                                    break;
                                 }
-                                while (n >= 4)
-                                {
-                                    *cast(uint*) s = 0x30303030;
-                                    s += 4;
-                                    n -= 4;
-                                }
+                                *s++ = '0';
+                                --n;
+                            }
+                            while (n >= 4)
+                            {
+                                *cast(uint*) s = 0x30303030;
+                                s += 4;
+                                n -= 4;
                             }
                             while (n)
                             {
-                                if ((fl & Modifier.tripletComma) && (++cs == 4))
-                                {
-                                    cs = 0;
-                                    *s++ = comma;
-                                }
-                                else
-                                {
-                                    *s++ = '0';
-                                    --n;
-                                }
+                                *s++ = '0';
+                                --n;
                             }
                         }
-                        // cs is how many tens.
-                        cs = cast(int) (s - (num.ptr + 64)) + (3 << 24);
                         if (precision)
                         {
                             *s++ = period;
@@ -1151,23 +1114,13 @@ pure nothrow @nogc
                         n = 0;
                         for (;;)
                         {
-                            if ((fl & Modifier.tripletComma) && (++cs == 4))
+                            *s++ = sn[n];
+                            ++n;
+                            if (n >= cast(uint) decimalPos)
                             {
-                                cs = 0;
-                                *s++ = comma;
-                            }
-                            else
-                            {
-                                *s++ = sn[n];
-                                ++n;
-                                if (n >= cast(uint) decimalPos)
-                                {
-                                    break;
-                                }
+                                break;
                             }
                         }
-                        // cs is how many tens.
-                        cs = cast(int) (s - (num.ptr + 64)) + (3 << 24);
                         if (precision)
                         {
                             *s++ = period;
@@ -1259,7 +1212,6 @@ pure nothrow @nogc
                     if (precision == 0)
                     {
                         l = 0;
-                        cs = (((l >> 4) & 15)) << 24;
                         goto scopy;
                     }
                 }
@@ -1272,18 +1224,7 @@ pure nothrow @nogc
                     {
                         break;
                     }
-                    if (fl & Modifier.tripletComma)
-                    {
-                        ++l;
-                        if ((l & 15) == ((l >> 4) & 15))
-                        {
-                            l &= ~15;
-                            *--s = comma;
-                        }
-                    }
                 }
-                // Get the tens and the comma position.
-                cs = cast(uint) ((num.ptr + NUMSZ) - s) + ((((l >> 4) & 15)) << 24);
                 // Get the length that we copied.
                 l = cast(uint)((num.ptr + NUMSZ) - s);
                 // Copy it.
@@ -1333,28 +1274,16 @@ pure nothrow @nogc
                         n = cast(uint) n64;
                         n64 = 0;
                     }
-                    if ((fl & Modifier.tripletComma) == 0)
+                    while (n)
                     {
-                        while (n)
-                        {
-                            s -= 2;
-                            *cast(ushort*) s = *cast(ushort*) &digitpair[(n % 100) * 2];
-                            n /= 100;
-                        }
+                        s -= 2;
+                        *cast(ushort*) s = *cast(ushort*) &digitpair[(n % 100) * 2];
+                        n /= 100;
                     }
                     while (n)
                     {
-                        if ((fl & Modifier.tripletComma) && (l++ == 3))
-                        {
-                            l = 0;
-                            *--s = comma;
-                            --o;
-                        }
-                        else
-                        {
-                            *--s = cast(char) (n % 10) + '0';
-                            n /= 10;
-                        }
+                        *--s = cast(char) (n % 10) + '0';
+                        n /= 10;
                     }
                     if (n64 == 0)
                     {
@@ -1366,16 +1295,7 @@ pure nothrow @nogc
                     }
                     while (s != o)
                     {
-                        if ((fl & Modifier.tripletComma) && (l++ == 3))
-                        {
-                            l = 0;
-                            *--s = comma;
-                            --o;
-                        }
-                        else
-                        {
-                            *--s = '0';
-                        }
+                        *--s = '0';
                     }
                 }
 
@@ -1389,7 +1309,6 @@ pure nothrow @nogc
                     *--s = '0';
                     l = 1;
                 }
-                cs = l + (3 << 24);
                 if (precision < 0)
                 {
                     precision = 0;
@@ -1417,10 +1336,6 @@ pure nothrow @nogc
                     {
                         precision = (fw > precision) ? fw : precision;
                         fw = 0;
-                    }
-                    else
-                    {
-                        fl &= ~Modifier.tripletComma; // if no leading zeros, then no commas
                     }
                 }
 
@@ -1473,49 +1388,28 @@ pure nothrow @nogc
                     }
 
                     // Copy leading zeros.
-                    uint c = cs >> 24;
-                    cs &= 0xffffff;
-                    if (fl & Modifier.tripletComma)
-                    {
-                        cs = cast(uint) (c - ((precision + cs) % (c + 1)));
-                    }
-                    else
-                    {
-                        cs = 0;
-                    }
                     while (precision > 0)
                     {
                         i = precision;
                         precision -= i;
-                        if ((fl & Modifier.tripletComma) == 0)
+                        while (i)
                         {
-                            while (i)
+                            if (((cast(size_t) bf) & 3) == 0)
                             {
-                                if (((cast(size_t) bf) & 3) == 0)
-                                {
-                                    break;
-                                }
-                                *bf++ = '0';
-                                --i;
+                                break;
                             }
-                            while (i >= 4)
-                            {
-                                *cast(uint*) bf = 0x30303030;
-                                bf += 4;
-                                i -= 4;
-                            }
+                            *bf++ = '0';
+                            --i;
+                        }
+                        while (i >= 4)
+                        {
+                            *cast(uint*) bf = 0x30303030;
+                            bf += 4;
+                            i -= 4;
                         }
                         while (i)
                         {
-                            if ((fl & Modifier.tripletComma) && (cs++ == c))
-                            {
-                                cs = 0;
-                                *bf++ = comma;
-                            }
-                            else
-                            {
-                                *bf++ = '0';
-                            }
+                            *bf++ = '0';
                             --i;
                         }
                     }
@@ -1627,7 +1521,6 @@ pure nothrow @nogc
                 tail[0] = 0;
                 precision = 0;
                 decimalPos = 0;
-                cs = 0;
                 goto scopy;
         }
         f.popFront();
@@ -1647,7 +1540,7 @@ nothrow
     return result;
 }
 
-private nothrow unittest
+nothrow unittest
 {
     char[318] buffer;
 
@@ -1663,12 +1556,12 @@ private nothrow unittest
     assert(format!"%#x"(buffer, 20) == "0x14");
     assert(format!"%#o"(buffer, 8) == "010");
     assert(format!"%#b"(buffer, 3) == "0b11");
-    assert(format!"%'d"(buffer, 1000) == "1,000");
+    assert(format!"%d"(buffer, 1000) == "1000");
     assert(format!"%*d"(buffer, 5, 1) == "    1");
     assert(format!"%.1f"(buffer, 10.25) == "10.3");
     assert(format!"%.*f"(buffer, 1, 10.25) == "10.3");
     assert(format!"%-9i"(buffer, 1) == "1        ");
-    assert(format!"%'07.3g"(buffer, 0.01) == ",000.01");
+    assert(format!"%07.3g"(buffer, 0.01) == "0000.01");
 
     // Integer size.
     assert(format!"%hd"(buffer, 10) == "10");
@@ -1694,10 +1587,10 @@ private nothrow unittest
     assert(format!"%b"(buffer, 3) == "11");
     assert(format!"%B"(buffer, 3) == "11");
     assert(format!"%.0x"(buffer, 0) == "");
-    assert(format!"%'x"(buffer, 11111111) == "a9,8ac7");
+    assert(format!"%x"(buffer, 11111111) == "a98ac7");
     assert(format!"%d"(buffer, 100000001) == "100000001");
     assert(format!"%.12d"(buffer, 99999999L) == "000099999999");
-    assert(format!"%'d"(buffer, 100000001) == "100,000,001");
+    assert(format!"%d"(buffer, 100000001) == "100000001");
 
     // Count of bytes written so far.
     {
@@ -1734,14 +1627,14 @@ private nothrow unittest
     assert(format!"%e"(buffer, double.init) == "NaN");
     assert(format!"%f"(buffer, 1e-307) == "0.000000");
     assert(format!"%f"(buffer, 1e+8) == "100000000.000000");
-    assert(format!"%'05g"(buffer, 111234.1) == "111,234");
+    assert(format!"%05g"(buffer, 111234.1) == "111234");
     assert(format!"%.2g"(buffer, double.init) == "Na");
     assert(format!"%.1e"(buffer, 0.999) == "1.0e+00");
     assert(format!"%.0f"(buffer, 0.999) == "1");
     assert(format!"%.9f"(buffer, 1e-307) == "0.000000000");
     assert(format!"%g"(buffer, 0x1p-16382L)); // "6.95336e-310"
-    assert(format!"%'f"(buffer, 1e+3) == "1,000.000000");
-    assert(format!"%'g"(buffer, 38234.1234) == "38,234.1");
+    assert(format!"%f"(buffer, 1e+3) == "1000.000000");
+    assert(format!"%g"(buffer, 38234.1234) == "38234.1");
 
     // Pointer conversions.
     {
