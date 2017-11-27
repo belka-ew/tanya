@@ -14,10 +14,12 @@
  */
 module tanya.format;
 
-import core.stdc.stdarg;
+import tanya.container.string;
+import tanya.encoding.ascii;
 public import tanya.format.conv;
 import tanya.memory.op;
 import tanya.meta.metafunction;
+import tanya.meta.trait;
 import tanya.range.array;
 
 private enum special = 0x7000;
@@ -106,8 +108,6 @@ private static const double[13] negativeTopError = [
 
 private enum ulong tenTo19th = 1000000000000000000UL;
 
-package static const string hex = "0123456789abcdefxp";
-
 private void ddmultlo(A, B, C, D, E, F)(ref A oh,
                                         ref B ol,
                                         ref C xh,
@@ -135,7 +135,7 @@ private void ddrenorm(T, U)(ref T oh, ref U ol)
 private void raise2Power10(double* ohi,
                            double* olo,
                            double d,
-                           int power) pure nothrow @nogc
+                           int power) @nogc nothrow pure
 {
     double ph, pl;
     if ((power >= 0) && (power <= 22))
@@ -232,7 +232,7 @@ private int real2String(ref const(char)* start,
                         char* out_,
                         out int decimalPos,
                         double value,
-                        uint fracDigits) pure nothrow @nogc
+                        uint fracDigits) @nogc nothrow pure
 {
     long bits = 0;
     int e, tens;
@@ -426,7 +426,7 @@ private int real2String(ref const(char)* start,
 }
 
 private void leadSign(bool negative, ref char[8] sign)
-pure nothrow @nogc
+@nogc nothrow pure
 {
     sign[0] = 0;
     if (negative)
@@ -448,7 +448,7 @@ private void copyFp(T, U)(ref T dest, ref U src)
 private void ddmulthi(ref double oh,
                       ref double ol,
                       ref double xh,
-                      const ref double yh) pure nothrow @nogc
+                      const ref double yh) @nogc nothrow pure
 {
     double ahi, bhi;
     long bt;
@@ -464,11 +464,10 @@ private void ddmulthi(ref double oh,
     ol = ((ahi * bhi - oh) + ahi * blo + alo * bhi) + alo * blo;
 }
 
-private char[] vsprintf(string fmt, Args...)(return char[] buf, va_list va)
-pure nothrow @nogc
+package(tanya) String format(string fmt, Args...)(char[] buf, Args args)
 {
+    String result;
     char* bf = buf.ptr;
-    int tlen;
 
     // Ok, we have a percent, read the modifiers first.
     int precision = -1;
@@ -488,65 +487,24 @@ pure nothrow @nogc
     int decimalPos;
     const(char)* sn;
 
-    static if (fmt[0] == 's') // String
+    static if (isSomeString!(Args[0])) // String
     {
-        // Get the string.
-        s = va_arg!(char[])(va).ptr;
-        if (s is null)
+        if (args[0] is null)
         {
-            s = cast(char*) "null";
+            result.insertBack("null");
         }
-        // Get the length.
-        sn = s;
-        for (;;)
+        else
         {
-            if (((cast(size_t) sn) & 3) == 0)
-            {
-                break;
-            }
-        lchk:
-            if (sn[0] == 0)
-            {
-                goto ld;
-            }
-            ++sn;
+            result.insertBack(args[0]);
         }
-        n = 0xffffffff;
-        while (n)
-        {
-            uint v = *cast(uint*) sn;
-            if ((v - 0x01010101) & (~v) & 0x80808080UL)
-            {
-                goto lchk;
-            }
-            sn += 4;
-            --n;
-        }
-        goto lchk;
-
-    ld:
-        l = cast(uint) (sn - s);
-
-        lead[0] = 0;
-        tail[0] = 0;
-        precision = 0;
-        decimalPos = 0;
-        // Copy the string in.
     }
-    else static if (fmt[0] == 'c') // Char
+    else static if (isSomeChar!(Args[0])) // Char
     {
-        // Get the character.
-        s = num.ptr + num.length - 1;
-        *s = cast(char) va_arg!int(va);
-        l = 1;
-        lead[0] = 0;
-        tail[0] = 0;
-        precision = 0;
-        decimalPos = 0;
+        result.insertBack(args[0]);
     }
-    else static if (fmt[0] == 'g') // Float
+    else static if (isFloatingPoint!(Args[0])) // Float
     {
-        fv = va_arg!double(va);
+        fv = args[0];
         if (precision == -1)
         {
             precision = 6;
@@ -642,7 +600,7 @@ pure nothrow @nogc
         tz = precision - (l - 1);
         precision = 0;
         // Dump the exponent.
-        tail[1] = hex[0xe];
+        tail[1] = 'e';
         decimalPos -= 1;
         if (decimalPos < 0)
         {
@@ -808,65 +766,49 @@ pure nothrow @nogc
         l = cast(uint) (s - (num.ptr + 64));
         s = num.ptr + 64;
     }
-    else static if (fmt[0] == 'p') // Pointer
+    else static if (isPointer!(Args[0])) // Pointer
     {
-        l = (4 << 4) | (4 << 8);
-        lead[0] = 2;
-        lead[1] = '0';
-        lead[2] = 'x';
-
         // Get the number.
-        static if (size_t.sizeof == 8)
-        {
-            n64 = va_arg!ulong(va);
-        }
-        else
-        {
-            n64 = va_arg!uint(va);
-        }
+        n64 = cast(size_t) args[0];
+        size_t position = num.length;
 
-        s = num.ptr + num.length;
-        decimalPos = 0;
-        // Clear tail, and clear leading if value is zero.
-        tail[0] = 0;
-        if (n64 == 0)
+        do // Write at least "0" if the pointer is null.
         {
-            lead[0] = 0;
+            num[--position] = lowerHexDigits[cast(size_t) (n64 & 15)];
+            n64 >>= 4;
         }
-        // Convert to string.
-        for (;;)
-        {
-            *--s = hex[cast(size_t) (n64 & ((1 << (l >> 8)) - 1))];
-            n64 >>= l >> 8;
-            if (n64 == 0)
-            {
-                break;
-            }
-        }
-        // Get the length that we copied.
-        l = cast(uint)((num.ptr + num.length) - s);
+        while (n64 != 0);
+
+        result.insertBack("0x");
+        result.insertBack(num[position .. $]);
     }
-    else static if (fmt[0] == 'u' || fmt[0] == 'i' || fmt[0] == 'l') // Integer
+    else static if (isIntegral!(Args[0])) // Integer
     {
         // Get the integer and abs it.
-        if (fmt[0] == 'l')
+        static if (Args[0].sizeof == 8)
         {
-            long i64 = va_arg!long(va);
-            n64 = cast(ulong) i64;
-            if ((fmt[0] != 'u') && (i64 < 0))
+            long k64 = args[0];
+            n64 = cast(ulong) k64;
+            static if (isSigned!(Args[0]))
             {
-                n64 = cast(ulong) -i64;
-                negative = true;
+                if (k64 < 0)
+                {
+                    n64 = cast(ulong) -k64;
+                    negative = true;
+                }
             }
         }
         else
         {
-            int i = va_arg!int(va);
-            n64 = cast(uint) i;
-            if ((fmt[0] != 'u') && (i < 0))
+            int k = args[0];
+            n64 = cast(uint) k;
+            static if (isSigned!(Args[0]))
             {
-                n64 = cast(uint) -i;
-                negative = true;
+                if (k < 0)
+                {
+                    n64 = cast(uint) -k;
+                    negative = true;
+                }
             }
         }
 
@@ -934,6 +876,10 @@ pure nothrow @nogc
         static assert(false);
     }
 
+    if (result.length > 0)
+    {
+        return result;
+    }
 scopy:
     // Get fw=leading/trailing space, precision=leading zeros.
     if (precision < cast(int) l)
@@ -1057,76 +1003,68 @@ scopy:
     }
 
     *bf = 0;
-    return buf[0 .. tlen + cast(int) (bf - buf.ptr)];
-}
-
-char[] format(string fmt, Args...)(return char[] buf, ...)
-nothrow
-{
-    va_list va;
-    va_start(va, buf);
-    auto result = vsprintf!(fmt, Args)(buf, va);
-    va_end(va);
+    result = String(buf[0 .. cast(int) (bf - buf.ptr)]);
     return result;
 }
 
-nothrow unittest
+@nogc pure unittest
 {
     char[318] buffer;
 
     // Modifiers.
-    assert(format!("g", double)(buffer, 8.5) == "8.5");
-    assert(format!("g", double)(buffer, 8.6) == "8.6");
-    assert(format!("i", int)(buffer, 1000) == "1000");
-    assert(format!("i", int)(buffer, 1) == "1");
-    assert(format!("g", double)(buffer, 10.25) == "10.25");
-    assert(format!("i", int)(buffer, 1) == "1");
-    assert(format!("g", double)(buffer, 0.01) == "0.01");
+    assert(format!("{}")(buffer, 8.5) == "8.5");
+    assert(format!("{}")(buffer, 8.6) == "8.6");
+    assert(format!("{}")(buffer, 1000) == "1000");
+    assert(format!("{}")(buffer, 1) == "1");
+    assert(format!("{}")(buffer, 10.25) == "10.25");
+    assert(format!("{}")(buffer, 1) == "1");
+    assert(format!("{}")(buffer, 0.01) == "0.01");
 
     // Integer size.
-    assert(format!("i", short)(buffer, 10) == "10");
-    assert(format!("l", long)(buffer, 10L) == "10");
+    assert(format!("{}")(buffer, 10) == "10");
+    assert(format!("{}")(buffer, 10L) == "10");
 
     // String printing.
-    assert(format!("s", string)(buffer, "Some weired string") == "Some weired string");
-    assert(format!("s", string)(buffer, cast(string) null) == "null");
-    assert(format!("c", char)(buffer, 'c') == "c");
+    assert(format!("{}")(buffer, "Some weired string") == "Some weired string");
+    assert(format!("{}")(buffer, cast(string) null) == "null");
+    assert(format!("{}")(buffer, 'c') == "c");
 
     // Integer conversions.
-    assert(format!("i", int)(buffer, 8) == "8");
-    assert(format!("i", int)(buffer, 8) == "8");
-    assert(format!("i", int)(buffer, -8) == "-8");
-    assert(format!("l", long)(buffer, -8L) == "-8");
-    assert(format!("u", uint)(buffer, 8) == "8");
-    assert(format!("i", int)(buffer, 100000001) == "100000001");
-    assert(format!("i", int)(buffer, 99999999L) == "99999999");
+    assert(format!("{}")(buffer, 8) == "8");
+    assert(format!("{}")(buffer, 8) == "8");
+    assert(format!("{}")(buffer, -8) == "-8");
+    assert(format!("{}")(buffer, -8L) == "-8");
+    assert(format!("{}")(buffer, 8) == "8");
+    assert(format!("{}")(buffer, 100000001) == "100000001");
+    assert(format!("{}")(buffer, 99999999L) == "99999999");
 
     // Floating point conversions.
-    assert(format!("g", double)(buffer, 0.1234) == "0.1234");
-    assert(format!("g", double)(buffer, 0.3) == "0.3");
-    assert(format!("g", double)(buffer, 0.333333333333) == "0.333333");
-    assert(format!("g", double)(buffer, 38234.1234) == "38234.1");
-    assert(format!("g", double)(buffer, -0.3) == "-0.3");
-    assert(format!("g", double)(buffer, 0.000000000000000006) == "6e-18");
-    assert(format!("g", double)(buffer, 0.0) == "0");
-    assert(format!("g", double)(buffer, double.init) == "NaN");
-    assert(format!("g", double)(buffer, -double.init) == "-NaN");
-    assert(format!("g", double)(buffer, double.infinity) == "Inf");
-    assert(format!("g", double)(buffer, -double.infinity) == "-Inf");
-    assert(format!("g", double)(buffer, 0.000000000000000000000000003) == "3e-27");
-    assert(format!("g", double)(buffer, 0.23432e304) == "2.3432e+303");
-    assert(format!("g", double)(buffer, -0.23432e8) == "-2.3432e+07");
-    assert(format!("g", double)(buffer, 1e-307) == "1e-307");
-    assert(format!("g", double)(buffer, 1e+8) == "1e+08");
-    assert(format!("g", double)(buffer, 111234.1) == "111234");
-    assert(format!("g", double)(buffer, 0.999) == "0.999");
-    assert(format!("g", double)(buffer, 0x1p-16382L)); // "6.95336e-310"
-    assert(format!("g", double)(buffer, 1e+3) == "1000");
-    assert(format!("g", double)(buffer, 38234.1234) == "38234.1");
+    assert(format!("{}")(buffer, 0.1234) == "0.1234");
+    assert(format!("{}")(buffer, 0.3) == "0.3");
+    assert(format!("{}")(buffer, 0.333333333333) == "0.333333");
+    assert(format!("{}")(buffer, 38234.1234) == "38234.1");
+    assert(format!("{}")(buffer, -0.3) == "-0.3");
+    assert(format!("{}")(buffer, 0.000000000000000006) == "6e-18");
+    assert(format!("{}")(buffer, 0.0) == "0");
+    assert(format!("{}")(buffer, double.init) == "NaN");
+    assert(format!("{}")(buffer, -double.init) == "-NaN");
+    assert(format!("{}")(buffer, double.infinity) == "Inf");
+    assert(format!("{}")(buffer, -double.infinity) == "-Inf");
+    assert(format!("{}")(buffer, 0.000000000000000000000000003) == "3e-27");
+    assert(format!("{}")(buffer, 0.23432e304) == "2.3432e+303");
+    assert(format!("{}")(buffer, -0.23432e8) == "-2.3432e+07");
+    assert(format!("{}")(buffer, 1e-307) == "1e-307");
+    assert(format!("{}")(buffer, 1e+8) == "1e+08");
+    assert(format!("{}")(buffer, 111234.1) == "111234");
+    assert(format!("{}")(buffer, 0.999) == "0.999");
+    assert(format!("{}")(buffer, 0x1p-16382L) == "0");
+    assert(format!("{}")(buffer, 1e+3) == "1000");
+    assert(format!("{}")(buffer, 38234.1234) == "38234.1");
 
     // Pointer convesions.
-    assert(format!("p", void*)(buffer, cast(void*) 1) == "0x1");
-    assert(format!("p", void*)(buffer, cast(void*) 20) == "0x14");
+    assert(format!("{}")(buffer, cast(void*) 1) == "0x1");
+    assert(format!("{}")(buffer, cast(void*) 20) == "0x14");
+    assert(format!("{}")(buffer, cast(void*) null) == "0x0");
 }
 
 private struct FormatSpec
