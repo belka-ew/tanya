@@ -432,12 +432,8 @@ NoRound:
     // Kill long trailing runs of zeros.
     if (bits)
     {
-        for (;;)
+        while (bits > 0xffffffff)
         {
-            if (bits <= 0xffffffff)
-            {
-                break;
-            }
             if (bits % 1000)
             {
                 goto Zeroed;
@@ -497,17 +493,6 @@ Zeroed:
     return result[0 .. length];
 }
 
-private void leadSign(bool negative, ref char[8] sign)
-@nogc nothrow pure @safe
-{
-    sign[0] = 0;
-    if (negative)
-    {
-        sign[0] = 1;
-        sign[1] = '-';
-    }
-}
-
 /*
  * Copies double into long and back bitwise.
  */
@@ -517,26 +502,7 @@ if (T.sizeof == U.sizeof)
     copy((&src)[0 .. 1], (&dest)[0 .. 1]);
 }
 
-private void ddmulthi(ref double oh,
-                      ref double ol,
-                      ref double xh,
-                      const ref double yh) @nogc nothrow pure
-{
-    double ahi, bhi;
-    long bt;
-    oh = xh * yh;
-    copyFp(xh, bt);
-    bt &= ((~cast(ulong) 0) << 27);
-    copyFp(bt, ahi);
-    double alo = xh - ahi;
-    copyFp(yh, bt);
-    bt &= ((~cast(ulong) 0) << 27);
-    copyFp(bt, bhi);
-    double blo = yh - bhi;
-    ol = ((ahi * bhi - oh) + ahi * blo + alo * bhi) + alo * blo;
-}
-
-package(tanya) String format(string fmt, Args...)(char[] buf, Args args)
+package(tanya) String format(string fmt, Args...)(auto ref Args args)
 {
     String result;
 
@@ -557,195 +523,181 @@ package(tanya) String format(string fmt, Args...)(char[] buf, Args args)
     }
     else static if (isFloatingPoint!(Args[0])) // Float
     {
-        char[512] num; // Big enough for e308 (with commas) or e-307.
-        char[8] lead;
+        char[512] buffer; // Big enough for e+308 or e-307.
         char[8] tail = 0;
         char *s;
-        int precision = 6;
-        int tz;
+        uint precision = 6;
         bool negative;
-        char* bf = buf.ptr;
         int decimalPos;
 
         // Read the double into a string.
-        auto fv = real2String(args[0], num, decimalPos, negative);
-        const(char)* sn = fv.ptr;
-        auto l = cast(uint) fv.length;
+        auto realString = real2String(args[0], buffer, decimalPos, negative);
+        auto length = cast(uint) realString.length;
 
         // Clamp the precision and delete extra zeros after clamp.
         uint n = precision;
-        if (l > cast(uint) precision)
+        if (length > precision)
         {
-            l = precision;
+            length = precision;
         }
-        while ((l > 1) && (precision) && (sn[l - 1] == '0'))
+        while ((length > 1)
+            && (precision != 0)
+            && (realString[length - 1] == '0'))
         {
             --precision;
-            --l;
+            --length;
         }
 
-        // Should we use %e.
+        if (negative)
+        {
+            result.insertBack('-');
+        }
+        if (decimalPos == special)
+        {
+            result.insertBack(realString);
+            goto ParamEnd;
+        }
+
+        // Should we use sceintific notation?
         if ((decimalPos <= -4) || (decimalPos > cast(int) n))
         {
-            if (precision > cast(int) l)
+            if (precision > length)
             {
-                precision = l - 1;
+                precision = length - 1;
             }
-            else if (precision)
+            else if (precision != 0)
             {
                // When using %e, there is one digit before the decimal.
                --precision;
             }
-            goto doexpfromg;
-        }
-        // This is the insane action to get the pr to match %g sematics
-        // for %f
-        if (decimalPos > 0)
-        {
-            precision = (decimalPos < cast(int) l) ? l - decimalPos : 0;
-        }
-        else
-        {
-            if (precision > cast(int) l)
-            {
-                precision = -decimalPos + l;
-            }
-            else
-            {
-                precision = -decimalPos + precision;
-            }
-        }
-        goto dofloatfromg;
 
-    doexpfromg:
-        leadSign(negative, lead);
-        if (decimalPos == special)
-        {
-            s = cast(char*) sn;
-            precision = 0;
-            goto scopy;
-        }
-        s = num.ptr + 64;
-        // Handle leading chars.
-        *s++ = sn[0];
+            s = buffer.ptr + 64;
+            // Handle leading chars.
+            *s++ = realString[0];
 
-        if (precision)
-        {
-            *s++ = period;
-        }
-
-        // Handle after decimal.
-        if ((l - 1) > cast(uint) precision)
-        {
-            l = precision + 1;
-        }
-        for (n = 1; n < l; n++)
-        {
-            *s++ = sn[n];
-        }
-        // Trailing zeros.
-        tz = precision - (l - 1);
-        precision = 0;
-        // Dump the exponent.
-        tail[1] = 'e';
-        decimalPos -= 1;
-        if (decimalPos < 0)
-        {
-            tail[2] = '-';
-            decimalPos = -decimalPos;
-        }
-        else
-        {
-            tail[2] = '+';
-        }
-
-        n = (decimalPos >= 100) ? 5 : 4;
-
-        tail[0] = cast(char) n;
-        for (;;)
-        {
-            tail[n] = '0' + decimalPos % 10;
-            if (n <= 3)
-            {
-                break;
-            }
-            --n;
-            decimalPos /= 10;
-        }
-        goto flt_lead;
-
-    dofloatfromg:
-        leadSign(negative, lead);
-        if (decimalPos == special)
-        {
-            s = cast(char*) sn;
-            precision = 0;
-            goto scopy;
-        }
-        s = num.ptr + 64;
-
-        // Handle the three decimal varieties.
-        if (decimalPos <= 0)
-        {
-            // Handle 0.000*000xxxx.
-            *s++ = '0';
-            if (precision)
+            if (precision != 0)
             {
                 *s++ = period;
             }
-            n = -decimalPos;
-            if (cast(int) n > precision)
+
+            // Handle after decimal.
+            if ((length - 1) > precision)
             {
-                n = precision;
+                length = precision + 1;
             }
-            int i = n;
-            while (i)
+            for (n = 1; n < length; n++)
             {
-                if (((cast(size_t) s) & 3) == 0)
+                *s++ = realString[n];
+            }
+            precision = 0;
+            // Dump the exponent.
+            tail[1] = 'e';
+            decimalPos -= 1;
+            if (decimalPos < 0)
+            {
+                tail[2] = '-';
+                decimalPos = -decimalPos;
+            }
+            else
+            {
+                tail[2] = '+';
+            }
+
+            n = (decimalPos >= 100) ? 5 : 4;
+
+            tail[0] = cast(char) n;
+            while (true)
+            {
+                tail[n] = '0' + decimalPos % 10;
+                if (n <= 3)
                 {
                     break;
                 }
-                *s++ = '0';
-                --i;
+                --n;
+                decimalPos /= 10;
             }
-            while (i >= 4)
-            {
-                *cast(uint*) s = 0x30303030;
-                s += 4;
-                i -= 4;
-            }
-            while (i)
-            {
-                *s++ = '0';
-                --i;
-            }
-            if (cast(int) (l + n) > precision)
-            {
-                l = precision - n;
-            }
-            i = l;
-            while (i)
-            {
-                *s++ = *sn++;
-                --i;
-            }
-            tz = precision - (n + l);
         }
         else
         {
-            if (cast(uint) decimalPos >= l)
+            // This is the insane action to get the pr to match %g sematics
+            // for %f
+            if (decimalPos > 0)
             {
-                // Handle xxxx000*000.0.
-                n = 0;
-                for (;;)
+                precision = decimalPos < (cast(int) length)
+                          ? length - decimalPos
+                          : 0;
+            }
+            else
+            {
+                if (precision > length)
                 {
-                    *s++ = sn[n];
-                    ++n;
-                    if (n >= l)
+                    precision = -decimalPos + length;
+                }
+                else
+                {
+                    precision = -decimalPos + precision;
+                }
+            }
+
+            s = buffer.ptr + 64;
+
+            // Handle the three decimal varieties.
+            if (decimalPos <= 0)
+            {
+                // Handle 0.000*000xxxx.
+                *s++ = '0';
+                if (precision != 0)
+                {
+                    *s++ = period;
+                }
+                n = -decimalPos;
+                if (n > precision)
+                {
+                    n = precision;
+                }
+                uint i = n;
+                while (i > 0)
+                {
+                    if (((cast(size_t) s) & 3) == 0)
                     {
                         break;
                     }
+                    *s++ = '0';
+                    --i;
                 }
+                while (i >= 4)
+                {
+                    *cast(uint*) s = 0x30303030;
+                    s += 4;
+                    i -= 4;
+                }
+                while (i > 0)
+                {
+                    *s++ = '0';
+                    --i;
+                }
+                if ((length + n) > precision)
+                {
+                    length = precision - n;
+                }
+                i = length;
+                while (i > 0)
+                {
+                    *s++ = realString.front;
+                    realString.popFront();
+                    --i;
+                }
+            }
+            else if (cast(uint) decimalPos >= length)
+            {
+                // Handle xxxx000*000.0.
+                n = 0;
+                do
+                {
+                    *s++ = realString[n];
+                    ++n;
+                }
+                while (n < length);
                 if (n < cast(uint) decimalPos)
                 {
                     n = decimalPos - n;
@@ -770,172 +722,44 @@ package(tanya) String format(string fmt, Args...)(char[] buf, Args args)
                         --n;
                     }
                 }
-                if (precision)
+                if (precision != 0)
                 {
                     *s++ = period;
-                    tz = precision;
                 }
             }
             else
             {
                 // Handle xxxxx.xxxx000*000.
                 n = 0;
-                for (;;)
+                do
                 {
-                    *s++ = sn[n];
+                    *s++ = realString[n];
                     ++n;
-                    if (n >= cast(uint) decimalPos)
-                    {
-                        break;
-                    }
                 }
-                if (precision)
+                while (n < cast(uint) decimalPos);
+
+                if (precision > 0)
                 {
                     *s++ = period;
                 }
-                if ((l - decimalPos) > cast(uint) precision)
+                if ((length - decimalPos) > precision)
                 {
-                    l = precision + decimalPos;
+                    length = precision + decimalPos;
                 }
-                while (n < l)
+                while (n < length)
                 {
-                    *s++ = sn[n];
+                    *s++ = realString[n];
                     ++n;
                 }
-                tz = precision - (l - decimalPos);
             }
+            precision = 0;
         }
-        precision = 0;
 
-    flt_lead:
         // Get the length that we copied.
-        l = cast(uint) (s - (num.ptr + 64));
-        s = num.ptr + 64;
+        length = cast(uint) (s - (buffer.ptr + 64));
 
-    scopy:
-        // Get fw=leading/trailing space, precision=leading zeros.
-        if (precision < cast(int) l)
-        {
-            precision = l;
-        }
-        n = precision + lead[0] + tail[0] + tz;
-        precision -= l;
-
-        // Copy the spaces and/or zeros.
-        if (precision)
-        {
-            int i;
-
-            // copy leader
-            sn = lead.ptr + 1;
-            while (lead[0])
-            {
-                i = lead[0];
-                lead[0] -= cast(char) i;
-                while (i)
-                {
-                    *bf++ = *sn++;
-                    --i;
-                }
-            }
-
-            // Copy leading zeros.
-            while (precision > 0)
-            {
-                i = precision;
-                precision -= i;
-                while (i)
-                {
-                    if (((cast(size_t) bf) & 3) == 0)
-                    {
-                        break;
-                    }
-                    *bf++ = '0';
-                    --i;
-                }
-                while (i >= 4)
-                {
-                    *cast(uint*) bf = 0x30303030;
-                    bf += 4;
-                    i -= 4;
-                }
-                while (i)
-                {
-                    *bf++ = '0';
-                    --i;
-                }
-            }
-        }
-
-        // copy leader if there is still one
-        sn = lead.ptr + 1;
-        while (lead[0])
-        {
-            int i = lead[0];
-            lead[0] -= cast(char) i;
-            while (i)
-            {
-                *bf++ = *sn++;
-                --i;
-            }
-        }
-
-        // Copy the string.
-        n = l;
-        while (n)
-        {
-            int i = n;
-            n -= i;
-
-            while (i)
-            {
-                *bf++ = *s++;
-                --i;
-            }
-        }
-
-        // Copy trailing zeros.
-        while (tz)
-        {
-            int i = tz;
-            tz -= i;
-            while (i)
-            {
-                if (((cast(size_t) bf) & 3) == 0)
-                {
-                    break;
-                }
-                *bf++ = '0';
-                --i;
-            }
-            while (i >= 4)
-            {
-                *cast(uint*) bf = 0x30303030;
-                bf += 4;
-                i -= 4;
-            }
-            while (i)
-            {
-                *bf++ = '0';
-                --i;
-            }
-        }
-
-        // copy tail if there is one
-        sn = tail.ptr + 1;
-        while (tail[0])
-        {
-            int i = tail[0];
-            tail[0] -= cast(char) i;
-            while (i)
-            {
-                *bf++ = *sn++;
-                --i;
-            }
-        }
-
-        *bf = 0;
-        result = String(buf[0 .. cast(int) (bf - buf.ptr)]);
+        result.insertBack(buffer[64 .. 64 + length]); // Number.
+        result.insertBack(tail[1 .. tail[0] + 1]); // Tail.
     }
     else static if (isPointer!(Args[0])) // Pointer
     {
@@ -962,68 +786,67 @@ package(tanya) String format(string fmt, Args...)(char[] buf, Args args)
     {
         static assert(false);
     }
+ParamEnd:
 
     return result;
 }
 
 @nogc pure unittest
 {
-    char[318] buffer;
-
     // Modifiers.
-    assert(format!("{}")(buffer, 8.5) == "8.5");
-    assert(format!("{}")(buffer, 8.6) == "8.6");
-    assert(format!("{}")(buffer, 1000) == "1000");
-    assert(format!("{}")(buffer, 1) == "1");
-    assert(format!("{}")(buffer, 10.25) == "10.25");
-    assert(format!("{}")(buffer, 1) == "1");
-    assert(format!("{}")(buffer, 0.01) == "0.01");
+    assert(format!("{}")(8.5) == "8.5");
+    assert(format!("{}")(8.6) == "8.6");
+    assert(format!("{}")(1000) == "1000");
+    assert(format!("{}")(1) == "1");
+    assert(format!("{}")(10.25) == "10.25");
+    assert(format!("{}")(1) == "1");
+    assert(format!("{}")(0.01) == "0.01");
 
     // Integer size.
-    assert(format!("{}")(buffer, 10) == "10");
-    assert(format!("{}")(buffer, 10L) == "10");
+    assert(format!("{}")(10) == "10");
+    assert(format!("{}")(10L) == "10");
 
     // String printing.
-    assert(format!("{}")(buffer, "Some weired string") == "Some weired string");
-    assert(format!("{}")(buffer, cast(string) null) == "null");
-    assert(format!("{}")(buffer, 'c') == "c");
+    assert(format!("{}")("Some weired string") == "Some weired string");
+    assert(format!("{}")(cast(string) null) == "null");
+    assert(format!("{}")('c') == "c");
 
     // Integer conversions.
-    assert(format!("{}")(buffer, 8) == "8");
-    assert(format!("{}")(buffer, 8) == "8");
-    assert(format!("{}")(buffer, -8) == "-8");
-    assert(format!("{}")(buffer, -8L) == "-8");
-    assert(format!("{}")(buffer, 8) == "8");
-    assert(format!("{}")(buffer, 100000001) == "100000001");
-    assert(format!("{}")(buffer, 99999999L) == "99999999");
+    assert(format!("{}")(8) == "8");
+    assert(format!("{}")(8) == "8");
+    assert(format!("{}")(-8) == "-8");
+    assert(format!("{}")(-8L) == "-8");
+    assert(format!("{}")(8) == "8");
+    assert(format!("{}")(100000001) == "100000001");
+    assert(format!("{}")(99999999L) == "99999999");
 
     // Floating point conversions.
-    assert(format!("{}")(buffer, 0.1234) == "0.1234");
-    assert(format!("{}")(buffer, 0.3) == "0.3");
-    assert(format!("{}")(buffer, 0.333333333333) == "0.333333");
-    assert(format!("{}")(buffer, 38234.1234) == "38234.1");
-    assert(format!("{}")(buffer, -0.3) == "-0.3");
-    assert(format!("{}")(buffer, 0.000000000000000006) == "6e-18");
-    assert(format!("{}")(buffer, 0.0) == "0");
-    assert(format!("{}")(buffer, double.init) == "NaN");
-    assert(format!("{}")(buffer, -double.init) == "-NaN");
-    assert(format!("{}")(buffer, double.infinity) == "Inf");
-    assert(format!("{}")(buffer, -double.infinity) == "-Inf");
-    assert(format!("{}")(buffer, 0.000000000000000000000000003) == "3e-27");
-    assert(format!("{}")(buffer, 0.23432e304) == "2.3432e+303");
-    assert(format!("{}")(buffer, -0.23432e8) == "-2.3432e+07");
-    assert(format!("{}")(buffer, 1e-307) == "1e-307");
-    assert(format!("{}")(buffer, 1e+8) == "1e+08");
-    assert(format!("{}")(buffer, 111234.1) == "111234");
-    assert(format!("{}")(buffer, 0.999) == "0.999");
-    assert(format!("{}")(buffer, 0x1p-16382L) == "0");
-    assert(format!("{}")(buffer, 1e+3) == "1000");
-    assert(format!("{}")(buffer, 38234.1234) == "38234.1");
+    assert(format!("{}")(0.1234) == "0.1234");
+    assert(format!("{}")(0.3) == "0.3");
+    assert(format!("{}")(0.333333333333) == "0.333333");
+    assert(format!("{}")(38234.1234) == "38234.1");
+    assert(format!("{}")(-0.3) == "-0.3");
+    assert(format!("{}")(0.000000000000000006) == "6e-18");
+    assert(format!("{}")(0.0) == "0");
+    assert(format!("{}")(double.init) == "NaN");
+    assert(format!("{}")(-double.init) == "-NaN");
+    assert(format!("{}")(double.infinity) == "Inf");
+    assert(format!("{}")(-double.infinity) == "-Inf");
+    assert(format!("{}")(0.000000000000000000000000003) == "3e-27");
+    assert(format!("{}")(0.23432e304) == "2.3432e+303");
+    assert(format!("{}")(-0.23432e8) == "-2.3432e+07");
+    assert(format!("{}")(1e-307) == "1e-307");
+    assert(format!("{}")(1e+8) == "1e+08");
+    assert(format!("{}")(111234.1) == "111234");
+    assert(format!("{}")(0.999) == "0.999");
+    assert(format!("{}")(0x1p-16382L) == "0");
+    assert(format!("{}")(1e+3) == "1000");
+    assert(format!("{}")(38234.1234) == "38234.1");
 
-    // Pointer convesions.
-    assert(format!("{}")(buffer, cast(void*) 1) == "0x1");
-    assert(format!("{}")(buffer, cast(void*) 20) == "0x14");
-    assert(format!("{}")(buffer, cast(void*) null) == "0x0");
+    // Pointer convesions
+    assert(format!("{}")(cast(void*) 1) == "0x1");
+    assert(format!("{}")(cast(void*) 20) == "0x14");
+    assert(format!("{}")(cast(void*) null) == "0x0");
 }
 
 private struct FormatSpec
