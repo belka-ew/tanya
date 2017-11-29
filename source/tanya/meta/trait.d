@@ -275,13 +275,37 @@ enum bool isTemplate(alias T) = __traits(isTemplate, T);
     static assert(!isTemplate!(S!int));
 }
 
-deprecated("Use is(T == interface) instead")
+/**
+ * Tests whether $(D_PARAM T) is an interface.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an interface,
+ *          $(D_KEYWORD false) otherwise.
+ */
 enum bool isInterface(T) = is(T == interface);
 
-deprecated("Use is(T == class) instead")
+/**
+ * Tests whether $(D_PARAM T) is a class.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a class,
+ *          $(D_KEYWORD false) otherwise.
+ */
 enum bool isClass(T) = is(T == class);
 
-deprecated("Use is(T == struct) instead")
+/**
+ * Tests whether $(D_PARAM T) is a struct.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a struct,
+ *          $(D_KEYWORD false) otherwise.
+ */
 enum bool isStruct(T) = is(T == struct);
 
 /**
