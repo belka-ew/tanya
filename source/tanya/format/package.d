@@ -21,6 +21,7 @@ import tanya.math;
 import tanya.memory.op;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
+import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
 
@@ -508,7 +509,15 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
 {
     String result;
 
-    static if (isSomeString!(Args[0])) // String
+    static if (is(Unqual!(Args[0]) == typeof(null)))
+    {
+        result.insertBack("null");
+    }
+    else static if(is(Unqual!(Args[0]) == bool))
+    {
+        result.insertBack(args[0] ? "true" : "false");
+    }
+    else static if (isSomeString!(Args[0])) // String
     {
         if (args[0] is null)
         {
@@ -749,66 +758,72 @@ ParamEnd:
     return result;
 }
 
+// One argument tests.
 @nogc pure @safe unittest
 {
     // Modifiers.
-    assert(format!("{}")(8.5) == "8.5");
-    assert(format!("{}")(8.6) == "8.6");
-    assert(format!("{}")(1000) == "1000");
-    assert(format!("{}")(1) == "1");
-    assert(format!("{}")(10.25) == "10.25");
-    assert(format!("{}")(1) == "1");
-    assert(format!("{}")(0.01) == "0.01");
-
-    // Integer size.
-    assert(format!("{}")(10) == "10");
-    assert(format!("{}")(10L) == "10");
+    assert(format!"{}"(8.5) == "8.5");
+    assert(format!"{}"(8.6) == "8.6");
+    assert(format!"{}"(1000) == "1000");
+    assert(format!"{}"(1) == "1");
+    assert(format!"{}"(10.25) == "10.25");
+    assert(format!"{}"(1) == "1");
+    assert(format!"{}"(0.01) == "0.01");
 
     // String printing.
-    assert(format!("{}")("Some weired string") == "Some weired string");
-    assert(format!("{}")(cast(string) null) == "null");
-    assert(format!("{}")('c') == "c");
+    assert(format!"{}"("Some weired string") == "Some weired string");
+    assert(format!"{}"(cast(string) null) == "null");
+    assert(format!"{}"('c') == "c");
 
-    // Integer conversions.
-    assert(format!("{}")(8) == "8");
-    assert(format!("{}")(8) == "8");
-    assert(format!("{}")(-8) == "-8");
-    assert(format!("{}")(-8L) == "-8");
-    assert(format!("{}")(8) == "8");
-    assert(format!("{}")(100000001) == "100000001");
-    assert(format!("{}")(99999999L) == "99999999");
+    // Integer.
+    assert(format!"{}"(8) == "8");
+    assert(format!"{}"(8) == "8");
+    assert(format!"{}"(-8) == "-8");
+    assert(format!"{}"(-8L) == "-8");
+    assert(format!"{}"(8) == "8");
+    assert(format!"{}"(100000001) == "100000001");
+    assert(format!"{}"(99999999L) == "99999999");
+    assert(format!"{}"(10) == "10");
+    assert(format!"{}"(10L) == "10");
 
-    // Floating point conversions.
-    assert(format!("{}")(0.1234) == "0.1234");
-    assert(format!("{}")(0.3) == "0.3");
-    assert(format!("{}")(0.333333333333) == "0.333333");
-    assert(format!("{}")(38234.1234) == "38234.1");
-    assert(format!("{}")(-0.3) == "-0.3");
-    assert(format!("{}")(0.000000000000000006) == "6e-18");
-    assert(format!("{}")(0.0) == "0");
-    assert(format!("{}")(double.init) == "NaN");
-    assert(format!("{}")(-double.init) == "-NaN");
-    assert(format!("{}")(double.infinity) == "Inf");
-    assert(format!("{}")(-double.infinity) == "-Inf");
-    assert(format!("{}")(0.000000000000000000000000003) == "3e-27");
-    assert(format!("{}")(0.23432e304) == "2.3432e+303");
-    assert(format!("{}")(-0.23432e8) == "-2.3432e+07");
-    assert(format!("{}")(1e-307) == "1e-307");
-    assert(format!("{}")(1e+8) == "1e+08");
-    assert(format!("{}")(111234.1) == "111234");
-    assert(format!("{}")(0.999) == "0.999");
-    assert(format!("{}")(0x1p-16382L) == "0");
-    assert(format!("{}")(1e+3) == "1000");
-    assert(format!("{}")(38234.1234) == "38234.1");
+    // Floating point.
+    assert(format!"{}"(0.1234) == "0.1234");
+    assert(format!"{}"(0.3) == "0.3");
+    assert(format!"{}"(0.333333333333) == "0.333333");
+    assert(format!"{}"(38234.1234) == "38234.1");
+    assert(format!"{}"(-0.3) == "-0.3");
+    assert(format!"{}"(0.000000000000000006) == "6e-18");
+    assert(format!"{}"(0.0) == "0");
+    assert(format!"{}"(double.init) == "NaN");
+    assert(format!"{}"(-double.init) == "-NaN");
+    assert(format!"{}"(double.infinity) == "Inf");
+    assert(format!"{}"(-double.infinity) == "-Inf");
+    assert(format!"{}"(0.000000000000000000000000003) == "3e-27");
+    assert(format!"{}"(0.23432e304) == "2.3432e+303");
+    assert(format!"{}"(-0.23432e8) == "-2.3432e+07");
+    assert(format!"{}"(1e-307) == "1e-307");
+    assert(format!"{}"(1e+8) == "1e+08");
+    assert(format!"{}"(111234.1) == "111234");
+    assert(format!"{}"(0.999) == "0.999");
+    assert(format!"{}"(0x1p-16382L) == "0");
+    assert(format!"{}"(1e+3) == "1000");
+    assert(format!"{}"(38234.1234) == "38234.1");
+
+    // typeof(null).
+    assert(format!"{}"(null) == "null");
+
+    // Boolean.
+    assert(format!"{}"(true) == "true");
+    assert(format!"{}"(false) == "false");
 }
 
 // Unsafe tests with pointers.
 @nogc pure @system unittest
 {
     // Pointer convesions
-    assert(format!("{}")(cast(void*) 1) == "0x1");
-    assert(format!("{}")(cast(void*) 20) == "0x14");
-    assert(format!("{}")(cast(void*) null) == "0x0");
+    assert(format!"{}"(cast(void*) 1) == "0x1");
+    assert(format!"{}"(cast(void*) 20) == "0x14");
+    assert(format!"{}"(cast(void*) null) == "0x0");
 }
 
 private struct FormatSpec
