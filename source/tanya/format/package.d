@@ -22,12 +22,14 @@ import tanya.memory.op;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 import tanya.range.array;
+import tanya.range.primitive;
 
 // Integer and floating point to string conversion is based on stb_sprintf
 // written by Jeff Roberts.
 
 // Returns the last part of buffer with converted number.
 package(tanya) char[] integral2String(T)(T number, return ref char[21] buffer)
+@trusted
 if (isIntegral!T)
 {
     // abs the integer.
@@ -525,13 +527,13 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     {
         char[512] buffer; // Big enough for e+308 or e-307.
         char[8] tail = 0;
-        char *s;
+        char[] bufferSlice = buffer[64 .. $];
         uint precision = 6;
         bool negative;
-        int decimalPos;
+        int decimalPoint;
 
         // Read the double into a string.
-        auto realString = real2String(args[0], buffer, decimalPos, negative);
+        auto realString = real2String(args[0], buffer, decimalPoint, negative);
         auto length = cast(uint) realString.length;
 
         // Clamp the precision and delete extra zeros after clamp.
@@ -552,32 +554,34 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
         {
             result.insertBack('-');
         }
-        if (decimalPos == special)
+        if (decimalPoint == special)
         {
             result.insertBack(realString);
             goto ParamEnd;
         }
 
         // Should we use sceintific notation?
-        if ((decimalPos <= -4) || (decimalPos > cast(int) n))
+        if ((decimalPoint <= -4) || (decimalPoint > cast(int) n))
         {
             if (precision > length)
             {
                 precision = length - 1;
             }
-            else if (precision != 0)
+            else if (precision > 0)
             {
-               // When using %e, there is one digit before the decimal.
+               // When using scientific notation, there is one digit before the
+               // decimal.
                --precision;
             }
 
-            s = buffer.ptr + 64;
             // Handle leading chars.
-            *s++ = realString[0];
+            bufferSlice.front = realString[0];
+            bufferSlice.popFront();
 
             if (precision != 0)
             {
-                *s++ = period;
+                bufferSlice.front = period;
+                bufferSlice.popFront();
             }
 
             // Handle after decimal.
@@ -585,146 +589,101 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
             {
                 length = precision + 1;
             }
-            for (n = 1; n < length; n++)
-            {
-                *s++ = realString[n];
-            }
-            precision = 0;
+            realString[1 .. length].copy(bufferSlice);
+            bufferSlice.popFrontExactly(length - 1);
+
             // Dump the exponent.
             tail[1] = 'e';
-            decimalPos -= 1;
-            if (decimalPos < 0)
+            --decimalPoint;
+            if (decimalPoint < 0)
             {
                 tail[2] = '-';
-                decimalPos = -decimalPos;
+                decimalPoint = -decimalPoint;
             }
             else
             {
                 tail[2] = '+';
             }
 
-            n = (decimalPos >= 100) ? 5 : 4;
+            n = decimalPoint >= 100 ? 5 : 4;
 
             tail[0] = cast(char) n;
             while (true)
             {
-                tail[n] = '0' + decimalPos % 10;
+                tail[n] = '0' + decimalPoint % 10;
                 if (n <= 3)
                 {
                     break;
                 }
                 --n;
-                decimalPos /= 10;
+                decimalPoint /= 10;
             }
         }
         else
         {
-            // This is the insane action to get the pr to match %g sematics
-            // for %f
-            if (decimalPos > 0)
+            if (decimalPoint > 0)
             {
-                precision = decimalPos < (cast(int) length)
-                          ? length - decimalPos
+                precision = decimalPoint < (cast(int) length)
+                          ? length - decimalPoint
                           : 0;
             }
             else
             {
-                if (precision > length)
-                {
-                    precision = -decimalPos + length;
-                }
-                else
-                {
-                    precision = -decimalPos + precision;
-                }
+                precision = -decimalPoint
+                          + (precision > length ? length : precision);
             }
 
-            s = buffer.ptr + 64;
-
             // Handle the three decimal varieties.
-            if (decimalPos <= 0)
+            if (decimalPoint <= 0)
             {
                 // Handle 0.000*000xxxx.
-                *s++ = '0';
+                bufferSlice.front = '0';
+                bufferSlice.popFront();
+
                 if (precision != 0)
                 {
-                    *s++ = period;
+                    bufferSlice.front = period;
+                    bufferSlice.popFront();
                 }
-                n = -decimalPos;
+                n = -decimalPoint;
                 if (n > precision)
                 {
                     n = precision;
                 }
-                uint i = n;
-                while (i > 0)
-                {
-                    if (((cast(size_t) s) & 3) == 0)
-                    {
-                        break;
-                    }
-                    *s++ = '0';
-                    --i;
-                }
-                while (i >= 4)
-                {
-                    *cast(uint*) s = 0x30303030;
-                    s += 4;
-                    i -= 4;
-                }
-                while (i > 0)
-                {
-                    *s++ = '0';
-                    --i;
-                }
+
+                fill!'0'(bufferSlice[0 .. n]);
+                bufferSlice.popFrontExactly(n);
+
                 if ((length + n) > precision)
                 {
                     length = precision - n;
                 }
-                i = length;
-                while (i > 0)
-                {
-                    *s++ = realString.front;
-                    realString.popFront();
-                    --i;
-                }
+
+                realString[0 .. length].copy(bufferSlice);
+                bufferSlice.popFrontExactly(length);
             }
-            else if (cast(uint) decimalPos >= length)
+            else if (cast(uint) decimalPoint >= length)
             {
                 // Handle xxxx000*000.0.
                 n = 0;
                 do
                 {
-                    *s++ = realString[n];
+                    bufferSlice.front = realString[n];
+                    bufferSlice.popFront();
                     ++n;
                 }
                 while (n < length);
-                if (n < cast(uint) decimalPos)
+                if (n < cast(uint) decimalPoint)
                 {
-                    n = decimalPos - n;
-                    while (n)
-                    {
-                        if (((cast(size_t) s) & 3) == 0)
-                        {
-                            break;
-                        }
-                        *s++ = '0';
-                        --n;
-                    }
-                    while (n >= 4)
-                    {
-                        *cast(uint*) s = 0x30303030;
-                        s += 4;
-                        n -= 4;
-                    }
-                    while (n)
-                    {
-                        *s++ = '0';
-                        --n;
-                    }
+                    n = decimalPoint - n;
+
+                    fill!'0'(bufferSlice[0 .. n]);
+                    bufferSlice.popFrontExactly(n);
                 }
                 if (precision != 0)
                 {
-                    *s++ = period;
+                    bufferSlice.front = period;
+                    bufferSlice.popFront();
                 }
             }
             else
@@ -733,32 +692,31 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
                 n = 0;
                 do
                 {
-                    *s++ = realString[n];
+                    bufferSlice.front = realString[n];
+                    bufferSlice.popFront();
                     ++n;
                 }
-                while (n < cast(uint) decimalPos);
+                while (n < cast(uint) decimalPoint);
 
                 if (precision > 0)
                 {
-                    *s++ = period;
+                    bufferSlice.front = period;
+                    bufferSlice.popFront();
                 }
-                if ((length - decimalPos) > precision)
+                if ((length - decimalPoint) > precision)
                 {
-                    length = precision + decimalPos;
+                    length = precision + decimalPoint;
                 }
-                while (n < length)
-                {
-                    *s++ = realString[n];
-                    ++n;
-                }
+
+                realString[n .. length].copy(bufferSlice);
+                bufferSlice.popFrontExactly(length - n);
             }
-            precision = 0;
         }
 
-        // Get the length that we copied.
-        length = cast(uint) (s - (buffer.ptr + 64));
+        // Get the length that we've copied.
+        length = cast(uint) (buffer.length - bufferSlice.length);
 
-        result.insertBack(buffer[64 .. 64 + length]); // Number.
+        result.insertBack(buffer[64 .. length]); // Number.
         result.insertBack(tail[1 .. tail[0] + 1]); // Tail.
     }
     else static if (isPointer!(Args[0])) // Pointer
@@ -791,7 +749,7 @@ ParamEnd:
     return result;
 }
 
-@nogc pure unittest
+@nogc pure @safe unittest
 {
     // Modifiers.
     assert(format!("{}")(8.5) == "8.5");
@@ -842,7 +800,11 @@ ParamEnd:
     assert(format!("{}")(0x1p-16382L) == "0");
     assert(format!("{}")(1e+3) == "1000");
     assert(format!("{}")(38234.1234) == "38234.1");
+}
 
+// Unsafe tests with pointers.
+@nogc pure @system unittest
+{
     // Pointer convesions
     assert(format!("{}")(cast(void*) 1) == "0x1");
     assert(format!("{}")(cast(void*) 20) == "0x14");
