@@ -14,9 +14,12 @@
  */
 module tanya.conv;
 
+import tanya.container.string;
+import tanya.format;
 import tanya.memory;
 import tanya.memory.op;
 import tanya.meta.trait;
+import tanya.meta.transform;
 
 version (unittest)
 {
@@ -542,4 +545,165 @@ if (isIntegral!From && is(To == enum))
         two,
     }
     assertThrown!ConvException(&to!(Test, int), 5);
+}
+
+/**
+ * Converts $(D_PARAM from) to a boolean.
+ *
+ * If $(D_PARAM From) is a numeric type, then `1` becomes $(D_KEYWORD true),
+ * `0` $(D_KEYWORD false). Otherwise $(D_PSYMBOL ConvException) is thrown.
+ *
+ * If $(D_PARAM To) is a string (built-in string or $(D_PSYMBOL String)),
+ * then `"true"` or `"false"` are converted to the appropriate boolean value.
+ * Otherwise $(D_PSYMBOL ConvException) is thrown.
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_KEYWORD from) converted to a boolean.
+ *
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) isn't convertible.
+ */
+To to(To, From)(From from)
+if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
+{
+    if (from == 0)
+    {
+        return false;
+    }
+    else if (from < 0)
+    {
+        throw make!ConvException(defaultAllocator,
+                                 "Negative number overflow");
+    }
+    else if (from <= 1)
+    {
+        return true;
+    }
+    throw make!ConvException(defaultAllocator,
+                             "Positive number overflow");
+}
+
+///
+@nogc pure @safe unittest
+{
+    assert(!0.0.to!bool);
+    assert(0.2.to!bool);
+    assert(0.5.to!bool);
+    assert(1.0.to!bool);
+
+    assert(!0.to!bool);
+    assert(1.to!bool);
+}
+
+@nogc pure @safe unittest
+{
+    assertThrown!ConvException(&to!(bool, int), -1);
+    assertThrown!ConvException(&to!(bool, int), 2);
+}
+
+/// ditto
+To to(To, From)(auto ref const From from)
+if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
+{
+    if (from == "true")
+    {
+        return true;
+    }
+    else if (from == "false")
+    {
+        return false;
+    }
+    throw make!ConvException(defaultAllocator,
+                             "String doesn't contain a boolean value");
+}
+
+///
+@nogc pure @safe unittest
+{
+    assert("true".to!bool);
+    assert(!"false".to!bool);
+    assert(String("true").to!bool);
+    assert(!String("false").to!bool);
+
+}
+
+@nogc pure @safe unittest
+{
+    assertThrown!ConvException(() => "1".to!bool);
+}
+
+/**
+ * Converts a boolean to $(D_PARAM To).
+ *
+ * If $(D_PARAM To) is a numeric type, then $(D_KEYWORD true) becomes `1`,
+ * $(D_KEYWORD false) `0`.
+ *
+ * If $(D_PARAM To) is a $(D_PSYMBOL String), then `"true"` or `"false"`
+ * is returned.
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_PARAM from) converted to $(D_PARAM To).
+ */
+To to(To, From)(From from)
+if (is(Unqual!From == bool) && isNumeric!To && !is(Unqual!To == Unqual!From))
+{
+    return from;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(true.to!float == 1.0);
+    assert(true.to!double == 1.0);
+    assert(true.to!ubyte == 1);
+    assert(true.to!byte == 1);
+    assert(true.to!ushort == 1);
+    assert(true.to!short == 1);
+    assert(true.to!uint == 1);
+    assert(true.to!int == 1);
+
+    assert(false.to!float == 0);
+    assert(false.to!double == 0);
+    assert(false.to!ubyte == 0);
+    assert(false.to!byte == 0);
+    assert(false.to!ushort == 0);
+    assert(false.to!short == 0);
+    assert(false.to!uint == 0);
+    assert(false.to!int == 0);
+}
+
+/**
+ * Converts $(D_PARAM From) to a $(D_PSYMBOL String).
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_PARAM from) converted to $(D_PSYMBOL String).
+ */
+To to(To, From)(auto ref From from)
+if (is(Unqual!To == String))
+{
+    return format!"{}"(from);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(true.to!String == "true");
+    assert(false.to!String == "false");
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(typeof((const String("true")).to!bool)));
+    static assert(is(typeof(false.to!(const String) == "false")));
 }

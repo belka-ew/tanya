@@ -160,6 +160,7 @@ if (isIntegral!From
  *
  * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) isn't convertible.
  */
+deprecated("Use tanya.conv.to instead")
 To to(To, From)(From from)
 if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
 {
@@ -180,25 +181,8 @@ if (isNumeric!From && is(Unqual!To == bool) && !is(Unqual!To == Unqual!From))
                              "Positive number overflow");
 }
 
-///
-@nogc pure @safe unittest
-{
-    assert(!0.0.to!bool);
-    assert(0.2.to!bool);
-    assert(0.5.to!bool);
-    assert(1.0.to!bool);
-
-    assert(!0.to!bool);
-    assert(1.to!bool);
-}
-
-@nogc pure @safe unittest
-{
-    assertThrown!ConvException(&to!(bool, int), -1);
-    assertThrown!ConvException(&to!(bool, int), 2);
-}
-
 /// ditto
+deprecated("Use tanya.conv.to instead")
 To to(To, From)(auto ref const From from)
 if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
 {
@@ -212,21 +196,6 @@ if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
     }
     throw make!ConvException(defaultAllocator,
                              "String doesn't contain a boolean value");
-}
-
-///
-@nogc pure @safe unittest
-{
-    assert("true".to!bool);
-    assert(!"false".to!bool);
-    assert(String("true").to!bool);
-    assert(!String("false").to!bool);
-
-}
-
-@nogc pure @safe unittest
-{
-    assertThrown!ConvException(() => "1".to!bool);
 }
 
 /**
@@ -245,52 +214,19 @@ if ((is(From == String) || isSomeString!From) && is(Unqual!To == bool))
  *
  * Returns: $(D_PARAM from) converted to $(D_PARAM To).
  */
+deprecated("Use tanya.conv.to instead")
 To to(To, From)(const From from)
 if (is(Unqual!From == bool) && isNumeric!To && !is(Unqual!To == Unqual!From))
 {
     return from;
 }
 
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(true.to!float == 1.0);
-    assert(true.to!double == 1.0);
-    assert(true.to!ubyte == 1);
-    assert(true.to!byte == 1);
-    assert(true.to!ushort == 1);
-    assert(true.to!short == 1);
-    assert(true.to!uint == 1);
-    assert(true.to!int == 1);
-
-    assert(false.to!float == 0);
-    assert(false.to!double == 0);
-    assert(false.to!ubyte == 0);
-    assert(false.to!byte == 0);
-    assert(false.to!ushort == 0);
-    assert(false.to!short == 0);
-    assert(false.to!uint == 0);
-    assert(false.to!int == 0);
-}
-
 /// ditto
+deprecated("Use tanya.conv.to instead")
 To to(To, From)(const From from)
 if (is(Unqual!From == bool) && is(Unqual!To == String))
 {
     return String(from ? "true" : "false");
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(true.to!String == "true");
-    assert(false.to!String == "false");
-}
-
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(typeof((const String("true")).to!bool)));
-    static assert(is(typeof(false.to!(const String) == "false")));
 }
 
 /**
