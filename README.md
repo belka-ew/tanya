@@ -12,8 +12,8 @@ Tanya is a general purpose library for D programming language.
 Its aim is to simplify the manual memory management in D and to provide a
 guarantee with @nogc attribute that there are no hidden allocations on the
 Garbage Collector heap. Everything in the library is usable in @nogc code.
-Tanya extends Phobos functionality and provides alternative implementations for
-data structures and utilities that depend on the Garbage Collector in Phobos.
+Tanya provides data structures and utilities to facilitate painless systems
+programming in D.
 
 * [API Documentation](https://docs.caraus.io/tanya)
 * [Contribution guidelines](CONTRIBUTING.md)
