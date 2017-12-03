@@ -505,10 +505,9 @@ if (T.sizeof == U.sizeof)
     copy((&src)[0 .. 1], (&dest)[0 .. 1]);
 }
 
-package(tanya) String format(string fmt, Args...)(auto ref Args args)
+private ref String printToString(string fmt, Args...)(return ref String result,
+                                                      auto ref Args args)
 {
-    String result;
-
     static if (is(Unqual!(Args[0]) == typeof(null)))
     {
         result.insertBack("null");
@@ -756,6 +755,12 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
 ParamEnd:
 
     return result;
+}
+
+package(tanya) String format(string fmt, Args...)(auto ref Args args)
+{
+    String formatted;
+    return printToString!fmt(formatted, args);
 }
 
 // One argument tests.
