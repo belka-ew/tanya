@@ -516,6 +516,22 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     {
         result.insertBack(args[0] ? "true" : "false");
     }
+    else static if (is(Unqual!(typeof(args[0].stringify())) == String))
+    {
+        result.insertBack(args[0].stringify()[]);
+    }
+    else static if (isClass!(Args[0]))
+    {
+        result.insertBack(args[0].toString());
+    }
+    else static if (isInterface!(Args[0]))
+    {
+        result.insertBack(Args[0].classinfo.name);
+    }
+    else static if (isStruct!(Args[0]))
+    {
+        result.insertBack(typeid(Args[0]).name);
+    }
     else static if (isSomeString!(Args[0])) // String
     {
         if (args[0] is null)
@@ -750,7 +766,7 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     }
     else
     {
-        static assert(false);
+        result.insertBack(Args[0].stringof);
     }
 ParamEnd:
 
@@ -829,6 +845,37 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     assert(format!"{}"(cast(void*) 1) == "0x1");
     assert(format!"{}"(cast(void*) 20) == "0x14");
     assert(format!"{}"(cast(void*) null) == "0x0");
+}
+
+// Aggregate types.
+@system unittest // Object.toString has no attributes.
+{
+    import tanya.memory;
+    import tanya.memory.smartref;
+
+    static struct WithoutStringify
+    {
+    }
+    assert(format!"{}"(WithoutStringify()) == typeid(WithoutStringify).name);
+
+    static struct WithStringify
+    {
+        String stringify() const @nogc nothrow pure @safe
+        {
+            return String("stringify method");
+        }
+    }
+    assert(format!"{}"(WithStringify()) == "stringify method");
+
+    interface I
+    {
+    }
+    class A : I
+    {
+    }
+    auto instance = defaultAllocator.unique!A();
+    assert(format!"{}"(instance.get()) == instance.get.toString());
+    assert(format!"{}"(cast(I) instance.get()) == I.classinfo.name);
 }
 
 private struct FormatSpec
