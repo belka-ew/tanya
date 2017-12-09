@@ -505,6 +505,202 @@ if (T.sizeof == U.sizeof)
     copy((&src)[0 .. 1], (&dest)[0 .. 1]);
 }
 
+private void formatReal(T)(ref T arg ,ref String result)
+if (isFloatingPoint!T)
+{
+    char[512] buffer; // Big enough for e+308 or e-307.
+    char[8] tail = 0;
+    char[] bufferSlice = buffer[64 .. $];
+    uint precision = 6;
+    bool negative;
+    int decimalPoint;
+
+    // Read the double into a string.
+    auto realString = real2String(arg, buffer, decimalPoint, negative);
+    auto length = cast(uint) realString.length;
+
+    // Clamp the precision and delete extra zeros after clamp.
+    uint n = precision;
+    if (length > precision)
+    {
+        length = precision;
+    }
+    while ((length > 1) && (precision != 0) && (realString[length - 1] == '0'))
+    {
+        --precision;
+        --length;
+    }
+
+    if (negative)
+    {
+        result.insertBack('-');
+    }
+    if (decimalPoint == special)
+    {
+        result.insertBack(realString);
+        return;
+    }
+
+    // Should we use sceintific notation?
+    if ((decimalPoint <= -4) || (decimalPoint > cast(int) n))
+    {
+        if (precision > length)
+        {
+            precision = length - 1;
+        }
+        else if (precision > 0)
+        {
+           // When using scientific notation, there is one digit before the
+           // decimal.
+           --precision;
+        }
+
+        // Handle leading chars.
+        bufferSlice.front = realString[0];
+        bufferSlice.popFront();
+
+        if (precision != 0)
+        {
+            bufferSlice.front = period;
+            bufferSlice.popFront();
+        }
+
+        // Handle after decimal.
+        if ((length - 1) > precision)
+        {
+            length = precision + 1;
+        }
+        realString[1 .. length].copy(bufferSlice);
+        bufferSlice.popFrontExactly(length - 1);
+
+        // Dump the exponent.
+        tail[1] = 'e';
+        --decimalPoint;
+        if (decimalPoint < 0)
+        {
+            tail[2] = '-';
+            decimalPoint = -decimalPoint;
+        }
+        else
+        {
+            tail[2] = '+';
+        }
+
+        n = decimalPoint >= 100 ? 5 : 4;
+
+        tail[0] = cast(char) n;
+        while (true)
+        {
+            tail[n] = '0' + decimalPoint % 10;
+            if (n <= 3)
+            {
+                break;
+            }
+            --n;
+            decimalPoint /= 10;
+        }
+    }
+    else
+    {
+        if (decimalPoint > 0)
+        {
+            precision = decimalPoint < (cast(int) length)
+                      ? length - decimalPoint
+                      : 0;
+        }
+        else
+        {
+            precision = -decimalPoint
+                      + (precision > length ? length : precision);
+        }
+
+        // Handle the three decimal varieties.
+        if (decimalPoint <= 0)
+        {
+            // Handle 0.000*000xxxx.
+            bufferSlice.front = '0';
+            bufferSlice.popFront();
+
+            if (precision != 0)
+            {
+                bufferSlice.front = period;
+                bufferSlice.popFront();
+            }
+            n = -decimalPoint;
+            if (n > precision)
+            {
+                n = precision;
+            }
+
+            fill!'0'(bufferSlice[0 .. n]);
+            bufferSlice.popFrontExactly(n);
+
+            if ((length + n) > precision)
+            {
+                length = precision - n;
+            }
+
+            realString[0 .. length].copy(bufferSlice);
+            bufferSlice.popFrontExactly(length);
+        }
+        else if (cast(uint) decimalPoint >= length)
+        {
+            // Handle xxxx000*000.0.
+            n = 0;
+            do
+            {
+                bufferSlice.front = realString[n];
+                bufferSlice.popFront();
+                ++n;
+            }
+            while (n < length);
+            if (n < cast(uint) decimalPoint)
+            {
+                n = decimalPoint - n;
+
+                fill!'0'(bufferSlice[0 .. n]);
+                bufferSlice.popFrontExactly(n);
+            }
+            if (precision != 0)
+            {
+                bufferSlice.front = period;
+                bufferSlice.popFront();
+            }
+        }
+        else
+        {
+            // Handle xxxxx.xxxx000*000.
+            n = 0;
+            do
+            {
+                bufferSlice.front = realString[n];
+                bufferSlice.popFront();
+                ++n;
+            }
+            while (n < cast(uint) decimalPoint);
+
+            if (precision > 0)
+            {
+                bufferSlice.front = period;
+                bufferSlice.popFront();
+            }
+            if ((length - decimalPoint) > precision)
+            {
+                length = precision + decimalPoint;
+            }
+
+            realString[n .. length].copy(bufferSlice);
+            bufferSlice.popFrontExactly(length - n);
+        }
+    }
+
+    // Get the length that we've copied.
+    length = cast(uint) (buffer.length - bufferSlice.length);
+
+    result.insertBack(buffer[64 .. length]); // Number.
+    result.insertBack(tail[1 .. tail[0] + 1]); // Tail.
+}
+
 private ref String printToString(string fmt, Args...)(return ref String result,
                                                       auto ref Args args)
 {
@@ -549,199 +745,7 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     }
     else static if (isFloatingPoint!(Args[0])) // Float
     {
-        char[512] buffer; // Big enough for e+308 or e-307.
-        char[8] tail = 0;
-        char[] bufferSlice = buffer[64 .. $];
-        uint precision = 6;
-        bool negative;
-        int decimalPoint;
-
-        // Read the double into a string.
-        auto realString = real2String(args[0], buffer, decimalPoint, negative);
-        auto length = cast(uint) realString.length;
-
-        // Clamp the precision and delete extra zeros after clamp.
-        uint n = precision;
-        if (length > precision)
-        {
-            length = precision;
-        }
-        while ((length > 1)
-            && (precision != 0)
-            && (realString[length - 1] == '0'))
-        {
-            --precision;
-            --length;
-        }
-
-        if (negative)
-        {
-            result.insertBack('-');
-        }
-        if (decimalPoint == special)
-        {
-            result.insertBack(realString);
-            goto ParamEnd;
-        }
-
-        // Should we use sceintific notation?
-        if ((decimalPoint <= -4) || (decimalPoint > cast(int) n))
-        {
-            if (precision > length)
-            {
-                precision = length - 1;
-            }
-            else if (precision > 0)
-            {
-               // When using scientific notation, there is one digit before the
-               // decimal.
-               --precision;
-            }
-
-            // Handle leading chars.
-            bufferSlice.front = realString[0];
-            bufferSlice.popFront();
-
-            if (precision != 0)
-            {
-                bufferSlice.front = period;
-                bufferSlice.popFront();
-            }
-
-            // Handle after decimal.
-            if ((length - 1) > precision)
-            {
-                length = precision + 1;
-            }
-            realString[1 .. length].copy(bufferSlice);
-            bufferSlice.popFrontExactly(length - 1);
-
-            // Dump the exponent.
-            tail[1] = 'e';
-            --decimalPoint;
-            if (decimalPoint < 0)
-            {
-                tail[2] = '-';
-                decimalPoint = -decimalPoint;
-            }
-            else
-            {
-                tail[2] = '+';
-            }
-
-            n = decimalPoint >= 100 ? 5 : 4;
-
-            tail[0] = cast(char) n;
-            while (true)
-            {
-                tail[n] = '0' + decimalPoint % 10;
-                if (n <= 3)
-                {
-                    break;
-                }
-                --n;
-                decimalPoint /= 10;
-            }
-        }
-        else
-        {
-            if (decimalPoint > 0)
-            {
-                precision = decimalPoint < (cast(int) length)
-                          ? length - decimalPoint
-                          : 0;
-            }
-            else
-            {
-                precision = -decimalPoint
-                          + (precision > length ? length : precision);
-            }
-
-            // Handle the three decimal varieties.
-            if (decimalPoint <= 0)
-            {
-                // Handle 0.000*000xxxx.
-                bufferSlice.front = '0';
-                bufferSlice.popFront();
-
-                if (precision != 0)
-                {
-                    bufferSlice.front = period;
-                    bufferSlice.popFront();
-                }
-                n = -decimalPoint;
-                if (n > precision)
-                {
-                    n = precision;
-                }
-
-                fill!'0'(bufferSlice[0 .. n]);
-                bufferSlice.popFrontExactly(n);
-
-                if ((length + n) > precision)
-                {
-                    length = precision - n;
-                }
-
-                realString[0 .. length].copy(bufferSlice);
-                bufferSlice.popFrontExactly(length);
-            }
-            else if (cast(uint) decimalPoint >= length)
-            {
-                // Handle xxxx000*000.0.
-                n = 0;
-                do
-                {
-                    bufferSlice.front = realString[n];
-                    bufferSlice.popFront();
-                    ++n;
-                }
-                while (n < length);
-                if (n < cast(uint) decimalPoint)
-                {
-                    n = decimalPoint - n;
-
-                    fill!'0'(bufferSlice[0 .. n]);
-                    bufferSlice.popFrontExactly(n);
-                }
-                if (precision != 0)
-                {
-                    bufferSlice.front = period;
-                    bufferSlice.popFront();
-                }
-            }
-            else
-            {
-                // Handle xxxxx.xxxx000*000.
-                n = 0;
-                do
-                {
-                    bufferSlice.front = realString[n];
-                    bufferSlice.popFront();
-                    ++n;
-                }
-                while (n < cast(uint) decimalPoint);
-
-                if (precision > 0)
-                {
-                    bufferSlice.front = period;
-                    bufferSlice.popFront();
-                }
-                if ((length - decimalPoint) > precision)
-                {
-                    length = precision + decimalPoint;
-                }
-
-                realString[n .. length].copy(bufferSlice);
-                bufferSlice.popFrontExactly(length - n);
-            }
-        }
-
-        // Get the length that we've copied.
-        length = cast(uint) (buffer.length - bufferSlice.length);
-
-        result.insertBack(buffer[64 .. length]); // Number.
-        result.insertBack(tail[1 .. tail[0] + 1]); // Tail.
+        formatReal(args[0], result);
     }
     else static if (isPointer!(Args[0])) // Pointer
     {
@@ -768,7 +772,6 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     {
         result.insertBack(Args[0].stringof);
     }
-ParamEnd:
 
     return result;
 }
