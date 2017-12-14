@@ -323,9 +323,9 @@ private HP raise2Power10(const HP value, int power)
 }
 
 /*
- * Given a float value, returns the significant bits in bits, and the position
- * of the decimal point in $(D_PARAM exponent). +/-Inf and NaN are specified
- * by special values returned in the $(D_PARAM exponent). Sing bit is set in
+ * Given a float value, returns the significant bits, and the position of the
+ * decimal point in $(D_PARAM exponent). +/-Inf and NaN are specified by
+ * special values returned in the $(D_PARAM exponent). Sing bit is set in
  * $(D_PARAM sign).
  */
 private const(char)[] real2String(double value,
@@ -505,7 +505,7 @@ if (T.sizeof == U.sizeof)
     copy((&src)[0 .. 1], (&dest)[0 .. 1]);
 }
 
-private void formatReal(T)(ref T arg ,ref String result)
+private void formatReal(T)(ref T arg, ref String result)
 if (isFloatingPoint!T)
 {
     char[512] buffer; // Big enough for e+308 or e-307.
@@ -701,6 +701,34 @@ if (isFloatingPoint!T)
     result.insertBack(tail[1 .. tail[0] + 1]); // Tail.
 }
 
+private void formatStruct(T)(ref T arg, ref String result)
+if (is(T == struct))
+{
+    template pred(alias f)
+    {
+        static if (f == "this")
+        {
+            // Exclude context pointer from nested structs.
+            enum bool pred = false;
+        }
+        else
+        {
+            enum bool pred = !isSomeFunction!(__traits(getMember, arg, f));
+        }
+    }
+    alias fields = Filter!(pred, __traits(allMembers, T));
+
+    static if (fields.length > 0)
+    {
+        printToString!"{}"(result, __traits(getMember, arg, fields[0]));
+        foreach (field; fields[1 .. $])
+        {
+            result.insertBack(", ");
+            printToString!"{}"(result, __traits(getMember, arg, field));
+        }
+    }
+}
+
 private ref String printToString(string fmt, Args...)(return ref String result,
                                                       auto ref Args args)
 {
@@ -716,17 +744,20 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     {
         result.insertBack(args[0].stringify()[]);
     }
-    else static if (isClass!(Args[0]))
+    else static if (is(Args[0] == class))
     {
         result.insertBack(args[0].toString());
     }
-    else static if (isInterface!(Args[0]))
+    else static if (is(Args[0] == interface))
     {
         result.insertBack(Args[0].classinfo.name);
     }
-    else static if (isStruct!(Args[0]))
+    else static if (is(Args[0] == struct))
     {
-        result.insertBack(typeid(Args[0]).name);
+        result.insertBack(Args[0].stringof);
+        result.insertBack('(');
+        formatStruct(args[0], result);
+        result.insertBack(')');
     }
     else static if (isSomeString!(Args[0])) // String
     {
@@ -850,16 +881,39 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     assert(format!"{}"(cast(void*) null) == "0x0");
 }
 
-// Aggregate types.
-@system unittest // Object.toString has no attributes.
+// Structs.
+@nogc pure @safe unittest
 {
-    import tanya.memory;
-    import tanya.memory.smartref;
+    static struct WithoutStringify1
+    {
+        int a;
+        void func()
+        {
+        }
+    }
+    assert(format!"{}"(WithoutStringify1(6)) == "WithoutStringify1(6)");
 
-    static struct WithoutStringify
+    static struct WithoutStringify2
     {
     }
-    assert(format!"{}"(WithoutStringify()) == typeid(WithoutStringify).name);
+    assert(format!"{}"(WithoutStringify2()) == "WithoutStringify2()");
+
+    static struct WithoutStringify3
+    {
+        int a = -2;
+        int b = 8;
+    }
+    assert(format!"{}"(WithoutStringify3()) == "WithoutStringify3(-2, 8)");
+
+    struct Nested
+    {
+        int i;
+
+        void func()
+        {
+        }
+    }
+    assert(format!"{}"(Nested()) == "Nested(0)");
 
     static struct WithStringify
     {
@@ -869,6 +923,13 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
         }
     }
     assert(format!"{}"(WithStringify()) == "stringify method");
+}
+
+// Aggregate types.
+@system unittest // Object.toString has no attributes.
+{
+    import tanya.memory;
+    import tanya.memory.smartref;
 
     interface I
     {
