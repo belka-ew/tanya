@@ -732,34 +732,17 @@ if (is(T == struct))
 private ref String printToString(string fmt, Args...)(return ref String result,
                                                       auto ref Args args)
 {
-    static if (is(Unqual!(Args[0]) == typeof(null)))
+    alias Arg = Args[0];
+
+    static if (is(Unqual!Arg == typeof(null))) // null
     {
         result.insertBack("null");
     }
-    else static if(is(Unqual!(Args[0]) == bool))
+    else static if(is(Unqual!Arg == bool)) // Boolean
     {
         result.insertBack(args[0] ? "true" : "false");
     }
-    else static if (is(Unqual!(typeof(args[0].stringify())) == String))
-    {
-        result.insertBack(args[0].stringify()[]);
-    }
-    else static if (is(Args[0] == class))
-    {
-        result.insertBack(args[0].toString());
-    }
-    else static if (is(Args[0] == interface))
-    {
-        result.insertBack(Args[0].classinfo.name);
-    }
-    else static if (is(Args[0] == struct))
-    {
-        result.insertBack(Args[0].stringof);
-        result.insertBack('(');
-        formatStruct(args[0], result);
-        result.insertBack(')');
-    }
-    else static if (isSomeString!(Args[0])) // String
+    else static if (isSomeString!Arg) // String
     {
         if (args[0] is null)
         {
@@ -770,15 +753,35 @@ private ref String printToString(string fmt, Args...)(return ref String result,
             result.insertBack(args[0]);
         }
     }
-    else static if (isSomeChar!(Args[0])) // Char
+    else static if (isSomeChar!Arg // Supported by String.insertBack()
+                 || (isInputRange!Arg && isSomeChar!(ElementType!Arg)))
     {
         result.insertBack(args[0]);
     }
-    else static if (isFloatingPoint!(Args[0])) // Float
+    else static if (is(Unqual!(typeof(args[0].stringify())) == String))
+    {
+        result.insertBack(args[0].stringify()[]);
+    }
+    else static if (is(Arg == class))
+    {
+        result.insertBack(args[0].toString());
+    }
+    else static if (is(Arg == interface))
+    {
+        result.insertBack(Arg.classinfo.name);
+    }
+    else static if (is(Arg == struct))
+    {
+        result.insertBack(Arg.stringof);
+        result.insertBack('(');
+        formatStruct(args[0], result);
+        result.insertBack(')');
+    }
+    else static if (isFloatingPoint!Arg) // Float
     {
         formatReal(args[0], result);
     }
-    else static if (isPointer!(Args[0])) // Pointer
+    else static if (isPointer!Arg) // Pointer
     {
         char[size_t.sizeof * 2] buffer;
         size_t position = buffer.length;
@@ -794,14 +797,14 @@ private ref String printToString(string fmt, Args...)(return ref String result,
         result.insertBack("0x");
         result.insertBack(buffer[position .. $]);
     }
-    else static if (isIntegral!(Args[0])) // Integer
+    else static if (isIntegral!Arg) // Integer
     {
         char[21] buffer;
         result.insertBack(integral2String(args[0], buffer));
     }
     else
     {
-        result.insertBack(Args[0].stringof);
+        result.insertBack(Arg.stringof);
     }
 
     return result;
@@ -940,6 +943,31 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     auto instance = defaultAllocator.unique!A();
     assert(format!"{}"(instance.get()) == instance.get.toString());
     assert(format!"{}"(cast(I) instance.get()) == I.classinfo.name);
+}
+
+// Ranges.
+@nogc pure @safe unittest
+{
+    static struct Stringish
+    {
+        string content = "Some content";
+
+        immutable(char) front() const @nogc nothrow pure @safe
+        {
+            return this.content[0];
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            this.content = this.content[1 .. $];
+        }
+
+        bool empty() const @nogc nothrow pure @safe
+        {
+            return this.content.length == 0;
+        }
+    }
+    assert(format!"{}"(Stringish()) == "Some content");
 }
 
 private struct FormatSpec
