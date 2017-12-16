@@ -742,19 +742,13 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     {
         result.insertBack(args[0] ? "true" : "false");
     }
-    else static if (isSomeString!Arg) // String
+    else static if (isSomeChar!Arg || isSomeString!Arg) // String or char
     {
-        if (args[0] is null)
-        {
-            result.insertBack("null");
-        }
-        else
-        {
-            result.insertBack(args[0]);
-        }
+        result.insertBack(args[0]);
     }
-    else static if (isSomeChar!Arg // Supported by String.insertBack()
-                 || (isInputRange!Arg && isSomeChar!(ElementType!Arg)))
+    else static if (isInputRange!Arg
+                 && !isInfinite!Arg
+                 && isSomeChar!(ElementType!Arg)) // Stringish range
     {
         result.insertBack(args[0]);
     }
@@ -764,7 +758,7 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     }
     else static if (is(Arg == class))
     {
-        result.insertBack(args[0].toString());
+        result.insertBack(args[0] is null ? "null" : args[0].toString());
     }
     else static if (is(Arg == interface))
     {
@@ -804,7 +798,8 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     }
     else
     {
-        result.insertBack(Arg.stringof);
+        static assert(false,
+                      "Formatting type " ~ Arg.stringof ~ " is not supported");
     }
 
     return result;
@@ -830,7 +825,7 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
 
     // String printing.
     assert(format!"{}"("Some weired string") == "Some weired string");
-    assert(format!"{}"(cast(string) null) == "null");
+    assert(format!"{}"(cast(string) null) == "");
     assert(format!"{}"('c') == "c");
 
     // Integer.
@@ -943,6 +938,7 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     auto instance = defaultAllocator.unique!A();
     assert(format!"{}"(instance.get()) == instance.get.toString());
     assert(format!"{}"(cast(I) instance.get()) == I.classinfo.name);
+    assert(format!"{}"(cast(A) null) == "null");
 }
 
 // Ranges.
