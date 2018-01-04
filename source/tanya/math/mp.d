@@ -393,7 +393,9 @@ struct Integer
     T opCast(T)() const
     if (isIntegral!T && isSigned!T)
     {
-        return this.sign ? -(cast(Unsigned!T) this) : cast(Unsigned!T) this;
+        return this.sign
+            ? cast(T) -(cast(Promoted!(Unsigned!T)) (cast(Unsigned!T) this))
+            : cast(Unsigned!T) this;
     }
 
     ///
@@ -1072,7 +1074,7 @@ struct Integer
         assert(h1 == 79);
 
         h2 = ~h1;
-        assert(h2 == ~cast(ubyte) 79);
+        assert(h2 == cast(ubyte) ~79);
     }
 
     /// ditto

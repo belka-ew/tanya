@@ -264,7 +264,8 @@ if (is(Unqual!E == char))
     body
     {
         dchar chr;
-        ubyte units, mask;
+        ubyte units;
+        int mask;
         const(char)* it = this.begin;
 
         if (*it & 0x80)
