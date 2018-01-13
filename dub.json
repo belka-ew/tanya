@@ -12,7 +12,12 @@
 	"configurations": [
 		{
 			"name": "library",
-			"targetType": "library",
+			"targetType": "staticLibrary",
+			"versions": ["TanyaPhobos"]
+		},
+		{
+			"name": "dynamic",
+			"targetType": "dynamicLibrary",
 			"versions": ["TanyaPhobos"]
 		},
 		{
