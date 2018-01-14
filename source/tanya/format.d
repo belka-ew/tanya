@@ -16,7 +16,6 @@ module tanya.format;
 
 import tanya.container.string;
 import tanya.encoding.ascii;
-public import tanya.format.conv;
 import tanya.math;
 import tanya.memory.op;
 import tanya.meta.metafunction;
