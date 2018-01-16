@@ -935,7 +935,7 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     {
     }
     auto instance = defaultAllocator.unique!A();
-    assert(format!"{}"(instance.get()) == instance.get.toString());
+    assert(format!"{}"(instance.get()) == instance.get().toString());
     assert(format!"{}"(cast(I) instance.get()) == I.classinfo.name);
     assert(format!"{}"(cast(A) null) == "null");
 }
@@ -963,6 +963,17 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
         }
     }
     assert(format!"{}"(Stringish()) == "Some content");
+}
+
+// Typeid.
+nothrow pure @safe unittest
+{
+    assert(format!"{}"(typeid(int[])) == "int[]");
+
+    class C
+    {
+    }
+    assert(format!"{}"(typeid(C)) == typeid(C).toString());
 }
 
 private struct FormatSpec
