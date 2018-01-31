@@ -72,7 +72,7 @@ abstract class SocketWatcher : Watcher
     {
         assert(socket !is null);
     }
-    body
+    do
     {
         socket_ = socket;
     }
@@ -123,7 +123,7 @@ class ConnectionWatcher : SocketWatcher
     {
         assert(protocolFactory !is null, "Protocol isn't set.");
     }
-    body
+    do
     {
         foreach (transport; incoming)
         {

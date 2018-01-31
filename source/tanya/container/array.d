@@ -56,7 +56,7 @@ struct Range(A)
         assert(begin >= container.data);
         assert(end <= container.data + container.length);
     }
-    body
+    do
     {
         this.container = &container;
         this.begin = begin;
@@ -87,7 +87,7 @@ struct Range(A)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return *this.begin;
     }
@@ -97,7 +97,7 @@ struct Range(A)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return *(this.end - 1);
     }
@@ -107,7 +107,7 @@ struct Range(A)
     {
         assert(!empty);
     }
-    body
+    do
     {
         ++this.begin;
     }
@@ -117,7 +117,7 @@ struct Range(A)
     {
         assert(!empty);
     }
-    body
+    do
     {
         --this.end;
     }
@@ -127,7 +127,7 @@ struct Range(A)
     {
         assert(i < length);
     }
-    body
+    do
     {
         return *(this.begin + i);
     }
@@ -148,7 +148,7 @@ struct Range(A)
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -159,7 +159,7 @@ struct Range(A)
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -333,7 +333,7 @@ struct Array(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         allocator_ = allocator;
     }
@@ -597,7 +597,7 @@ struct Array(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         length = length - 1;
     }
@@ -619,7 +619,7 @@ struct Array(T)
     {
         assert(removed <= howMany);
     }
-    body
+    do
     {
         const toRemove = min(howMany, length);
 
@@ -662,7 +662,7 @@ struct Array(T)
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         auto target = r.begin;
         for (auto source = r.end; source != end; ++source, ++target)
@@ -821,7 +821,7 @@ struct Array(T)
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         const oldLen = length;
         const offset = r.end - this.data;
@@ -838,7 +838,7 @@ struct Array(T)
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         return insertAfter!(T[])(r, el[]);
     }
@@ -852,7 +852,7 @@ struct Array(T)
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         const oldLen = length;
         const offset = r.end - this.data;
@@ -881,7 +881,7 @@ struct Array(T)
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         return insertAfter(Range(this, this.data, r.begin), el);
     }
@@ -894,7 +894,7 @@ struct Array(T)
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         return insertBefore!(T[])(r, el[]);
     }
@@ -908,7 +908,7 @@ struct Array(T)
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         const oldLen = length;
         const offset = r.begin - this.data;
@@ -1080,7 +1080,7 @@ struct Array(T)
     {
         assert(length > pos);
     }
-    body
+    do
     {
         return *(this.data + pos);
     }
@@ -1185,7 +1185,7 @@ struct Array(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return *this.data;
     }
@@ -1212,7 +1212,7 @@ struct Array(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return *(this.data + length - 1);
     }
@@ -1245,7 +1245,7 @@ struct Array(T)
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1257,7 +1257,7 @@ struct Array(T)
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1328,7 +1328,7 @@ struct Array(T)
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         copy(value[], this.data[i .. j]);
         return opSlice(i, j);
@@ -1342,7 +1342,7 @@ struct Array(T)
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         fill(this.data[i .. j], value);
         return opSlice(i, j);
@@ -1356,7 +1356,7 @@ struct Array(T)
         assert(j <= length);
         assert(j - i == value.length);
     }
-    body
+    do
     {
         copy(value, this.data[i .. j]);
         return opSlice(i, j);

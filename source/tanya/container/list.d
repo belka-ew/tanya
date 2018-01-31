@@ -64,7 +64,7 @@ struct SRange(L)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return (*this.head).content;
     }
@@ -74,7 +74,7 @@ struct SRange(L)
     {
         assert(!empty);
     }
-    body
+    do
     {
         this.head = &(*this.head).next;
     }
@@ -205,7 +205,7 @@ struct SList(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.allocator_ = allocator;
     }
@@ -325,7 +325,7 @@ struct SList(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return this.head.content;
     }
@@ -467,7 +467,7 @@ struct SList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         return moveEntry(*r.head, el);
     }
@@ -490,7 +490,7 @@ struct SList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         size_t inserted;
         foreach (e; el)
@@ -519,7 +519,7 @@ struct SList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         *r.head = allocator.make!Entry(el, *r.head);
         return 1;
@@ -641,7 +641,7 @@ struct SList(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         auto n = this.head.next;
 
@@ -680,7 +680,7 @@ struct SList(T)
     {
         assert(removed <= howMany);
     }
-    body
+    do
     {
         size_t i;
         for (; i < howMany && !empty; ++i)
@@ -716,7 +716,7 @@ struct SList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         auto outOfScopeList = typeof(this)(allocator);
         outOfScopeList.head = *r.head;
@@ -963,7 +963,7 @@ struct DRange(L)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return (*this.head).content;
     }
@@ -973,7 +973,7 @@ struct DRange(L)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return (*this.tail).content;
     }
@@ -983,7 +983,7 @@ struct DRange(L)
     {
         assert(!empty);
     }
-    body
+    do
     {
         this.head = &(*this.head).next;
     }
@@ -993,7 +993,7 @@ struct DRange(L)
     {
         assert(!empty);
     }
-    body
+    do
     {
         this.tail = &(*this.tail).prev;
     }
@@ -1135,7 +1135,7 @@ struct DList(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.allocator_ = allocator;
     }
@@ -1259,7 +1259,7 @@ struct DList(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return this.head.content;
     }
@@ -1272,7 +1272,7 @@ struct DList(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         return this.tail.content;
     }
@@ -1311,17 +1311,17 @@ struct DList(T)
         return 1;
     }
 
-	// Creates a lsit of linked entries from a range.
-	// Returns count of the elements in the list.
-	private size_t makeList(R)(ref R el, out Entry* head, out Entry* tail) @trusted
-	out (retLength)
-	{
-		assert((retLength == 0 && head is null && tail is null)
-		    || (retLength > 0 && head !is null && tail !is null));
-	}
-	body
-	{
-		size_t retLength;
+    // Creates a lsit of linked entries from a range.
+    // Returns count of the elements in the list.
+    private size_t makeList(R)(ref R el, out Entry* head, out Entry* tail) @trusted
+    out (retLength)
+    {
+        assert((retLength == 0 && head is null && tail is null)
+            || (retLength > 0 && head !is null && tail !is null));
+    }
+    do
+    {
+        size_t retLength;
 
         if (!el.empty)
         {
@@ -1336,8 +1336,8 @@ struct DList(T)
             tail = tail.next;
             ++retLength;
         }
-		return retLength;
-	}
+        return retLength;
+    }
 
     /**
      * Inserts a new element at the beginning.
@@ -1525,10 +1525,10 @@ struct DList(T)
         {
             this.head = begin;
         }
-		else
-		{
+        else
+        {
             this.tail.next = begin;
-		}
+        }
         if (begin !is null)
         {
             this.tail = end;
@@ -1595,7 +1595,7 @@ struct DList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         return moveFront(*r.head, el);
     }
@@ -1615,7 +1615,7 @@ struct DList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         auto temp = allocator.make!Entry(el, *r.head);
 
@@ -1653,7 +1653,7 @@ struct DList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         size_t inserted;
         foreach (e; el)
@@ -1710,7 +1710,7 @@ struct DList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         return moveBack(*r.tail, el);
     }
@@ -1741,7 +1741,7 @@ struct DList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         auto temp = allocator.make!Entry(el, null, *r.tail);
 
@@ -1779,7 +1779,7 @@ struct DList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         size_t inserted;
         foreach (e; el)
@@ -1896,7 +1896,7 @@ struct DList(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         auto n = this.head.next;
 
@@ -1932,7 +1932,7 @@ struct DList(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         auto n = this.tail.prev;
 
@@ -1978,7 +1978,7 @@ struct DList(T)
     {
         assert(removed <= howMany);
     }
-    body
+    do
     {
         size_t i;
         for (; i < howMany && !empty; ++i)
@@ -2005,7 +2005,7 @@ struct DList(T)
     {
         assert(removed <= howMany);
     }
-    body
+    do
     {
         size_t i;
         for (; i < howMany && !empty; ++i)
@@ -2041,7 +2041,7 @@ struct DList(T)
     {
         assert(checkRangeBelonging(r));
     }
-    body
+    do
     {
         // Save references to the elements before and after the range.
         Entry* tailNext, headPrev;

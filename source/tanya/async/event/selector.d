@@ -61,7 +61,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         assert(loop !is null);
     }
-    body
+    do
     {
         super(socket);
         this.loop = loop;
@@ -80,7 +80,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         assert(socket !is null);
     }
-    body
+    do
     {
         return cast(ConnectedSocket) socket_;
     }
@@ -91,7 +91,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         assert(socket !is null);
     }
-    body
+    do
     {
         socket_ = socket;
     }
@@ -120,7 +120,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         assert(protocol !is null);
     }
-    body
+    do
     {
         protocol_ = protocol;
     }
@@ -263,7 +263,7 @@ abstract class SelectorLoop : Loop
     {
         assert(transport !is null);
     }
-    body
+    do
     {
         transport.socket.shutdown();
         defaultAllocator.dispose(transport.socket);
@@ -289,7 +289,7 @@ abstract class SelectorLoop : Loop
     {
         assert(transport !is null);
     }
-    body
+    do
     {
         while (transport.input.length && transport.writeReady)
         {
@@ -356,7 +356,7 @@ abstract class SelectorLoop : Loop
     {
         assert(connection !is null);
     }
-    body
+    do
     {
         while (true)
         {

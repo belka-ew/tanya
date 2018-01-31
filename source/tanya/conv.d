@@ -66,7 +66,7 @@ out (result)
 {
     assert(memory.ptr is (() @trusted => cast(void*) result)());
 }
-body
+do
 {
     copy(typeid(T).initializer, memory);
 
@@ -91,7 +91,8 @@ in
 out (result)
 {
     assert(memory.ptr is (() @trusted => cast(void*) result)());
-}body
+}
+do
 {
     copy(typeid(T).initializer, memory);
 
@@ -144,7 +145,7 @@ out (result)
 {
     assert(memory.ptr is result);
 }
-body
+do
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
     static if (Args.length == 1)
@@ -169,7 +170,7 @@ out (result)
 {
     assert(memory.ptr is result);
 }
-body
+do
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
     static if (!hasElaborateAssign!T && isAssignable!T)

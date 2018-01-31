@@ -91,7 +91,7 @@ if (is(Unqual!E == char))
         assert(begin >= container.data);
         assert(end <= container.data + container.length);
     }
-    body
+    do
     {
         this.container = &container;
         this.begin = begin;
@@ -122,7 +122,7 @@ if (is(Unqual!E == char))
     {
         assert(!empty);
     }
-    body
+    do
     {
         return *this.begin;
     }
@@ -132,7 +132,7 @@ if (is(Unqual!E == char))
     {
         assert(!empty);
     }
-    body
+    do
     {
         return *(this.end - 1);
     }
@@ -142,7 +142,7 @@ if (is(Unqual!E == char))
     {
         assert(!empty);
     }
-    body
+    do
     {
         ++this.begin;
     }
@@ -152,7 +152,7 @@ if (is(Unqual!E == char))
     {
         assert(!empty);
     }
-    body
+    do
     {
         --this.end;
     }
@@ -162,7 +162,7 @@ if (is(Unqual!E == char))
     {
         assert(i < length);
     }
-    body
+    do
     {
         return *(this.begin + i);
     }
@@ -183,7 +183,7 @@ if (is(Unqual!E == char))
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -194,7 +194,7 @@ if (is(Unqual!E == char))
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -233,7 +233,7 @@ if (is(Unqual!E == char))
         assert(begin >= container.data);
         assert(end <= container.data + container.length);
     }
-    body
+    do
     {
         this.container = &container;
         this.begin = begin;
@@ -261,7 +261,7 @@ if (is(Unqual!E == char))
     {
         assert(chr < 0xd800 || chr > 0xdfff);
     }
-    body
+    do
     {
         dchar chr;
         ubyte units;
@@ -295,7 +295,7 @@ if (is(Unqual!E == char))
     {
         assert(!empty);
     }
-    body
+    do
     {
         ubyte units;
         if ((*begin & 0xf0) == 0xf0)
@@ -438,7 +438,7 @@ struct String
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.allocator_ = allocator;
     }
@@ -528,7 +528,7 @@ struct String
         assert(capacity - length >= 4);
         assert(src - 0x10000 < 0x100000);
     }
-    body
+    do
     {
         auto dst = this.data + length;
 
@@ -546,7 +546,7 @@ struct String
     {
         assert(capacity - length >= 3);
     }
-    body
+    do
     {
         auto dst = this.data + length;
         if (chr < 0x80)
@@ -924,7 +924,7 @@ struct String
         assert(j <= length);
         assert(j - i == value.length);
     }
-    body
+    do
     {
         auto target = opSlice(i, j);
         copy(value, target);
@@ -941,7 +941,7 @@ struct String
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         copy(value[], this.data[i .. j]);
         return opSlice(i, j);
@@ -957,7 +957,7 @@ struct String
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         for (auto p = this.data + i; p < this.data + j; ++p)
         {
@@ -1038,7 +1038,7 @@ struct String
     {
         assert(length > pos);
     }
-    body
+    do
     {
         return *(this.data + pos);
     }
@@ -1188,7 +1188,7 @@ struct String
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1201,7 +1201,7 @@ struct String
         assert(i <= j);
         assert(j <= length);
     }
-    body
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1509,7 +1509,7 @@ struct String
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         auto end = this.data + this.length;
         copy(ByCodeUnit!char(this, r.end, end), ByCodeUnit!char(this, r.begin, end));
@@ -1562,7 +1562,7 @@ struct String
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         auto oldLen = this.data + length;
         const inserted = insertBack(el);
@@ -1595,7 +1595,7 @@ struct String
         assert(r.begin >= this.data);
         assert(r.end <= this.data + length);
     }
-    body
+    do
     {
         return insertAfter(R(this, this.data, r.begin), el);
     }

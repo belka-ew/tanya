@@ -59,7 +59,7 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     return array[0];
 }
@@ -99,7 +99,7 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     return array[$ - 1];
 }
@@ -138,7 +138,7 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     array = array[1 .. $];
 }
@@ -149,7 +149,7 @@ in
 {
     assert(array.length > 0);
 }
-body
+do
 {
     array = array[0 .. $ - 1];
 }

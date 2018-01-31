@@ -77,7 +77,7 @@ struct NetworkOrder(uint L)
     {
         assert(value <= pow(2, L * 8) - 1);
     }
-    body
+    do
     {
         this.value = value & StorageType.max;
     }
@@ -92,7 +92,7 @@ struct NetworkOrder(uint L)
     {
         assert(this.length > 0);
     }
-    body
+    do
     {
         return this.value & 0xff;
     }
@@ -107,7 +107,7 @@ struct NetworkOrder(uint L)
     {
         assert(this.length > 0);
     }
-    body
+    do
     {
         return (this.value >> ((this.length - 1) * 8)) & 0xff;
     }
@@ -122,7 +122,7 @@ struct NetworkOrder(uint L)
     {
         assert(this.length > 0);
     }
-    body
+    do
     {
         this.value >>= 8;
         --this.size;
@@ -138,7 +138,7 @@ struct NetworkOrder(uint L)
     {
         assert(this.length > 0);
     }
-    body
+    do
     {
         this.value &= StorageType.max >> ((StorageType.sizeof - this.length) * 8);
         --this.size;

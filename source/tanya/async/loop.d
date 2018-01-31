@@ -326,7 +326,7 @@ abstract class Loop
         assert(blockTime <= 1.dur!"hours", "Too long to wait.");
         assert(!blockTime.isNegative);
     }
-    body
+    do
     {
         blockTime_ = blockTime;
     }
@@ -414,7 +414,7 @@ in
 {
     assert(loop !is null);
 }
-body
+do
 {
     defaultLoop_ = loop;
 }

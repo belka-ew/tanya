@@ -58,7 +58,7 @@ in
     assert(source.length == 0 || source.ptr !is null);
     assert(target.length == 0 || target.ptr !is null);
 }
-body
+do
 {
     version (TanyaNative)
     {
@@ -126,7 +126,7 @@ in
 {
     assert(memory.length == 0 || memory.ptr !is null);
 }
-body
+do
 {
     version (TanyaNative)
     {
@@ -203,7 +203,7 @@ in
     assert(source.length == 0 || source.ptr !is null);
     assert(target.length == 0 || target.ptr !is null);
 }
-body
+do
 {
     version (TanyaNative)
     {
@@ -257,7 +257,7 @@ in
     assert(r1.length == 0 || r1.ptr !is null);
     assert(r2.length == 0 || r2.ptr !is null);
 }
-body
+do
 {
     version (TanyaNative)
     {
@@ -321,7 +321,7 @@ in
 {
     assert(haystack.length == 0 || haystack.ptr !is null);
 }
-body
+do
 {
     auto length = haystack.length;
     const size_t needleWord = size_t.max * needle;

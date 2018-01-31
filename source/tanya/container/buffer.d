@@ -27,7 +27,7 @@ version (unittest)
     {
         assert(start < end);
     }
-    body
+    do
     {
         auto numberRead = end - start;
         for (ubyte i; i < numberRead; ++i)
@@ -106,7 +106,7 @@ struct ReadBuffer(T = ubyte)
     {
         assert(allocator_ is null);
     }
-    body
+    do
     {
         allocator_ = allocator;
     }
@@ -349,7 +349,7 @@ struct WriteBuffer(T = ubyte)
         assert(size > 0);
         assert(allocator !is null);
     }
-    body
+    do
     {
         blockSize = size;
         ring = size - 1;
@@ -549,7 +549,7 @@ struct WriteBuffer(T = ubyte)
     {
         assert(length <= this.length);
     }
-    body
+    do
     {
         auto afterRing = ring + 1;
         auto oldStart = start;

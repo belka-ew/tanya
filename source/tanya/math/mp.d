@@ -112,7 +112,7 @@ struct Integer
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.allocator_ = allocator;
     }
@@ -873,7 +873,7 @@ struct Integer
     {
         assert(operand.length > 0, "Division by zero.");
     }
-    body
+    do
     {
         divide(operand, this);
         return this;
@@ -885,7 +885,7 @@ struct Integer
     {
         assert(operand.length > 0, "Division by zero.");
     }
-    body
+    do
     {
         divide(operand, null, this);
         return this;
@@ -1168,7 +1168,7 @@ struct Integer
     {
         assert(operand.length > 0, "Division by zero.");
     }
-    body
+    do
     {
         mixin("return Integer(this, allocator) " ~ op ~ "= operand;");
     }
@@ -1287,7 +1287,7 @@ struct Integer
     {
         assert(divisor != 0, "Division by zero.");
     }
-    body
+    do
     {
         if (compare(divisor) < 0)
         {
@@ -1472,7 +1472,7 @@ struct Integer
     {
         assert(array.length == length);
     }
-    body
+    do
     {
         Array!ubyte array;
 

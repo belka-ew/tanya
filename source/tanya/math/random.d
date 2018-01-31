@@ -134,7 +134,7 @@ version (linux)
         {
             assert(length <= maxGather);
         }
-        body
+        do
         {
             // int getrandom(void *buf, size_t buflen, unsigned int flags);
             auto length = syscall(318, output.ptr, output.length, 0);
@@ -198,7 +198,7 @@ class Entropy
         assert(maxSources > 0 && maxSources <= ubyte.max);
         assert(allocator !is null);
     }
-    body
+    do
     {
         allocator.resize(sources, maxSources);
 
@@ -234,7 +234,7 @@ class Entropy
     {
         assert(sourceCount_ <= sources.length);
     }
-    body
+    do
     {
         sources[sourceCount_++] = source;
         return this;
@@ -251,7 +251,7 @@ class Entropy
     {
         assert(sourceCount_ > 0, "No entropy sources defined.");
     }
-    body
+    do
     {
         bool haveStrong;
         ushort done;

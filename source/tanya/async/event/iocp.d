@@ -72,7 +72,7 @@ final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         assert(socket !is null);
     }
-    body
+    do
     {
         return cast(OverlappedConnectedSocket) socket_;
     }
@@ -130,7 +130,7 @@ final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         assert(protocol !is null);
     }
-    body
+    do
     {
         protocol_ = protocol;
     }
@@ -270,7 +270,7 @@ final class IOCPLoop : Loop
     {
         assert(transport !is null);
     }
-    body
+    do
     {
         transport.socket.shutdown();
         defaultAllocator.dispose(transport.socket);

@@ -167,7 +167,7 @@ struct Queue(T)
     {
         assert(!empty);
     }
-    body
+    do
     {
         auto n = first.next;
         T ret = move(first.content);

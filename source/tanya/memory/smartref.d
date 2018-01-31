@@ -54,7 +54,7 @@ private final class RefCountedStore(T)
     {
         assert(this.counter > 0);
     }
-    body
+    do
     {
         mixin("return " ~ op ~ "counter;");
     }
@@ -139,7 +139,7 @@ struct RefCounted(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.allocator_ = allocator;
     }
@@ -247,7 +247,7 @@ struct RefCounted(T)
     {
         assert(count > 0, "Attempted to access an uninitialized reference");
     }
-    body
+    do
     {
         return this.storage.payload;
     }
@@ -501,7 +501,7 @@ in
 {
     assert(allocator !is null);
 }
-body
+do
 {
     auto rc = typeof(return)(allocator);
 
@@ -546,7 +546,7 @@ in
     assert(allocator !is null);
     assert(size <= size_t.max / ElementType!T.sizeof);
 }
-body
+do
 {
     return RefCounted!T(allocator.make!T(size), allocator);
 }
@@ -664,7 +664,7 @@ struct Unique(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.allocator_ = allocator;
     }
@@ -849,7 +849,7 @@ in
 {
     assert(allocator !is null);
 }
-body
+do
 {
     auto payload = allocator.make!(T, A)(args);
     return Unique!T(payload, allocator);
@@ -877,7 +877,7 @@ in
     assert(allocator !is null);
     assert(size <= size_t.max / ElementType!T.sizeof);
 }
-body
+do
 {
     auto payload = allocator.resize!(ElementType!T)(null, size);
     return Unique!T(payload, allocator);

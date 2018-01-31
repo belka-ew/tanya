@@ -77,7 +77,7 @@ in
 {
     assert(&source !is &target, "Source and target must be different");
 }
-body
+do
 {
     static if (is(T == struct) || isStaticArray!T)
     {

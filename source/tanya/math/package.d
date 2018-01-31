@@ -586,7 +586,7 @@ in
 {
     assert(z > 0, "Division by zero.");
 }
-body
+do
 {
     G mask = G.max / 2 + 1;
     H result;
@@ -627,7 +627,7 @@ in
 {
     assert(z.length > 0, "Division by zero.");
 }
-body
+do
 {
     size_t i;
     auto tmp1 = Integer(x, x.allocator);

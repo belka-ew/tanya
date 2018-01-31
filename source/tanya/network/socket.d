@@ -185,7 +185,7 @@ else version (Windows)
         {
             assert(count >= 0);
         }
-        body
+        do
         {
             DWORD lpNumber;
             BOOL result = GetOverlappedResult(overlapped.handle,
@@ -259,7 +259,7 @@ else version (Windows)
         {
             assert(count >= 0);
         }
-        body
+        do
         {
             DWORD lpNumber;
             BOOL result = GetOverlappedResult(overlapped.handle,
@@ -720,7 +720,7 @@ abstract class Socket
         assert(handle != SocketType.init);
         assert(handle_ == SocketType.init, "Socket handle cannot be changed");
     }
-    body
+    do
     {
         handle_ = handle;
 
@@ -749,7 +749,7 @@ abstract class Socket
     {
         assert(handle != SocketType.init);
     }
-    body
+    do
     {
         scope (failure)
         {

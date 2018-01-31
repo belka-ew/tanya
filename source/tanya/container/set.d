@@ -76,7 +76,7 @@ struct Range(E)
         assert(this.dataRange.empty
             || this.dataRange.back.status == BucketStatus.used);
     }
-    body
+    do
     {
         do
         {
@@ -96,7 +96,7 @@ struct Range(E)
         assert(this.dataRange.empty
             || this.dataRange.back.status == BucketStatus.used);
     }
-    body
+    do
     {
         do
         {
@@ -111,7 +111,7 @@ struct Range(E)
         assert(!this.dataRange.empty);
         assert(this.dataRange.front.status == BucketStatus.used);
     }
-    body
+    do
     {
         return dataRange.front.content;
     }
@@ -122,7 +122,7 @@ struct Range(E)
         assert(!this.dataRange.empty);
         assert(this.dataRange.back.status == BucketStatus.used);
     }
-    body
+    do
     {
         return dataRange.back.content;
     }
@@ -180,7 +180,7 @@ struct Set(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this(allocator);
         rehash(n);
@@ -192,7 +192,7 @@ struct Set(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.data = typeof(this.data)(allocator);
     }
@@ -227,7 +227,7 @@ struct Set(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.data = typeof(this.data)(init.data, allocator);
     }
@@ -239,7 +239,7 @@ struct Set(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.data = typeof(this.data)(move(init.data), allocator);
         this.lengthIndex = init.lengthIndex;
@@ -285,7 +285,7 @@ struct Set(T)
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         return cast(shared Allocator) this.data.allocator;
     }
@@ -371,7 +371,7 @@ struct Set(T)
     {
         assert(buckets.length > 0);
     }
-    body
+    do
     {
         return hash % buckets.length;
     }

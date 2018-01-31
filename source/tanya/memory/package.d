@@ -45,7 +45,7 @@ mixin template DefaultAllocator()
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         this.allocator_ = allocator;
     }
@@ -63,7 +63,7 @@ mixin template DefaultAllocator()
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         if (allocator_ is null)
         {
@@ -78,7 +78,7 @@ mixin template DefaultAllocator()
     {
         assert(allocator !is null);
     }
-    body
+    do
     {
         if (allocator_ is null)
         {
@@ -114,7 +114,7 @@ out (allocator)
 {
     assert(allocator !is null);
 }
-body
+do
 {
     return (cast(GetPureInstance!Allocator) &getAllocatorInstance)();
 }
@@ -132,7 +132,7 @@ in
 {
     assert(allocator !is null);
 }
-body
+do
 {
     .allocator = allocator;
 }
@@ -403,7 +403,7 @@ in
 {
     assert(allocator !is null);
 }
-body
+do
 {
     auto mem = (() @trusted => allocator.allocate(stateSize!T))();
     if (mem is null)
@@ -442,7 +442,7 @@ in
 {
     assert(allocator !is null);
 }
-body
+do
 {
     auto mem = (() @trusted => allocator.allocate(stateSize!T))();
     if (mem is null)
@@ -484,7 +484,7 @@ in
     assert(allocator !is null);
     assert(n <= size_t.max / ElementType!T.sizeof);
 }
-body
+do
 {
     auto ret = allocator.resize!(ElementType!T)(null, n);
     ret.uninitializedFill(ElementType!T.init);
