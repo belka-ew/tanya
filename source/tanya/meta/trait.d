@@ -309,6 +309,17 @@ enum bool isClass(T) = is(T == class);
 enum bool isStruct(T) = is(T == struct);
 
 /**
+ * Tests whether $(D_PARAM T) is a enum.
+ *
+ * Params:
+ *  T = A type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an enum,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isEnum(T) = is(T == enum);
+
+/**
  * Determines whether $(D_PARAM T) is a polymorphic type, i.e. a
  * $(D_KEYWORD class) or an $(D_KEYWORD interface).
  *

@@ -737,9 +737,19 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     {
         result.insertBack("null");
     }
-    else static if(is(Unqual!Arg == bool)) // Boolean
+    else static if (is(Unqual!Arg == bool)) // Boolean
     {
         result.insertBack(args[0] ? "true" : "false");
+    }
+    else static if (is(Arg == enum)) // Enum
+    {
+        foreach (m; __traits(allMembers, Arg))
+        {
+            if (args[0] == __traits(getMember, Arg, m))
+            {
+                result.insertBack(m);
+            }
+        }
     }
     else static if (isSomeChar!Arg || isSomeString!Arg) // String or char
     {
@@ -808,6 +818,20 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
 {
     String formatted;
     return printToString!fmt(formatted, args);
+}
+
+// Enum.
+@nogc nothrow pure @safe unittest
+{
+    enum E1 : int
+    {
+        one,
+        two,
+    }
+    assert(format!"{}"(E1.one) == "one");
+
+    const E1 e1;
+    assert(format!"{}"(e1) == "one");
 }
 
 // One argument tests.
