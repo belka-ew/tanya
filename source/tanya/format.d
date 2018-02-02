@@ -717,6 +717,8 @@ if (is(T == struct))
     }
     alias fields = Filter!(pred, __traits(allMembers, T));
 
+    result.insertBack(T.stringof);
+    result.insertBack('(');
     static if (fields.length > 0)
     {
         printToString!"{}"(result, __traits(getMember, arg, fields[0]));
@@ -726,6 +728,7 @@ if (is(T == struct))
             printToString!"{}"(result, __traits(getMember, arg, field));
         }
     }
+    result.insertBack(')');
 }
 
 private void formatRange(T)(ref T arg, ref String result)
@@ -784,7 +787,21 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     }
     else static if (is(Unqual!(typeof(args[0].stringify())) == String))
     {
-        result.insertBack(args[0].stringify()[]);
+        static if (is(Arg == class) || is(Arg == interface))
+        {
+            if (args[0] is null)
+            {
+                result.insertBack("null");
+            }
+            else
+            {
+                result.insertBack(args[0].stringify()[]);
+            }
+        }
+        else
+        {
+            result.insertBack(args[0].stringify()[]);
+        }
     }
     else static if (is(Arg == class))
     {
@@ -796,10 +813,11 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     }
     else static if (is(Arg == struct))
     {
-        result.insertBack(Arg.stringof);
-        result.insertBack('(');
         formatStruct(args[0], result);
-        result.insertBack(')');
+    }
+    else static if (is(Arg == union))
+    {
+        result.insertBack(Arg.stringof);
     }
     else static if (isFloatingPoint!Arg) // Float
     {
@@ -983,6 +1001,26 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     assert(format!"{}"(instance.get()) == instance.get().toString());
     assert(format!"{}"(cast(I) instance.get()) == I.classinfo.name);
     assert(format!"{}"(cast(A) null) == "null");
+
+    class B
+    {
+        String stringify() @nogc nothrow pure @safe
+        {
+            return String("Class B");
+        }
+    }
+    assert(format!"{}"(cast(B) null) == "null");
+}
+
+// Unions.
+unittest
+{
+    union U
+    {
+        int i;
+        char c;
+    }
+    assert(format!"{}"(U(2)) == "U");
 }
 
 // Ranges.
