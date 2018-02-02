@@ -728,6 +728,23 @@ if (is(T == struct))
     }
 }
 
+private void formatRange(T)(ref T arg, ref String result)
+if (isInputRange!T && !isInfinite!T)
+{
+    result.insertBack('[');
+    if (!arg.empty)
+    {
+        printToString!"{}"(result, arg.front);
+        arg.popFront();
+    }
+    foreach (e; arg)
+    {
+        result.insertBack(", ");
+        printToString!"{}"(result, e);
+    }
+    result.insertBack(']');
+}
+
 private ref String printToString(string fmt, Args...)(return ref String result,
                                                       auto ref Args args)
 {
@@ -760,6 +777,10 @@ private ref String printToString(string fmt, Args...)(return ref String result,
                  && isSomeChar!(ElementType!Arg)) // Stringish range
     {
         result.insertBack(args[0]);
+    }
+    else static if (isInputRange!Arg && !isInfinite!Arg)
+    {
+        formatRange(args[0], result);
     }
     else static if (is(Unqual!(typeof(args[0].stringify())) == String))
     {
@@ -969,7 +990,7 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
 {
     static struct Stringish
     {
-        string content = "Some content";
+        private string content = "Some content";
 
         immutable(char) front() const @nogc nothrow pure @safe
         {
@@ -987,6 +1008,27 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
         }
     }
     assert(format!"{}"(Stringish()) == "Some content");
+
+    static struct Intish
+    {
+        private int front_ = 3;
+
+        int front() const @nogc nothrow pure @safe
+        {
+            return this.front_;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            --this.front_;
+        }
+
+        bool empty() const @nogc nothrow pure @safe
+        {
+            return this.front == 0;
+        }
+    }
+    assert(format!"{}"(Intish()) == "[3, 2, 1]");
 }
 
 // Typeid.
