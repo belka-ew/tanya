@@ -37,6 +37,11 @@ _D5tanya6memory2op10fillMemoryFNaNbNiAvmZv:
 
 		mov %rsi,  %r8
 
+		// If the length is less than the number of misaligned bytes,
+		// write one byte at a time and exit
+		cmp %rax, %rcx
+		jg aligned_1
+
 	naligned:
 		mov %dl, (%r8) // Write a byte
 

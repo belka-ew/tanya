@@ -32,6 +32,16 @@ else
     import core.stdc.string;
 }
 
+version (TanyaNative)
+{
+    @nogc nothrow pure @system unittest
+    {
+        ubyte[2] buffer = 1;
+        fillMemory(buffer[1 .. $], 0);
+        assert(buffer[0] == 1 && buffer[1] == 0);
+    }
+}
+
 private enum alignMask = size_t.sizeof - 1;
 
 /**
@@ -146,31 +156,6 @@ do
     foreach (ubyte v; memory)
     {
         assert(v == 0);
-    }
-}
-
-// Stress test. Checks that `fill` can handle unaligned pointers and different
-// lengths.
-@nogc nothrow pure @safe unittest
-{
-    ubyte[192] memory;
-
-    foreach (j; 0 .. 192)
-    {
-        foreach (ubyte i, ref ubyte v; memory[j .. $])
-        {
-            v = i;
-        }
-        fill(memory[j .. $]);
-        foreach (ubyte v; memory[j .. $])
-        {
-            assert(v == 0);
-        }
-        fill!1(memory[j .. $]);
-        foreach (ubyte v; memory[j .. $])
-        {
-            assert(v == 1);
-        }
     }
 }
 
