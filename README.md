@@ -149,7 +149,7 @@ There are more containers in the `tanya.container` package.
 
 | DMD     | GCC            |
 |:-------:|:--------------:|
-| 2.078.2 | *gdc-5* branch |
+| 2.078.3 | *gdc-5* branch |
 | 2.077.1 |                |
 | 2.076.1 |                |
 
