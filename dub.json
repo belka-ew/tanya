@@ -9,6 +9,10 @@
 
 	"targetType": "library",
 
+	"dependencies-linux": {
+		"mir-linux-kernel": "~>1.0.0",
+	},
+
 	"configurations": [
 		{
 			"name": "library",
