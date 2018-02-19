@@ -28,5 +28,6 @@
 			"lflags": ["arch/tanya.a"],
 			"versions": ["TanyaNative"]
 		}
-	]
+	],
+	"libs-windows": ["advapi32"]
 }
