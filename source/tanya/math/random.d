@@ -117,7 +117,8 @@ else version (Solaris)
 
 version (linux)
 {
-    extern (C) long syscall(long number, ...) nothrow @system @nogc;
+    import core.stdc.config : c_long;
+    extern (C) c_long syscall(c_long number, ...) nothrow @system @nogc;
 
     /**
      * Uses getrandom system call.
@@ -158,7 +159,8 @@ version (linux)
         do
         {
             // int getrandom(void *buf, size_t buflen, unsigned int flags);
-            auto length = syscall(318, output.ptr, output.length, 0);
+            import mir.linux._asm.unistd : NR_getrandom;
+            auto length = syscall(NR_getrandom, output.ptr, output.length, 0);
             Nullable!ubyte ret;
 
             if (length >= 0)
@@ -169,16 +171,13 @@ version (linux)
         }
     }
 
-    version (X86_64)
+    @nogc @system unittest
     {
-        private unittest
-        {
-            auto entropy = defaultAllocator.make!Entropy();
-            ubyte[blockSize] output;
-            output = entropy.random;
+        auto entropy = defaultAllocator.make!Entropy();
+        ubyte[blockSize] output;
+        output = entropy.random;
 
-            defaultAllocator.dispose(entropy);
-        }
+        defaultAllocator.dispose(entropy);
     }
 }
 else version (SecureARC4Random)
