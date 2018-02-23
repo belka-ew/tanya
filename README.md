@@ -168,7 +168,7 @@ Deprecated features are removed after one release that includes these deprecatio
 
 ## Further characteristics
 
-* Tanya is a native D library without any external dependencies.
+* Tanya is a native D library
 
 * Tanya is cross-platform. The development happens on a 64-bit Linux, but it
 is being tested on Windows and FreeBSD as well.
