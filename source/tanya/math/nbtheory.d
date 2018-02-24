@@ -30,15 +30,15 @@ else
  * Calculates the absolute value of a number.
  *
  * Params:
- *  I = Value type.
- *  x = Value.
+ *  T = Argument type.
+ *  x = Argument.
  *
  * Returns: Absolute value of $(D_PARAM x).
  */
-I abs(I)(I x)
-if (isIntegral!I)
+T abs(T)(T x)
+if (isIntegral!T)
 {
-    static if (isSigned!I)
+    static if (isSigned!T)
     {
         return x >= 0 ? x : -x;
     }
@@ -49,7 +49,7 @@ if (isIntegral!I)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     int i = -1;
     assert(i.abs == 1);
@@ -63,25 +63,25 @@ pure nothrow @safe @nogc unittest
 version (D_Ddoc)
 {
     /// ditto
-    I abs(I)(I x)
-    if (isFloatingPoint!I);
+    T abs(T)(T x)
+    if (isFloatingPoint!T);
 }
 else version (TanyaNative)
 {
-    extern I abs(I)(I number) pure nothrow @safe @nogc
-    if (isFloatingPoint!I);
+    extern T abs(T)(T number) @nogc nothrow pure @safe
+    if (isFloatingPoint!T);
 }
 else
 {
-    I abs(I)(I x)
-    if (isFloatingPoint!I)
+    T abs(T)(T x)
+    if (isFloatingPoint!T)
     {
         return fabs(cast(real) x);
     }
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     float f = -1.64;
     assert(f.abs == 1.64F);
@@ -97,7 +97,7 @@ pure nothrow @safe @nogc unittest
 }
 
 /// ditto
-I abs(I : Integer)(const auto ref I x)
+T abs(T : Integer)(const auto ref T x)
 {
     auto result = Integer(x, x.allocator);
     result.sign = Sign.positive;
@@ -105,7 +105,7 @@ I abs(I : Integer)(const auto ref I x)
 }
 
 /// ditto
-I abs(I : Integer)(I x)
+T abs(T : Integer)(T x)
 {
     x.sign = Sign.positive;
     return x;
@@ -117,37 +117,30 @@ version (D_Ddoc)
      * Calculates natural logarithm of $(D_PARAM x).
      *
      * Params:
+     *  T = Argument type.
      *  x = Argument.
      *
      * Returns: Natural logarithm of $(D_PARAM x).
      */
-    float ln(float x) pure nothrow @safe @nogc;
-    /// ditto
-    double ln(double x) pure nothrow @safe @nogc;
-    /// ditto
-    real ln(real x) pure nothrow @safe @nogc;
+    T ln(T)(T x)
+    if (isFloatingPoint!T);
 }
 else version (TanyaNative)
 {
-    extern float ln(float x) pure nothrow @safe @nogc;
-    extern double ln(double x) pure nothrow @safe @nogc;
-    extern real ln(real x) pure nothrow @safe @nogc;
+    extern T ln(T)(T x) @nogc nothrow pure @safe
+    if (isFloatingPoint!T);
 }
 else
 {
-    float ln(float x) pure nothrow @safe @nogc
+    T ln(T)(T x)
+    if (isFloatingPoint!T)
     {
         return log(x);
     }
-    double ln(double x) pure nothrow @safe @nogc
-    {
-        return log(x);
-    }
-    alias ln = log;
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     import tanya.math;
 

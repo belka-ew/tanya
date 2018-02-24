@@ -2,10 +2,10 @@
 
 
 // logl.
-	.globl _D5tanya4math8nbtheory2lnFNaNbNiNfeZe
-	.type _D5tanya4math8nbtheory2lnFNaNbNiNfeZe, @function
+	.globl _D5tanya4math8nbtheory9__T2lnTeZ2lnFNaNbNiNfeZe
+	.type _D5tanya4math8nbtheory9__T2lnTeZ2lnFNaNbNiNfeZe, @function
 
-_D5tanya4math8nbtheory2lnFNaNbNiNfeZe:
+_D5tanya4math8nbtheory9__T2lnTeZ2lnFNaNbNiNfeZe:
 	fldln2 // Put lb(e) onto the FPU stack
 	fldt 8(%rsp) // Put the argument onto the FPU stack
 	fyl2x // %st1 * lb(%st0)
@@ -13,10 +13,10 @@ _D5tanya4math8nbtheory2lnFNaNbNiNfeZe:
 
 
 // log.
-	.globl _D5tanya4math8nbtheory2lnFNaNbNiNfdZd
-	.type _D5tanya4math8nbtheory2lnFNaNbNiNfdZd, @function
+	.globl _D5tanya4math8nbtheory9__T2lnTdZ2lnFNaNbNiNfdZd
+	.type _D5tanya4math8nbtheory9__T2lnTdZ2lnFNaNbNiNfdZd, @function
 
-_D5tanya4math8nbtheory2lnFNaNbNiNfdZd:
+_D5tanya4math8nbtheory9__T2lnTdZ2lnFNaNbNiNfdZd:
 	movsd %xmm0, -8(%rsp) // Put the argument onto the stack
 
 	fldln2 // Put lb(e) onto the FPU stack
@@ -31,10 +31,10 @@ _D5tanya4math8nbtheory2lnFNaNbNiNfdZd:
 
 
 // logf.
-	.globl _D5tanya4math8nbtheory2lnFNaNbNiNffZf
-	.type _D5tanya4math8nbtheory2lnFNaNbNiNffZf, @function
+	.globl _D5tanya4math8nbtheory9__T2lnTfZ2lnFNaNbNiNffZf
+	.type _D5tanya4math8nbtheory9__T2lnTfZ2lnFNaNbNiNffZf, @function
 
-_D5tanya4math8nbtheory2lnFNaNbNiNffZf:
+_D5tanya4math8nbtheory9__T2lnTfZ2lnFNaNbNiNffZf:
 	movss %xmm0, -4(%rsp) // Put the argument onto the stack
 
 	fldln2 // Put lb(e) onto the FPU stack
