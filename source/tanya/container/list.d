@@ -179,12 +179,6 @@ struct SList(T)
         assert(l.front == 3);
     }
 
-    @nogc nothrow pure @safe unittest
-    {
-        auto l = SList!int(0, 0);
-        assert(l.empty);
-    }
-
     /// ditto
     this(const size_t len, shared Allocator allocator = defaultAllocator)
     {
@@ -842,14 +836,6 @@ struct SList(T)
         assert(l1 == l2);
     }
 
-    @nogc nothrow pure @safe unittest
-    {
-        auto l1 = SList!int();
-        auto l2 = SList!int([9, 4]);
-        l1 = l2[];
-        assert(l1 == l2);
-    }
-
     /**
      * Assigns a static array.
      *
@@ -903,6 +889,12 @@ struct SList(T)
     static assert(is(SList!Stuff));
 }
 
+@nogc nothrow pure @safe unittest
+{
+    auto l = SList!int(0, 0);
+    assert(l.empty);
+}
+
 // foreach called using opIndex().
 @nogc nothrow pure @safe unittest
 {
@@ -919,6 +911,14 @@ struct SList(T)
         assert(i != 2 || e == 5);
         ++i;
     }
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto l1 = SList!int();
+    auto l2 = SList!int([9, 4]);
+    l1 = l2[];
+    assert(l1 == l2);
 }
 
 /**
@@ -1107,12 +1107,6 @@ struct DList(T)
         assert(l.length == 2);
         assert(l.front == 3);
         assert(l.back == 3);
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        auto l = DList!int(0, 0);
-        assert(l.empty);
     }
 
     /// ditto
@@ -1406,12 +1400,6 @@ struct DList(T)
         }
 
         return inserted;
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        auto l1 = DList!int([5, 234]);
-        assert(l1.head is l1.head.next.prev);
     }
 
     /// ditto
@@ -1724,15 +1712,6 @@ struct DList(T)
         r.popBack();
         l2.insertAfter(r, 234);
         assert(l1 == l2);
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        DList!int l;
-        l.insertAfter(l[], 234);
-        assert(l.front == 234);
-        assert(l.back == 234);
-        assert(l.length == 1);
     }
 
     /// ditto
@@ -2068,6 +2047,15 @@ struct DList(T)
         {
             tailNext.prev = headPrev;
         }
+        if (headPrev !is null)
+        {
+            headPrev.next = tailNext;
+        }
+        else if (headPrev is null && tailNext is null)
+        {
+            this.tail = null;
+            this.head = null;
+        }
         *r.head = tailNext;
         *r.tail = tail;
 
@@ -2084,21 +2072,6 @@ struct DList(T)
         r.popFront();
 
         assert(l1.remove(r).empty);
-        assert(l1 == l2);
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        auto l1 = DList!int([5, 234, 30, 1]);
-        auto l2 = DList!int([5, 1]);
-        auto r = l1[];
-
-        r.popFront();
-        r.popBack();
-        assert(r.front == 234);
-        assert(r.back == 30);
-
-        assert(!l1.remove(r).empty);
         assert(l1 == l2);
     }
 
@@ -2190,14 +2163,6 @@ struct DList(T)
         assert(l1 == l2);
     }
 
-    @nogc nothrow pure @safe unittest
-    {
-        auto l1 = DList!int();
-        auto l2 = DList!int([9, 4]);
-        l1 = l2[];
-        assert(l1 == l2);
-    }
-
     /**
      * Assigns a static array.
      *
@@ -2250,4 +2215,54 @@ struct DList(T)
     }
     static assert(is(SList!(A*)));
     static assert(is(DList!(A*)));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto l = DList!int([5]);
+    assert(l.remove(l[]).empty);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto l1 = DList!int([5, 234, 30, 1]);
+    auto l2 = DList!int([5, 1]);
+    auto r = l1[];
+
+    r.popFront();
+    r.popBack();
+    assert(r.front == 234);
+    assert(r.back == 30);
+
+    assert(!l1.remove(r).empty);
+    assert(l1 == l2);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto l = DList!int(0, 0);
+    assert(l.empty);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto l1 = DList!int([5, 234]);
+    assert(l1.head is l1.head.next.prev);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    DList!int l;
+    l.insertAfter(l[], 234);
+    assert(l.front == 234);
+    assert(l.back == 234);
+    assert(l.length == 1);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto l1 = DList!int();
+    auto l2 = DList!int([9, 4]);
+    l1 = l2[];
+    assert(l1 == l2);
 }
