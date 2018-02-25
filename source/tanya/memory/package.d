@@ -14,12 +14,10 @@
  */
 module tanya.memory;
 
-import std.algorithm.iteration;
 import std.algorithm.mutation;
 import tanya.conv;
 import tanya.exception;
 public import tanya.memory.allocator;
-import tanya.memory.mmappool;
 import tanya.meta.trait;
 import tanya.range.primitive;
 
@@ -94,13 +92,21 @@ private void _d_monitordelete(Object h, bool det) pure nothrow @nogc;
 
 shared Allocator allocator;
 
-shared static this() nothrow @nogc
-{
-    allocator = MmapPool.instance;
-}
-
 private shared(Allocator) getAllocatorInstance() nothrow @nogc
 {
+    if (allocator is null)
+    {
+        version (TanyaNative)
+        {
+            import tanya.memory.mmappool;
+            defaultAllocator = MmapPool.instance;
+        }
+        else
+        {
+            import tanya.memory.mallocator;
+            defaultAllocator = Mallocator.instance;
+        }
+    }
     return allocator;
 }
 
@@ -244,7 +250,7 @@ package(tanya) T[] resize(T)(shared Allocator allocator,
     return array;
 }
 
-private unittest
+@nogc nothrow pure @safe unittest
 {
     int[] p;
 
@@ -267,6 +273,10 @@ private unittest
  */
 package(tanya) void[] finalize(T)(ref T* p)
 {
+    if (p is null)
+    {
+        return null;
+    }
     static if (hasElaborateDestructor!T)
     {
         destroy(*p);
@@ -333,7 +343,10 @@ package(tanya) void[] finalize(T)(ref T[] p)
 {
     static if (hasElaborateDestructor!(typeof(p[0])))
     {
-        p.each!((ref e) => destroy(e));
+        foreach (ref e; p)
+        {
+            destroy(e);
+        }
     }
     return p;
 }
@@ -354,11 +367,11 @@ void dispose(T)(shared Allocator allocator, auto ref T p)
     p = null;
 }
 
-private unittest
+@nogc nothrow pure @system unittest
 {
-    struct S
+    static struct S
     {
-        ~this()
+        ~this() @nogc nothrow pure @safe
         {
         }
     }
@@ -368,7 +381,7 @@ private unittest
 }
 
 // Works with interfaces.
-private pure unittest
+@nogc nothrow pure @safe unittest
 {
     interface I
     {
@@ -457,7 +470,7 @@ do
 }
 
 ///
-unittest
+@nogc nothrow pure @safe unittest
 {
     int* i = defaultAllocator.make!int(5);
     assert(*i == 5);
@@ -492,7 +505,7 @@ do
 }
 
 ///
-unittest
+@nogc nothrow pure @safe unittest
 {
     int[] i = defaultAllocator.make!(int[])(2);
     assert(i.length == 2);
