@@ -124,7 +124,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = SList!int([5, 8, 15]);
         assert(l.front == 5);
@@ -172,14 +172,14 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = SList!int(2, 3);
         assert(l.length == 2);
         assert(l.front == 3);
     }
 
-    private @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = SList!int(0, 0);
         assert(l.empty);
@@ -192,7 +192,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = SList!int(2);
         assert(l.length == 2);
@@ -263,7 +263,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([5, 1, 234]);
         auto l2 = SList!int(l1);
@@ -289,7 +289,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([5, 1, 234]);
         auto l2 = l1;
@@ -308,7 +308,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         SList!int l = SList!int([8, 5]);
 
@@ -366,7 +366,7 @@ struct SList(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         SList!int l;
         int value = 5;
@@ -419,7 +419,7 @@ struct SList(T)
     alias insert = insertFront;
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         SList!int l1;
 
@@ -473,7 +473,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([234, 5, 1]);
         auto l2 = SList!int([5, 1]);
@@ -502,7 +502,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([5, 234, 30, 1]);
         auto l2 = SList!int([5, 1]);
@@ -526,7 +526,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([234, 5, 1]);
         auto l2 = SList!int([5, 1]);
@@ -553,7 +553,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([5, 234, 30, 1]);
         auto l2 = SList!int([5, 1]);
@@ -572,7 +572,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         SList!int l;
 
@@ -600,7 +600,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         SList!int l1, l2;
 
@@ -650,7 +650,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         SList!int l;
 
@@ -691,7 +691,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         SList!int l = SList!int([8, 5, 4]);
 
@@ -726,7 +726,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([5, 234, 30, 1]);
         auto l2 = SList!int([5]);
@@ -784,7 +784,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         {
             auto l1 = SList!int([5, 4, 9]);
@@ -834,7 +834,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([5, 4, 9]);
         auto l2 = SList!int([9, 4]);
@@ -842,7 +842,7 @@ struct SList(T)
         assert(l1 == l2);
     }
 
-    private @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int();
         auto l2 = SList!int([9, 4]);
@@ -865,7 +865,7 @@ struct SList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = SList!int([5, 4, 9]);
         auto l2 = SList!int([9, 4]);
@@ -877,7 +877,7 @@ struct SList(T)
 }
 
 ///
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     SList!int l;
     size_t i;
@@ -895,7 +895,7 @@ struct SList(T)
     assert(i == 3);
 }
 
-@safe @nogc private unittest
+@nogc nothrow pure @safe unittest
 {
     interface Stuff
     {
@@ -904,7 +904,7 @@ struct SList(T)
 }
 
 // foreach called using opIndex().
-private @nogc @safe unittest
+@nogc nothrow pure @safe unittest
 {
     SList!int l;
     size_t i;
@@ -1051,7 +1051,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = DList!int([5, 8, 15]);
         assert(l.front == 5);
@@ -1101,7 +1101,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = DList!int(2, 3);
         assert(l.length == 2);
@@ -1109,7 +1109,7 @@ struct DList(T)
         assert(l.back == 3);
     }
 
-    private @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = DList!int(0, 0);
         assert(l.empty);
@@ -1122,7 +1122,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = DList!int(2);
         assert(l.length == 2);
@@ -1196,7 +1196,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 1, 234]);
         auto l2 = DList!int(l1);
@@ -1223,7 +1223,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 1, 234]);
         auto l2 = l1;
@@ -1242,7 +1242,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l = DList!int([8, 5]);
 
@@ -1278,7 +1278,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = DList!int([25]);
         assert(l.front == 25);
@@ -1371,7 +1371,7 @@ struct DList(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l;
         int value = 5;
@@ -1408,7 +1408,7 @@ struct DList(T)
         return inserted;
     }
 
-    private @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 234]);
         assert(l1.head is l1.head.next.prev);
@@ -1421,7 +1421,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l1;
 
@@ -1497,7 +1497,7 @@ struct DList(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l;
         int value = 5;
@@ -1544,7 +1544,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l1;
 
@@ -1601,7 +1601,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([234, 5, 1]);
         auto l2 = DList!int([5, 1]);
@@ -1634,7 +1634,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([234, 5, 1]);
         auto l2 = DList!int([5, 1]);
@@ -1665,7 +1665,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 234, 30, 1]);
         auto l2 = DList!int([5, 1]);
@@ -1716,7 +1716,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 234, 1]);
         auto l2 = DList!int([5, 1]);
@@ -1726,7 +1726,7 @@ struct DList(T)
         assert(l1 == l2);
     }
 
-    private @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l;
         l.insertAfter(l[], 234);
@@ -1760,7 +1760,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 1, 234]);
         auto l2 = DList!int([5, 1]);
@@ -1790,7 +1790,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 234, 30, 1]);
         auto l2 = DList!int([5, 1]);
@@ -1827,7 +1827,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l;
 
@@ -1855,7 +1855,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l1, l2;
 
@@ -1913,7 +1913,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l;
 
@@ -1949,7 +1949,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l = DList!int([9, 8]);
 
@@ -1989,7 +1989,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l = DList!int([8, 5, 4]);
 
@@ -2016,7 +2016,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         DList!int l = DList!int([8, 5, 4]);
 
@@ -2075,7 +2075,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 234, 30, 1]);
         auto l2 = DList!int([5]);
@@ -2087,8 +2087,7 @@ struct DList(T)
         assert(l1 == l2);
     }
 
-    // Issue 260: https://issues.caraus.io/issues/260.
-    private @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 234, 30, 1]);
         auto l2 = DList!int([5, 1]);
@@ -2183,7 +2182,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 4, 9]);
         auto l2 = DList!int([9, 4]);
@@ -2191,7 +2190,7 @@ struct DList(T)
         assert(l1 == l2);
     }
 
-    private @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int();
         auto l2 = DList!int([9, 4]);
@@ -2214,7 +2213,7 @@ struct DList(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto l1 = DList!int([5, 4, 9]);
         auto l2 = DList!int([9, 4]);
@@ -2226,7 +2225,7 @@ struct DList(T)
 }
 
 ///
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     DList!int l;
     size_t i;
@@ -2244,8 +2243,7 @@ struct DList(T)
     assert(i == 3);
 }
 
-// Issue 232: https://issues.caraus.io/issues/232.
-private @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
