@@ -639,7 +639,7 @@ struct SList(T)
     {
         auto n = this.head.next;
 
-        this.allocator.dispose(this.head);
+        this.allocator_.dispose(this.head);
         this.head = n;
     }
 
@@ -2038,7 +2038,10 @@ struct DList(T)
         while (e !is tailNext)
         {
             auto next = e.next;
-            allocator.dispose(e);
+            /* Workaround for dmd 2.076.1 bug on OSX. Invariants fail when
+               the allocator is called. Here it should be safe to use
+               allocator_ directory, since the list isn't empty. */
+            this.allocator_.dispose(e);
             e = next;
         }
 
@@ -2057,7 +2060,7 @@ struct DList(T)
             this.head = null;
         }
         *r.head = tailNext;
-        *r.tail = tail;
+        *r.tail = this.tail;
 
         return r;
     }
