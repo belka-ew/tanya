@@ -1564,10 +1564,12 @@ struct String
     }
     do
     {
-        auto oldLen = this.data + length;
+        const oldLength = length;
+        const rangeEnd = r.end - this.data;
         const inserted = insertBack(el);
-        bringToFront(ByCodeUnit!char(this, r.end, oldLen),
-                     ByCodeUnit!char(this, oldLen, this.data + length));
+        auto containerEnd = this.data + oldLength;
+        bringToFront(ByCodeUnit!char(this, this.data + rangeEnd, containerEnd),
+                     ByCodeUnit!char(this, containerEnd, this.data + length));
         return inserted;
     }
 
