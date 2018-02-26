@@ -633,8 +633,8 @@ template isBidirectionalRange(R)
  *
  * A random-access range is a range that allows random access to its
  * elements by index using $(D_INLINECODE [])-operator (defined with
- * $(D_INLINECODE opIndex())). Further a random access range should be a
- * bidirectional range that also has a length or an infinite forward range.
+ * $(D_INLINECODE opIndex())). Further a random access range should
+ * have a length or be infinite.
  *
  * Params:
  *  R = The type to be tested.
@@ -642,19 +642,21 @@ template isBidirectionalRange(R)
  * Returns: $(D_KEYWORD true) if $(D_PARAM R) is a random-access range,
  *          $(D_KEYWORD false) otherwise.
  *
- * See_Also: $(D_PSYMBOL isBidirectionalRange),
- *           $(D_PSYMBOL isForwardRange),
- *           $(D_PSYMBOL isInfinite),
+ * See_Also: $(D_PSYMBOL isInfinite),
  *           $(D_PSYMBOL hasLength).
+ *
+ * Note: This definition differs from `std.range.primitives.isRandomAccessRange`
+ *  in the D standard library in that it does not also require $(D_PARAM R) to
+ *  be a forward range and a bidirectional range. Those properties may be tested
+ *  separately with $(D_PSYMBOL isForwardRange) and
+ *  $(D_PSYMBOL isBidirectionalRange).
  */
 template isRandomAccessRange(R)
 {
     static if (is(ReturnType!((R r) => r.opIndex(size_t.init)) U))
     {
-        private enum bool isBidirectional = isBidirectionalRange!R
-                                         && hasLength!R;
-        private enum bool isForward = isInfinite!R && isForwardRange!R;
-        enum bool isRandomAccessRange = (isBidirectional || isForward)
+        enum bool isRandomAccessRange = isInputRange!R
+                                     && (hasLength!R || isInfinite!R)
                                      && is(U == ReturnType!((R r) => r.front()));
     }
     else
