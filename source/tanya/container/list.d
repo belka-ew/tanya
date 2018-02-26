@@ -639,7 +639,7 @@ struct SList(T)
     {
         auto n = this.head.next;
 
-        this.allocator_.dispose(this.head);
+        allocator.dispose(this.head);
         this.head = n;
     }
 
@@ -1879,7 +1879,7 @@ struct DList(T)
     {
         auto n = this.head.next;
 
-        allocator.dispose(this.head);
+        this.allocator_.dispose(this.head);
         this.head = n;
         if (this.head is null)
         {
@@ -2023,10 +2023,11 @@ struct DList(T)
     do
     {
         // Save references to the elements before and after the range.
-        Entry* tailNext, headPrev;
-        if (*r.tail !is null && (*r.tail).next !is null)
+        Entry* headPrev;
+        Entry** tailNext;
+        if (*r.tail !is null)
         {
-            tailNext = (*r.tail).next;
+            tailNext = &(*r.tail).next;
         }
         if (*r.head !is null)
         {
@@ -2035,32 +2036,36 @@ struct DList(T)
 
         // Remove the elements.
         Entry* e = *r.head;
-        while (e !is tailNext)
+        while (e !is *tailNext)
         {
             auto next = e.next;
             /* Workaround for dmd 2.076.1 bug on OSX. Invariants fail when
                the allocator is called. Here it should be safe to use
-               allocator_ directory, since the list isn't empty. */
+               allocator_ directory, since the list isn't empty.
+               See also removeFront. */
             this.allocator_.dispose(e);
             e = next;
         }
 
         // Connect the elements before and after the removed range.
-        if (tailNext !is null)
+        if (*tailNext !is null)
         {
-            tailNext.prev = headPrev;
+            (*tailNext).prev = headPrev;
+        }
+        else
+        {
+            this.tail = headPrev;
         }
         if (headPrev !is null)
         {
-            headPrev.next = tailNext;
+            headPrev.next = *tailNext;
         }
-        else if (headPrev is null && tailNext is null)
+        else
         {
-            this.tail = null;
-            this.head = null;
+            this.head = *tailNext;
         }
-        *r.head = tailNext;
-        *r.tail = this.tail;
+        r.head = tailNext;
+        r.tail = &this.tail;
 
         return r;
     }
@@ -2220,6 +2225,7 @@ struct DList(T)
     static assert(is(DList!(A*)));
 }
 
+// Removes all elements
 @nogc nothrow pure @safe unittest
 {
     auto l = DList!int([5]);
@@ -2267,5 +2273,18 @@ struct DList(T)
     auto l1 = DList!int();
     auto l2 = DList!int([9, 4]);
     l1 = l2[];
+    assert(l1 == l2);
+}
+
+// Sets the new head
+@nogc nothrow pure @safe unittest
+{
+    auto l1 = DList!int([5, 234, 30, 1]);
+    auto l2 = DList!int([1]);
+    auto r = l1[];
+
+    r.popBack();
+
+    assert(!l1.remove(r).empty);
     assert(l1 == l2);
 }
