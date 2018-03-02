@@ -5,7 +5,7 @@
 /**
  * This module provides a portable way of using operating system error codes.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -13,6 +13,8 @@
  *                 tanya/os/error.d)
  */
 module tanya.os.error;
+
+import tanya.meta.trait;
 
 // Socket API error.
 private template SAError(int posix, int wsa = posix)
@@ -120,7 +122,7 @@ struct ErrorCode
         /// Protocol not available.
         noProtocolOption          = SAError!(92, 42),
 
-        /// The protocol is not implemented orR has not been configured.
+        /// The protocol is not implemented or has not been configured.
         protocolNotSupported      = SAError!(93, 43),
 
         /// The support for the specified socket type does not exist in this
@@ -187,18 +189,65 @@ struct ErrorCode
     }
 
     /**
+     * Error descriptions.
+     */
+    private enum ErrorStr : string
+    {
+        success                   = "The operation completed successfully",
+        noPermission              = "Operation not permitted",
+        interrupted               = "Interrupted system call",
+        badDescriptor             = "Bad file descriptor",
+        wouldBlock                = "An operation on a non-blocking socket would block",
+        noMemory                  = "Out of memory",
+        accessDenied              = "Access denied",
+        fault                     = "An invalid pointer address detected",
+        noSuchDevice              = "No such device",
+        invalidArgument           = "An invalid argument was supplied",
+        tooManyDescriptors        = "The limit on the number of open file descriptors",
+        noDescriptors             = "The limit on the number of open file descriptors",
+        brokenPipe                = "Broken pipe",
+        nameTooLong               = "The name was too long",
+        notSocket                 = "A socket operation was attempted on a non-socket",
+        protocolError             = "Protocol error",
+        messageTooLong            = "Message too long",
+        wrongProtocolType         = "Wrong protocol type for socket",
+        noProtocolOption          = "Protocol not available",
+        protocolNotSupported      = "The protocol is not implemented or has not been configured",
+        socketNotSupported        = "Socket type not supported",
+        operationNotSupported     = "The address family is no supported by the protocol family",
+        addressFamilyNotSupported = "Address family specified is not supported",
+        addressInUse              = "Address already in use",
+        networkDown               = "The network is not available",
+        networkUnreachable        = "No route to host",
+        networkReset              = "Network dropped connection because of reset",
+        connectionAborted         = "The connection has been aborted",
+        connectionReset           = "Connection reset by peer",
+        noBufferSpace             = "No free buffer space is available for a socket operation",
+        alreadyConnected          = "Transport endpoint is already connected",
+        notConnected              = "Transport endpoint is not connected",
+        shutdown                  = "Cannot send after transport endpoint shutdown",
+        timedOut                  = "Operation timed out",
+        connectionRefused         = "Connection refused",
+        hostDown                  = "Host is down",
+        hostUnreachable           = "No route to host",
+        alreadyStarted            = "Operation already in progress",
+        inProgress                = "Operation now in progress",
+        cancelled                 = "Operation cancelled",
+    }
+
+    /**
      * Constructor.
      *
      * Params:
      *  value = Numeric error code.
      */
-    this(const ErrorNo value) pure nothrow @safe @nogc
+    this(const ErrorNo value) @nogc nothrow pure @safe
     {
         this.value_ = value;
     }
 
     ///
-    pure nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         ErrorCode ec;
         assert(ec == ErrorCode.success);
@@ -211,13 +260,13 @@ struct ErrorCode
      * Resets this $(D_PSYMBOL ErrorCode) to default
      * ($(D_PSYMBOL ErrorCode.success)).
      */
-    void reset() pure nothrow @safe @nogc
+    void reset() @nogc nothrow pure @safe
     {
         this.value_ = ErrorNo.success;
     }
 
     ///
-    pure nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto ec = ErrorCode(ErrorCode.fault);
         assert(ec == ErrorCode.fault);
@@ -241,7 +290,7 @@ struct ErrorCode
     }
 
     ///
-    pure nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         ErrorCode ec = ErrorCode.fault;
         auto errorNo = cast(ErrorCode.ErrorNo) ec;
@@ -258,38 +307,38 @@ struct ErrorCode
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref ErrorCode opAssign(const ErrorNo that) pure nothrow @safe @nogc
+    ref ErrorCode opAssign(const ErrorNo that) @nogc nothrow pure @safe
     {
         this.value_ = that;
         return this;
     }
 
     /// ditto
-    ref ErrorCode opAssign()(auto ref const ErrorCode that)
-    pure nothrow @safe @nogc
+    ref ErrorCode opAssign(const ErrorCode that) @nogc nothrow pure @safe
     {
         this.value_ = that.value_;
         return this;
     }
 
     ///
-    pure nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
-        {
-            ErrorCode ec;
-            assert(ec == ErrorCode.success);
+        ErrorCode ec;
+        assert(ec == ErrorCode.success);
 
-            ec = ErrorCode.fault;
-            assert(ec == ErrorCode.fault);
-        }
-        {
-            auto ec1 = ErrorCode(ErrorCode.fault);
-            ErrorCode ec2;
-            assert(ec2 == ErrorCode.success);
+        ec = ErrorCode.fault;
+        assert(ec == ErrorCode.fault);
+    }
 
-            ec2 = ec1;
-            assert(ec1 == ec2);
-        }
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        auto ec1 = ErrorCode(ErrorCode.fault);
+        ErrorCode ec2;
+        assert(ec2 == ErrorCode.success);
+
+        ec2 = ec1;
+        assert(ec1 == ec2);
     }
 
     /**
@@ -300,37 +349,68 @@ struct ErrorCode
      *
      * Returns: Whether $(D_KEYWORD this) and $(D_PARAM that) are equal.
      */
-    bool opEquals(const ErrorNo that) const pure nothrow @safe @nogc
+    bool opEquals(const ErrorNo that) const @nogc nothrow pure @safe
     {
         return this.value_ == that;
     }
 
     /// ditto
-    bool opEquals()(auto ref const ErrorCode that)
-    const pure nothrow @safe @nogc
+    bool opEquals(const ErrorCode that) const @nogc nothrow pure @safe
     {
         return this.value_ == that.value_;
     }
 
     ///
-    pure nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
-        {
-            ErrorCode ec1 = ErrorCode.fault;
-            ErrorCode ec2 = ErrorCode.accessDenied;
+        ErrorCode ec1 = ErrorCode.fault;
+        ErrorCode ec2 = ErrorCode.accessDenied;
 
-            assert(ec1 != ec2);
-            assert(ec1 != ErrorCode.accessDenied);
-            assert(ErrorCode.fault != ec2);
-        }
-        {
-            ErrorCode ec1 = ErrorCode.fault;
-            ErrorCode ec2 = ErrorCode.fault;
+        assert(ec1 != ec2);
+        assert(ec1 != ErrorCode.accessDenied);
+        assert(ErrorCode.fault != ec2);
+    }
 
-            assert(ec1 == ec2);
-            assert(ec1 == ErrorCode.fault);
-            assert(ErrorCode.fault == ec2);
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        ErrorCode ec1 = ErrorCode.fault;
+        ErrorCode ec2 = ErrorCode.fault;
+
+        assert(ec1 == ec2);
+        assert(ec1 == ErrorCode.fault);
+        assert(ErrorCode.fault == ec2);
+    }
+
+    /**
+     * Returns string describing the error number. If a description for a
+     * specific error number is not available, returns $(D_KEYWORD null).
+     *
+     * Returns: String describing the error number.
+     */
+    string text() const @nogc nothrow pure @safe
+    {
+        foreach (e; __traits(allMembers, ErrorNo))
+        {
+            if (__traits(getMember, ErrorNo, e) == this.value_)
+            {
+                return __traits(getMember, ErrorStr, e);
+            }
         }
+        return null;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        ErrorCode ec = ErrorCode.fault;
+        assert(ec.text == "An invalid pointer address detected");
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        ErrorCode ec = cast(ErrorCode.ErrorNo) -1;
+        assert(ec.text is null);
     }
 
     private ErrorNo value_ = ErrorNo.success;
