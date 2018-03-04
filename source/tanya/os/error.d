@@ -388,7 +388,7 @@ struct ErrorCode
      *
      * Returns: String describing the error number.
      */
-    string text() const @nogc nothrow pure @safe
+    string toString() const @nogc nothrow pure @safe
     {
         foreach (e; __traits(allMembers, ErrorNo))
         {
@@ -404,13 +404,13 @@ struct ErrorCode
     @nogc nothrow pure @safe unittest
     {
         ErrorCode ec = ErrorCode.fault;
-        assert(ec.text == "An invalid pointer address detected");
+        assert(ec.toString() == "An invalid pointer address detected");
     }
 
     @nogc nothrow pure @safe unittest
     {
         ErrorCode ec = cast(ErrorCode.ErrorNo) -1;
-        assert(ec.text is null);
+        assert(ec.toString() is null);
     }
 
     private ErrorNo value_ = ErrorNo.success;
