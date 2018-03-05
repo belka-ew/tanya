@@ -78,7 +78,6 @@ import tanya.async.watcher;
 import tanya.container.buffer;
 import tanya.container.queue;
 import tanya.memory;
-import tanya.memory.mmappool;
 import tanya.network.socket;
 
 version (DisableBackends)
@@ -189,7 +188,7 @@ abstract class Loop
      */
     this() @nogc
     {
-        pendings = Queue!Watcher(MmapPool.instance);
+        pendings = Queue!Watcher();
     }
 
     /**
@@ -199,7 +198,7 @@ abstract class Loop
     {
         foreach (w; pendings)
         {
-            MmapPool.instance.dispose(w);
+            defaultAllocator.dispose(w);
         }
     }
 
@@ -384,16 +383,16 @@ class BadLoopException : Exception
     }
     version (Epoll)
     {
-        defaultLoop_ = MmapPool.instance.make!EpollLoop;
+        defaultLoop_ = defaultAllocator.make!EpollLoop;
     }
     else version (IOCP)
     {
-        defaultLoop_ = MmapPool.instance.make!IOCPLoop;
+        defaultLoop_ = defaultAllocator.make!IOCPLoop;
     }
     else version (Kqueue)
     {
         import tanya.async.event.kqueue;
-        defaultLoop_ = MmapPool.instance.make!KqueueLoop;
+        defaultLoop_ = defaultAllocator.make!KqueueLoop;
     }
     return defaultLoop_;
 }

@@ -26,7 +26,6 @@ import tanya.async.watcher;
 import tanya.container.array;
 import tanya.container.buffer;
 import tanya.memory;
-import tanya.memory.mmappool;
 import tanya.network.socket;
 
 /**
@@ -65,8 +64,8 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         super(socket);
         this.loop = loop;
-        output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
-        input = WriteBuffer!ubyte(8192, MmapPool.instance);
+        output = ReadBuffer!ubyte(8192, 1024);
+        input = WriteBuffer!ubyte(8192);
         active = true;
     }
 
@@ -107,8 +106,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     /**
      * Switches the protocol.
      *
-     * The protocol is deallocated by the event loop, it should currently be
-     * allocated with $(D_PSYMBOL MmapPool).
+     * The protocol is deallocated by the event loop.
      *
      * Params:
      *  protocol = Application protocol.
@@ -163,7 +161,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
         else
         {
             protocol.disconnected(exception);
-            MmapPool.instance.dispose(protocol_);
+            defaultAllocator.dispose(protocol_);
             defaultAllocator.dispose(exception);
             active = false;
         }
@@ -220,7 +218,7 @@ abstract class SelectorLoop : Loop
     this() @nogc
     {
         super();
-        connections = Array!SocketWatcher(maxEvents, MmapPool.instance);
+        connections = Array!SocketWatcher(maxEvents);
     }
 
     ~this() @nogc
@@ -231,7 +229,7 @@ abstract class SelectorLoop : Loop
             // created by the user and should be freed by himself.
             if (cast(StreamTransport) connection !is null)
             {
-                MmapPool.instance.dispose(connection);
+                defaultAllocator.dispose(connection);
             }
         }
     }
@@ -387,7 +385,7 @@ abstract class SelectorLoop : Loop
             }
             if (transport is null)
             {
-                transport = MmapPool.instance.make!StreamTransport(this, client);
+                transport = defaultAllocator.make!StreamTransport(this, client);
                 connections[client.handle] = transport;
             }
             else

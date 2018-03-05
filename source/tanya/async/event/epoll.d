@@ -31,7 +31,6 @@ import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.array;
 import tanya.memory;
-import tanya.memory.mmappool;
 import tanya.network.socket;
 
 extern (C) nothrow @nogc
@@ -56,7 +55,7 @@ final class EpollLoop : SelectorLoop
             throw defaultAllocator.make!BadLoopException("epoll initialization failed");
         }
         super();
-        events = Array!epoll_event(maxEvents, MmapPool.instance);
+        events = Array!epoll_event(maxEvents);
     }
 
     /**

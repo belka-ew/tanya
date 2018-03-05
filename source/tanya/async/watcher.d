@@ -22,7 +22,6 @@ import tanya.async.transport;
 import tanya.container.buffer;
 import tanya.container.queue;
 import tanya.memory;
-import tanya.memory.mmappool;
 import tanya.network.socket;
 
 /**
@@ -103,7 +102,7 @@ class ConnectionWatcher : SocketWatcher
     this(Socket socket) @nogc
     {
         super(socket);
-        incoming = Queue!DuplexTransport(MmapPool.instance);
+        incoming = Queue!DuplexTransport();
     }
 
     /**
@@ -112,7 +111,7 @@ class ConnectionWatcher : SocketWatcher
      */
     void setProtocol(P : Protocol)() @nogc
     {
-        this.protocolFactory = () @nogc => cast(Protocol) MmapPool.instance.make!P;
+        this.protocolFactory = () @nogc => cast(Protocol) defaultAllocator.make!P;
     }
 
     /**

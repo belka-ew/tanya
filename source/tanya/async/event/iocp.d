@@ -27,7 +27,6 @@ import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.buffer;
 import tanya.memory;
-import tanya.memory.mmappool;
 import tanya.network.socket;
 import tanya.sys.windows.winbase;
 
@@ -57,8 +56,8 @@ final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     this(OverlappedConnectedSocket socket) @nogc
     {
         super(socket);
-        output = ReadBuffer!ubyte(8192, 1024, MmapPool.instance);
-        input = WriteBuffer!ubyte(8192, MmapPool.instance);
+        output = ReadBuffer!ubyte(8192, 1024);
+        input = WriteBuffer!ubyte(8192);
         active = true;
     }
 
@@ -117,8 +116,7 @@ final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     /**
      * Switches the protocol.
      *
-     * The protocol is deallocated by the event loop, it should currently be
-     * allocated with $(D_PSYMBOL MmapPool).
+     * The protocol is deallocated by the event loop.
      *
      * Params:
      *  protocol = Application protocol.
@@ -150,20 +148,20 @@ final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
                 SocketState overlapped;
                 try
                 {
-                    overlapped = MmapPool.instance.make!SocketState;
+                    overlapped = defaultAllocator.make!SocketState;
                     socket.beginSend(input[], overlapped);
                 }
                 catch (SocketException e)
                 {
-                    MmapPool.instance.dispose(overlapped);
-                    MmapPool.instance.dispose(e);
+                    defaultAllocator.dispose(overlapped);
+                    defaultAllocator.dispose(e);
                 }
             }
         }
         else
         {
             protocol.disconnected(exception);
-            MmapPool.instance.dispose(protocol_);
+            defaultAllocator.dispose(protocol_);
             defaultAllocator.dispose(exception);
             active = false;
         }
@@ -221,12 +219,12 @@ final class IOCPLoop : Loop
 
             try
             {
-                overlapped = MmapPool.instance.make!SocketState;
+                overlapped = defaultAllocator.make!SocketState;
                 socket.beginAccept(overlapped);
             }
             catch (SocketException e)
             {
-                MmapPool.instance.dispose(overlapped);
+                defaultAllocator.dispose(overlapped);
                 defaultAllocator.dispose(e);
                 return false;
             }
@@ -250,12 +248,12 @@ final class IOCPLoop : Loop
             {
                 try
                 {
-                    overlapped = MmapPool.instance.make!SocketState;
+                    overlapped = defaultAllocator.make!SocketState;
                     transport.socket.beginReceive(transport.output[], overlapped);
                 }
                 catch (SocketException e)
                 {
-                    MmapPool.instance.dispose(overlapped);
+                    defaultAllocator.dispose(overlapped);
                     defaultAllocator.dispose(e);
                     return false;
                 }
@@ -302,7 +300,7 @@ final class IOCPLoop : Loop
         assert(overlapped !is null);
         scope (failure)
         {
-            MmapPool.instance.dispose(overlapped);
+            defaultAllocator.dispose(overlapped);
         }
 
         switch (overlapped.event)
@@ -315,7 +313,7 @@ final class IOCPLoop : Loop
                 assert(listener !is null);
 
                 auto socket = listener.endAccept(overlapped);
-                auto transport = MmapPool.instance.make!StreamTransport(socket);
+                auto transport = defaultAllocator.make!StreamTransport(socket);
 
                 connection.incoming.enqueue(transport);
 
@@ -330,8 +328,8 @@ final class IOCPLoop : Loop
 
                 if (!transport.active)
                 {
-                    MmapPool.instance.dispose(transport);
-                    MmapPool.instance.dispose(overlapped);
+                    defaultAllocator.dispose(transport);
+                    defaultAllocator.dispose(overlapped);
                     return;
                 }
 

@@ -59,7 +59,6 @@ import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.array;
 import tanya.memory;
-import tanya.memory.mmappool;
 import tanya.network.socket;
 
 void EV_SET(kevent_t* kevp, typeof(kevent_t.tupleof) args) pure nothrow @nogc
@@ -146,8 +145,8 @@ final class KqueueLoop : SelectorLoop
             throw make!BadLoopException(defaultAllocator,
                                         "kqueue initialization failed");
         }
-        events = Array!kevent_t(64, MmapPool.instance);
-        changes = Array!kevent_t(64, MmapPool.instance);
+        events = Array!kevent_t(64);
+        changes = Array!kevent_t(64);
     }
 
     /**

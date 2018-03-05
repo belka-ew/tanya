@@ -65,8 +65,7 @@ interface DuplexTransport : ReadTransport, WriteTransport
     /**
      * Switches the protocol.
      *
-     * The protocol is deallocated by the event loop, it should currently be
-     * allocated with $(D_PSYMBOL MmapPool).
+     * The protocol is deallocated by the event loop.
      *
      * Params:
      *  protocol = Application protocol.
