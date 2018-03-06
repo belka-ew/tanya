@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/**
+/*
  * Native allocator for Posix and Windows.
  *
  * Copyright: Eugene Wissner 2016-2017.
@@ -82,7 +82,7 @@ else version (Windows)
     }
 }
 
-/**
+/*
  * This allocator allocates memory in regions (multiple of 64 KB for example).
  * Each region is then splitted in blocks. So it doesn't request the memory
  * from the operating system on each call, but only if there are no large
@@ -106,6 +106,7 @@ else version (Windows)
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  * </pre>
  */
+deprecated("Use tanya.memory.mallocator instead")
 final class MmapPool : Allocator
 {
     version (none)
@@ -126,7 +127,7 @@ final class MmapPool : Allocator
         }
     }
 
-    /**
+    /*
      * Allocates $(D_PARAM size) bytes of memory.
      *
      * Params:
@@ -155,8 +156,7 @@ final class MmapPool : Allocator
         return data is null ? null : data[0 .. size];
     }
 
-    ///
-    nothrow unittest
+    version (TanyaNative) @nogc nothrow pure unittest
     {
         auto p = MmapPool.instance.allocate(20);
         assert(p);
@@ -167,7 +167,7 @@ final class MmapPool : Allocator
     }
 
     // Issue 245: https://issues.caraus.io/issues/245.
-    private @nogc unittest
+    version (TanyaNative) @nogc nothrow pure unittest
     {
         // allocate() check.
         size_t tooMuchMemory = size_t.max
@@ -245,7 +245,7 @@ final class MmapPool : Allocator
         block.next = block.next.next;
     }
 
-    /**
+    /*
      * Deallocates a memory block.
      *
      * Params:
@@ -299,15 +299,14 @@ final class MmapPool : Allocator
         return true;
     }
 
-    ///
-    nothrow unittest
+    version (TanyaNative) @nogc nothrow pure unittest
     {
         auto p = MmapPool.instance.allocate(20);
 
         assert(MmapPool.instance.deallocate(p));
     }
 
-    /**
+    /*
      * Reallocates a memory block in place if possible or returns
      * $(D_KEYWORD false). This function cannot be used to allocate or
      * deallocate memory, so if $(D_PARAM p) is $(D_KEYWORD null) or
@@ -383,8 +382,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    ///
-    nothrow unittest
+    version (TanyaNative) @nogc nothrow pure unittest
     {
         void[] p;
         assert(!MmapPool.instance.reallocateInPlace(p, 5));
@@ -408,7 +406,7 @@ final class MmapPool : Allocator
         MmapPool.instance.deallocate(p);
     }
 
-    /**
+    /*
      * Increases or decreases the size of a memory block.
      *
      * Params:
@@ -449,8 +447,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    ///
-    nothrow unittest
+    version (TanyaNative) @nogc nothrow pure unittest
     {
         void[] p;
         MmapPool.instance.reallocate(p, 10 * int.sizeof);
@@ -514,7 +511,7 @@ final class MmapPool : Allocator
         return instance_;
     }
 
-    /**
+    /*
      * Static allocator instance and initializer.
      *
      * Returns: Global $(D_PSYMBOL MmapPool) instance.
@@ -524,8 +521,7 @@ final class MmapPool : Allocator
         return (cast(GetPureInstance!MmapPool) &instantiate)();
     }
 
-    ///
-    nothrow unittest
+    version (TanyaNative) @nogc nothrow pure unittest
     {
         assert(instance is instance);
     }
@@ -622,7 +618,7 @@ final class MmapPool : Allocator
              / pageSize * pageSize + pageSize;
     }
 
-    /**
+    /*
      * Returns: Alignment offered.
      */
     @property uint alignment() shared const pure nothrow @safe @nogc
@@ -630,7 +626,7 @@ final class MmapPool : Allocator
         return alignment_;
     }
 
-    private nothrow @nogc unittest
+    version (TanyaNative) @nogc nothrow pure unittest
     {
         assert(MmapPool.instance.alignment == MmapPool.alignment_);
     }
@@ -661,9 +657,11 @@ final class MmapPool : Allocator
     private alias Block = shared BlockEntry*;
 }
 
+version (TanyaNative):
+
 // A lot of allocations/deallocations, but it is the minimum caused a
 // segmentation fault because MmapPool reallocateInPlace moves a block wrong.
-private @nogc unittest
+@nogc nothrow pure unittest
 {
     auto a = MmapPool.instance.allocate(16);
     auto d = MmapPool.instance.allocate(16);
