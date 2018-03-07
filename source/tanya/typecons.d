@@ -92,7 +92,7 @@ template Pair(Specs...)
 }
 
 ///
-unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(Pair!(int, int)));
     static assert(!is(Pair!(int, 5)));
