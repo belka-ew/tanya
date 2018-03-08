@@ -296,7 +296,8 @@ final class IOCPLoop : Loop
             return; // Timeout
         }
 
-        auto overlapped = (cast(SocketState) ((cast(void*) overlap) - 8));
+        enum size_t offset = size_t.sizeof * 2;
+        auto overlapped = cast(SocketState) ((cast(void*) overlap) - offset);
         assert(overlapped !is null);
         scope (failure)
         {
