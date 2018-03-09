@@ -162,7 +162,7 @@ final class EpollLoop : SelectorLoop
                 }
                 else if (transport.output.length)
                 {
-                    pendings.enqueue(transport);
+                    pendings.insertBack(transport);
                 }
             }
             if (events[i].events & EPOLLOUT)

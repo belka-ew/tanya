@@ -273,7 +273,7 @@ final class IOCPLoop : Loop
         transport.socket.shutdown();
         defaultAllocator.dispose(transport.socket);
         transport.exception = exception;
-        pendings.enqueue(transport);
+        pendings.insertBack(transport);
     }
 
     /**
@@ -316,11 +316,11 @@ final class IOCPLoop : Loop
                 auto socket = listener.endAccept(overlapped);
                 auto transport = defaultAllocator.make!StreamTransport(socket);
 
-                connection.incoming.enqueue(transport);
+                connection.incoming.insertBack(transport);
 
                 reify(transport, EventMask(Event.none), EventMask(Event.read, Event.write));
 
-                pendings.enqueue(connection);
+                pendings.insertBack(connection);
                 listener.beginAccept(overlapped);
                 break;
             case OverlappedSocketEvent.read:
@@ -360,7 +360,7 @@ final class IOCPLoop : Loop
                     {
                         transport.socket.beginReceive(transport.output[], overlapped);
                     }
-                    pendings.enqueue(transport);
+                    pendings.insertBack(transport);
                 }
                 break;
             case OverlappedSocketEvent.write:

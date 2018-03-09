@@ -20,7 +20,7 @@ import tanya.async.loop;
 import tanya.async.protocol;
 import tanya.async.transport;
 import tanya.container.buffer;
-import tanya.container.queue;
+import tanya.container.list;
 import tanya.memory;
 import tanya.network.socket;
 
@@ -91,7 +91,7 @@ abstract class SocketWatcher : Watcher
 class ConnectionWatcher : SocketWatcher
 {
     /// Incoming connection queue.
-    Queue!DuplexTransport incoming;
+    DList!DuplexTransport incoming;
 
     private Protocol delegate() @nogc protocolFactory;
 
@@ -102,7 +102,6 @@ class ConnectionWatcher : SocketWatcher
     this(Socket socket) @nogc
     {
         super(socket);
-        incoming = Queue!DuplexTransport();
     }
 
     /**
@@ -124,10 +123,10 @@ class ConnectionWatcher : SocketWatcher
     }
     do
     {
-        foreach (transport; incoming)
+        for (; !this.incoming.empty; this.incoming.removeFront())
         {
-            transport.protocol = protocolFactory();
-            transport.protocol.connected(transport);
+            this.incoming.front.protocol = protocolFactory();
+            this.incoming.front.protocol.connected(this.incoming.front);
         }
     }
 }
