@@ -313,6 +313,8 @@ struct SList(T)
 
     /**
      * Returns: First element.
+     *
+     * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) front() inout
     in
@@ -1247,6 +1249,8 @@ struct DList(T)
 
     /**
      * Returns: First element.
+     *
+     * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) front() inout
     in
@@ -1260,6 +1264,8 @@ struct DList(T)
 
     /**
      * Returns: Last element.
+     *
+     * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) back() inout
     in
