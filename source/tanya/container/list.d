@@ -3,9 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Linked list.
+ * This module contains singly-linked ($(D_PSYMBOL SList)) and doubly-linked
+ * ($(D_PSYMBOL DList)) lists.
  *
- * Copyright: Eugene Wissner 2016-2017.
+ * Copyright: Eugene Wissner 2016-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -924,7 +925,7 @@ struct SList(T)
 }
 
 /**
- * Forward range for the $(D_PSYMBOL DList).
+ * Bidirectional range for the $(D_PSYMBOL DList).
  *
  * Params:
  *  L = List type.
@@ -1013,6 +1014,17 @@ struct DRange(L)
 
 /**
  * Doubly-linked list.
+ *
+ * $(D_PSYMBOL DList) can be also used as a queue. Elements can be enqueued
+ * with $(D_PSYMBOL DList.insertBack). To process the queue a `for`-loop comes
+ * in handy:
+ *
+ * ---
+ * for (; !dlist.empty; dlist.removeFront())
+ * {
+ *  do_something_with(dlist.front);
+ * }
+ * ---
  *
  * Params:
  *  T = Content type.

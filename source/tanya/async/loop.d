@@ -76,7 +76,7 @@ import std.typecons;
 import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.buffer;
-import tanya.container.queue;
+import tanya.container.list;
 import tanya.memory;
 import tanya.network.socket;
 
@@ -163,7 +163,7 @@ abstract class Loop
     private bool done = true;
 
     /// Pending watchers.
-    protected Queue!Watcher pendings;
+    protected DList!Watcher pendings;
 
     /**
      * Returns: Maximal event count can be got at a time
@@ -188,7 +188,6 @@ abstract class Loop
      */
     this() @nogc
     {
-        pendings = Queue!Watcher();
     }
 
     /**
@@ -196,9 +195,9 @@ abstract class Loop
      */
     ~this() @nogc
     {
-        foreach (w; pendings)
+        for (; !this.pendings.empty; this.pendings.removeFront())
         {
-            defaultAllocator.dispose(w);
+            defaultAllocator.dispose(this.pendings.front);
         }
     }
 
@@ -213,9 +212,9 @@ abstract class Loop
             poll();
 
             // Invoke pendings
-            foreach (ref w; this.pendings)
+            for (; !this.pendings.empty; this.pendings.removeFront())
             {
-                w.invoke();
+                this.pendings.front.invoke();
             }
         }
         while (!this.done);
@@ -244,7 +243,7 @@ abstract class Loop
     {
         auto loop = defaultAllocator.make!TestLoop;
         auto watcher = defaultAllocator.make!DummyWatcher;
-        loop.pendings.enqueue(watcher);
+        loop.pendings.insertBack(watcher);
 
         assert(!watcher.invoked);
         loop.run();

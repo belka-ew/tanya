@@ -218,12 +218,12 @@ abstract class SelectorLoop : Loop
     this() @nogc
     {
         super();
-        connections = Array!SocketWatcher(maxEvents);
+        this.connections = Array!SocketWatcher(maxEvents);
     }
 
     ~this() @nogc
     {
-        foreach (ref connection; connections)
+        foreach (ref connection; this.connections[])
         {
             // We want to free only the transports. ConnectionWatcher are
             // created by the user and should be freed by himself.
@@ -266,7 +266,7 @@ abstract class SelectorLoop : Loop
         transport.socket.shutdown();
         defaultAllocator.dispose(transport.socket);
         transport.exception = exception;
-        pendings.enqueue(transport);
+        pendings.insertBack(transport);
     }
 
     /**
@@ -394,12 +394,12 @@ abstract class SelectorLoop : Loop
             }
 
             reify(transport, EventMask(Event.none), EventMask(Event.read, Event.write));
-            connection.incoming.enqueue(transport);
+            connection.incoming.insertBack(transport);
         }
 
         if (!connection.incoming.empty)
         {
-            pendings.enqueue(connection);
+            pendings.insertBack(connection);
         }
     }
 }

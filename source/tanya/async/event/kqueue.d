@@ -279,7 +279,7 @@ final class KqueueLoop : SelectorLoop
                 }
                 else if (transport.output.length)
                 {
-                    pendings.enqueue(transport);
+                    pendings.insertBack(transport);
                 }
             }
             else if (events[i].filter == EVFILT_WRITE)

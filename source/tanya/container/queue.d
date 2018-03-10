@@ -12,6 +12,7 @@
  * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/container/queue.d,
  *                 tanya/container/queue.d)
  */
+deprecated("Use tanya.container.list.DList instead")
 module tanya.container.queue;
 
 import tanya.algorithm.mutation;
