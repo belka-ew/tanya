@@ -1,6 +1,7 @@
 # Binary
 *.[oa]
 *.exe
+*.lib
 
 # D
 .dub
