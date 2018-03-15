@@ -1,8 +1,8 @@
 {
 	"name": "tanya",
-	"description": "General purpose, @nogc library. Containers, networking, metaprogramming, memory management, utilities",
+	"description": "@nogc library. Containers, networking, metaprogramming, memory management, utilities",
 	"license": "MPL-2.0",
-	"copyright": "(c) Eugene Wissner <info@caraus.de>",
+	"copyright": "© Eugene Wissner <info@caraus.de>",
 	"authors": [
 		"Eugene Wissner"
 	],
@@ -10,7 +10,7 @@
 	"targetType": "library",
 
 	"dependencies-linux": {
-		"mir-linux-kernel": "~>1.0.0",
+		"mir-linux-kernel": "~>1.0.0"
 	},
 
 	"configurations": [
@@ -33,5 +33,6 @@
 			"versions": ["TanyaNative"]
 		}
 	],
+
 	"libs-windows": ["advapi32"]
 }

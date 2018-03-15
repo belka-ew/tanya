@@ -147,21 +147,20 @@ There are more containers in the `tanya.container` package.
 
 ### Supported compilers
 
-| DMD     | GCC            |
-|:-------:|:--------------:|
-| 2.079.0 | *master*       |
-| 2.078.3 |                |
-| 2.077.1 |                |
-| 2.076.1 |                |
+| DMD     | GCC       |
+|:-------:|:---------:|
+| 2.079.0 | *master*  |
+| 2.078.3 |           |
+| 2.077.1 |           |
+| 2.076.1 |           |
 
 ### Current status
 
 Following modules are under development:
 
-| Feature  | Branch    | Build status                                                                                                                                                                                                                                                                                  |
-|----------|:---------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| BitArray | bitvector | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya) [![bitvector](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/bitvector?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/bitvector) |
-| TLS      | crypto    | [![crypto](https://travis-ci.org/caraus-ecms/tanya.svg?branch=crypto)](https://travis-ci.org/caraus-ecms/tanya) [![crypto](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/crypto?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/crypto)                |
+| Feature    | Branch    | Build status                                                                                                                                                                                                                                                                                  |
+|------------|:---------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Hash table | bitvector | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya) [![bitvector](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/bitvector?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/bitvector) |
 
 ### Release management
 
