@@ -49,7 +49,10 @@ After finishing the new socket implementation will land in the `net` package and
 ones.
 
 
-## Basic usage
+## NogcD
+
+To achieve programming without the Garbage Collection tanya uses a subset of D:
+NogcD.
 
 ### Allocators
 
@@ -113,7 +116,7 @@ catch (Exception e)
 }
 ```
 
-### Containers
+### Built-in array operations and containers
 
 Arrays are commonly used in programming. D's built-in arrays often rely on the
 GC. It is inconvenient to change their size, reserve memory for future use and
@@ -143,6 +146,25 @@ int i = arr[7]; // Access 8th element.
 There are more containers in the `tanya.container` package.
 
 
+### Immutability
+
+Immutability doesn't play nice with manual memory management since the
+allocated storage should be initialized (mutated) and then released (mutated).
+`immutable` is used only for non-local immutable declarations (that are
+evaluated at compile time), static immutable data, strings (`immutable(char)[]`,
+`immutable(wchar)[]` and `immutable(dchar)[]`).
+
+
+### Unsupported features
+
+The following features depend on GC and aren't supported:
+
+- `lazy` parameters (allocate a closure which is evaluated when then the
+parameter is used)
+
+- `synchronized` blocks
+
+
 ## Development
 
 ### Supported compilers
@@ -168,12 +190,18 @@ Deprecated features are removed after one release that includes these deprecatio
 
 ## Further characteristics
 
-* Tanya is a native D library
+- Tanya is a native D library
 
-* Tanya is cross-platform. The development happens on a 64-bit Linux, but it
-is being tested on Windows and FreeBSD as well.
+- Tanya is cross-platform. The development happens on a 64-bit Linux, but it
+is being tested on Windows and FreeBSD as well
 
-* The library isn't thread-safe yet.
+- Tanya favours generic algorithms therefore there is no auto-decoding. Char
+arrays are handled as any other array type
+
+- The library isn't thread-safe yet
+
+- Complex numbers (`cfloat`, `cdouble`, `creal`, `ifloat`, `idouble`, `ireal`)
+aren't supported
 
 
 ## Feedback
