@@ -186,7 +186,20 @@ Following modules are under development:
 
 ### Release management
 
-Deprecated features are removed after one release that includes these deprecations.
+Tanya is still under active development and it isn't possible to provide great
+backwards-compatibility at this stage. This won't change until 1.0.0. Almost
+every release contains new features or API changes alongside bug fixes. Thus:
+
+- Patch releases add new functionality and bug fixes in a backwards-compatible
+manner
+
+- Minor releases contain API breakages
+
+- Major release number is always the same: `0.x.x`
+
+Deprecated functionality is where possible marked as such before getting
+removed. It is left in the library for one release: If 0.8.1 deprecates some
+feature, it is removed in the next release: 0.9.0.
 
 ## Further characteristics
 
