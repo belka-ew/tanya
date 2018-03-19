@@ -15,59 +15,83 @@
 module tanya.hash.lookup;
 
 import tanya.meta.trait;
+import tanya.range.primitive;
 
-/**
- * FNV-1a (Fowler-Noll-Vo) hash function.
- *
- * See_Also: $(LINK http://www.isthe.com/chongo/tech/comp/fnv/).
- */
-size_t fnv(const ubyte[] key) @nogc nothrow pure @safe
+private struct FNV
 {
     static if (size_t.sizeof == 4)
     {
         enum uint offsetBasis = 2166136261;
-        enum uint fnvPrime = 16777619;
+        enum uint prime = 16777619;
     }
     else static if (size_t.sizeof == 8)
     {
         enum ulong offsetBasis = 14695981039346656037UL;
-        enum ulong fnvPrime = 1099511628211UL;
+        enum ulong prime = 1099511628211UL;
     }
     else
     {
         static assert(false, "FNV requires at least 32-bit hash length");
     }
 
-    size_t h = offsetBasis;
+    size_t hash = offsetBasis;
 
-    foreach (c; key)
+    void opCall(T)(auto ref T key)
     {
-        h = (h ^ c) * fnvPrime;
+        static if (isScalarType!T)
+        {
+            (() @trusted => add(cast(const ubyte[]) (&key)[0 .. T.sizeof]))();
+        }
+        else static if (isArray!T && isScalarType!(ElementType!T))
+        {
+            add(cast(const ubyte[]) key);
+        }
+        else static if (is(T == typeof(null)))
+        {
+            add(key);
+        }
+        else static if (is(typeof(key.toHash()) == size_t))
+        {
+            opCall(key.toHash()); // Combine user-defined hashes
+        }
+        else static if (isInputRange!T && !isInfinite!T)
+        {
+            foreach (e; key)
+            {
+                opCall(e);
+            }
+        }
+        else
+        {
+            static assert(false, "Hash function is not available");
+        }
     }
 
-    return h;
-}
-
-static if (size_t.sizeof == 4) @nogc nothrow pure @safe unittest
-{
-    assert(fnv(null) == 2166136261U);
-}
-
-static if (size_t.sizeof == 8) @nogc nothrow pure @safe unittest
-{
-    assert(fnv(null) == 14695981039346656037UL);
-}
-
-size_t hash(T)(auto ref const T key)
-{
-    static if (isScalarType!T)
+    void add(const ubyte[] key) @nogc nothrow pure @safe
     {
-        return (() @trusted => fnv(cast(const ubyte[]) (&key)[0 .. T.sizeof]))();
+        foreach (c; key)
+        {
+            this.hash = (this.hash ^ c) * prime;
+        }
     }
-    else static if (isSomeString!T
-                 || (isArray && isScalarType!(ElementType!T)))
+}
+
+/**
+ * FNV-1a (Fowler-Noll-Vo) hash function.
+ *
+ * See_Also: $(LINK http://www.isthe.com/chongo/tech/comp/fnv/).
+ */
+size_t hash(T)(auto ref T key)
+{
+    static if (is(typeof(key.toHash()) == size_t))
     {
-        return fnv(cast(const ubyte[]) key);
+        return key.toHash();
+    }
+    else
+    {
+        FNV fnv;
+        fnv(key);
+        return fnv.hash;
     }
 }
 
@@ -77,8 +101,78 @@ version (unittest)
     enum string r100(string x) = r10!x ~ r10!x ~ r10!x ~ r10!x ~ r10!x
                                ~ r10!x ~ r10!x ~ r10!x ~ r10!x ~ r10!x;
     enum string r500(string x) = r100!x ~ r100!x ~ r100!x ~ r100!x ~ r100!x;
+
+    private struct ToHash
+    {
+        size_t toHash() const @nogc nothrow pure @safe
+        {
+            return 0;
+        }
+    }
+
+    private struct HashRange
+    {
+        string fo = "fo";
+
+        @property ubyte front() const @nogc nothrow pure @safe
+        {
+            return this.fo[0];
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            this.fo = this.fo[1 .. $];
+        }
+
+        @property bool empty() const @nogc nothrow pure @safe
+        {
+            return this.fo.length == 0;
+        }
+    }
+
+    private struct ToHashRange
+    {
+        bool empty_;
+
+        @property ToHash front() const @nogc nothrow pure @safe
+        {
+            return ToHash();
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            this.empty_ = true;
+        }
+
+         @property bool empty() const @nogc nothrow pure @safe
+         {
+             return this.empty_;
+         }
+    }
 }
 
+// Tests that work for any hash size
+@nogc nothrow pure @safe unittest
+{
+    assert(hash(null) == FNV.offsetBasis);
+    assert(hash(ToHash()) == 0U);
+}
+
+static if (size_t.sizeof == 4) @nogc nothrow pure @safe unittest
+{
+    assert(hash('a') == 0xe40c292cU);
+    assert(hash(HashRange()) == 0x6222e842U);
+}
+
+static if (size_t.sizeof == 8) @nogc nothrow pure @safe unittest
+{
+    assert(hash('a') == 0xaf63dc4c8601ec8cUL);
+    assert(hash(HashRange()) == 0x08985907b541d342UL);
+}
+
+/*
+ * These are official FNV-1a test vectors and they are in the public domain.
+ */
 // FNV-1a 32 bit test vectors
 static if (size_t.sizeof == 4) @nogc nothrow pure @safe unittest
 {
