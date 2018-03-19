@@ -77,7 +77,29 @@ private struct FNV
 }
 
 /**
- * FNV-1a (Fowler-Noll-Vo) hash function.
+ * Takes an a argument of an arbitrary type $(D_PARAM T) and calculates the hash value.
+ *
+ * Hash calculation is supported for all scalar types. Aggregate types, like
+ *$(D_KEYWORD struct)s should implement `toHash`-function:
+ * ---
+ * size_t toHash() const
+ * {
+ *  return hash;
+ * }
+ * ---
+ *
+ * For scalar types FNV-1a (Fowler-Noll-Vo) hash function is used internally.
+ * If the type provides a `toHash`-function, only `toHash()` is called and its
+ * result is returned.
+ *
+ * This function also accepts input ranges that contain hashable elements.
+ * Individual values are combined then and the resulting hash is returned.
+ *
+ * Params:
+ *  T = Hashable type.
+ *  key = Hashable value.
+ *
+ * Returns: Calculated hash value.
  *
  * See_Also: $(LINK http://www.isthe.com/chongo/tech/comp/fnv/).
  */
