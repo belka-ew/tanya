@@ -40,7 +40,7 @@ private struct FNV
     {
         static if (isScalarType!T)
         {
-            (() @trusted => add(cast(const ubyte[]) (&key)[0 .. T.sizeof]))();
+            (() @trusted => add((cast(const ubyte*) &key)[0 .. T.sizeof]))();
         }
         else static if (isArray!T && isScalarType!(ElementType!T))
         {
@@ -162,12 +162,14 @@ static if (size_t.sizeof == 4) @nogc nothrow pure @safe unittest
 {
     assert(hash('a') == 0xe40c292cU);
     assert(hash(HashRange()) == 0x6222e842U);
+    assert(hash(ToHashRange()) == 1268118805U);
 }
 
 static if (size_t.sizeof == 8) @nogc nothrow pure @safe unittest
 {
     assert(hash('a') == 0xaf63dc4c8601ec8cUL);
     assert(hash(HashRange()) == 0x08985907b541d342UL);
+    assert(hash(ToHashRange()) == 12161962213042174405UL);
 }
 
 /*
