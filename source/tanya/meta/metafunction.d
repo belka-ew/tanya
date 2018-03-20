@@ -9,7 +9,7 @@
  * It contains different algorithms for iterating, searching and modifying
  * template arguments.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -232,19 +232,21 @@ if (Tuples.length > 0
  *
  * See_Also: $(D_PSYMBOL AliasSeq).
  */
-template Tuple(Args...)
+struct Tuple(Args...)
 {
     /// Elements in this tuple as $(D_PSYMBOL AliasSeq).
     alias Seq = Args;
 
     /// The length of the tuple.
     enum size_t length = Args.length;
+
+    alias Seq this;
 }
 
 ///
 @nogc nothrow pure @safe unittest
 {
-    alias A = Tuple!(short);
+    alias A = Tuple!short;
     alias B = Tuple!(3, 8, 9);
     alias C = Tuple!(A, B);
 
@@ -263,20 +265,22 @@ template Tuple(Args...)
 /**
  * Unordered sequence of unique aliases.
  *
- * $(D_PARAM Args) can contain duplicates, but they will be filteredout, so
+ * $(D_PARAM Args) can contain duplicates, but they will be filtered out, so
  * $(D_PSYMBOL Set) contains only unique items. $(D_PSYMBOL isEqual) is used
  * for determining if two items are equal.
  *
  * Params:
  *  Args = Elements of this $(D_PSYMBOL Tuple).
  */
-template Set(Args...)
+struct Set(Args...)
 {
     /// Elements in this set as $(D_PSYMBOL AliasSeq).
     alias Seq = NoDuplicates!Args;
 
     /// The length of the set.
     enum size_t length = Seq.length;
+
+    alias Seq this;
 }
 
 ///
@@ -682,7 +686,7 @@ if (Args.length == 2)
 }
 
 /**
- * Instantiates the template $(D_PARAM T) with $(D_PARAM ARGS).
+ * Instantiates the template $(D_PARAM T) with $(D_PARAM Args).
  *
  * Params:
  *  T    = Template.
@@ -1634,7 +1638,8 @@ template Filter(alias pred, L...)
 ///
 @nogc nothrow pure @safe unittest
 {
-    static assert(is(Filter!(isIntegral, real, int, bool, uint) == AliasSeq!(int, uint)));
+    alias Given = AliasSeq!(real, int, bool, uint);
+    static assert(is(Filter!(isIntegral, Given) == AliasSeq!(int, uint)));
 }
 
 /**
@@ -1661,8 +1666,8 @@ template NoDuplicates(L...)
 ///
 @nogc nothrow pure @safe unittest
 {
-    alias Types = AliasSeq!(int, uint, int, short, short, uint);
-    static assert(is(NoDuplicates!Types == AliasSeq!(int, uint, short)));
+    alias Given = AliasSeq!(int, uint, int, short, short, uint);
+    static assert(is(NoDuplicates!Given == AliasSeq!(int, uint, short)));
 }
 
 /**
