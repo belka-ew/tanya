@@ -160,6 +160,7 @@ enum bool isComplex(T) = is(Unqual!(OriginalType!T) == cfloat)
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a POD type,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use __traits(isPOD) instead")
 enum bool isPOD(T) = __traits(isPOD, T);
 
 ///
@@ -196,6 +197,7 @@ enum bool isPOD(T) = __traits(isPOD, T);
  *
  * Returns: Size of the type $(D_PARAM T).
  */
+deprecated("Use T.sizeof instead")
 enum size_t sizeOf(T) = T.sizeof;
 
 ///
@@ -217,6 +219,7 @@ enum size_t sizeOf(T) = T.sizeof;
  *
  * Returns: Alignment of the type $(D_PARAM T).
  */
+deprecated("Use T.alignof instead")
 enum size_t alignOf(T) = T.alignof;
 
 ///
@@ -236,6 +239,7 @@ enum size_t alignOf(T) = T.alignof;
  * Returns: $(D_KEYWORD true) if $(D_PARAM Args) are the same symbol,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use __traits(isSame) instead")
 template isSame(Args...)
 if (Args.length == 2)
 {
@@ -263,6 +267,7 @@ if (Args.length == 2)
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a template,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use __traits(isTemplate) instead")
 enum bool isTemplate(alias T) = __traits(isTemplate, T);
 
 ///
@@ -284,6 +289,7 @@ enum bool isTemplate(alias T) = __traits(isTemplate, T);
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an interface,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use is(T == interface) instead")
 enum bool isInterface(T) = is(T == interface);
 
 /**
@@ -295,6 +301,7 @@ enum bool isInterface(T) = is(T == interface);
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a class,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use is(T == class) instead")
 enum bool isClass(T) = is(T == class);
 
 /**
@@ -306,6 +313,7 @@ enum bool isClass(T) = is(T == class);
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a struct,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use is(T == struct) instead")
 enum bool isStruct(T) = is(T == struct);
 
 /**
@@ -317,6 +325,7 @@ enum bool isStruct(T) = is(T == struct);
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an enum,
  *          $(D_KEYWORD false) otherwise.
  */
+deprecated("Use is(T == enum) instead")
 enum bool isEnum(T) = is(T == enum);
 
 /**
