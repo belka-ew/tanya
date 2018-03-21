@@ -8,7 +8,7 @@
  * Templates in this module are used to obtain type information at compile
  * time.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -268,7 +268,7 @@ enum bool isTemplate(alias T) = __traits(isTemplate, T);
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S(T)
+    static struct S(T)
     {
     }
     static assert(isTemplate!S);
@@ -375,7 +375,7 @@ template hasStaticMember(T, string member)
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S
+    static struct S
     {
          int member1;
          void member2()
@@ -599,14 +599,14 @@ enum bool isBoolean(T) = is(Unqual!(OriginalType!T) == bool);
     }
     static assert(isBoolean!E);
 
-    struct S1
+    static struct S1
     {
         bool b;
         alias b this;
     }
     static assert(!isBoolean!S1);
 
-    struct S2
+    static struct S2
     {
         bool opCast(T : bool)()
         {
@@ -924,7 +924,7 @@ enum bool isAggregateType(T) = is(T == struct)
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S;
+    static struct S;
     class C;
     interface I;
     union U;
@@ -1146,20 +1146,20 @@ enum bool isCopyable(T) = is(typeof({ T s1 = T.init; T s2 = s1; }));
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S1
+    static struct S1
     {
     }
-    struct S2
+    static struct S2
     {
         this(this)
         {
         }
     }
-    struct S3
+    static struct S3
     {
         @disable this(this);
     }
-    struct S4
+    static struct S4
     {
         S3 s;
     }
@@ -1254,7 +1254,7 @@ enum bool isTypeTuple(Args...) = allSatisfy!(isType, Args);
     union U
     {
     }
-    struct T()
+    static struct T()
     {
     }
 
@@ -1664,7 +1664,7 @@ if (F.length == 1)
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S
+    static struct S
     {
         void opCall()
         {
@@ -1689,7 +1689,7 @@ if (F.length == 1)
 
 @nogc nothrow pure @safe unittest
 {
-    struct S
+    static struct S
     {
         @property int opCall()
         {
@@ -1714,7 +1714,7 @@ enum bool hasMember(T, string member) = __traits(hasMember, T, member);
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S
+    static struct S
     {
          int member1;
          void member2()
@@ -1769,7 +1769,7 @@ template isMutable(T)
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S
+    static struct S
     {
         void method()
         {
@@ -1907,7 +1907,7 @@ if (isCallable!F)
     }
     static assert(is(FunctionTypeOf!(I.prop) == function));
 
-    struct S
+    static struct S
     {
         void opCall()
         {
@@ -1928,7 +1928,7 @@ if (isCallable!F)
 
 @nogc nothrow pure @safe unittest
 {
-    struct S2
+    static struct S2
     {
         @property int opCall()
         {
@@ -1981,7 +1981,7 @@ alias TemplateOf(alias T : Base!Args, alias Base, Args...) = Base;
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S(T)
+    static struct S(T)
     {
     }
     static assert(isSame!(TemplateOf!(S!int), S));
@@ -2037,7 +2037,7 @@ template isInstanceOf(alias T, alias I)
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S(T)
+    static struct S(T)
     {
     }
     static assert(isInstanceOf!(S, S!int));
@@ -2296,23 +2296,22 @@ template isAssignable(Lhs, Rhs = Lhs)
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct S1
+    static struct S1
     {
         @disable this();
         @disable this(this);
     }
-    struct S2
+    static struct S2
     {
         void opAssign(S1 s) pure nothrow @safe @nogc
         {
         }
     }
-    struct S3
+    static struct S3
     {
         void opAssign(ref S1 s) pure nothrow @safe @nogc
         {
         }
-
     }
     static assert(isAssignable!(S2, S1));
     static assert(!isAssignable!(S3, S1));
@@ -2867,7 +2866,7 @@ if (is(T == class))
     }
     static assert(classInstanceAlignment!C1 == C1.alignof);
 
-    struct S
+    static struct S
     {
         align(8)
         uint s;
@@ -2907,12 +2906,12 @@ template ifTestable(T, alias pred = a => a)
 {
     static assert(ifTestable!int);
 
-    struct S1
+    static struct S1
     {
     }
     static assert(!ifTestable!S1);
 
-    struct S2
+    static struct S2
     {
         bool opCast(T : bool)()
         {
@@ -2979,7 +2978,7 @@ alias getUDAs(alias symbol) = AliasSeq!(__traits(getAttributes, symbol));
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct Attr
+    static struct Attr
     {
         int i;
     }
@@ -2998,7 +2997,7 @@ alias getUDAs(alias symbol) = AliasSeq!(__traits(getAttributes, symbol));
     static assert(getUDAs!(c, "String").length == 0);
     static assert(getUDAs!(c, 4).length == 0);
 
-    struct T(U)
+    static struct T(U)
     {
         enum U s = 7;
         U i;
@@ -3034,10 +3033,10 @@ template hasUDA(alias symbol, alias attr)
 ///
 @nogc nothrow pure @safe unittest
 {
-    struct Attr1
+    static struct Attr1
     {
     }
-    struct Attr2
+    static struct Attr2
     {
     }
     @Attr1 int a;
