@@ -8,7 +8,7 @@
  * This module contains templates that allow to build new types from the
  * available ones.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -36,7 +36,7 @@ import tanya.meta.metafunction;
  */
 template Pair(Specs...)
 {
-    template parseSpecs(int fieldCount, Specs...)
+    template parseSpecs(size_t fieldCount, Specs...)
     {
         static if (Specs.length == 0)
         {
@@ -47,13 +47,13 @@ template Pair(Specs...)
             static if (is(typeof(Specs[1]) == string))
             {
                 alias parseSpecs
-                    = AliasSeq!(Specs[0],
+                    = AliasSeq!(Tuple!(Specs[0], Specs[1]),
                                 parseSpecs!(fieldCount + 1, Specs[2 .. $]));
             }
             else
             {
                 alias parseSpecs
-                    = AliasSeq!(Specs[0],
+                    = AliasSeq!(Tuple!(Specs[0]),
                                 parseSpecs!(fieldCount + 1, Specs[1 .. $]));
             }
         }
@@ -63,25 +63,24 @@ template Pair(Specs...)
         }
     }
 
+    alias ChooseType(alias T) = T.Seq[0];
+    alias ParsedSpecs = parseSpecs!(0, Specs);
+
+    static assert(ParsedSpecs.length == 2, "Invalid argument count");
+
     struct Pair
     {
         /// Field types.
-        alias Types = parseSpecs!(0, Specs);
-
-        static assert(Types.length == 2, "Invalid argument count.");
+        alias Types = Map!(ChooseType, ParsedSpecs);
 
         // Create field aliases.
-        static if (is(typeof(Specs[1]) == string))
+        static if (ParsedSpecs[0].length == 2)
         {
-            mixin("alias " ~ Specs[1] ~ " = expand[0];");
+            mixin("alias " ~ ParsedSpecs[0][1] ~ " = expand[0];");
         }
-        static if (is(typeof(Specs[2]) == string))
+        static if (ParsedSpecs[1].length == 2)
         {
-            mixin("alias " ~ Specs[2] ~ " = expand[1];");
-        }
-        else static if (is(typeof(Specs[3]) == string))
-        {
-            mixin("alias " ~ Specs[3] ~ " = expand[1];");
+            mixin("alias " ~ ParsedSpecs[1][1] ~ " = expand[1];");
         }
 
         /// Represents the values of the $(D_PSYMBOL Pair) as a list of values.
@@ -92,6 +91,15 @@ template Pair(Specs...)
 }
 
 ///
+@nogc nothrow pure @safe unittest
+{
+    auto pair = Pair!(int, "first", string, "second")(1, "second");
+    assert(pair.first == 1);
+    assert(pair[0] == 1);
+    assert(pair.second == "second");
+    assert(pair[1] == "second");
+}
+
 @nogc nothrow pure @safe unittest
 {
     static assert(is(Pair!(int, int)));
