@@ -5,7 +5,7 @@
 /**
  * Algorithms that modify its arguments.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -255,7 +255,7 @@ T move(T)(ref T source) @trusted
  *
  * Params:
  *  a = The first object.
- *  a = The second object.
+ *  b = The second object.
  */
 void swap(T)(ref T a, ref T b) @trusted
 {
