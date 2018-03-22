@@ -17,7 +17,7 @@
  * Internally $(D_PSYMBOL String) is represented by a sequence of
  * $(D_KEYWORD char)s.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -29,7 +29,6 @@ module tanya.container.string;
 import std.algorithm.comparison;
 import std.algorithm.mutation : bringToFront, copy;
 import std.algorithm.searching;
-static import std.range;
 import tanya.algorithm.mutation;
 import tanya.memory;
 import tanya.meta.trait;
@@ -759,7 +758,7 @@ struct String
                     }
                     dchar d = (range[0] - 0xd800) | ((range[1] - 0xdc00) >> 10);
 
-                    std.range.popFrontN(range, 2);
+                    popFrontN(range, 2);
                 }
                 else
                 {
@@ -1527,7 +1526,7 @@ struct String
         assert(s.length == 38);
 
         auto byCodePoint = s.byCodePoint();
-        std.range.popFrontN(byCodePoint, 8);
+        popFrontN(byCodePoint, 8);
 
         assert(s.remove(byCodePoint).count == 0);
         assert(s == "Из слова");
