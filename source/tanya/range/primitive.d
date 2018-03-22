@@ -14,6 +14,7 @@
  */
 module tanya.range.primitive;
 
+import tanya.algorithm.mutation;
 import tanya.math;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -1354,4 +1355,502 @@ if (isBidirectionalRange!R)
         popBackN(range, 20);
         assert(range.empty);
     }
+}
+
+/**
+ * Moves the front element of an input range.
+ *
+ * The front element is left in a valid but inspecified state.
+ * $(D_PSYMBOL moveFront) doesn't advances the range, so `popFront` should be
+ * probably called after this function.
+ *
+ * Params:
+ *  R     = Type of the range.
+ *  range = Input range.
+ *
+ * Returns: The front element of the $(D_PSYMBOL range).
+ *
+ * See_Also: $(D_PSYMBOL move).
+ */
+ElementType!R moveFront(R)(R range)
+if (isInputRange!R)
+{
+    static if (is(typeof(R.moveFront)))
+    {
+        return range.moveFront();
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
+        return range.front;
+    }
+    else static if (is(typeof(((ref ElementType!R e) => e)(range.front))))
+    {
+        return move(range.front);
+    }
+    else
+    {
+        static assert(false, "Front element cannot be moved");
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    // Defines moveFront.
+    static struct R1
+    {
+        enum bool empty = false;
+
+        int moveFront() @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+        alias front = moveFront;
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+    }
+    assert(moveFront(R1()) == 5);
+
+    // Has elements without a postblit constructor.
+    static struct R2
+    {
+        enum bool empty = false;
+
+        int front() const @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+    }
+    assert(moveFront(R2()) == 5);
+
+    static struct Element
+    {
+        this(this)
+        {
+            assert(false);
+        }
+    }
+    // Returns its elements by reference.
+    static struct R3
+    {
+        Element element;
+        enum bool empty = false;
+
+        ref Element front() @nogc nothrow pure @safe
+        {
+            return element;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(is(typeof(moveFront(R3()))));
+
+    // Returns elements with a postblit constructor by value. moveFront fails.
+    static struct R4
+    {
+        enum bool empty = false;
+
+        Element front() @nogc nothrow pure @safe
+        {
+            return Element();
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(!is(typeof(moveFront(R4()))));
+}
+
+/**
+ * Moves the back element of a bidirectional range.
+ *
+ * The back element is left in a valid but inspecified state.
+ * $(D_PSYMBOL moveBack) doesn't advances the range, so `popBack` should be
+ * probably called after this function.
+ *
+ * Params:
+ *  R     = Type of the range.
+ *  range = Bidirectional range.
+ *
+ * Returns: The back element of the $(D_PSYMBOL range).
+ *
+ * See_Also: $(D_PSYMBOL move).
+ */
+ElementType!R moveBack(R)(R range)
+if (isBidirectionalRange!R)
+{
+    static if (is(typeof(R.moveBack)))
+    {
+        return range.moveBack();
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
+        return range.back;
+    }
+    else static if (is(typeof(((ref ElementType!R e) => e)(range.back))))
+    {
+        return move(range.back);
+    }
+    else
+    {
+        static assert(false, "Back element cannot be moved");
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    // Defines moveBack.
+    static struct R1
+    {
+        enum bool empty = false;
+
+        int moveBack() @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+        alias back = moveBack;
+        alias front = moveBack;
+
+        void popBack() @nogc nothrow pure @safe
+        {
+        }
+        alias popFront = popBack;
+
+        R1 save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    assert(moveBack(R1()) == 5);
+
+    // Has elements without a postblit constructor.
+    static struct R2
+    {
+        enum bool empty = false;
+
+        int back() const @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+        alias front = back;
+
+        void popBack() @nogc nothrow pure @safe
+        {
+        }
+        alias popFront = popBack;
+
+        R2 save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    assert(moveBack(R2()) == 5);
+
+    static struct Element
+    {
+        this(this)
+        {
+            assert(false);
+        }
+    }
+    // Returns its elements by reference.
+    static struct R3
+    {
+        Element element;
+        enum bool empty = false;
+
+        ref Element back() @nogc nothrow pure @safe
+        {
+            return element;
+        }
+        alias front = back;
+
+        void popBack() @nogc nothrow pure @safe
+        {
+        }
+        alias popFront = popBack;
+
+        R3 save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    static assert(is(typeof(moveBack(R3()))));
+
+    // Returns elements with a postblit constructor by value. moveBack fails.
+    static struct R4
+    {
+        enum bool empty = false;
+
+        Element back() @nogc nothrow pure @safe
+        {
+            return Element();
+        }
+        alias front = back;
+
+        void popBack() @nogc nothrow pure @safe
+        {
+        }
+        alias popFront = popBack;
+
+        R4 save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    static assert(!is(typeof(moveBack(R4()))));
+}
+
+/**
+ * Moves the element at the position $(D_PARAM n) out of the range.
+ *
+ * The moved element is left in a valid but inspecified state.
+ *
+ * Params:
+ *  R     = Type of the range.
+ *  range = Random-access range.
+ *  n     = Element position.
+ *
+ * Returns: The element at the position $(D_PARAM n).
+ *
+ * See_Also: $(D_PSYMBOL move).
+ */
+ElementType!R moveAt(R)(R range, size_t n)
+if (isRandomAccessRange!R)
+{
+    static if (is(typeof(R.moveAt)))
+    {
+        return range.moveAt(n);
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
+        return range[n];
+    }
+    else static if (is(typeof(((ref ElementType!R e) => e)(range[0]))))
+    {
+        return move(range[n]);
+    }
+    else
+    {
+        static assert(false, "Back element cannot be moved");
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    // Defines moveAt.
+    static struct R1
+    {
+        enum bool empty = false;
+
+        int front() @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+
+        int moveAt(size_t) @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+        alias opIndex = moveAt;
+    }
+    assert(moveAt(R1(), 0) == 5);
+
+    // Has elements without a postblit constructor.
+    static struct R2
+    {
+        enum bool empty = false;
+
+        int front() const @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+
+        int opIndex(size_t) const @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+    }
+    assert(moveAt(R2(), 0) == 5);
+
+    static struct Element
+    {
+        this(this)
+        {
+            assert(false);
+        }
+    }
+    // Returns its elements by reference.
+    static struct R3
+    {
+        Element element;
+        enum bool empty = false;
+
+        ref Element front() @nogc nothrow pure @safe
+        {
+            return element;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+
+        ref Element opIndex(size_t)
+        {
+            return element;
+        }
+    }
+    static assert(is(typeof(moveAt(R3(), 0))));
+
+    // Returns elements with a postblit constructor by value. moveAt fails.
+    static struct R4
+    {
+        enum bool empty = false;
+
+        Element front() @nogc nothrow pure @safe
+        {
+            return Element();
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+
+        Element opIndex() @nogc nothrow pure @safe
+        {
+            return Element();
+        }
+    }
+    static assert(!is(typeof(moveAt(R4(), 0))));
+}
+
+/**
+ * Determines whether $(D_PSYMBOL R) is a range containing mobile elements,
+ * i.e. elements that can be moved out of the range.
+ *
+ * Having mobile elements means for an input range to support
+ * $(D_PSYMBOL moveFront), for a bidirectional range - both,
+ * $(D_PSYMBOL moveFront) and $(D_PSYMBOL moveBack), for a random-access -
+ * $(D_PSYMBOL moveFront) and $(D_PSYMBOL moveAt).
+ *
+ * Params:
+ *  R = Range type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PSYMBOL R) has mobile elements,
+ *          $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL moveFront), $(D_PSYMBOL moveBack),
+ *           $(D_PSYMBOL moveAt).
+ */
+template hasMobileElements(R)
+{
+    static if (isRandomAccessRange!R)
+    {
+        enum bool hasMobileElements = is(typeof((R r) => moveFront(r)))
+                                   && is(typeof((R r) => moveAt(r, 0)));
+    }
+    else static if (isBidirectionalRange!R)
+    {
+        enum bool hasMobileElements = is(typeof((R r) => moveFront(r)))
+                                   && is(typeof((R r) => moveBack(r)));
+    }
+    else
+    {
+        enum bool hasMobileElements = is(typeof((R r) => moveFront(r)));
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    // Input range with elements without a postblit constructor.
+    // These can be moved.
+    static struct InputRange
+    {
+        enum bool empty = false;
+
+        int front() @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(hasMobileElements!InputRange);
+
+    static struct Element
+    {
+        this(this)
+        {
+        }
+    }
+    // Bidirectional range, whose elements cannot be moved. The range defines
+    // only moveFront, but not moveBack. So it doesn't have mobile elements.
+    static struct BidirectionalRange
+    {
+        enum bool empty = false;
+
+        Element front() @nogc nothrow pure @safe
+        {
+            return Element();
+        }
+        alias back = front;
+        alias moveFront = front;
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+        alias popBack = popFront;
+
+        BidirectionalRange save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    static assert(!hasMobileElements!BidirectionalRange);
+
+    // Access-random range, whose elements cannot be moved, but the range
+    // defines both, moveFront and moveAt.
+    static struct RandomAccessRange
+    {
+        enum bool empty = false;
+
+        Element front() @nogc nothrow pure @safe
+        {
+            return Element();
+        }
+        alias moveFront = front;
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+
+        Element opIndex(size_t) @nogc nothrow pure @safe
+        {
+            return Element();
+        }
+        alias moveAt = opIndex;
+    }
+    static assert(hasMobileElements!RandomAccessRange);
 }
