@@ -811,6 +811,114 @@ template isRandomAccessRange(R)
 }
 
 /**
+ * Puts $(D_PARAM e) into the $(D_PARAM range).
+ *
+ * $(D_PSYMBOL R) should be an output range for $(D_PARAM E).
+ *
+ * $(D_PARAM range) is advanced after putting an element into it if all of the
+ * following conditions are met:
+ *
+ * $(OL
+ *  $(LI $(D_PSYMBOL R) is an input range)
+ *  $(LI $(D_PSYMBOL R) doesn't define a `put`-method)
+ *  $(LI $(D_PARAM e) can be assigned to $(D_INLINECODE range.front)
+ * )
+ *
+ * Params:
+ *  R     = Target range type.
+ *  E     = Source element type.
+ *  range = Target range.
+ *  e     = Source element.
+ *
+ * See_Also: $(D_PSYMBOL isOutputRange).
+ */
+void put(R, E)(ref R range, auto ref E e)
+{
+    static if (__traits(hasMember, R, "put")
+            && is(typeof((R r, E e) => r.put(e))))
+    {
+        range.put(e);
+    }
+    else static if (isInputRange!R
+                 && is(typeof((R r, E e) => r.front = e)))
+    {
+        range.front = e;
+        range.popFront();
+    }
+    else static if (is(typeof((R r, E e) => r(e))))
+    {
+        range(e);
+    }
+    else static if (isInputRange!E)
+    {
+        for (; !e.empty; e.popFront())
+        {
+            put(range, e.front);
+        }
+    }
+    else
+    {
+        static assert(false, R.stringof ~ " is not an output range for "
+                           ~ E.stringof);
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[2] actual;
+    auto slice = actual[];
+
+    put(slice, 2);
+    assert(actual == [2, 0]);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct Put
+    {
+        int e;
+
+        void put(int e)
+        {
+            this.e = e;
+        }
+    }
+    Put p;
+    put(p, 2);
+    assert(p.e == 2);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct OpCall
+    {
+        int e;
+
+        void opCall(int e)
+        {
+            this.e = e;
+        }
+    }
+    OpCall oc;
+    put(oc, 2);
+    assert(oc.e == 2);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[2] actual;
+    int[2] expected = [2, 3];
+    auto slice = actual[];
+
+    put(slice, expected[]);
+    assert(actual == expected);
+}
+
+/**
  * Determines whether $(D_PARAM R) is an output range for the elemens of type
  * $(D_PARAM E).
  *
@@ -855,26 +963,7 @@ template isRandomAccessRange(R)
  * Returns: $(D_KEYWORD true) if $(D_PARAM R) is an output range for the
  *          elements of the type $(D_PARAM E), $(D_KEYWORD false) otherwise.
  */
-template isOutputRange(R, E)
-{
-    private enum bool doPut(E) = is(typeof((R r, E e) => r.put(e)))
-                              || (isInputRange!R
-                              && is(typeof((R r, E e) => r.front = e)))
-                              || is(typeof((R r, E e) => r(e)));
-
-    static if (doPut!E)
-    {
-        enum bool isOutputRange = true;
-    }
-    else static if (isInputRange!E)
-    {
-        enum bool isOutputRange = doPut!(ElementType!E);
-    }
-    else
-    {
-        enum bool isOutputRange = false;
-    }
-}
+enum bool isOutputRange(R, E) = is(typeof((ref R r, ref E e) => put(r, e)));
 
 ///
 @nogc nothrow pure @safe unittest
@@ -1360,7 +1449,7 @@ if (isBidirectionalRange!R)
 /**
  * Moves the front element of an input range.
  *
- * The front element is left in a valid but inspecified state.
+ * The front element is left in a valid but unspecified state.
  * $(D_PSYMBOL moveFront) doesn't advances the range, so `popFront` should be
  * probably called after this function.
  *
@@ -1375,7 +1464,7 @@ if (isBidirectionalRange!R)
 ElementType!R moveFront(R)(R range)
 if (isInputRange!R)
 {
-    static if (is(typeof(R.moveFront)))
+    static if (__traits(hasMember, R, "moveFront"))
     {
         return range.moveFront();
     }
@@ -1473,7 +1562,7 @@ if (isInputRange!R)
 /**
  * Moves the back element of a bidirectional range.
  *
- * The back element is left in a valid but inspecified state.
+ * The back element is left in a valid but unspecified state.
  * $(D_PSYMBOL moveBack) doesn't advances the range, so `popBack` should be
  * probably called after this function.
  *
@@ -1488,7 +1577,7 @@ if (isInputRange!R)
 ElementType!R moveBack(R)(R range)
 if (isBidirectionalRange!R)
 {
-    static if (is(typeof(R.moveBack)))
+    static if (__traits(hasMember, R, "moveBack"))
     {
         return range.moveBack();
     }
@@ -1614,10 +1703,10 @@ if (isBidirectionalRange!R)
 /**
  * Moves the element at the position $(D_PARAM n) out of the range.
  *
- * The moved element is left in a valid but inspecified state.
+ * The moved element is left in a valid but unspecified state.
  *
  * Params:
- *  R     = Type of the range.
+ *  R     = Range type.
  *  range = Random-access range.
  *  n     = Element position.
  *
@@ -1628,7 +1717,7 @@ if (isBidirectionalRange!R)
 ElementType!R moveAt(R)(R range, size_t n)
 if (isRandomAccessRange!R)
 {
-    static if (is(typeof(R.moveAt)))
+    static if (__traits(hasMember, R, "moveAt"))
     {
         return range.moveAt(n);
     }
@@ -1749,8 +1838,8 @@ if (isRandomAccessRange!R)
  *
  * Having mobile elements means for an input range to support
  * $(D_PSYMBOL moveFront), for a bidirectional range - both,
- * $(D_PSYMBOL moveFront) and $(D_PSYMBOL moveBack), for a random-access -
- * $(D_PSYMBOL moveFront) and $(D_PSYMBOL moveAt).
+ * $(D_PSYMBOL moveFront) and $(D_PSYMBOL moveBack), for a random-access
+ * range - $(D_PSYMBOL moveFront) and $(D_PSYMBOL moveAt).
  *
  * Params:
  *  R = Range type.
@@ -1853,4 +1942,230 @@ template hasMobileElements(R)
         alias moveAt = opIndex;
     }
     static assert(hasMobileElements!RandomAccessRange);
+}
+
+/**
+ * Determines whether $(D_PARAM R) provides access to its elements by
+ * reference.
+ *
+ * Params:
+ *  R = Range type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM R) has lvalue elements,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template hasLvalueElements(R)
+{
+    private alias refDg = (ref ElementType!R e) => e;
+
+    static if (isRandomAccessRange!R)
+    {
+        enum bool hasLvalueElements = is(typeof(refDg(R.init.front)))
+                                   && is(typeof(refDg(R.init[0])));
+    }
+    else static if (isBidirectionalRange!R)
+    {
+        enum bool hasLvalueElements = is(typeof(refDg(R.init.front)))
+                                   && is(typeof(refDg(R.init.back)));
+    }
+    else
+    {
+        enum bool hasLvalueElements = is(typeof(refDg(R.init.front)));
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct R1
+    {
+        enum bool empty = false;
+
+        int front() @nogc nothrow pure @safe
+        {
+            return 5;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(!hasLvalueElements!R1);
+
+    static struct R2
+    {
+        int element;
+        enum bool empty = false;
+
+        ref const(int) front() const @nogc nothrow pure @safe
+        {
+            return element;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+
+        ref const(int) opIndex(size_t) const @nogc nothrow pure @safe
+        {
+            return element;
+        }
+    }
+    static assert(hasLvalueElements!R2);
+}
+
+/**
+ * Determines whether the elements of $(D_PARAM R) are assignable.
+ *
+ * Params:
+ *  R = Range type.
+ *
+ * Returns: $(D_KEYWORD true) if the elements of $(D_PARAM R) are assignable
+ *          $(D_KEYWORD false) otherwise.
+ */
+template hasAssignableElements(R)
+{
+    static if (isRandomAccessRange!R)
+    {
+        enum bool assignable = is(typeof({R.init.front = R.init.front;}))
+                            && is(typeof({R.init[0] = R.init[0];}));
+    }
+    else static if (isBidirectionalRange!R)
+    {
+        enum bool assignable = is(typeof({R.init.front = R.init.front;}))
+                            && is(typeof({R.init.back = R.init.back;}));
+    }
+    else
+    {
+        enum bool assignable = is(typeof({R.init.front = R.init.front;}));
+    }
+    enum bool hasAssignableElements = assignable;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct R1
+    {
+        int element;
+        enum bool empty = false;
+
+        ref int front() @nogc nothrow pure @safe
+        {
+            return element;
+        }
+        alias back = front;
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+        alias popBack = popFront;
+
+        R1 save() const @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    static assert(hasAssignableElements!R1);
+
+    static struct R2
+    {
+        int element;
+        enum bool empty = false;
+
+        ref const(int) front() const @nogc nothrow pure @safe
+        {
+            return element;
+        }
+        alias back = front;
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+        alias popBack = popFront;
+
+        R2 save() const @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    static assert(!hasAssignableElements!R2);
+}
+
+/**
+ * Determines whether the elements of $(D_PSYMBOL R) can be swapped with
+ * $(D_PSYMBOL swap).
+ *
+ * Params:
+ *  R = Range type.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM R) has swappable elements,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template hasSwappableElements(R)
+{
+    static if (isRandomAccessRange!R)
+    {
+        enum bool hasSwappableElements = is(typeof(swap(R.init.front, R.init.front)))
+                                      && is(typeof(swap(R.init[0], R.init[0])));
+    }
+    else static if (isBidirectionalRange!R)
+    {
+        enum bool hasSwappableElements = is(typeof(swap(R.init.front, R.init.front)))
+                                      && is(typeof(swap(R.init.back, R.init.back)));
+    }
+    else
+    {
+        enum bool hasSwappableElements = is(typeof(swap(R.init.front, R.init.front)));
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct R1
+    {
+        int element;
+        enum bool empty = false;
+
+        ref int front() @nogc nothrow pure @safe
+        {
+            return element;
+        }
+        alias back = front;
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+        alias popBack = popFront;
+
+        R1 save() const @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    static assert(hasSwappableElements!R1);
+
+    static struct R2
+    {
+        int element;
+        enum bool empty = false;
+
+        int front() const @nogc nothrow pure @safe
+        {
+            return element;
+        }
+        alias back = front;
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+        alias popBack = popFront;
+
+        R2 save() const @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+    static assert(!hasSwappableElements!R2);
 }
