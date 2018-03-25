@@ -735,7 +735,7 @@ template isPointer(T)
 {
     static if (is(T U : U*))
     {
-        enum bool isPointer = true;
+        enum bool isPointer = !is(Unqual!(OriginalType!T) == typeof(null));
     }
     else
     {
@@ -750,6 +750,19 @@ template isPointer(T)
     static assert(isPointer!(const bool*));
     static assert(isPointer!(const shared bool*));
     static assert(!isPointer!bool);
+}
+
+// typeof(null) is not a pointer.
+@nogc nothrow pure @safe unittest
+{
+    static assert(!isPointer!(typeof(null)));
+    static assert(!isPointer!(const shared typeof(null)));
+
+    enum typeOfNull : typeof(null)
+    {
+        null_ = null,
+    }
+    static assert(!isPointer!typeOfNull);
 }
 
 /**
