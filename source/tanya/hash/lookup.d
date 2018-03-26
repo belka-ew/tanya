@@ -38,7 +38,11 @@ private struct FNV
 
     void opCall(T)(auto ref T key)
     {
-        static if (isScalarType!T)
+        static if (is(typeof(key.toHash()) == size_t))
+        {
+            opCall(key.toHash()); // Combine user-defined hashes
+        }
+        else static if (isScalarType!T || isPointer!T)
         {
             (() @trusted => add((cast(const ubyte*) &key)[0 .. T.sizeof]))();
         }
@@ -49,10 +53,6 @@ private struct FNV
         else static if (is(T == typeof(null)))
         {
             add(key);
-        }
-        else static if (is(typeof(key.toHash()) == size_t))
-        {
-            opCall(key.toHash()); // Combine user-defined hashes
         }
         else static if (isInputRange!T && !isInfinite!T)
         {
@@ -186,12 +186,20 @@ static if (size_t.sizeof == 4) @nogc nothrow pure @safe unittest
     assert(hash(HashRange()) == 0x6222e842U);
     assert(hash(ToHashRange()) == 1268118805U);
 }
-
 static if (size_t.sizeof == 8) @nogc nothrow pure @safe unittest
 {
     assert(hash('a') == 0xaf63dc4c8601ec8cUL);
     assert(hash(HashRange()) == 0x08985907b541d342UL);
     assert(hash(ToHashRange()) == 12161962213042174405UL);
+}
+
+static if (size_t.sizeof == 4) @nogc nothrow pure @system unittest
+{
+    assert(hash(cast(void*) 0x6e6f6863) == 0xac297727U);
+}
+static if (size_t.sizeof == 8) @nogc nothrow pure @system unittest
+{
+    assert(hash(cast(void*) 0x77206f676e6f6863) == 0xd1edd10b507344d0UL);
 }
 
 /*
