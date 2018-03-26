@@ -361,7 +361,7 @@ enum bool isPolymorphicType(T) = is(T == class) || is(T == interface);
  */
 template hasStaticMember(T, string member)
 {
-    static if (hasMember!(T, member))
+    static if (__traits(hasMember, T, member))
     {
         alias Member = Alias!(__traits(getMember, T, member));
 
@@ -1731,6 +1731,7 @@ if (F.length == 1)
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) defines a symbol
  *          $(D_PARAM member), $(D_KEYWORD false) otherwise.
  */
+deprecated("Use __traits(hasMember) instead")
 enum bool hasMember(T, string member) = __traits(hasMember, T, member);
 
 ///
