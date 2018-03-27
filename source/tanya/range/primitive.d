@@ -821,7 +821,7 @@ template isRandomAccessRange(R)
  * $(OL
  *  $(LI $(D_PSYMBOL R) is an input range)
  *  $(LI $(D_PSYMBOL R) doesn't define a `put`-method)
- *  $(LI $(D_PARAM e) can be assigned to $(D_INLINECODE range.front)
+ *  $(LI $(D_PARAM e) can be assigned to $(D_INLINECODE range.front))
  * )
  *
  * Params:
