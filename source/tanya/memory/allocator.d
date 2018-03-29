@@ -8,7 +8,7 @@
  * Allocators are classes encapsulating memory allocation strategy. This allows
  * to decouple memory management from the algorithms and the data. 
  *
- * Copyright: Eugene Wissner 2016-2017.
+ * Copyright: Eugene Wissner 2016-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)

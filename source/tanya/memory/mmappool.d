@@ -3,9 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /*
- * Native allocator for Posix and Windows.
+ * Native allocator.
  *
- * Copyright: Eugene Wissner 2016-2017.
+ * Copyright: Eugene Wissner 2016-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -18,68 +18,41 @@ import std.algorithm.comparison;
 import tanya.memory.allocator;
 import tanya.memory.op;
 
-version (Posix)
+version (TanyaNative):
+
+import core.sys.posix.sys.mman : MAP_ANON,
+                                 MAP_FAILED,
+                                 MAP_PRIVATE,
+                                 PROT_READ,
+                                 PROT_WRITE;
+import core.sys.posix.unistd;
+
+extern(C)
+private void* mmap(void* addr,
+                   size_t len,
+                   int prot,
+                   int flags,
+                   int fd,
+                   off_t offset) pure nothrow @system @nogc;
+
+extern(C)
+private int munmap(void* addr, size_t len) pure nothrow @system @nogc;
+
+private void* mapMemory(const size_t len) pure nothrow @system @nogc
 {
-    import core.sys.posix.sys.mman : MAP_ANON,
-                                     MAP_FAILED,
-                                     MAP_PRIVATE,
-                                     PROT_READ,
-                                     PROT_WRITE;
-    import core.sys.posix.unistd;
-
-    extern(C)
-    private void* mmap(void* addr,
-                       size_t len,
-                       int prot,
-                       int flags,
-                       int fd,
-                       off_t offset) pure nothrow @system @nogc;
-
-    extern(C)
-    private int munmap(void* addr, size_t len) pure nothrow @system @nogc;
-
-    private void* mapMemory(const size_t len) pure nothrow @system @nogc
-    {
-        void* p = mmap(null,
-                       len,
-                       PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANON,
-                       -1,
-                       0);
-        return p is MAP_FAILED ? null : p;
-    }
-
-    private bool unmapMemory(shared void* addr, const size_t len)
-    pure nothrow @system @nogc
-    {
-        return munmap(cast(void*) addr, len) == 0;
-    }
+    void* p = mmap(null,
+                   len,
+                   PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANON,
+                   -1,
+                   0);
+    return p is MAP_FAILED ? null : p;
 }
-else version (Windows)
+
+private bool unmapMemory(shared void* addr, const size_t len)
+pure nothrow @system @nogc
 {
-    import core.sys.windows.winbase : GetSystemInfo, SYSTEM_INFO;
-
-    extern(Windows)
-    private void* VirtualAlloc(void*, size_t, uint, uint)
-    pure nothrow @system @nogc;
-
-    extern(Windows)
-    private int VirtualFree(void* addr, size_t len, uint)
-    pure nothrow @system @nogc;
-
-    private void* mapMemory(const size_t len) pure nothrow @system @nogc
-    {
-        return VirtualAlloc(null,
-                            len,
-                            0x00001000, // MEM_COMMIT
-                            0x04); // PAGE_READWRITE
-    }
-
-    private bool unmapMemory(shared void* addr, const size_t len)
-    pure nothrow @system @nogc
-    {
-        return VirtualFree(cast(void*) addr, 0, 0x8000) == 0;
-    }
+    return munmap(cast(void*) addr, len) == 0;
 }
 
 /*
@@ -106,7 +79,6 @@ else version (Windows)
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  * </pre>
  */
-deprecated("Use tanya.memory.mallocator instead")
 final class MmapPool : Allocator
 {
     version (none)
@@ -156,7 +128,7 @@ final class MmapPool : Allocator
         return data is null ? null : data[0 .. size];
     }
 
-    version (TanyaNative) @nogc nothrow pure unittest
+    @nogc nothrow pure unittest
     {
         auto p = MmapPool.instance.allocate(20);
         assert(p);
@@ -167,7 +139,7 @@ final class MmapPool : Allocator
     }
 
     // Issue 245: https://issues.caraus.io/issues/245.
-    version (TanyaNative) @nogc nothrow pure unittest
+    @nogc nothrow pure unittest
     {
         // allocate() check.
         size_t tooMuchMemory = size_t.max
@@ -299,7 +271,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    version (TanyaNative) @nogc nothrow pure unittest
+    @nogc nothrow pure unittest
     {
         auto p = MmapPool.instance.allocate(20);
 
@@ -382,7 +354,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    version (TanyaNative) @nogc nothrow pure unittest
+    @nogc nothrow pure unittest
     {
         void[] p;
         assert(!MmapPool.instance.reallocateInPlace(p, 5));
@@ -447,7 +419,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    version (TanyaNative) @nogc nothrow pure unittest
+    @nogc nothrow pure unittest
     {
         void[] p;
         MmapPool.instance.reallocate(p, 10 * int.sizeof);
@@ -480,19 +452,10 @@ final class MmapPool : Allocator
         if (instance_ is null)
         {
             // Get system dependend page size.
-            version (Posix)
+            size_t pageSize = sysconf(_SC_PAGE_SIZE);
+            if (pageSize < 65536)
             {
-                size_t pageSize = sysconf(_SC_PAGE_SIZE);
-                if (pageSize < 65536)
-                {
-                    pageSize = pageSize * 65536 / pageSize;
-                }
-            }
-            else version (Windows)
-            {
-                SYSTEM_INFO si;
-                GetSystemInfo(&si);
-                size_t pageSize = si.dwPageSize;
+                pageSize = pageSize * 65536 / pageSize;
             }
 
             const instanceSize = addAlignment(__traits(classInstanceSize,
@@ -521,7 +484,7 @@ final class MmapPool : Allocator
         return (cast(GetPureInstance!MmapPool) &instantiate)();
     }
 
-    version (TanyaNative) @nogc nothrow pure unittest
+    @nogc nothrow pure unittest
     {
         assert(instance is instance);
     }
@@ -626,7 +589,7 @@ final class MmapPool : Allocator
         return alignment_;
     }
 
-    version (TanyaNative) @nogc nothrow pure unittest
+    @nogc nothrow pure unittest
     {
         assert(MmapPool.instance.alignment == MmapPool.alignment_);
     }
@@ -656,8 +619,6 @@ final class MmapPool : Allocator
     }
     private alias Block = shared BlockEntry*;
 }
-
-version (TanyaNative):
 
 // A lot of allocations/deallocations, but it is the minimum caused a
 // segmentation fault because MmapPool reallocateInPlace moves a block wrong.
