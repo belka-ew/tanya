@@ -560,26 +560,10 @@ struct SList(T)
         assert(l1 == l2);
     }
 
-    /**
-     * Returns: How many elements are in the list.
-     */
+    deprecated
     @property size_t length() const
     {
         return count(this[]);
-    }
-
-    ///
-    @nogc nothrow pure @safe unittest
-    {
-        SList!int l;
-
-        l.insertFront(8);
-        l.insertFront(9);
-        assert(l.length == 2);
-        l.removeFront();
-        assert(l.length == 1);
-        l.removeFront();
-        assert(l.length == 0);
     }
 
     /**
@@ -1815,26 +1799,10 @@ struct DList(T)
         return insertAfter!(T[])(r, el[]);
     }
 
-    /**
-     * Returns: How many elements are in the list.
-     */
+    deprecated
     @property size_t length() const
     {
         return count(this[]);
-    }
-
-    ///
-    @nogc nothrow pure @safe unittest
-    {
-        DList!int l;
-
-        l.insertFront(8);
-        l.insertFront(9);
-        assert(l.length == 2);
-        l.removeFront();
-        assert(l.length == 1);
-        l.removeFront();
-        assert(l.length == 0);
     }
 
     /**
