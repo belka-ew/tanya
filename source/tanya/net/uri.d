@@ -5,7 +5,7 @@
 /**
  * URL parser.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -460,7 +460,6 @@ struct URL
     assertThrown!URIException(() => URL("http://blah.com:66000"));
 }
 
-// Issue 254: https://issues.caraus.io/issues/254.
 @nogc pure @system unittest
 {
     auto u = URL("ftp://");

@@ -5,7 +5,7 @@
 /**
  * Internet utilities.
  *
- * Copyright: Eugene Wissner 2016-2017.
+ * Copyright: Eugene Wissner 2016-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -170,7 +170,7 @@ struct NetworkOrder(uint L)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     auto networkOrder = NetworkOrder!3(0xae34e2u);
     assert(!networkOrder.empty);
@@ -190,8 +190,8 @@ pure nothrow @safe @nogc unittest
     assert(networkOrder.empty);
 }
 
-// Static.
-private unittest
+// Static tests
+@nogc nothrow pure @safe unittest
 {
     static assert(isBidirectionalRange!(NetworkOrder!4));
     static assert(isBidirectionalRange!(NetworkOrder!8));
@@ -238,7 +238,7 @@ T toHostOrder(T = size_t, R)(R range)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     const value = 0xae34e2u;
     auto networkOrder = NetworkOrder!4(value);

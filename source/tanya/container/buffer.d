@@ -120,7 +120,7 @@ struct ReadBuffer(T = ubyte)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         ReadBuffer!ubyte b;
         assert(b.capacity == 0);
@@ -165,7 +165,7 @@ struct ReadBuffer(T = ubyte)
     }
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         ReadBuffer!ubyte b;
         size_t numberRead;
@@ -197,7 +197,7 @@ struct ReadBuffer(T = ubyte)
     }
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         ReadBuffer!ubyte b;
         size_t numberRead;
@@ -272,7 +272,7 @@ struct ReadBuffer(T = ubyte)
     }
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         ReadBuffer!ubyte b;
         size_t numberRead;
@@ -293,7 +293,7 @@ struct ReadBuffer(T = ubyte)
     mixin DefaultAllocator;
 }
 
-private unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(ReadBuffer!int));
 }
@@ -399,7 +399,7 @@ struct WriteBuffer(T = ubyte)
     alias opDollar = length;
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         auto b = WriteBuffer!ubyte(4);
         ubyte[3] buf = [48, 23, 255];
@@ -498,42 +498,6 @@ struct WriteBuffer(T = ubyte)
         return this;
     }
 
-    ///
-    unittest
-    {
-        auto b = WriteBuffer!ubyte(4);
-        ubyte[3] buf = [48, 23, 255];
-
-        b ~= buf;
-        assert(b.capacity == 4);
-        assert(b.buffer_[0] == 48 && b.buffer_[1] == 23 && b.buffer_[2] == 255);
-
-        b += 2;
-        b ~= buf;
-        assert(b.capacity == 4);
-        assert(b.buffer_[0] == 23 && b.buffer_[1] == 255
-            && b.buffer_[2] == 255 && b.buffer_[3] == 48);
-
-        b += 2;
-        b ~= buf;
-        assert(b.capacity == 8);
-        assert(b.buffer_[0] == 23 && b.buffer_[1] == 255
-            && b.buffer_[2] == 48 && b.buffer_[3] == 23 && b.buffer_[4] == 255);
-    }
-
-    ///
-    unittest
-    {
-        auto b = WriteBuffer!ubyte(2);
-        ubyte[3] buf = [48, 23, 255];
-
-        b ~= buf;
-        assert(b.start == 0);
-        assert(b.capacity == 4);
-        assert(b.ring == 3);
-        assert(b.position == 3);
-    }
-
     /**
      * Sets how many bytes were written. It will shrink the buffer
      * appropriately. Always call it after $(D_PSYMBOL opIndex).
@@ -607,7 +571,7 @@ struct WriteBuffer(T = ubyte)
     }
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         auto b = WriteBuffer!ubyte(6);
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
@@ -648,7 +612,7 @@ struct WriteBuffer(T = ubyte)
     }
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         auto b = WriteBuffer!ubyte(6);
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
@@ -686,7 +650,41 @@ struct WriteBuffer(T = ubyte)
     mixin DefaultAllocator;
 }
 
-private unittest
+@nogc nothrow pure @safe unittest
 {
     static assert(is(typeof(WriteBuffer!int(5))));
+}
+
+@nogc nothrow pure unittest
+{
+    auto b = WriteBuffer!ubyte(4);
+    ubyte[3] buf = [48, 23, 255];
+
+    b ~= buf;
+    assert(b.capacity == 4);
+    assert(b.buffer_[0] == 48 && b.buffer_[1] == 23 && b.buffer_[2] == 255);
+
+    b += 2;
+    b ~= buf;
+    assert(b.capacity == 4);
+    assert(b.buffer_[0] == 23 && b.buffer_[1] == 255
+        && b.buffer_[2] == 255 && b.buffer_[3] == 48);
+
+    b += 2;
+    b ~= buf;
+    assert(b.capacity == 8);
+    assert(b.buffer_[0] == 23 && b.buffer_[1] == 255
+        && b.buffer_[2] == 48 && b.buffer_[3] == 23 && b.buffer_[4] == 255);
+}
+
+@nogc nothrow pure unittest
+{
+    auto b = WriteBuffer!ubyte(2);
+    ubyte[3] buf = [48, 23, 255];
+
+    b ~= buf;
+    assert(b.start == 0);
+    assert(b.capacity == 4);
+    assert(b.ring == 3);
+    assert(b.position == 3);
 }

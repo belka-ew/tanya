@@ -279,26 +279,13 @@ struct Array(T)
     }
 
     ///
-    @trusted @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v1 = Array!int([1, 2, 3]);
         auto v2 = Array!int(v1);
         assert(v1 == v2);
 
         auto v3 = Array!int(Array!int([1, 2, 3]));
-        assert(v1 == v3);
-        assert(v3.length == 3);
-        assert(v3.capacity == 3);
-    }
-
-    private @trusted @nogc unittest // const constructor tests
-    {
-        auto v1 = const Array!int([1, 2, 3]);
-        auto v2 = Array!int(v1);
-        assert(v1.data !is v2.data);
-        assert(v1 == v2);
-
-        auto v3 = const Array!int(Array!int([1, 2, 3]));
         assert(v1 == v3);
         assert(v3.length == 3);
         assert(v3.capacity == 3);
@@ -339,7 +326,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([3, 8, 2]);
 
@@ -349,18 +336,13 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int(3, 5);
 
         assert(v.capacity == 3);
         assert(v.length == 3);
         assert(v[0] == 5 && v[1] == 5 && v[2] == 5);
-    }
-
-    @safe unittest
-    {
-        auto v1 = Array!int(defaultAllocator);
     }
 
     /**
@@ -392,7 +374,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([18, 20, 15]);
         v.clear();
@@ -409,7 +391,7 @@ struct Array(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int(4);
         assert(v.capacity == 4);
@@ -461,7 +443,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         Array!int v;
 
@@ -529,7 +511,7 @@ struct Array(T)
     }
 
     ///
-    @nogc @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         Array!int v;
         assert(v.capacity == 0);
@@ -564,7 +546,7 @@ struct Array(T)
     }
 
     ///
-    @nogc @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         Array!int v;
         assert(v.capacity == 0);
@@ -629,7 +611,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([5, 18, 17]);
 
@@ -674,7 +656,7 @@ struct Array(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([5, 18, 17, 2, 4, 6, 1]);
 
@@ -759,7 +741,7 @@ struct Array(T)
     alias insert = insertBack;
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         struct TestRange
         {
@@ -927,7 +909,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         Array!int v1;
         v1.insertAfter(v1[], [2, 8]);
@@ -963,7 +945,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure unittest
     {
         Array!int v1;
         v1.insertBefore(v1[], [2, 8]);
@@ -1022,7 +1004,7 @@ struct Array(T)
     }
 
     ///
-    nothrow @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         Array!int a = Array!int(1);
         a[0] = 5;
@@ -1052,7 +1034,7 @@ struct Array(T)
     }
 
     ///
-    @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v1 = Array!int([12, 1, 7]);
 
@@ -1101,7 +1083,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         const v1 = Array!int([6, 123, 34, 5]);
 
@@ -1156,7 +1138,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         Array!int v1, v2;
         assert(v1 == v2);
@@ -1191,7 +1173,7 @@ struct Array(T)
     }
 
     ///
-    @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([5]);
 
@@ -1218,7 +1200,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([5]);
 
@@ -1263,16 +1245,7 @@ struct Array(T)
     }
 
     ///
-    unittest
-    {
-        Array!int v;
-        auto r = v[];
-        assert(r.length == 0);
-        assert(r.empty);
-    }
-
-    ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([1, 2, 3]);
         auto r = v[];
@@ -1290,7 +1263,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([1, 2, 3, 4]);
         auto r = v[1 .. 4];
@@ -1363,7 +1336,7 @@ struct Array(T)
     }
 
     ///
-    @nogc @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v1 = Array!int([3, 3, 3]);
         auto v2 = Array!int([1, 2]);
@@ -1397,7 +1370,7 @@ struct Array(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v = Array!int([1, 2, 4]);
         auto data = v.get();
@@ -1464,28 +1437,12 @@ struct Array(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v1 = const Array!int([5, 15, 8]);
         Array!int v2;
         v2 = v1;
         assert(v1 == v2);
-    }
-
-    ///
-    @safe @nogc unittest
-    {
-        auto v1 = const Array!int([5, 15, 8]);
-        Array!int v2;
-        v2 = v1[0 .. 2];
-        assert(equal(v1[0 .. 2], v2[]));
-    }
-
-    // Move assignment.
-    private @safe @nogc unittest
-    {
-        Array!int v1;
-        v1 = Array!int([5, 15, 8]);
     }
 
     /**
@@ -1503,7 +1460,7 @@ struct Array(T)
     }
 
     ///
-    @safe @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         auto v1 = Array!int([5, 15, 8]);
         Array!int v2;
@@ -1516,7 +1473,7 @@ struct Array(T)
 }
 
 ///
-unittest
+@nogc nothrow pure @safe unittest
 {
     auto v = Array!int([5, 15, 8]);
 
@@ -1530,7 +1487,7 @@ unittest
     assert(r.front == v.front);
 }
 
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     const v1 = Array!int();
     const Array!int v2;
@@ -1538,7 +1495,7 @@ unittest
     static assert(is(PointerTarget!(typeof(v3.data)) == const(int)));
 }
 
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     // Test that const arrays return usable ranges.
     auto v = const Array!int([1, 2, 4]);
@@ -1559,7 +1516,7 @@ unittest
     static assert(is(typeof(r2[])));
 }
 
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     Array!int v1;
     const Array!int v2;
@@ -1581,18 +1538,18 @@ unittest
     assert(!v1[].equal(v2[]));
 }
 
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct MutableEqualsStruct
     {
-        int opEquals(typeof(this) that) @nogc
+        int opEquals(typeof(this) that) @nogc nothrow pure @safe
         {
             return true;
         }
     }
     struct ConstEqualsStruct
     {
-        int opEquals(const typeof(this) that) const @nogc
+        int opEquals(const typeof(this) that) const @nogc nothrow pure @safe
         {
             return true;
         }
@@ -1619,18 +1576,18 @@ unittest
     assert(v7[].equal(v8[]));
 }
 
-@nogc unittest
+@nogc nothrow pure @safe unittest
 {
     struct SWithDtor
     {
-        ~this() @nogc
+        ~this() @nogc nothrow pure @safe
         {
         }
     }
     auto v = Array!SWithDtor(); // Destructor can destroy empty arrays.
 }
 
-private unittest
+@nogc nothrow pure @safe unittest
 {
     class A
     {
@@ -1642,7 +1599,7 @@ private unittest
     static assert(is(Array!(A*)));
 }
 
-private @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     auto v = Array!int([5, 15, 8]);
     {
@@ -1669,4 +1626,46 @@ private @safe @nogc unittest
         }
         assert(i == 0);
     }
+}
+
+// const constructor tests
+@nogc nothrow pure @safe unittest
+{
+    auto v1 = const Array!int([1, 2, 3]);
+    auto v2 = Array!int(v1);
+    assert(v1.data !is v2.data);
+    assert(v1 == v2);
+
+    auto v3 = const Array!int(Array!int([1, 2, 3]));
+    assert(v1 == v3);
+    assert(v3.length == 3);
+    assert(v3.capacity == 3);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto v1 = Array!int(defaultAllocator);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    Array!int v;
+    auto r = v[];
+    assert(r.length == 0);
+    assert(r.empty);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    auto v1 = const Array!int([5, 15, 8]);
+    Array!int v2;
+    v2 = v1[0 .. 2];
+    assert(equal(v1[0 .. 2], v2[]));
+}
+
+// Move assignment
+@nogc nothrow pure @safe unittest
+{
+    Array!int v1;
+    v1 = Array!int([5, 15, 8]);
 }
