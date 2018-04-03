@@ -5,7 +5,7 @@
 /**
  * This module defines primitives for working with ranges.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -1464,11 +1464,7 @@ if (isBidirectionalRange!R)
 ElementType!R moveFront(R)(R range)
 if (isInputRange!R)
 {
-    static if (__traits(hasMember, R, "moveFront"))
-    {
-        return range.moveFront();
-    }
-    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    static if (!hasElaborateCopyConstructor!(ElementType!R))
     {
         return range.front;
     }
@@ -1485,48 +1481,24 @@ if (isInputRange!R)
 ///
 @nogc nothrow pure @safe unittest
 {
-    // Defines moveFront.
-    static struct R1
-    {
-        enum bool empty = false;
-
-        int moveFront() @nogc nothrow pure @safe
-        {
-            return 5;
-        }
-        alias front = moveFront;
-
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-    }
-    assert(moveFront(R1()) == 5);
-
     // Has elements without a postblit constructor.
-    static struct R2
-    {
-        enum bool empty = false;
+    int[2] a = 5;
 
-        int front() const @nogc nothrow pure @safe
-        {
-            return 5;
-        }
+    assert(moveFront(a[]) == 5);
+}
 
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-    }
-    assert(moveFront(R2()) == 5);
-
+@nogc nothrow pure @safe unittest
+{
     static struct Element
     {
-        this(this)
+        this(this) @nogc nothrow pure @safe
         {
             assert(false);
         }
     }
+
     // Returns its elements by reference.
-    static struct R3
+    static struct R1
     {
         Element element;
         enum bool empty = false;
@@ -1540,10 +1512,10 @@ if (isInputRange!R)
         {
         }
     }
-    static assert(is(typeof(moveFront(R3()))));
+    static assert(is(typeof(moveFront(R1()))));
 
     // Returns elements with a postblit constructor by value. moveFront fails.
-    static struct R4
+    static struct R2
     {
         enum bool empty = false;
 
@@ -1556,7 +1528,7 @@ if (isInputRange!R)
         {
         }
     }
-    static assert(!is(typeof(moveFront(R4()))));
+    static assert(!is(typeof(moveFront(R2()))));
 }
 
 /**
@@ -1577,11 +1549,7 @@ if (isInputRange!R)
 ElementType!R moveBack(R)(R range)
 if (isBidirectionalRange!R)
 {
-    static if (__traits(hasMember, R, "moveBack"))
-    {
-        return range.moveBack();
-    }
-    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    static if (!hasElaborateCopyConstructor!(ElementType!R))
     {
         return range.back;
     }
@@ -1598,62 +1566,24 @@ if (isBidirectionalRange!R)
 ///
 @nogc nothrow pure @safe unittest
 {
-    // Defines moveBack.
-    static struct R1
-    {
-        enum bool empty = false;
-
-        int moveBack() @nogc nothrow pure @safe
-        {
-            return 5;
-        }
-        alias back = moveBack;
-        alias front = moveBack;
-
-        void popBack() @nogc nothrow pure @safe
-        {
-        }
-        alias popFront = popBack;
-
-        R1 save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
-    }
-    assert(moveBack(R1()) == 5);
-
     // Has elements without a postblit constructor.
-    static struct R2
-    {
-        enum bool empty = false;
+    int[2] a = 5;
 
-        int back() const @nogc nothrow pure @safe
-        {
-            return 5;
-        }
-        alias front = back;
+    assert(moveBack(a[]) == 5);
+}
 
-        void popBack() @nogc nothrow pure @safe
-        {
-        }
-        alias popFront = popBack;
-
-        R2 save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
-    }
-    assert(moveBack(R2()) == 5);
-
+@nogc nothrow pure @safe unittest
+{
     static struct Element
     {
-        this(this)
+        this(this) @nogc nothrow pure @safe
         {
             assert(false);
         }
     }
+
     // Returns its elements by reference.
-    static struct R3
+    static struct R1
     {
         Element element;
         enum bool empty = false;
@@ -1669,15 +1599,15 @@ if (isBidirectionalRange!R)
         }
         alias popFront = popBack;
 
-        R3 save() @nogc nothrow pure @safe
+        R1 save() @nogc nothrow pure @safe
         {
             return this;
         }
     }
-    static assert(is(typeof(moveBack(R3()))));
+    static assert(is(typeof(moveBack(R1()))));
 
     // Returns elements with a postblit constructor by value. moveBack fails.
-    static struct R4
+    static struct R2
     {
         enum bool empty = false;
 
@@ -1692,12 +1622,12 @@ if (isBidirectionalRange!R)
         }
         alias popFront = popBack;
 
-        R4 save() @nogc nothrow pure @safe
+        R2 save() @nogc nothrow pure @safe
         {
             return this;
         }
     }
-    static assert(!is(typeof(moveBack(R4()))));
+    static assert(!is(typeof(moveBack(R2()))));
 }
 
 /**
@@ -1717,11 +1647,7 @@ if (isBidirectionalRange!R)
 ElementType!R moveAt(R)(R range, size_t n)
 if (isRandomAccessRange!R)
 {
-    static if (__traits(hasMember, R, "moveAt"))
-    {
-        return range.moveAt(n);
-    }
-    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    static if (!hasElaborateCopyConstructor!(ElementType!R))
     {
         return range[n];
     }
@@ -1731,65 +1657,31 @@ if (isRandomAccessRange!R)
     }
     else
     {
-        static assert(false, "Back element cannot be moved");
+        static assert(false, "Random element cannot be moved");
     }
 }
 
 ///
 @nogc nothrow pure @safe unittest
 {
-    // Defines moveAt.
-    static struct R1
-    {
-        enum bool empty = false;
-
-        int front() @nogc nothrow pure @safe
-        {
-            return 5;
-        }
-
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-
-        int moveAt(size_t) @nogc nothrow pure @safe
-        {
-            return 5;
-        }
-        alias opIndex = moveAt;
-    }
-    assert(moveAt(R1(), 0) == 5);
-
     // Has elements without a postblit constructor.
-    static struct R2
-    {
-        enum bool empty = false;
+    int[3] a = 5;
 
-        int front() const @nogc nothrow pure @safe
-        {
-            return 5;
-        }
+    assert(moveAt(a[], 1) == 5);
+}
 
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-
-        int opIndex(size_t) const @nogc nothrow pure @safe
-        {
-            return 5;
-        }
-    }
-    assert(moveAt(R2(), 0) == 5);
-
+@nogc nothrow pure @safe unittest
+{
     static struct Element
     {
-        this(this)
+        this(this) @nogc nothrow pure @safe
         {
             assert(false);
         }
     }
+
     // Returns its elements by reference.
-    static struct R3
+    static struct R1
     {
         Element element;
         enum bool empty = false;
@@ -1808,10 +1700,10 @@ if (isRandomAccessRange!R)
             return element;
         }
     }
-    static assert(is(typeof(moveAt(R3(), 0))));
+    static assert(is(typeof(moveAt(R1(), 0))));
 
     // Returns elements with a postblit constructor by value. moveAt fails.
-    static struct R4
+    static struct R2
     {
         enum bool empty = false;
 
@@ -1829,7 +1721,7 @@ if (isRandomAccessRange!R)
             return Element();
         }
     }
-    static assert(!is(typeof(moveAt(R4(), 0))));
+    static assert(!is(typeof(moveAt(R2(), 0))));
 }
 
 /**
@@ -1871,32 +1763,20 @@ template hasMobileElements(R)
 ///
 @nogc nothrow pure @safe unittest
 {
-    // Input range with elements without a postblit constructor.
-    // These can be moved.
-    static struct InputRange
-    {
-        enum bool empty = false;
+    static assert(hasMobileElements!(int[]));
+}
 
-        int front() @nogc nothrow pure @safe
-        {
-            return 5;
-        }
-
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-    }
-    static assert(hasMobileElements!InputRange);
-
+///
+@nogc nothrow pure @safe unittest
+{
     static struct Element
     {
-        this(this)
+        this(this) @nogc nothrow pure @safe
         {
         }
     }
-    // Bidirectional range, whose elements cannot be moved. The range defines
-    // only moveFront, but not moveBack. So it doesn't have mobile elements.
-    static struct BidirectionalRange
+
+    static struct R1
     {
         enum bool empty = false;
 
@@ -1904,44 +1784,28 @@ template hasMobileElements(R)
         {
             return Element();
         }
-        alias back = front;
-        alias moveFront = front;
 
         void popFront() @nogc nothrow pure @safe
         {
         }
-        alias popBack = popFront;
-
-        BidirectionalRange save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
     }
-    static assert(!hasMobileElements!BidirectionalRange);
+    static assert(!hasMobileElements!R1);
 
-    // Access-random range, whose elements cannot be moved, but the range
-    // defines both, moveFront and moveAt.
-    static struct RandomAccessRange
+    static struct R2
     {
         enum bool empty = false;
+        private Element front_;
 
-        Element front() @nogc nothrow pure @safe
+        ref Element front() @nogc nothrow pure @safe
         {
-            return Element();
+            return front_;
         }
-        alias moveFront = front;
 
         void popFront() @nogc nothrow pure @safe
         {
         }
-
-        Element opIndex(size_t) @nogc nothrow pure @safe
-        {
-            return Element();
-        }
-        alias moveAt = opIndex;
     }
-    static assert(hasMobileElements!RandomAccessRange);
+    static assert(hasMobileElements!R2);
 }
 
 /**
