@@ -20,9 +20,6 @@ import tanya.math;
 public import tanya.range.array;
 public import tanya.range.primitive;
 
-/**
- *
- */
 struct Take(R)
 if (isInputRange!R)
 {
@@ -82,18 +79,6 @@ if (isInputRange!R)
         return this.length_;
     }
 
-    static if (hasMobileElements!R)
-    {
-        auto moveFront()
-        in
-        {
-            assert(!empty);
-        }
-        do
-        {
-            return this.source.moveFront();
-        }
-    }
     static if (hasAssignableElements!R)
     {
         @property void front(ref ElementType!R value)
@@ -156,28 +141,6 @@ if (isInputRange!R)
             return this.source[i];
         }
 
-        static if (hasMobileElements!R)
-        {
-            auto moveBack()
-            in
-            {
-                assert(!empty);
-            }
-            do
-            {
-                return this.source.moveAt(length - 1);
-            }
-
-            auto moveAt(size_t i)
-            in
-            {
-                assert(i < length);
-            }
-            do
-            {
-                return this.source.moveAt(i);
-            }
-        }
         static if (hasAssignableElements!R)
         {
             @property void back(ref ElementType!R value)
@@ -237,7 +200,15 @@ if (isInputRange!R)
 }
 
 /**
- * ditto
+ * Takes $(D_PARAM n) elements from $(D_PARAM range).
+ *
+ * Params:
+ *  R     = Type of the original range.
+ *  range = The range to take elements from.
+ *  n     = The number of elements to take.
+ *
+ * Returns: A range containing maximum $(D_PARAM n) first elements of
+ *          $(D_PARAM range).
  */
 Take!R take(R)(R range, size_t n)
 if (isInputRange!R)
@@ -268,7 +239,7 @@ if (isInputRange!R)
         {
             ++this.front_;
         }
-        
+
         size_t opIndex(size_t i) @nogc nothrow pure @safe
         {
             return this.front_ + i;
