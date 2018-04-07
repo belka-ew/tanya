@@ -925,6 +925,7 @@ struct DRange(L)
     invariant
     {
         assert(this.head !is null);
+        assert(this.tail !is null);
     }
 
     private this(ref EntryPointer head, ref EntryPointer tail) @trusted
