@@ -5,7 +5,7 @@
 /**
  * Random number generator.
  *
- * Copyright: Eugene Wissner 2016.
+ * Copyright: Eugene Wissner 2016-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -234,9 +234,12 @@ else version (SecureARC4Random)
 else version (Windows)
 {
     import core.sys.windows.basetsd : ULONG_PTR;
-    import core.sys.windows.windef : BOOL, DWORD, PBYTE;
-    import core.sys.windows.winnt : LPCSTR, LPCWSTR;
+    import core.sys.windows.winbase : GetLastError;
     import core.sys.windows.wincrypt;
+    import core.sys.windows.windef : BOOL, DWORD, PBYTE;
+    import core.sys.windows.winerror : NTE_BAD_KEYSET;
+    import core.sys.windows.winnt : LPCSTR, LPCWSTR;
+
     private extern(Windows) @nogc nothrow
     {
         BOOL CryptGenRandom(HCRYPTPROV, DWORD, PBYTE);
@@ -247,9 +250,6 @@ else version (Windows)
 
     private bool initCryptGenRandom(scope ref HCRYPTPROV hProvider) @nogc nothrow @trusted
     {
-        import core.sys.windows.winbase : GetLastError;
-        import core.sys.windows.winerror : NTE_BAD_KEYSET;
-
         // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379886(v=vs.85).aspx
         // For performance reasons, we recommend that you set the pszContainer
         // parameter to NULL and the dwFlags parameter to CRYPT_VERIFYCONTEXT
