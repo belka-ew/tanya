@@ -10,9 +10,8 @@ d:
   - dmd-2.079.0
   - dmd-2.078.3
   - dmd-2.077.1
-  - dmd-2.076.1
 
-env: 
+env:
   matrix:
     - ARCH=x86_64
     - ARCH=x86
@@ -23,12 +22,17 @@ addons:
       - gcc-multilib
 
 before_script:
-  - if [ "$PS1" = '(dmd-2.079.0)' ]; then
+  - if [ "`$DC --version | head -n 1 | grep 'v2.079.0'`" ]; then
       export UNITTEST="unittest-cov";
     fi
 
 script:
   - dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC
+  - if [ "$UNITTEST" ] && [ "$ARCH" = "x86_64" ] && [ "$TRAVIS_OS_NAME" = "linux" ];
+    then
+      dub fetch dscanner;
+      dub run dscanner -- --styleCheck ./source/;
+    fi
 
 after_success:
-  - test "$UNITTEST" = "unittest-cov" && bash <(curl -s https://codecov.io/bash)
+  - test "$UNITTEST" && bash <(curl -s https://codecov.io/bash)
