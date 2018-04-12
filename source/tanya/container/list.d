@@ -720,6 +720,50 @@ struct SList(T)
     }
 
     /**
+     * Removes the fron element of the $(D_PARAM range) from the list.
+     *
+     * Params:
+     *  range = Range whose front element should be removed.
+     *
+     * Returns: $(D_PSYMBOL range) with the first element removed.
+     *
+     * Precondition: $(D_INLINECODE !range.empty).
+     *               $(D_PARAM range) is extracted from this list.
+     */
+    Range popFirstOf(Range range)
+    in
+    {
+        assert(!range.empty);
+        assert(checkRangeBelonging(range));
+    }
+    do
+    {
+        auto next = (*range.head).next;
+
+        allocator.dispose(*range.head);
+        *range.head = next;
+
+        return range;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        auto list = SList!int([5, 234, 30]);
+        auto range = list[];
+
+        range.popFront();
+        assert(list.popFirstOf(range).front == 30);
+
+        range = list[];
+        assert(range.front == 5);
+        range.popFront;
+        assert(range.front == 30);
+        range.popFront;
+        assert(range.empty);
+    }
+
+    /**
      * Returns: Range that iterates over all elements of the container, in
      *          forward order.
      */
