@@ -172,10 +172,9 @@ parameter is used)
 
 | DMD     | GCC       |
 |:-------:|:---------:|
-| 2.079.0 | *master*  |
+| 2.079.1 | *master*  |
 | 2.078.3 |           |
 | 2.077.1 |           |
-| 2.076.1 |           |
 
 ### Current status
 

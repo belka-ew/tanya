@@ -156,7 +156,8 @@ struct SList(T)
      *  init      = Initial value to fill the list with.
      *  allocator = Allocator.
      */
-    this(const size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
+    this(size_t len, T init, shared Allocator allocator = defaultAllocator)
+    @trusted
     {
         this(allocator);
         if (len == 0)
@@ -181,7 +182,7 @@ struct SList(T)
     }
 
     /// ditto
-    this(const size_t len, shared Allocator allocator = defaultAllocator)
+    this(size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(len, T.init, allocator);
     }
@@ -656,7 +657,7 @@ struct SList(T)
      *
      * Returns: The number of elements removed.
      */
-    size_t removeFront(const size_t howMany)
+    size_t removeFront(size_t howMany)
     out (removed)
     {
         assert(removed <= howMany);
@@ -1125,7 +1126,8 @@ struct DList(T)
      *  init      = Initial value to fill the list with.
      *  allocator = Allocator.
      */
-    this(const size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
+    this(size_t len, T init, shared Allocator allocator = defaultAllocator)
+    @trusted
     {
         this(allocator);
         if (len == 0)
@@ -1153,7 +1155,7 @@ struct DList(T)
     }
 
     /// ditto
-    this(const size_t len, shared Allocator allocator = defaultAllocator)
+    this(size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(len, T.init, allocator);
     }
@@ -1910,7 +1912,7 @@ struct DList(T)
     {
         auto n = this.head.next;
 
-        this.allocator_.dispose(this.head);
+        allocator.dispose(this.head);
         this.head = n;
         if (this.head is null)
         {
@@ -1983,7 +1985,7 @@ struct DList(T)
      *
      * Returns: The number of elements removed.
      */
-    size_t removeFront(const size_t howMany)
+    size_t removeFront(size_t howMany)
     out (removed)
     {
         assert(removed <= howMany);
@@ -2010,7 +2012,7 @@ struct DList(T)
     }
 
     /// ditto
-    size_t removeBack(const size_t howMany)
+    size_t removeBack(size_t howMany)
     out (removed)
     {
         assert(removed <= howMany);
@@ -2070,11 +2072,7 @@ struct DList(T)
         while (e !is *tailNext)
         {
             auto next = e.next;
-            /* Workaround for dmd 2.076.1 bug on OSX. Invariants fail when
-               the allocator is called. Here it should be safe to use
-               allocator_ directory, since the list isn't empty.
-               See also removeFront. */
-            this.allocator_.dispose(e);
+            allocator.dispose(e);
             e = next;
         }
 

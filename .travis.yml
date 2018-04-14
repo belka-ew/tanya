@@ -7,7 +7,7 @@ os:
 language: d
 
 d:
-  - dmd-2.079.0
+  - dmd-2.079.1
   - dmd-2.078.3
   - dmd-2.077.1
 
@@ -22,7 +22,7 @@ addons:
       - gcc-multilib
 
 before_script:
-  - if [ "`$DC --version | head -n 1 | grep 'v2.079.0'`" ]; then
+  - if [ "`$DC --version | head -n 1 | grep 'v2.079.1'`" ]; then
       export UNITTEST="unittest-cov";
     fi
 
