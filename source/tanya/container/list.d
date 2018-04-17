@@ -437,13 +437,13 @@ struct SList(T)
 
     version (assert)
     {
-        private bool checkRangeBelonging(ref Range r) const
+        private bool checkRangeBelonging(ref const Range r) const
         {
-            const(Entry*)* pos = &this.head;
-            for (; pos != r.head && *pos !is null; pos = &(*pos).next)
+            const(Entry)* pos = this.head;
+            for (; pos !is *r.head && pos !is null; pos = pos.next)
             {
             }
-            return pos == r.head;
+            return pos is *r.head;
         }
     }
 
@@ -721,12 +721,12 @@ struct SList(T)
     }
 
     /**
-     * Removes the fron element of the $(D_PARAM range) from the list.
+     * Removes the front element of the $(D_PARAM range) from the list.
      *
      * Params:
      *  range = Range whose front element should be removed.
      *
-     * Returns: $(D_PSYMBOL range) with the first element removed.
+     * Returns: $(D_PSYMBOL range) with its front element removed.
      *
      * Precondition: $(D_INLINECODE !range.empty).
      *               $(D_PARAM range) is extracted from this list.
@@ -1604,13 +1604,13 @@ struct DList(T)
 
     version (assert)
     {
-        private bool checkRangeBelonging(ref Range r) const
+        private bool checkRangeBelonging(ref const Range r) const
         {
-            const(Entry*)* pos = &this.head;
-            for (; pos != r.head && *pos !is null; pos = &(*pos).next)
+            const(Entry)* pos = this.head;
+            for (; pos !is *r.head && pos !is null; pos = pos.next)
             {
             }
-            return pos == r.head;
+            return pos is *r.head;
         }
     }
 
@@ -2110,6 +2110,57 @@ struct DList(T)
 
         assert(l1.remove(r).empty);
         assert(l1 == l2);
+    }
+
+    /**
+     * Removes the front or back element of the $(D_PARAM range) from the list
+     * respectively.
+     *
+     * Params:
+     *  range = Range whose element should be removed.
+     *
+     * Returns: $(D_PSYMBOL range) with its front or back element removed.
+     *
+     * Precondition: $(D_INLINECODE !range.empty).
+     *               $(D_PARAM range) is extracted from this list.
+     */
+    Range popFirstOf(Range range)
+    in
+    {
+        assert(!range.empty);
+    }
+    do
+    {
+        remove(Range(*range.head, *range.head));
+        return range;
+    }
+
+    /// ditto
+    Range popLastOf(Range range)
+    in
+    {
+        assert(!range.empty);
+    }
+    do
+    {
+        remove(Range(*range.tail, *range.tail));
+        return range;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        auto list = DList!int([5, 234, 30]);
+        auto range = list[];
+
+        range.popFront();
+        range = list.popFirstOf(range);
+        assert(range.front == 30);
+        assert(range.back == 30);
+
+        assert(list.popLastOf(range).empty);
+        assert(list[].front == 5);
+        assert(list[].back == 5);
     }
 
     /**
