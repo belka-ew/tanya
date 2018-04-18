@@ -435,15 +435,19 @@ struct SList(T)
         assert(l2.front == 9);
     }
 
-    version (assert)
+    private bool checkRangeBelonging(ref const Range r) const
     {
-        private bool checkRangeBelonging(ref const Range r) const
+        version (assert)
         {
             const(Entry)* pos = this.head;
             for (; pos !is *r.head && pos !is null; pos = pos.next)
             {
             }
             return pos is *r.head;
+        }
+        else
+        {
+            return true;
         }
     }
 
@@ -1602,15 +1606,19 @@ struct DList(T)
     /// ditto
     alias insert = insertBack;
 
-    version (assert)
+    private bool checkRangeBelonging(ref const Range r) const
     {
-        private bool checkRangeBelonging(ref const Range r) const
+        version (assert)
         {
             const(Entry)* pos = this.head;
             for (; pos !is *r.head && pos !is null; pos = pos.next)
             {
             }
             return pos is *r.head;
+        }
+        else
+        {
+            return true;
         }
     }
 
