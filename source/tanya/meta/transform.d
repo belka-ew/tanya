@@ -701,7 +701,7 @@ alias TypeOf(T) = T;
 
 /// ditto
 template TypeOf(alias T)
-if (isExpressions!T || isTemplate!T)
+if (isExpressions!T || __traits(isTemplate, T))
 {
     alias TypeOf = typeof(T);
 }

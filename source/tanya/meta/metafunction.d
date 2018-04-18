@@ -44,7 +44,7 @@ import tanya.meta.transform;
  * See_Also: $(D_PSYMBOL isLess).
  */
 template Min(alias pred, Args...)
-if (Args.length > 0 && isTemplate!pred)
+if (Args.length > 0 && __traits(isTemplate, pred))
 {
     static if (Args.length == 1)
     {
@@ -91,7 +91,7 @@ if (Args.length > 0 && isTemplate!pred)
  * See_Also: $(D_PSYMBOL isLess).
  */
 template Max(alias pred, Args...)
-if (Args.length > 0 && isTemplate!pred)
+if (Args.length > 0 && __traits(isTemplate, pred))
 {
     static if (Args.length == 1)
     {
@@ -148,7 +148,7 @@ if (Args.length > 0 && isTemplate!pred)
  */
 template ZipWith(alias f, Tuples...)
 if (Tuples.length > 0
- && isTemplate!f
+ && __traits(isTemplate, f)
  && allSatisfy!(ApplyLeft!(isInstanceOf, Tuple), Tuples))
 {
     private template GetIth(size_t i, Args...)
@@ -448,7 +448,7 @@ if (isInstanceOf!(Set, S1) && isInstanceOf!(Set, S2))
  *          to $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isLessEqual(alias cmp, Args...)
-if (Args.length == 2 && isTemplate!cmp)
+if (Args.length == 2 && __traits(isTemplate, cmp))
 {
     private enum result = cmp!(Args[1], Args[0]);
     static if (is(typeof(result) == bool))
@@ -495,7 +495,7 @@ if (Args.length == 2 && isTemplate!cmp)
  *          equal to $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isGreaterEqual(alias cmp, Args...)
-if (Args.length == 2 && isTemplate!cmp)
+if (Args.length == 2 && __traits(isTemplate, cmp))
 {
     private enum result = cmp!Args;
     static if (is(typeof(result) == bool))
@@ -542,7 +542,7 @@ if (Args.length == 2 && isTemplate!cmp)
  *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isLess(alias cmp, Args...)
-if (Args.length == 2 && isTemplate!cmp)
+if (Args.length == 2 && __traits(isTemplate, cmp))
 {
     private enum result = cmp!Args;
     static if (is(typeof(result) == bool))
@@ -589,7 +589,7 @@ if (Args.length == 2 && isTemplate!cmp)
  *          $(D_INLINECODE Args[1]), $(D_KEYWORD false) otherwise.
  */
 template isGreater(alias cmp, Args...)
-if (Args.length == 2 && isTemplate!cmp)
+if (Args.length == 2 && __traits(isTemplate, cmp))
 {
     private enum result = cmp!Args;
     static if (is(typeof(result) == bool))
@@ -637,7 +637,7 @@ if (Args.length == 2)
 {
     static if ((is(typeof(Args[0] == Args[1])) && (Args[0] == Args[1]))
             || (isTypeTuple!Args && is(Args[0] == Args[1]))
-            || isSame!Args)
+            || __traits(isSame, Args[0], Args[1]))
     {
         enum bool isEqual = true;
     }
@@ -804,7 +804,7 @@ alias AliasSeq(Args...) = Args;
  *          $(D_PARAM F), $(D_KEYWORD false) otherwise.
  */
 template allSatisfy(alias F, L...)
-if (isTemplate!F)
+if (__traits(isTemplate, F))
 {
     static if (L.length == 0)
     {
@@ -842,7 +842,7 @@ if (isTemplate!F)
  *          $(D_PARAM F), $(D_KEYWORD false) otherwise.
  */
 template anySatisfy(alias F, L...)
-if (isTemplate!F)
+if (__traits(isTemplate, F))
 {
     static if (L.length == 0)
     {
@@ -943,6 +943,32 @@ template canFind(alias T, L...)
     static assert(canFind!(int, int));
     static assert(canFind!(int, float, double, int, real));
     static assert(canFind!(3, () {}, uint, 5, 3));
+}
+
+/*
+ * Tests whether $(D_PARAM T) is a template.
+ *
+ * $(D_PSYMBOL isTemplate) isn't $(D_KEYWORD true) for template instances,
+ * since the latter already represent some type. Only not instantiated
+ * templates, i.e. that accept some template parameters, are considered
+ * templates.
+ *
+ * Params:
+ *  T = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a template,
+ *          $(D_KEYWORD false) otherwise.
+ */
+private enum bool isTemplate(alias T) = __traits(isTemplate, T);
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct S(T)
+    {
+    }
+    static assert(isTemplate!S);
+    static assert(!isTemplate!(S!int));
 }
 
 /**
@@ -1049,7 +1075,7 @@ if (allSatisfy!(isTemplate, Preds))
  * Returns: Negated $(D_PARAM pred).
  */
 template templateNot(alias pred)
-if (isTemplate!pred)
+if (__traits(isTemplate, pred))
 {
     enum bool templateNot(T...) = !pred!T;
 }
@@ -1083,7 +1109,7 @@ if (isTemplate!pred)
  *          if not.
  */
 template isSorted(alias cmp, L...)
-if (isTemplate!cmp)
+if (__traits(isTemplate, cmp))
 {
     static if (L.length <= 1)
     {
@@ -1359,7 +1385,7 @@ template Reverse(L...)
  * Returns: Elements $(D_PARAM T) after applying $(D_PARAM F) to them.
  */
 template Map(alias F, T...)
-if (isTemplate!F)
+if (__traits(isTemplate, F))
 {
     static if (T.length == 0)
     {
@@ -1401,7 +1427,7 @@ if (isTemplate!F)
  * See_Also: $(LINK2 https://en.wikipedia.org/wiki/Merge_sort, Merge sort).
  */
 template Sort(alias cmp, L...)
-if (isTemplate!cmp)
+if (__traits(isTemplate, cmp))
 {
     private template merge(size_t A, size_t B)
     {

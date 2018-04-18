@@ -150,137 +150,7 @@ enum bool isComplex(T) = is(Unqual!(OriginalType!T) == cfloat)
     static assert(!isComplex!real);
 }
 
-/**
- * POD (Plain Old Data) is a $(D_KEYWORD struct) without constructors,
- * destructors and member functions.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a POD type,
- *          $(D_KEYWORD false) otherwise.
- */
-deprecated("Use __traits(isPOD) instead")
-enum bool isPOD(T) = __traits(isPOD, T);
-
-///
-@nogc nothrow pure @safe unittest
-{
-    struct S1
-    {
-        void method()
-        {
-        }
-    }
-    static assert(!isPOD!S1);
-
-    struct S2
-    {
-        void function() val; // Function pointer, not a member function.
-    }
-    static assert(isPOD!S2);
-
-    struct S3
-    {
-        this(this)
-        {
-        }
-    }
-    static assert(!isPOD!S3);
-}
-
-/**
- * Returns size of the type $(D_PARAM T).
- *
- * Params:
- *  T = A type.
- *
- * Returns: Size of the type $(D_PARAM T).
- */
-deprecated("Use T.sizeof instead")
-enum size_t sizeOf(T) = T.sizeof;
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(sizeOf!(bool function()) == size_t.sizeof);
-    static assert(sizeOf!bool == 1);
-    static assert(sizeOf!short == 2);
-    static assert(sizeOf!int == 4);
-    static assert(sizeOf!long == 8);
-    static assert(sizeOf!(void[16]) == 16);
-}
-
-/**
- * Returns the alignment of the type $(D_PARAM T).
- *
- * Params:
- *  T = A type.
- *
- * Returns: Alignment of the type $(D_PARAM T).
- */
-deprecated("Use T.alignof instead")
-enum size_t alignOf(T) = T.alignof;
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(alignOf!bool == bool.alignof);
-    static assert(is(typeof(alignOf!bool) == typeof(bool.alignof)));
-}
-
-/**
- * Tests whether $(D_INLINECODE Args[0]) and $(D_INLINECODE Args[1]) are the
- * same symbol.
- *
- * Params:
- *  Args = Two symbols to be tested.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM Args) are the same symbol,
- *          $(D_KEYWORD false) otherwise.
- */
-deprecated("Use __traits(isSame) instead")
-template isSame(Args...)
-if (Args.length == 2)
-{
-    enum bool isSame = __traits(isSame, Args[0], Args[1]);
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(isSame!("string", "string"));
-    static assert(!isSame!(string, immutable(char)[]));
-}
-
-/**
- * Tests whether $(D_PARAM T) is a template.
- *
- * $(D_PSYMBOL isTemplate) isn't $(D_KEYWORD true) for template instances,
- * since the latter already represent some type. Only not instantiated
- * templates, i.e. that accept some template parameters, are considered
- * templates.
- *
- * Params:
- *  T = A symbol.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a template,
- *          $(D_KEYWORD false) otherwise.
- */
-deprecated("Use __traits(isTemplate) instead")
-enum bool isTemplate(alias T) = __traits(isTemplate, T);
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static struct S(T)
-    {
-    }
-    static assert(isTemplate!S);
-    static assert(!isTemplate!(S!int));
-}
-
-/**
+/*
  * Tests whether $(D_PARAM T) is an interface.
  *
  * Params:
@@ -289,44 +159,7 @@ enum bool isTemplate(alias T) = __traits(isTemplate, T);
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an interface,
  *          $(D_KEYWORD false) otherwise.
  */
-deprecated("Use is(T == interface) instead")
-enum bool isInterface(T) = is(T == interface);
-
-/**
- * Tests whether $(D_PARAM T) is a class.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a class,
- *          $(D_KEYWORD false) otherwise.
- */
-deprecated("Use is(T == class) instead")
-enum bool isClass(T) = is(T == class);
-
-/**
- * Tests whether $(D_PARAM T) is a struct.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a struct,
- *          $(D_KEYWORD false) otherwise.
- */
-deprecated("Use is(T == struct) instead")
-enum bool isStruct(T) = is(T == struct);
-
-/**
- * Tests whether $(D_PARAM T) is a enum.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is an enum,
- *          $(D_KEYWORD false) otherwise.
- */
-deprecated("Use is(T == enum) instead")
-enum bool isEnum(T) = is(T == enum);
+private enum bool isInterface(T) = is(T == interface);
 
 /**
  * Determines whether $(D_PARAM T) is a polymorphic type, i.e. a
@@ -2007,17 +1840,17 @@ alias TemplateOf(alias T : Base!Args, alias Base, Args...) = Base;
     static struct S(T)
     {
     }
-    static assert(isSame!(TemplateOf!(S!int), S));
+    static assert(__traits(isSame, TemplateOf!(S!int), S));
 
     static void func(T)()
     {
     }
-    static assert(isSame!(TemplateOf!(func!int), func));
+    static assert(__traits(isSame, TemplateOf!(func!int), func));
 
     template T(U)
     {
     }
-    static assert(isSame!(TemplateOf!(T!int), T));
+    static assert(__traits(isSame, TemplateOf!(T!int), T));
 }
 
 /**
@@ -2049,7 +1882,7 @@ template isInstanceOf(alias T, alias I)
 {
     static if (is(typeof(TemplateOf!I)))
     {
-        enum bool isInstanceOf = isSame!(TemplateOf!I, T);
+        enum bool isInstanceOf = __traits(isSame, TemplateOf!I, T);
     }
     else
     {
