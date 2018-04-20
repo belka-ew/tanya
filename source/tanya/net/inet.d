@@ -14,7 +14,6 @@
  */
 module tanya.net.inet;
 
-import std.math;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.primitive;
@@ -31,7 +30,7 @@ import tanya.range.primitive;
  *  L = Desired range length.
  */
 struct NetworkOrder(uint L)
-    if (L > ubyte.sizeof && L <= ulong.sizeof)
+if (L > ubyte.sizeof && L <= ulong.sizeof)
 {
     static if (L > uint.sizeof)
     {
@@ -53,7 +52,7 @@ struct NetworkOrder(uint L)
     private StorageType value;
     private size_t size = L;
 
-    const pure nothrow @safe @nogc invariant
+    invariant
     {
         assert(this.size <= L);
     }
@@ -69,13 +68,13 @@ struct NetworkOrder(uint L)
      *  T      = Value type.
      *  value  = The value should be represented by this range.
      *
-     * Precondition: $(D_INLINECODE value <= 2 ^^ (length * 8) - 1).
+     * Precondition: $(D_INLINECODE value <= (2 ^^ (L * 8)) - 1).
      */
-    this(T)(const T value)
-        if (isUnsigned!T)
+    this(T)(T value)
+    if (isUnsigned!T)
     in
     {
-        assert(value <= pow(2, L * 8) - 1);
+        assert(value <= (2 ^^ (L * 8)) - 1);
     }
     do
     {
@@ -216,10 +215,10 @@ struct NetworkOrder(uint L)
  *          order.
  */
 T toHostOrder(T = size_t, R)(R range)
-    if (isInputRange!R
-     && !isInfinite!R
-     && is(Unqual!(ElementType!R) == ubyte)
-     && isUnsigned!T)
+if (isInputRange!R
+ && !isInfinite!R
+ && is(Unqual!(ElementType!R) == ubyte)
+ && isUnsigned!T)
 {
     T ret;
     ushort pos = T.sizeof * 8;
