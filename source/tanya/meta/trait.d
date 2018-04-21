@@ -3012,3 +3012,99 @@ template Fields(T)
 
     static assert(is(Fields!short == AliasSeq!short));
 }
+
+/**
+ * Determines whether all $(D_PARAM Types) are the same.
+ *
+ * If $(D_PARAM Types) is empty, returns $(D_KEYWORD true).
+ *
+ * Params:
+ *  Types = Type sequence.
+ *
+ * Returns: $(D_KEYWORD true) if all $(D_PARAM Types) are the same,
+ *          $(D_KEYWORD false) otherwise.
+ */
+template allSameType(Types...)
+{
+    static if (Types.length == 0)
+    {
+        enum bool allSameType = true;
+    }
+    else
+    {
+        private enum bool sameType(T) = is(T == Types[0]);
+
+        enum bool allSameType = allSatisfy!(sameType, Types[1 .. $]);
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(allSameType!());
+    static assert(allSameType!int);
+    static assert(allSameType!(int, int, int));
+    static assert(!allSameType!(int, uint, int));
+    static assert(!allSameType!(int, uint, short));
+}
+
+/**
+ * Determines whether values of type $(D_PARAM T) can be compared for equality,
+ * i.e. using `==` or `!=` binary operators.
+ *
+ * Params:
+ *  T = Type to test.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) can be compared for equality,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isEqualityComparable(T) = ifTestable!(T, a => a == a);
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(isEqualityComparable!int);
+}
+
+/**
+ * Determines whether values of type $(D_PARAM T) can be compared for ordering,
+ * i.e. using `>`, `>=`, `<` or `<=` binary operators.
+ *
+ * Params:
+ *  T = Type to test.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) can be compared for ordering,
+ *          $(D_KEYWORD false) otherwise.
+ */
+enum bool isOrderingComparable(T) = ifTestable!(T, a => a > a);
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(isOrderingComparable!int);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct DisabledOpEquals
+    {
+        @disable bool opEquals(typeof(this)) @nogc nothrow pure @safe;
+
+        int opCmp(typeof(this)) @nogc nothrow pure @safe
+        {
+            return 0;
+        }
+    }
+    static assert(!isEqualityComparable!DisabledOpEquals);
+    static assert(isOrderingComparable!DisabledOpEquals);
+
+    static struct OpEquals
+    {
+        bool opEquals(typeof(this)) @nogc nothrow pure @safe
+        {
+            return true;
+        }
+    }
+    static assert(isEqualityComparable!OpEquals);
+    static assert(!isOrderingComparable!OpEquals);
+}
