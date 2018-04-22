@@ -14,45 +14,32 @@
  */
 module tanya.memory.mmappool;
 
-import std.algorithm.comparison;
-import tanya.memory.allocator;
-import tanya.memory.op;
-
 version (TanyaNative):
 
-import core.sys.posix.sys.mman : MAP_ANON,
-                                 MAP_FAILED,
-                                 MAP_PRIVATE,
-                                 PROT_READ,
-                                 PROT_WRITE;
-import core.sys.posix.unistd;
+import mir.linux._asm.unistd;
+import tanya.algorithm.comparison;
+import tanya.memory.allocator;
+import tanya.memory.op;
+import tanya.os.error;
+import tanya.sys.linux.syscall;
+import tanya.sys.posix.mman;
 
-extern(C)
-private void* mmap(void* addr,
-                   size_t len,
-                   int prot,
-                   int flags,
-                   int fd,
-                   off_t offset) pure nothrow @system @nogc;
-
-extern(C)
-private int munmap(void* addr, size_t len) pure nothrow @system @nogc;
-
-private void* mapMemory(const size_t len) pure nothrow @system @nogc
+private void* mapMemory(const size_t length) @nogc nothrow pure @system
 {
-    void* p = mmap(null,
-                   len,
-                   PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANON,
-                   -1,
-                   0);
-    return p is MAP_FAILED ? null : p;
+    auto p = syscall_(0,
+                      length,
+                      PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS,
+                      -1,
+                      0,
+                      NR_mmap);
+    return p == -ErrorCode.noMemory ? null : cast(void*) p;
 }
 
-private bool unmapMemory(shared void* addr, const size_t len)
-pure nothrow @system @nogc
+private bool unmapMemory(shared void* addr, const size_t length)
+@nogc nothrow pure @system
 {
-    return munmap(cast(void*) addr, len) == 0;
+    return syscall_(cast(ptrdiff_t) addr, length, NR_munmap) == 0;
 }
 
 /*
@@ -83,7 +70,7 @@ final class MmapPool : Allocator
 {
     version (none)
     {
-        pure nothrow @nogc invariant
+        @nogc nothrow pure @system invariant
         {
             for (auto r = &head; *r !is null; r = &((*r).next))
             {
@@ -107,7 +94,7 @@ final class MmapPool : Allocator
      *
      * Returns: Pointer to the new allocated memory.
      */
-    void[] allocate(const size_t size) shared pure nothrow @nogc
+    void[] allocate(size_t size) @nogc nothrow pure shared @system
     {
         if (size == 0)
         {
@@ -128,7 +115,7 @@ final class MmapPool : Allocator
         return data is null ? null : data[0 .. size];
     }
 
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         auto p = MmapPool.instance.allocate(20);
         assert(p);
@@ -138,15 +125,14 @@ final class MmapPool : Allocator
         assert(p.length == 0);
     }
 
-    // Issue 245: https://issues.caraus.io/issues/245.
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         // allocate() check.
         size_t tooMuchMemory = size_t.max
                              - MmapPool.alignment_
                              - BlockEntry.sizeof * 2
                              - RegionEntry.sizeof
-                             - MmapPool.instance.pageSize;
+                             - pageSize;
         assert(MmapPool.instance.allocate(tooMuchMemory) is null);
 
         assert(MmapPool.instance.allocate(size_t.max) is null);
@@ -165,7 +151,8 @@ final class MmapPool : Allocator
      *
      * Returns: Data the block points to or $(D_KEYWORD null).
      */
-    private void* findBlock(const ref size_t size) shared pure nothrow @nogc
+    private void* findBlock(const ref size_t size)
+    @nogc nothrow pure shared @system
     {
         Block block1;
         RegionLoop: for (auto r = head; r !is null; r = r.next)
@@ -207,7 +194,7 @@ final class MmapPool : Allocator
     }
 
     // Merge block with the next one.
-    private void mergeNext(Block block) shared const pure nothrow @safe @nogc
+    private void mergeNext(Block block) const @nogc nothrow pure @safe shared
     {
         block.size = block.size + BlockEntry.sizeof + block.next.size;
         if (block.next.next !is null)
@@ -225,7 +212,7 @@ final class MmapPool : Allocator
      *
      * Returns: Whether the deallocation was successful.
      */
-    bool deallocate(void[] p) shared pure nothrow @nogc
+    bool deallocate(void[] p) @nogc nothrow pure shared @system
     {
         if (p.ptr is null)
         {
@@ -271,7 +258,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         auto p = MmapPool.instance.allocate(20);
 
@@ -290,8 +277,8 @@ final class MmapPool : Allocator
      *
      * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
      */
-    bool reallocateInPlace(ref void[] p, const size_t size)
-    shared pure nothrow @nogc
+    bool reallocateInPlace(ref void[] p, size_t size)
+    @nogc nothrow pure shared @system
     {
         if (p is null || size == 0)
         {
@@ -354,7 +341,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         void[] p;
         assert(!MmapPool.instance.reallocateInPlace(p, 5));
@@ -387,7 +374,8 @@ final class MmapPool : Allocator
      *
      * Returns: Whether the reallocation was successful.
      */
-    bool reallocate(ref void[] p, const size_t size) shared pure nothrow @nogc
+    bool reallocate(ref void[] p, size_t size)
+    @nogc nothrow pure shared @system
     {
         if (size == 0)
         {
@@ -419,7 +407,7 @@ final class MmapPool : Allocator
         return true;
     }
 
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         void[] p;
         MmapPool.instance.reallocate(p, 10 * int.sizeof);
@@ -447,28 +435,20 @@ final class MmapPool : Allocator
         MmapPool.instance.deallocate(p);
     }
 
-    static private shared(MmapPool) instantiate() nothrow @nogc
+    static private shared(MmapPool) instantiate() @nogc nothrow @system
     {
         if (instance_ is null)
         {
-            // Get system dependend page size.
-            size_t pageSize = sysconf(_SC_PAGE_SIZE);
-            if (pageSize < 65536)
-            {
-                pageSize = pageSize * 65536 / pageSize;
-            }
-
             const instanceSize = addAlignment(__traits(classInstanceSize,
                                               MmapPool));
 
             Region head; // Will become soon our region list head
-            void* data = initializeRegion(instanceSize, head, pageSize);
+            void* data = initializeRegion(instanceSize, head);
             if (data !is null)
             {
                 copy(typeid(MmapPool).initializer, data[0 .. instanceSize]);
                 instance_ = cast(shared MmapPool) data;
                 instance_.head = head;
-                instance_.pageSize = pageSize;
             }
         }
         return instance_;
@@ -479,12 +459,12 @@ final class MmapPool : Allocator
      *
      * Returns: Global $(D_PSYMBOL MmapPool) instance.
      */
-    static @property shared(MmapPool) instance() pure nothrow @nogc
+    static @property shared(MmapPool) instance() @nogc nothrow pure @system
     {
         return (cast(GetPureInstance!MmapPool) &instantiate)();
     }
 
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         assert(instance is instance);
     }
@@ -498,12 +478,10 @@ final class MmapPool : Allocator
      *
      * Returns: A pointer to the data.
      */
-    private static void* initializeRegion(const size_t size,
-                                          ref Region head,
-                                          const size_t pageSize)
-    pure nothrow @nogc
+    private static void* initializeRegion(const size_t size, ref Region head)
+    @nogc nothrow pure @system
     {
-        const regionSize = calculateRegionSize(size, pageSize);
+        const regionSize = calculateRegionSize(size);
         if (regionSize < size)
         {
             return null;
@@ -550,9 +528,10 @@ final class MmapPool : Allocator
         return data;
     }
 
-    private void* initializeRegion(const size_t size) shared pure nothrow @nogc
+    private void* initializeRegion(const size_t size)
+    @nogc nothrow pure shared @system
     {
-        return initializeRegion(size, this.head, this.pageSize);
+        return initializeRegion(size, this.head);
     }
 
     /*
@@ -561,21 +540,19 @@ final class MmapPool : Allocator
      *
      * Returns: Aligned size of $(D_PARAM x).
      */
-    private static size_t addAlignment(const size_t x) pure nothrow @safe @nogc
+    private static size_t addAlignment(const size_t x) @nogc nothrow pure @safe
     {
         return (x - 1) / alignment_ * alignment_ + alignment_;
     }
 
     /*
      * Params:
-     *  x        = Required space.
-     *  pageSize = Page size.
+     *  x = Required space.
      *
      * Returns: Minimum region size (a multiple of $(D_PSYMBOL pageSize)).
      */
-    private static size_t calculateRegionSize(ref const size_t x,
-                                              ref const size_t pageSize)
-    pure nothrow @safe @nogc
+    private static size_t calculateRegionSize(ref const size_t x)
+    @nogc nothrow pure @safe
     {
         return (x + RegionEntry.sizeof + BlockEntry.sizeof * 2)
              / pageSize * pageSize + pageSize;
@@ -584,12 +561,12 @@ final class MmapPool : Allocator
     /*
      * Returns: Alignment offered.
      */
-    @property uint alignment() shared const pure nothrow @safe @nogc
+    @property uint alignment() const @nogc nothrow pure @safe shared
     {
         return alignment_;
     }
 
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         assert(MmapPool.instance.alignment == MmapPool.alignment_);
     }
@@ -597,7 +574,9 @@ final class MmapPool : Allocator
     private enum uint alignment_ = 8;
 
     private shared static MmapPool instance_;
-    private shared size_t pageSize;
+
+    // Page size.
+    enum size_t pageSize = 65536;
 
     private shared struct RegionEntry
     {
@@ -622,7 +601,7 @@ final class MmapPool : Allocator
 
 // A lot of allocations/deallocations, but it is the minimum caused a
 // segmentation fault because MmapPool reallocateInPlace moves a block wrong.
-@nogc nothrow pure unittest
+@nogc nothrow pure @system unittest
 {
     auto a = MmapPool.instance.allocate(16);
     auto d = MmapPool.instance.allocate(16);

@@ -35,7 +35,7 @@ interface Allocator
      *
      * Returns: Pointer to the new allocated memory.
      */
-    void[] allocate(const size_t size) shared pure nothrow @nogc;
+    void[] allocate(size_t size) shared pure nothrow @nogc;
 
     /**
      * Deallocates a memory block.
@@ -56,7 +56,7 @@ interface Allocator
      *
      * Returns: Pointer to the allocated memory.
      */
-    bool reallocate(ref void[] p, const size_t size) shared pure nothrow @nogc;
+    bool reallocate(ref void[] p, size_t size) shared pure nothrow @nogc;
 
     /**
      * Reallocates a memory block in place if possible or returns
@@ -70,7 +70,7 @@ interface Allocator
      *
      * Returns: $(D_KEYWORD true) if successful, $(D_KEYWORD false) otherwise.
      */
-    bool reallocateInPlace(ref void[] p, const size_t size)
+    bool reallocateInPlace(ref void[] p, size_t size)
     shared pure nothrow @nogc;
 }
 

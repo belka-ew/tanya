@@ -22,44 +22,31 @@ syscall1:
 	ret
 
 
-	.globl syscall2
-	.type syscall2, @function
+// 2 parameters.
+	.globl _D5tanya3sys5linux7syscall7syscallFNbNilllZl
+	.type _D5tanya3sys5linux7syscall7syscallFNbNilllZl, @function
 
-syscall2:
-	// Store registers.
-	movq %rdi, %r8
-
-	movq %rdx, %rax // Syscall number.
-
-	// Syscall arguments.
-	movq %rsi, %rdi
-	movq %r8, %rsi
+_D5tanya3sys5linux7syscall7syscallFNbNilllZl:
+	movq %rdx, %rax
 
 	syscall
-
-	// Restore registers.
-	movq %rdi, %rsi
-	movq %r8, %rdi
 
 	ret
 
 
-	.globl syscall3
-	.type syscall3, @function
+// 6 parameters.
+	.globl _D5tanya3sys5linux7syscall7syscallFNbNilllllllZl
+	.type _D5tanya3sys5linux7syscall7syscallFNbNilllllllZl, @function
 
-syscall3:
-	// Store registers.
-	movq %rdi, %r8
+_D5tanya3sys5linux7syscall7syscallFNbNilllllllZl:
+	pushq %rbp
+	movq %rsp, %rbp
 
-	movq %rcx, %rax // Syscall number.
+	movq 16(%rbp), %rax
 
-	// Syscall arguments.
-	movq %rdx, %rdi
-	movq %r8, %rdx
+	mov %rcx, %r10
 
 	syscall
 
-	// Restore registers.
-	movq %r8, %rdi
-
+	leave
 	ret

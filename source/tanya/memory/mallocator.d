@@ -29,11 +29,11 @@ import tanya.memory.allocator;
 final class Mallocator : Allocator
 {
     private alias MallocType = extern (C) void* function(size_t)
-                               pure nothrow @system @nogc;
+                               @nogc nothrow pure @system;
     private alias FreeType = extern (C) void function(void*)
-                             pure nothrow @system @nogc;
+                             @nogc nothrow pure @system;
     private alias ReallocType = extern (C) void* function(void*, size_t)
-                                pure nothrow @system @nogc;
+                                @nogc nothrow pure @system;
 
     /**
      * Allocates $(D_PARAM size) bytes of memory.
@@ -43,7 +43,7 @@ final class Mallocator : Allocator
      *
      * Returns: The pointer to the new allocated memory.
      */
-    void[] allocate(const size_t size) shared pure nothrow @nogc
+    void[] allocate(size_t size) @nogc nothrow pure shared @system
     {
         if (size == 0)
         {
@@ -55,7 +55,7 @@ final class Mallocator : Allocator
     }
 
     ///
-    @nogc nothrow unittest
+    @nogc nothrow pure @system unittest
     {
         auto p = Mallocator.instance.allocate(20);
         assert(p.length == 20);
@@ -73,7 +73,7 @@ final class Mallocator : Allocator
      *
      * Returns: Whether the deallocation was successful.
      */
-    bool deallocate(void[] p) shared pure nothrow @nogc
+    bool deallocate(void[] p) @nogc nothrow pure shared @system
     {
         if (p !is null)
         {
@@ -83,7 +83,7 @@ final class Mallocator : Allocator
     }
 
     ///
-    @nogc nothrow unittest
+    @nogc nothrow pure @system unittest
     {
         void[] p;
         assert(Mallocator.instance.deallocate(p));
@@ -101,14 +101,14 @@ final class Mallocator : Allocator
      *
      * Returns: $(D_KEYWORD false).
      */
-    bool reallocateInPlace(ref void[] p, const size_t size)
-    shared pure nothrow @nogc
+    bool reallocateInPlace(ref void[] p, size_t size)
+    @nogc nothrow pure shared @system
     {
         return false;
     }
 
     ///
-    @nogc nothrow unittest
+    @nogc nothrow pure @system unittest
     {
         void[] p;
         assert(!Mallocator.instance.reallocateInPlace(p, 8));
@@ -123,7 +123,8 @@ final class Mallocator : Allocator
      *
      * Returns: Whether the reallocation was successful.
      */
-    bool reallocate(ref void[] p, const size_t size) shared pure nothrow @nogc
+    bool reallocate(ref void[] p, size_t size)
+    @nogc nothrow pure shared @system
     {
         if (size == 0)
         {
@@ -152,7 +153,7 @@ final class Mallocator : Allocator
     }
 
     ///
-    @nogc nothrow unittest
+    @nogc nothrow pure @system unittest
     {
         void[] p;
 
@@ -169,8 +170,8 @@ final class Mallocator : Allocator
         assert(p is null);
     }
 
-    // Fails with false.
-    private @nogc nothrow unittest
+    // Fails with false
+    @nogc nothrow pure @system unittest
     {
         void[] p = Mallocator.instance.allocate(20);
         void[] oldP = p;
@@ -182,7 +183,7 @@ final class Mallocator : Allocator
     /**
      * Returns: The alignment offered.
      */
-    @property uint alignment() shared const pure nothrow @safe @nogc
+    @property uint alignment() const @nogc nothrow pure @safe shared
     {
         return (void*).alignof;
     }
@@ -192,7 +193,7 @@ final class Mallocator : Allocator
         assert(Mallocator.instance.alignment == (void*).alignof);
     }
 
-    static private shared(Mallocator) instantiate() nothrow @nogc
+    static private shared(Mallocator) instantiate() @nogc nothrow @system
     {
         if (instance_ is null)
         {
@@ -213,13 +214,13 @@ final class Mallocator : Allocator
      *
      * Returns: The global $(D_PSYMBOL Allocator) instance.
      */
-    static @property shared(Mallocator) instance() pure nothrow @nogc
+    static @property shared(Mallocator) instance() @nogc nothrow pure @system
     {
         return (cast(GetPureInstance!Mallocator) &instantiate)();
     }
 
     ///
-    @nogc nothrow unittest
+    @nogc nothrow pure @system unittest
     {
         assert(instance is instance);
     }
