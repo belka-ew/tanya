@@ -18,6 +18,7 @@
  */
 module tanya.meta.transform;
 
+import tanya.meta.metafunction;
 import tanya.meta.trait;
 
 /**
@@ -716,4 +717,187 @@ if (isExpressions!T || __traits(isTemplate, T))
     static assert(is(TypeOf!int == int));
     static assert(is(TypeOf!true == bool));
     static assert(!is(TypeOf!(tanya.meta)));
+}
+
+// e.g. returns int for int**.
+private template FinalPointerTarget(T)
+{
+    static if (isPointer!T)
+    {
+        alias FinalPointerTarget = FinalPointerTarget!(PointerTarget!T);
+    }
+    else
+    {
+        alias FinalPointerTarget = T;
+    }
+}
+
+// Returns true if T1 is void* and T2 is some pointer.
+private template voidAndPointer(T1, T2)
+{
+    enum bool voidAndPointer = is(Unqual!(PointerTarget!T1) == void)
+                            && isPointer!T2;
+}
+
+// Type returned by the ternary operator.
+private alias TernaryType(T, U) = typeof(true ? T.init : U.init);
+
+/**
+ * Determines the type all $(D_PARAM Args) can be implicitly converted to.
+ *
+ * $(OL
+ *  $(LI If one of the arguments is $(D_KEYWORD void), the common type is
+ *       $(D_KEYWORD void).)
+ *  $(LI The common type of integers with the same sign is the type with a
+ *       larger size. Signed and unsigned integers don't have a common type.
+ *       Type qualifiers are only preserved if all arguments are the same
+ *       type.)
+ *  $(LI The common type of floating point numbers is the type with more
+ *       precision. Type qualifiers are only preserved if all arguments are
+ *       the same type.)
+ *  $(LI The common type of polymorphic objects is the next, more generic type
+ *       both objects inherit from, e.g. $(D_PSYMBOL Object).)
+ *  $(LI `void*` is concerned as a common type of pointers only if one of the
+ *       arguments is a void pointer.)
+ *  $(LI Other types have a common type only if their pointers have a common
+ *       type. It means that for example $(D_KEYWORD bool) and $(D_KEYWORD int)
+         don't have a common type. If the types fullfill this condition, the
+         common type is determined with the ternary operator, i.e.
+         `typeof(true ? T1.init : T2.init)` is evaluated.)
+ * )
+ *
+ * If $(D_PARAM Args) don't have a common type, $(D_PSYMBOL CommonType) is
+ * $(D_KEYWORD void).
+ *
+ * Params:
+ *  Args = Type list.
+ *
+ * Returns: Common type for $(D_PARAM Args) or $(D_KEYWORD void) if
+ *          $(D_PARAM Args) don't have a common type.
+ */
+template CommonType(Args...)
+if (allSatisfy!(isType, Args))
+{
+    static if (Args.length == 0
+            || is(Unqual!(Args[0]) == void)
+            || is(Unqual!(Args[1]) == void))
+    {
+        alias CommonType = void;
+    }
+    else static if (Args.length == 1)
+    {
+        alias CommonType = Args[0];
+    }
+    else
+    {
+        private alias Pair = Args[0 .. 2];
+        private enum bool sameSigned = allSatisfy!(isIntegral, Pair)
+                                    && isSigned!(Args[0]) == isSigned!(Args[1]);
+
+        static if (is(Args[0] == Args[1]))
+        {
+            alias CommonType = CommonType!(Args[0], Args[2 .. $]);
+        }
+        else static if (sameSigned || allSatisfy!(isFloatingPoint, Pair))
+        {
+            alias CommonType = CommonType!(Unqual!(Largest!Pair),
+                                           Args[2 .. $]);
+        }
+        else static if (voidAndPointer!Pair
+                     || voidAndPointer!(Args[1], Args[0]))
+        {
+            // Workaround for https://issues.dlang.org/show_bug.cgi?id=15557.
+            // Determine the qualifiers returned by the ternary operator as if
+            // both pointers were int*. Then copy the qualifiers to void*.
+            alias P1 = CopyTypeQualifiers!(FinalPointerTarget!(Args[0]), int)*;
+            alias P2 = CopyTypeQualifiers!(FinalPointerTarget!(Args[1]), int)*;
+            static if (is(TernaryType!(P1, P2) U))
+            {
+                alias CommonType = CopyTypeQualifiers!(PointerTarget!U, void)*;
+            }
+            else
+            {
+                alias CommonType = void;
+            }
+        }
+        else static if ((isPointer!(Args[0]) || isPolymorphicType!(Args[0]))
+                     && is(TernaryType!Pair U))
+        {
+            alias CommonType = CommonType!(U, Args[2 .. $]);
+        }
+        else static if (is(TernaryType!(Args[0]*, Args[1]*)))
+        {
+            alias CommonType = CommonType!(TernaryType!Pair, Args[2 .. $]);
+        }
+        else
+        {
+            alias CommonType = void;
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(CommonType!(int, int, int) == int));
+    static assert(is(CommonType!(ubyte, ushort, uint) == uint));
+    static assert(is(CommonType!(int, uint) == void));
+
+    static assert(is(CommonType!(int, const int) == int));
+    static assert(is(CommonType!(const int, const int) == const int));
+
+    static assert(is(CommonType!(int[], const(int)[]) == const(int)[]));
+    static assert(is(CommonType!(string, char[]) == const(char)[]));
+
+    class A
+    {
+    }
+    static assert(is(CommonType!(const A, Object) == const Object));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(CommonType!(void*, int*) == void*));
+    static assert(is(CommonType!(void*, const(int)*) == const(void)*));
+    static assert(is(CommonType!(void*, const(void)*) == const(void)*));
+    static assert(is(CommonType!(int*, void*) == void*));
+    static assert(is(CommonType!(const(int)*, void*) == const(void)*));
+    static assert(is(CommonType!(const(void)*, void*) == const(void)*));
+
+    static assert(is(CommonType!() == void));
+    static assert(is(CommonType!(int*, const(int)*) == const(int)*));
+    static assert(is(CommonType!(int**, const(int)**) == const(int*)*));
+
+    static assert(is(CommonType!(float, double) == double));
+    static assert(is(CommonType!(float, int) == void));
+
+    static assert(is(CommonType!(bool, const bool) == bool));
+    static assert(is(CommonType!(int, bool) == void));
+    static assert(is(CommonType!(int, void) == void));
+    static assert(is(CommonType!(Object, void*) == void));
+
+    class A
+    {
+    }
+    static assert(is(CommonType!(A, Object) == Object));
+    static assert(is(CommonType!(const(A)*, Object*) == const(Object)*));
+    static assert(is(CommonType!(A, typeof(null)) == A));
+
+    class B : A
+    {
+    }
+    class C : A
+    {
+    }
+    static assert(is(CommonType!(B, C) == A));
+
+    static struct S
+    {
+        int opCast(T : int)()
+        {
+            return 1;
+        }
+    }
+    static assert(is(CommonType!(S, int) == void));
+    static assert(is(CommonType!(const S, S) == const S));
 }
