@@ -10,6 +10,7 @@
  * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/sys/windows/error.d,
  *                 tanya/sys/windows/error.d)
  */
+ deprecated("Use core.sys.windows.winerror instead")
 module tanya.sys.windows.error;
 
 version (Windows):
@@ -77,7 +78,7 @@ enum
     WSA_E_NO_MORE = WSABASEERR + 110,
     WSA_E_CANCELLED = WSABASEERR + 111,
     WSAEREFUSED = WSABASEERR + 112,
-    
+
     WSAHOST_NOT_FOUND = WSABASEERR + 1001,
     WSATRY_AGAIN = WSABASEERR + 1002,
     WSANO_RECOVERY = WSABASEERR + 1003,

@@ -21,6 +21,7 @@ public import std.socket : SocketOption, SocketOptionLevel;
 import std.traits;
 import std.typecons;
 import tanya.memory;
+import tanya.os.error;
 
 /// Value returned by socket operations on error.
 enum int socketError = -1;
@@ -581,9 +582,7 @@ enum AddressFamily : int
     inet6     = 10,    /// IP version 6.
 }
 
-/**
- * Error codes for $(D_PSYMBOL Socket).
- */
+deprecated("Use tanya.os.error.ErrorCode.ErrorNo instead")
 enum SocketError : int
 {
     /// Unknown error.
@@ -621,7 +620,7 @@ enum SocketError : int
  */
 class SocketException : Exception
 {
-    const SocketError error = SocketError.unknown;
+    const ErrorCode.ErrorNo error = ErrorCode.ErrorNo.success;
 
     /**
      * Params:
@@ -637,7 +636,7 @@ class SocketException : Exception
     {
         super(msg, file, line, next);
 
-        foreach (member; EnumMembers!SocketError)
+        foreach (member; EnumMembers!(ErrorCode.ErrorNo))
         {
             if (member == lastError)
             {
@@ -647,24 +646,24 @@ class SocketException : Exception
         }
         if (lastError == ENOMEM)
         {
-            error = SocketError.noBufferSpaceAvailable;
+            error = ErrorCode.ErrorNo.noBufferSpace;
         }
         else if (lastError == EMFILE)
         {
-            error = SocketError.tooManyOpenSockets;
+            error = ErrorCode.ErrorNo.tooManyDescriptors;
         }
         else version (linux)
         {
             if (lastError == ENOSR)
             {
-                error = SocketError.networkDown;
+                error = ErrorCode.ErrorNo.networkDown;
             }
         }
         else version (Posix)
         {
             if (lastError == EPROTO)
             {
-                error = SocketError.networkDown;
+                error = ErrorCode.ErrorNo.networkDown;
             }
         }
     }
