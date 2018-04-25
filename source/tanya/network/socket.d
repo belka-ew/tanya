@@ -45,10 +45,8 @@ version (Posix)
 }
 else version (Windows)
 {
-    import core.sys.windows.winbase : ERROR_IO_INCOMPLETE,
-                                      ERROR_IO_PENDING,
-                                      GetModuleHandle,
-                                      GetProcAddress;
+    import core.sys.windows.winbase;
+    import core.sys.windows.winerror;
     import core.sys.windows.winsock2 : accept,
                                        addrinfo,
                                        bind,
