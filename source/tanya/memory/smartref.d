@@ -23,7 +23,7 @@
  */
 module tanya.memory.smartref;
 
-import std.algorithm.comparison;
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.conv;
 import tanya.exception;
@@ -259,7 +259,7 @@ struct RefCounted(T)
          * reference types like classes, that can be accessed directly.
          *
          * Params:
-         *  op = Operation. 
+         *  op = Operation.
          *
          * Returns: Reference to the pointed value.
          */
@@ -276,7 +276,7 @@ struct RefCounted(T)
     }
 
     /**
-     * Returns: Whether this $(D_PSYMBOL RefCounted) already has an internal 
+     * Returns: Whether this $(D_PSYMBOL RefCounted) already has an internal
      *          storage.
      */
     @property bool isInitialized() const
@@ -489,7 +489,7 @@ version (unittest)
  *  A         = Types of the arguments to the constructor of $(D_PARAM T).
  *  allocator = Allocator.
  *  args      = Constructor arguments of $(D_PARAM T).
- * 
+ *
  * Returns: Newly created $(D_PSYMBOL RefCounted!T).
  *
  * Precondition: $(D_INLINECODE allocator !is null)
@@ -743,7 +743,7 @@ struct Unique(T)
          * reference types like classes, that can be accessed directly.
          *
          * Params:
-         *  op = Operation. 
+         *  op = Operation.
          *
          * Returns: Reference to the pointed value.
          */
@@ -837,7 +837,7 @@ struct Unique(T)
  *  A         = Types of the arguments to the constructor of $(D_PARAM T).
  *  allocator = Allocator.
  *  args      = Constructor arguments of $(D_PARAM T).
- * 
+ *
  * Returns: Newly created $(D_PSYMBOL Unique!T).
  *
  * Precondition: $(D_INLINECODE allocator !is null)

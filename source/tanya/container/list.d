@@ -15,8 +15,9 @@
  */
 module tanya.container.list;
 
-import std.algorithm.comparison;
+import std.algorithm.comparison : equal;
 import std.algorithm.searching;
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.container.entry;
 import tanya.memory;
@@ -707,7 +708,7 @@ struct SList(T)
         auto outOfScopeList = typeof(this)(allocator);
         outOfScopeList.head = *r.head;
         *r.head = null;
-    
+
         return r;
     }
 

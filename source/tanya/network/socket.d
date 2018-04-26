@@ -16,10 +16,10 @@ module tanya.network.socket;
 
 import core.stdc.errno;
 import core.time;
-import std.algorithm.comparison;
 public import std.socket : SocketOption, SocketOptionLevel;
 import std.traits;
 import std.typecons;
+import tanya.algorithm.comparison;
 import tanya.memory;
 import tanya.os.error;
 

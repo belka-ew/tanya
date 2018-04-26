@@ -26,9 +26,10 @@
  */
 module tanya.container.string;
 
-import std.algorithm.comparison;
+import std.algorithm.comparison : cmp, equal;
 import std.algorithm.mutation : bringToFront, copy;
 import std.algorithm.searching;
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.memory;
 import tanya.meta.trait;

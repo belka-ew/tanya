@@ -14,9 +14,10 @@
  */
 module tanya.math.mp;
 
-import std.algorithm.comparison;
+import std.algorithm.comparison : cmp, equal;
 import std.algorithm.mutation : copy, fill, reverse;
 import std.range;
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.encoding.ascii;
@@ -1256,7 +1257,7 @@ struct Integer
 
         for (size_t i; i < this.size; ++i)
         {
-            const limit = min(factor.size, digits - i);
+            const limit = min(cast(size_t) factor.size, digits - i);
             word carry;
             auto k = i;
 

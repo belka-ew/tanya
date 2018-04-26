@@ -52,7 +52,7 @@ import core.stdc.errno;
 import core.sys.posix.time; // timespec
 import core.sys.posix.unistd;
 import core.time;
-import std.algorithm.comparison;
+import tanya.algorithm.comparison;
 import tanya.async.event.selector;
 import tanya.async.loop;
 import tanya.async.transport;
@@ -217,7 +217,7 @@ final class KqueueLoop : SelectorLoop
         timespec ts;
         blockTime.split!("seconds", "nsecs")(ts.tv_sec, ts.tv_nsec);
 
-        if (changeCount > maxEvents) 
+        if (changeCount > maxEvents)
         {
             events.length = changes.length;
         }
