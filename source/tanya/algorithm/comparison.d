@@ -14,9 +14,26 @@
  */
 module tanya.algorithm.comparison;
 
+import tanya.meta.metafunction;
 import tanya.meta.trait;
+import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
+
+private ref inout(Args[0]) minMax(alias cmp, Args...)(ref inout Args args)
+{
+    auto actual = ((ref inout arg) @trusted => &arg)(args[0]);
+
+    foreach (i, arg; args[1 .. $])
+    {
+        if (cmp(arg, *actual))
+        {
+            actual = ((ref inout arg) @trusted => &arg)(args[i + 1]);
+        }
+    }
+
+    return *actual;
+}
 
 /**
  * Finds the smallest element in the argument list or a range.
@@ -37,27 +54,21 @@ import tanya.range.primitive;
  *
  * Returns: The smallest element.
  */
-Args[0] min(Args...)(Args args)
-if (Args.length > 0 && isOrderingComparable!(Args[0]) && allSameType!Args)
+inout(Unqual!(Args[0])) min(Args...)(inout Args args)
+if (Args.length > 0
+ && isOrderingComparable!(Args[0])
+ && allSameType!(Map!(Unqual, Args)))
 {
-    return min!Args(args);
+    return minMax!((a, b) => a < b)(args);
 }
 
 /// ditto
-ref Args[0] min(Args...)(ref Args args)
-if (Args.length > 0 && isOrderingComparable!(Args[0]) && allSameType!Args)
+ref inout(Unqual!(Args[0])) min(Args...)(ref inout Args args)
+if (Args.length > 0
+ && isOrderingComparable!(Args[0])
+ && allSameType!(Map!(Unqual, Args)))
 {
-    auto actual = (() @trusted => &args[0])();
-
-    foreach (arg; args[1 .. $])
-    {
-        if (arg < *actual)
-        {
-            actual = (() @trusted => &arg)();
-        }
-    }
-
-    return *actual;
+    return minMax!((a, b) => a < b)(args);
 }
 
 @nogc nothrow pure @safe unittest
@@ -105,7 +116,7 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
 {
     assert(min(cast(ubyte[]) []).empty);
 }
-    
+
 /**
  * Finds the largest element in the argument list or a range.
  *
@@ -125,27 +136,21 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
  *
  * Returns: The largest element.
  */
-Args[0] max(Args...)(Args args)
-if (Args.length > 0 && isOrderingComparable!(Args[0]) && allSameType!Args)
+inout(Unqual!(Args[0])) max(Args...)(inout Args args)
+if (Args.length > 0
+ && isOrderingComparable!(Args[0])
+ && allSameType!(Map!(Unqual, Args)))
 {
-    return max!Args(args);
+    return minMax!((a, b) => a > b)(args);
 }
 
 /// ditto
-ref Args[0] max(Args...)(ref Args args)
-if (Args.length > 0 && isOrderingComparable!(Args[0]) && allSameType!Args)
+ref inout(Unqual!(Args[0])) max(Args...)(ref inout Args args)
+if (Args.length > 0
+ && isOrderingComparable!(Args[0])
+ && allSameType!(Map!(Unqual, Args)))
 {
-    auto actual = (() @trusted => &args[0])();
-
-    foreach (arg; args[1 .. $])
-    {
-        if (arg > *actual)
-        {
-            actual = (() @trusted => &arg)();
-        }
-    }
-
-    return *actual;
+    return minMax!((a, b) => a > b)(args);
 }
 
 @nogc nothrow pure @safe unittest
@@ -192,4 +197,21 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
 @nogc nothrow pure @safe unittest
 {
     assert(max(cast(ubyte[]) []).empty);
+}
+
+// min/max compare const and mutable structs.
+@nogc nothrow pure @safe unittest
+{
+    static struct S
+    {
+        int s;
+
+        int opCmp(typeof(this) that) const @nogc nothrow pure @safe
+        {
+            return this.s - that.s;
+        }
+    }
+    const s1 = S(1);
+    assert(min(s1, S(2)).s == 1);
+    assert(max(s1, S(2)).s == 2);
 }
