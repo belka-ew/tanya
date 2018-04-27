@@ -14,6 +14,8 @@
  */
 module tanya.algorithm.comparison;
 
+import tanya.algorithm.mutation;
+import tanya.math : isNaN;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -22,29 +24,54 @@ import tanya.range.primitive;
 
 private ref inout(Args[0]) minMax(alias cmp, Args...)(ref inout Args args)
 {
-    auto actual = ((ref inout arg) @trusted => &arg)(args[0]);
+    auto actual = ((ref arg) @trusted => &arg)(args[0]);
 
     foreach (i, arg; args[1 .. $])
     {
+        static if (isFloatingPoint!(Args[0]))
+        {
+            if (isNaN(arg))
+            {
+                continue;
+            }
+            if (isNaN(*actual))
+            {
+                actual = ((ref arg) @trusted => &arg)(args[i + 1]);
+                continue;
+            }
+        }
         if (cmp(arg, *actual))
         {
-            actual = ((ref inout arg) @trusted => &arg)(args[i + 1]);
+            actual = ((ref arg) @trusted => &arg)(args[i + 1]);
         }
     }
 
     return *actual;
 }
 
+private T moveIf(T)(ref T arg)
+{
+    static if (hasElaborateCopyConstructor!T && isMutable!T)
+    {
+        return move(arg);
+    }
+    else
+    {
+        return arg;
+    }
+}
+
 /**
  * Finds the smallest element in the argument list or a range.
- *
- * The function should take at least one argument.
  *
  * If a range is passed, $(D_PSYMBOL min) returns a range of the same type,
  * whose front element is the smallest in the range. If more than one element
  * fulfills this condition, the front of the returned range points to
  * the first one found.
  * If $(D_PARAM range) is empty, the original range is returned.
+ *
+ * If $(D_PARAM Args) are floating point numbers, $(B NaN) is not considered
+ * for comparison. $(B NaN) is returned only if all arguments are $(B NaN)s.
  *
  * Params:
  *  Args  = Types of the arguments. All arguments should have the same type.
@@ -54,27 +81,37 @@ private ref inout(Args[0]) minMax(alias cmp, Args...)(ref inout Args args)
  *
  * Returns: The smallest element.
  */
-inout(Unqual!(Args[0])) min(Args...)(inout Args args)
-if (Args.length > 0
+CommonType!Args min(Args...)(Args args)
+if (Args.length >= 2
  && isOrderingComparable!(Args[0])
  && allSameType!(Map!(Unqual, Args)))
 {
-    return minMax!((a, b) => a < b)(args);
+    return moveIf(minMax!((ref a, ref b) => a < b)(args));
 }
 
 /// ditto
 ref inout(Unqual!(Args[0])) min(Args...)(ref inout Args args)
-if (Args.length > 0
+if (Args.length >= 2
  && isOrderingComparable!(Args[0])
  && allSameType!(Map!(Unqual, Args)))
 {
-    return minMax!((a, b) => a < b)(args);
+    return minMax!((ref a, ref b) => a < b)(args);
 }
 
 @nogc nothrow pure @safe unittest
 {
-    assert(min(1) == 1);
     static assert(!is(typeof(min(1, 1UL))));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    assert(min(5, 3) == 3);
+    assert(min(4, 4) == 4);
+    assert(min(5.2, 3.0) == 3.0);
+
+    assert(min(5.2, double.nan) == 5.2);
+    assert(min(double.nan, 3.0) == 3.0);
+    assert(isNaN(min(double.nan, double.nan)));
 }
 
 /// ditto
@@ -120,13 +157,14 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
 /**
  * Finds the largest element in the argument list or a range.
  *
- * The function should take at least one argument.
- *
  * If a range is passed, $(D_PSYMBOL max) returns a range of the same type,
  * whose front element is the largest in the range. If more than one element
  * fulfills this condition, the front of the returned range points to
  * the first one found.
  * If $(D_PARAM range) is empty, the original range is returned.
+ *
+ * If $(D_PARAM Args) are floating point numbers, $(B NaN) is not considered
+ * for comparison. $(B NaN) is returned only if all arguments are $(B NaN)s.
  *
  * Params:
  *  Args  = Types of the arguments. All arguments should have the same type.
@@ -136,27 +174,37 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
  *
  * Returns: The largest element.
  */
-inout(Unqual!(Args[0])) max(Args...)(inout Args args)
-if (Args.length > 0
+CommonType!Args max(Args...)(Args args)
+if (Args.length >= 2
  && isOrderingComparable!(Args[0])
  && allSameType!(Map!(Unqual, Args)))
 {
-    return minMax!((a, b) => a > b)(args);
+    return moveIf(minMax!((ref a, ref b) => a > b)(args));
 }
 
 /// ditto
 ref inout(Unqual!(Args[0])) max(Args...)(ref inout Args args)
-if (Args.length > 0
+if (Args.length >= 2
  && isOrderingComparable!(Args[0])
  && allSameType!(Map!(Unqual, Args)))
 {
-    return minMax!((a, b) => a > b)(args);
+    return minMax!((ref a, ref b) => a > b)(args);
 }
 
 @nogc nothrow pure @safe unittest
 {
-    assert(max(1) == 1);
     static assert(!is(typeof(max(1, 1UL))));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    assert(max(5, 3) == 5);
+    assert(max(4, 4) == 4);
+    assert(max(5.2, 3.0) == 5.2);
+
+    assert(max(5.2, double.nan) == 5.2);
+    assert(max(double.nan, 3.0) == 3.0);
+    assert(isNaN(max(double.nan, double.nan)));
 }
 
 /// ditto
@@ -211,7 +259,14 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
             return this.s - that.s;
         }
     }
-    const s1 = S(1);
-    assert(min(s1, S(2)).s == 1);
-    assert(max(s1, S(2)).s == 2);
+    {
+        const s1 = S(1);
+        assert(min(s1, S(2)).s == 1);
+        assert(max(s1, S(2)).s == 2);
+    }
+    {
+        auto s2 = S(2), s3 = S(3);
+        assert(min(s2, s3).s == 2);
+        assert(max(s2, s3).s == 3);
+    }
 }

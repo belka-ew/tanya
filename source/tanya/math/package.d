@@ -89,7 +89,7 @@ if (isFloatingPoint!F)
 
 private union FloatBits(F)
 {
-    F floating;
+    Unqual!F floating;
     static if (ieeePrecision!F == IEEEPrecision.single)
     {
         uint integral;
@@ -741,32 +741,14 @@ bool isPseudoprime(ulong x) @nogc nothrow pure @safe
     assert(982451653.isPseudoprime);
 }
 
-/**
- * Determines minimum of two numbers.
- *
- * Params:
- *  x = First number.
- *  y = Second number.
- *
- * Returns: $(D_PARAM x) if $(D_PARAM x) is smaller than $(D_PSYMBOL y),
- *          $(D_PARAM y) otherwise.
- *
- * See_Also: $(D_PSYMBOL max).
- */
+deprecated("Use tanya.algorithm.comparison.min instead")
 T min(T)(T x, T y)
 if (isIntegral!T)
 {
     return x < y ? x : y;
 }
 
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(min(5, 3) == 3);
-    assert(min(4, 4) == 4);
-}
-
-/// ditto
+deprecated("Use tanya.algorithm.comparison.min instead")
 T min(T)(T x, T y)
 if (isFloatingPoint!T)
 {
@@ -781,62 +763,33 @@ if (isFloatingPoint!T)
     return x < y ? x : y;
 }
 
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(min(5.2, 3.0) == 3.0);
-
-    assert(min(5.2, double.nan) == 5.2);
-    assert(min(double.nan, 3.0) == 3.0);
-    assert(isNaN(min(double.nan, double.nan)));
-}
-
-/// ditto
+deprecated("Use tanya.algorithm.comparison.min instead")
 ref T min(T)(ref T x, ref T y)
 if (is(Unqual!T == Integer))
 {
     return x < y ? x : y;
 }
 
-/// ditto
+deprecated("Use tanya.algorithm.comparison.min instead")
 T min(T)(T x, T y)
 if (is(T == Integer))
 {
     return x < y ? move(x) : move(y);
 }
 
-///
 @nogc nothrow pure @safe unittest
 {
     assert(min(Integer(5), Integer(3)) == 3);
 }
 
-/**
- * Determines maximum of two numbers.
- *
- * Params:
- *  x = First number.
- *  y = Second number.
- *
- * Returns: $(D_PARAM x) if $(D_PARAM x) is larger than $(D_PSYMBOL y),
- *          $(D_PARAM y) otherwise.
- *
- * See_Also: $(D_PSYMBOL min).
- */
+deprecated("Use tanya.algorithm.comparison.max instead")
 T max(T)(T x, T y)
 if (isIntegral!T)
 {
     return x > y ? x : y;
 }
 
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(max(5, 3) == 5);
-    assert(max(4, 4) == 4);
-}
-
-/// ditto
+deprecated("Use tanya.algorithm.comparison.max instead")
 T max(T)(T x, T y)
 if (isFloatingPoint!T)
 {
@@ -851,24 +804,14 @@ if (isFloatingPoint!T)
     return x > y ? x : y;
 }
 
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(max(5.2, 3.0) == 5.2);
-
-    assert(max(5.2, double.nan) == 5.2);
-    assert(max(double.nan, 3.0) == 3.0);
-    assert(isNaN(max(double.nan, double.nan)));
-}
-
-/// ditto
+deprecated("Use tanya.algorithm.comparison.max instead")
 ref T max(T)(ref T x, ref T y)
 if (is(Unqual!T == Integer))
 {
     return x > y ? x : y;
 }
 
-/// ditto
+deprecated("Use tanya.algorithm.comparison.max instead")
 T max(T)(T x, T y)
 if (is(T == Integer))
 {
