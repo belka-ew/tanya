@@ -1076,8 +1076,19 @@ enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
     static assert(!isAbstractClass!E);
 }
 
-private enum bool isType(alias T) = is(T);
-private enum bool isType(T) = true;
+/**
+ * Checks whether $(D_PARAM T) is a type, same as `is(T)` does.
+ *
+ * Params:
+ *  T = A symbol.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a type, $(D_KEYWORD false)
+ *          otherwise.
+ */
+enum bool isType(alias T) = is(T);
+
+/// ditto
+enum bool isType(T) = true;
 
 /**
  * Determines whether $(D_PARAM Args) contains only types.
