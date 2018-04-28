@@ -38,7 +38,7 @@ mixin template DefaultAllocator()
      *
      * Precondition: $(D_INLINECODE allocator_ !is null)
      */
-    this(shared Allocator allocator) pure nothrow @safe @nogc
+    this(shared Allocator allocator) @nogc nothrow pure @safe
     in
     {
         assert(allocator !is null);
@@ -56,7 +56,7 @@ mixin template DefaultAllocator()
      *
      * Postcondition: $(D_INLINECODE allocator !is null)
      */
-    protected @property shared(Allocator) allocator() pure nothrow @safe @nogc
+    @property shared(Allocator) allocator() @nogc nothrow pure @safe
     out (allocator)
     {
         assert(allocator !is null);
@@ -71,7 +71,7 @@ mixin template DefaultAllocator()
     }
 
     /// ditto
-    @property shared(Allocator) allocator() const pure nothrow @trusted @nogc
+    @property shared(Allocator) allocator() const @nogc nothrow pure @trusted
     out (allocator)
     {
         assert(allocator !is null);
@@ -88,11 +88,11 @@ mixin template DefaultAllocator()
 
 // From druntime
 extern (C)
-private void _d_monitordelete(Object h, bool det) pure nothrow @nogc;
+private void _d_monitordelete(Object h, bool det) @nogc nothrow pure;
 
 shared Allocator allocator;
 
-private shared(Allocator) getAllocatorInstance() nothrow @nogc
+private shared(Allocator) getAllocatorInstance() @nogc nothrow
 {
     if (allocator is null)
     {
@@ -115,7 +115,7 @@ private shared(Allocator) getAllocatorInstance() nothrow @nogc
  *
  * Postcondition: $(D_INLINECODE allocator !is null).
  */
-@property shared(Allocator) defaultAllocator() pure nothrow @trusted @nogc
+@property shared(Allocator) defaultAllocator() @nogc nothrow pure @trusted
 out (allocator)
 {
     assert(allocator !is null);
@@ -133,7 +133,7 @@ do
  *
  * Precondition: $(D_INLINECODE allocator !is null).
  */
-@property void defaultAllocator(shared(Allocator) allocator) nothrow @safe @nogc
+@property void defaultAllocator(shared(Allocator) allocator) @nogc nothrow @safe
 in
 {
     assert(allocator !is null);
@@ -185,8 +185,8 @@ template stateSize(T)
 {
     static assert(stateSize!int == 4);
     static assert(stateSize!bool == 1);
-    static assert(stateSize!(int[]) == (size_t.sizeof * 2)); 
-    static assert(stateSize!(short[3]) == 6); 
+    static assert(stateSize!(int[]) == (size_t.sizeof * 2));
+    static assert(stateSize!(short[3]) == 6);
 
     static struct Empty
     {
@@ -285,7 +285,7 @@ package(tanya) void[] finalize(T)(ref T* p)
 }
 
 package(tanya) void[] finalize(T)(ref T p)
-    if (is(T == class) || is(T == interface))
+if (isPolymorphicType!T)
 {
     if (p is null)
     {
@@ -405,7 +405,7 @@ void dispose(T)(shared Allocator allocator, auto ref T p)
  *  A         = Types of the arguments to the constructor of $(D_PARAM T).
  *  allocator = Allocator.
  *  args      = Constructor arguments of $(D_PARAM T).
- * 
+ *
  * Returns: Newly created $(D_PSYMBOL T).
  *
  * Precondition: $(D_INLINECODE allocator !is null)
@@ -441,7 +441,7 @@ do
  *  A         = Types of the arguments to the constructor of $(D_PARAM T).
  *  allocator = Allocator.
  *  args      = Constructor arguments of $(D_PARAM T).
- * 
+ *
  * Returns: Pointer to the created object.
  *
  * Precondition: $(D_INLINECODE allocator !is null)
