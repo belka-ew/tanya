@@ -580,36 +580,28 @@ if (is(typeof(hasher(T.init)) == size_t))
     Set!int set;
 
     assert(set.insert(5) == 1);
-    assert(set.data[0].status == BucketStatus.empty);
-    assert(set.data[1].key == 5 && set.data[1].status == BucketStatus.used);
-    assert(set.data[2].status == BucketStatus.empty);
+    assert(5 in set);
     assert(set.data.length == 3);
 
     assert(set.insert(5) == 0);
-    assert(set.data[0].status == BucketStatus.empty);
-    assert(set.data[1].key == 5 && set.data[1].status == BucketStatus.used);
-    assert(set.data[2].status == BucketStatus.empty);
+    assert(5 in set);
     assert(set.data.length == 3);
 
     assert(set.insert(9) == 1);
-    assert(set.data[0].key == 9 && set.data[0].status == BucketStatus.used);
-    assert(set.data[1].key == 5 && set.data[1].status == BucketStatus.used);
-    assert(set.data[2].status == BucketStatus.empty);
+    assert(9 in set);
+    assert(5 in set);
     assert(set.data.length == 3);
 
     assert(set.insert(7) == 1);
     assert(set.insert(8) == 1);
-    assert(set.data[0].status == BucketStatus.empty);
-    assert(set.data[1].key == 8);
-    assert(set.data[2].key == 5);
-    assert(set.data[3].status == BucketStatus.empty);
-    assert(set.data[4].key == 9);
-    assert(set.data[5].key == 7);
+    assert(8 in set);
+    assert(5 in set);
+    assert(9 in set);
+    assert(7 in set);
     assert(set.data.length == 7);
 
     assert(set.insert(16) == 1);
-    assert(set.data[5].key == 7);
-    assert(set.data[6].key == 16);
+    assert(16 in set);
     assert(set.data.length == 7);
 }
 
