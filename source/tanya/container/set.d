@@ -18,6 +18,7 @@ module tanya.container.set;
 import tanya.algorithm.mutation;
 import tanya.container;
 import tanya.container.entry;
+import tanya.hash.lookup;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -113,7 +114,7 @@ struct Range(E)
     }
     do
     {
-        return dataRange.front.content;
+        return dataRange.front.key;
     }
 
     @property ref inout(E) back() inout
@@ -124,7 +125,7 @@ struct Range(E)
     }
     do
     {
-        return dataRange.back.content;
+        return dataRange.back.key;
     }
 
     Range opIndex()
@@ -148,10 +149,11 @@ struct Range(E)
  * Currently works only with integral types.
  *
  * Params:
- *  T = Element type.
+ *  T      = Element type.
+ *  hasher = Hash function for $(D_PARAM T).
  */
-struct Set(T)
-    if (isIntegral!T || is(Unqual!T == bool))
+struct Set(T, alias hasher = hash)
+if (is(typeof(hasher(T.init)) == size_t))
 {
     /// The range types for $(D_PSYMBOL Set).
     alias Range = .Range!T;
@@ -175,7 +177,7 @@ struct Set(T)
      *
      * Precondition: $(D_INLINECODE allocator !is null).
      */
-    this(const size_t n, shared Allocator allocator = defaultAllocator)
+    this(size_t n, shared Allocator allocator = defaultAllocator)
     in
     {
         assert(allocator !is null);
@@ -197,19 +199,6 @@ struct Set(T)
         this.data = typeof(this.data)(allocator);
     }
 
-    ///
-    unittest
-    {
-        {
-            auto set = Set!int(defaultAllocator);
-            assert(set.capacity == 0);
-        }
-        {
-            auto set = Set!int(8);
-            assert(set.capacity == 13);
-        }
-    }
-
     /**
      * Initializes this $(D_PARAM Set) from another one.
      *
@@ -222,7 +211,7 @@ struct Set(T)
      *  allocator = Allocator.
      */
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
-        if (is(Unqual!S == Set))
+    if (is(Unqual!S == Set))
     in
     {
         assert(allocator !is null);
@@ -234,7 +223,7 @@ struct Set(T)
 
     /// ditto
     this(S)(S init, shared Allocator allocator = defaultAllocator)
-        if (is(S == Set))
+    if (is(S == Set))
     in
     {
         assert(allocator !is null);
@@ -259,7 +248,7 @@ struct Set(T)
      * Returns: $(D_KEYWORD this).
      */
     ref typeof(this) opAssign(S)(ref S that)
-        if (is(Unqual!S == Set))
+    if (is(Unqual!S == Set))
     {
         this.data = that.data;
         this.lengthIndex = that.lengthIndex;
@@ -268,7 +257,7 @@ struct Set(T)
 
     /// ditto
     ref typeof(this) opAssign(S)(S that) @trusted
-        if (is(S == Set))
+    if (is(S == Set))
     {
         swap(this.data, that.data);
         swap(this.lengthIndex, that.lengthIndex);
@@ -305,7 +294,7 @@ struct Set(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         Set!int set;
         assert(set.capacity == 0);
@@ -333,7 +322,7 @@ struct Set(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         Set!int set;
         assert(set.length == 0);
@@ -342,55 +331,8 @@ struct Set(T)
         assert(set.length == 1);
     }
 
-    private static const size_t[41] primes = [
-        3, 7, 13, 23, 29, 37, 53, 71, 97, 131, 163, 193, 239, 293, 389, 521,
-        769, 919, 1103, 1327, 1543, 2333, 3079, 4861, 6151, 12289, 24593,
-        49157, 98317, 196613, 393241, 786433, 1572869, 3145739, 6291469,
-        12582917, 25165843, 139022417, 282312799, 573292817, 1164186217,
-    ];
-
     /// The maximum number of buckets the container can have.
     enum size_t maxBucketCount = primes[$ - 1];
-
-    static private size_t calculateHash(U)(ref const U value)
-    if (is(U == Unqual!T))
-    {
-        static if (isIntegral!T || isSomeChar!T || is(T == bool))
-        {
-            return (cast(size_t) value);
-        }
-        else
-        {
-            static assert(false);
-        }
-    }
-
-    static private size_t locateBucket(ref const DataType buckets,
-                                       const size_t hash)
-    in
-    {
-        assert(buckets.length > 0);
-    }
-    do
-    {
-        return hash % buckets.length;
-    }
-
-    /*
-     * Returns bucket position for `hash`. `0` may mean the 0th position or an
-     * empty `buckets` array.
-     */
-    private size_t locateBucket(const size_t hash) const
-    {
-        return this.data.length == 0 ? 0 : locateBucket(this.data, hash);
-    }
-
-    private enum InsertStatus : byte
-    {
-        found = -1,
-        failed = 0,
-        added = 1,
-    }
 
     /*
      * Inserts the value in an empty or deleted bucket. If the value is
@@ -400,7 +342,7 @@ struct Set(T)
      */
     private InsertStatus insertInUnusedBucket(ref T value)
     {
-        auto bucketPosition = locateBucket(this.data, calculateHash(value));
+        auto bucketPosition = locateBucket(this.data, hasher(value));
 
         foreach (ref e; this.data[bucketPosition .. $])
         {
@@ -410,7 +352,7 @@ struct Set(T)
             }
             else if (e.status != BucketStatus.used) // Insert the value.
             {
-                e.content = value;
+                e.key = value;
                 return InsertStatus.added;
             }
         }
@@ -424,23 +366,16 @@ struct Set(T)
      *  value = Element value.
      *
      * Returns: Amount of new elements inserted.
-     *
-     * Throws: $(D_PSYMBOL HashContainerFullException) if the insertion failed.
      */
     size_t insert(T value)
     {
-        if (this.data.length == 0)
-        {
-            this.data = DataType(primes[0], allocator);
-        }
-
         InsertStatus status = insertInUnusedBucket(value);
         for (; !status; status = insertInUnusedBucket(value))
         {
-            if (this.primes.length == (this.lengthIndex + 1))
+            if (primes.length == (this.lengthIndex + 1))
             {
-                throw make!HashContainerFullException(defaultAllocator,
-                                                      "Set is full");
+                this.data.insertBack(Bucket!T(value));
+                return 1;
             }
             rehashToSize(this.lengthIndex + 1);
         }
@@ -448,7 +383,7 @@ struct Set(T)
     }
 
     ///
-    unittest
+    @nogc nothrow pure @safe unittest
     {
         Set!int set;
         assert(8 !in set);
@@ -476,7 +411,7 @@ struct Set(T)
      */
     size_t remove(T value)
     {
-        auto bucketPosition = locateBucket(calculateHash(value));
+        auto bucketPosition = locateBucket(this.data, hasher(value));
         foreach (ref e; this.data[bucketPosition .. $])
         {
             if (e == value) // Found.
@@ -493,7 +428,7 @@ struct Set(T)
     }
 
     ///
-    @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         Set!int set;
         assert(8 !in set);
@@ -517,7 +452,7 @@ struct Set(T)
      */
     bool opBinaryRight(string op : "in")(auto ref const T value) const
     {
-        auto bucketPosition = locateBucket(calculateHash(value));
+        auto bucketPosition = locateBucket(this.data, hasher(value));
         foreach (ref e; this.data[bucketPosition .. $])
         {
             if (e == value) // Found.
@@ -533,7 +468,7 @@ struct Set(T)
     }
 
     ///
-    @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         Set!int set;
 
@@ -587,14 +522,13 @@ struct Set(T)
         {
             if (e1.status == BucketStatus.used)
             {
-                auto bucketPosition = locateBucket(storage,
-                                                   calculateHash(e1.content));
+                auto bucketPosition = hasher(e1.key) % storage.length;
 
                 foreach (ref e2; storage[bucketPosition .. $])
                 {
                     if (e2.status != BucketStatus.used) // Insert the value.
                     {
-                        e2.content = e1.content;
+                        e2 = e1;
                         continue DataLoop;
                     }
                 }
@@ -635,72 +569,52 @@ struct Set(T)
         assert(set[].empty);
     }
 
-    private @nogc unittest
-    {
-        const Set!int set;
-        assert(set[].empty);
-    }
-
-    private @nogc unittest
-    {
-        Set!int set;
-        set.insert(8);
-
-        auto r1 = set[];
-        auto r2 = r1.save();
-
-        r1.popFront();
-        assert(r1.empty);
-
-        r2.popBack();
-        assert(r2.empty);
-    }
-
     private alias DataType = Array!(Bucket!T);
     private DataType data;
     private size_t lengthIndex;
 }
 
 // Basic insertion logic.
-private @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     Set!int set;
 
     assert(set.insert(5) == 1);
     assert(set.data[0].status == BucketStatus.empty);
-    assert(set.data[1].status == BucketStatus.empty);
-    assert(set.data[2].content == 5 && set.data[2].status == BucketStatus.used);
+    assert(set.data[1].key == 5 && set.data[1].status == BucketStatus.used);
+    assert(set.data[2].status == BucketStatus.empty);
     assert(set.data.length == 3);
 
     assert(set.insert(5) == 0);
     assert(set.data[0].status == BucketStatus.empty);
-    assert(set.data[1].status == BucketStatus.empty);
-    assert(set.data[2].content == 5 && set.data[2].status == BucketStatus.used);
+    assert(set.data[1].key == 5 && set.data[1].status == BucketStatus.used);
+    assert(set.data[2].status == BucketStatus.empty);
     assert(set.data.length == 3);
 
     assert(set.insert(9) == 1);
-    assert(set.data[0].content == 9 && set.data[0].status == BucketStatus.used);
-    assert(set.data[1].status == BucketStatus.empty);
-    assert(set.data[2].content == 5 && set.data[2].status == BucketStatus.used);
+    assert(set.data[0].key == 9 && set.data[0].status == BucketStatus.used);
+    assert(set.data[1].key == 5 && set.data[1].status == BucketStatus.used);
+    assert(set.data[2].status == BucketStatus.empty);
     assert(set.data.length == 3);
 
     assert(set.insert(7) == 1);
     assert(set.insert(8) == 1);
-    assert(set.data[0].content == 7);
-    assert(set.data[1].content == 8);
-    assert(set.data[2].content == 9);
+    assert(set.data[0].status == BucketStatus.empty);
+    assert(set.data[1].key == 8);
+    assert(set.data[2].key == 5);
     assert(set.data[3].status == BucketStatus.empty);
-    assert(set.data[5].content == 5);
+    assert(set.data[4].key == 9);
+    assert(set.data[5].key == 7);
     assert(set.data.length == 7);
 
     assert(set.insert(16) == 1);
-    assert(set.data[2].content == 9);
-    assert(set.data[3].content == 16);
-    assert(set.data[4].status == BucketStatus.empty);
+    assert(set.data[5].key == 7);
+    assert(set.data[6].key == 16);
+    assert(set.data.length == 7);
 }
 
 // Static checks.
-private unittest
+@nogc nothrow pure @safe unittest
 {
     import tanya.range.primitive;
 
@@ -716,4 +630,39 @@ private unittest
     static assert(is(Set!short));
     static assert(is(Set!ushort));
     static assert(is(Set!bool));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    const Set!int set;
+    assert(set[].empty);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    Set!int set;
+    set.insert(8);
+
+    auto r1 = set[];
+    auto r2 = r1.save();
+
+    r1.popFront();
+    assert(r1.empty);
+
+    r2.popBack();
+    assert(r2.empty);
+}
+
+// Initial capacity is 0.
+@nogc nothrow pure @safe unittest
+{
+    auto set = Set!int(defaultAllocator);
+    assert(set.capacity == 0);
+}
+
+// Capacity is set to a prime.
+@nogc nothrow pure @safe unittest
+{
+    auto set = Set!int(8);
+    assert(set.capacity == 13);
 }

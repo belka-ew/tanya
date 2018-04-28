@@ -24,6 +24,7 @@ public import tanya.container.string;
  * Thrown if $(D_PSYMBOL Set) cannot insert a new element because the container
  * is full.
  */
+deprecated
 class HashContainerFullException : Exception
 {
     /**
@@ -36,7 +37,7 @@ class HashContainerFullException : Exception
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
-         Throwable next = null) @nogc @safe pure nothrow
+         Throwable next = null) @nogc nothrow pure @safe
     {
         super(msg, file, line, next);
     }

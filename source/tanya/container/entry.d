@@ -35,17 +35,6 @@ package struct DEntry(T)
     DEntry* next, prev;
 }
 
-package struct HashEntry(K, V)
-{
-    this(ref K key, ref V value)
-    {
-        this.pair = Pair!(K, V)(key, value);
-    }
-
-    Pair!(K, V) pair;
-    HashEntry* next;
-}
-
 package enum BucketStatus : byte
 {
     deleted = -1,
@@ -53,31 +42,31 @@ package enum BucketStatus : byte
     used = 1,
 }
 
-package struct Bucket(T)
+package struct Bucket(K, V = void)
 {
-    @property void content(ref T content)
+    @property void key(ref K key)
     {
-        this.content_ = content;
+        this.key_ = key;
         this.status = BucketStatus.used;
     }
 
-    @property ref inout(T) content() inout
+    @property ref inout(K) key() inout
     {
-        return this.content_;
+        return this.key_;
     }
 
-    bool opEquals(ref T content)
+    bool opEquals(ref K key)
     {
-        if (this.status == BucketStatus.used && this.content == content)
+        if (this.status == BucketStatus.used && this.key == key)
         {
             return true;
         }
         return false;
     }
 
-    bool opEquals(ref const T content) const
+    bool opEquals(ref const K key) const
     {
-        if (this.status == BucketStatus.used && this.content == content)
+        if (this.status == BucketStatus.used && this.key == key)
         {
             return true;
         }
@@ -86,23 +75,51 @@ package struct Bucket(T)
 
     bool opEquals(ref typeof(this) that)
     {
-        return this.content == that.content && this.status == that.status;
+        return key == that.key && this.status == that.status;
     }
 
     bool opEquals(ref typeof(this) that) const
     {
-        return this.content == that.content && this.status == that.status;
+        return key == that.key && this.status == that.status;
     }
 
     void remove()
     {
-        static if (hasElaborateDestructor!T)
+        static if (hasElaborateDestructor!K)
         {
-            destroy(this.content);
+            destroy(key);
         }
         this.status = BucketStatus.deleted;
     }
 
-    T content_;
+    private K key_;
+    static if (!is(V == void))
+    {
+        V value;
+    }
     BucketStatus status = BucketStatus.empty;
+}
+
+// Possible sizes for the hash-based containers.
+package static immutable size_t[33] primes = [
+    0, 3, 7, 13, 23, 37, 53, 97, 193, 389, 769, 1543, 3079, 6151, 12289,
+    24593, 49157, 98317, 196613, 393241, 786433, 1572869, 3145739, 6291469,
+    12582917, 25165843, 50331653, 100663319, 201326611, 402653189,
+    805306457, 1610612741, 3221225473
+];
+
+/*
+ * Returns bucket position for `hash`. `0` may mean the 0th position or an
+ * empty `buckets` array.
+ */
+package size_t locateBucket(T)(ref const T buckets, const size_t hash)
+{
+    return buckets.length == 0 ? 0 : hash % buckets.length;
+}
+
+package enum InsertStatus : byte
+{
+    found = -1,
+    failed = 0,
+    added = 1,
 }
