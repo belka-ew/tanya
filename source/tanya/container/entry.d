@@ -14,6 +14,8 @@
  */
 module tanya.container.entry;
 
+import tanya.algorithm.mutation;
+import tanya.container.array;
 import tanya.meta.trait;
 import tanya.typecons;
 
@@ -44,6 +46,9 @@ package enum BucketStatus : byte
 
 package struct Bucket(K, V = void)
 {
+    private alias Key = K;
+    private alias Value = V;
+
     @property void key(ref K key)
     {
         this.key_ = key;
@@ -108,18 +113,98 @@ package static immutable size_t[33] primes = [
     805306457, 1610612741, 3221225473
 ];
 
-/*
- * Returns bucket position for `hash`. `0` may mean the 0th position or an
- * empty `buckets` array.
- */
-package size_t locateBucket(T)(ref const T buckets, const size_t hash)
+package struct HashArray(alias hasher, K, V = void)
 {
-    return buckets.length == 0 ? 0 : hash % buckets.length;
-}
+    alias Bucket = .Bucket!(K, V);
+    alias Buckets = Array!Bucket;
 
-package enum InsertStatus : byte
-{
-    found = -1,
-    failed = 0,
-    added = 1,
+    Array!Bucket array;
+    size_t lengthIndex;
+
+    /*
+     * Returns bucket position for `hash`. `0` may mean the 0th position or an
+     * empty `buckets` array.
+     */
+    size_t locateBucket(ref const K key) const
+    {
+        return this.array.length == 0 ? 0 : hasher(key) % this.array.length;
+    }
+
+    /*
+     * Inserts the value in an empty or deleted bucket. If the value is
+     * already in there, does nothing and returns InsertStatus.found. If the
+     * hash array is full returns InsertStatus.failed. Otherwise,
+     * InsertStatus.added is returned.
+     */
+    ref Bucket insert(ref K key)
+    {
+        while (true)
+        {
+            auto bucketPosition = locateBucket(key);
+
+            foreach (ref e; this.array[bucketPosition .. $])
+            {
+                if (e == key || e.status != BucketStatus.used)
+                {
+                    return e;
+                }
+            }
+
+            if (primes.length == (this.lengthIndex + 1))
+            {
+                this.array.insertBack(Bucket(key));
+                return this.array[$ - 1];
+            }
+            if (this.rehashToSize(this.lengthIndex + 1))
+            {
+                ++this.lengthIndex;
+            }
+        }
+    }
+
+    // Takes an index in the primes array.
+    bool rehashToSize(const size_t n)
+    {
+        auto storage = typeof(this.array)(primes[n], this.array.allocator);
+        DataLoop: foreach (ref e1; this.array[])
+        {
+            if (e1.status == BucketStatus.used)
+            {
+                auto bucketPosition = hasher(e1.key) % storage.length;
+
+                foreach (ref e2; storage[bucketPosition .. $])
+                {
+                    if (e2.status != BucketStatus.used) // Insert the value.
+                    {
+                        e2 = e1;
+                        continue DataLoop;
+                    }
+                }
+                return false; // Rehashing failed.
+            }
+        }
+        move(storage, this.array);
+        return true;
+    }
+
+    void rehash(const size_t n)
+    {
+        size_t lengthIndex;
+        for (; lengthIndex < primes.length; ++lengthIndex)
+        {
+            if (primes[lengthIndex] >= n)
+            {
+                break;
+            }
+        }
+        if (this.rehashToSize(lengthIndex))
+        {
+            this.lengthIndex = lengthIndex;
+        }
+    }
+
+    @property size_t capacity() const
+    {
+        return this.array.length;
+    }
 }

@@ -16,7 +16,7 @@
 module tanya.container.set;
 
 import tanya.algorithm.mutation;
-import tanya.container;
+import tanya.container.array;
 import tanya.container.entry;
 import tanya.hash.lookup;
 import tanya.memory;
@@ -155,6 +155,10 @@ struct Range(E)
 struct Set(T, alias hasher = hash)
 if (is(typeof(hasher(T.init)) == size_t))
 {
+    private HashArray!(hasher, T) data;
+
+    private alias Buckets = typeof(this.data).Buckets;
+
     /// The range types for $(D_PSYMBOL Set).
     alias Range = .Range!T;
 
@@ -163,9 +167,9 @@ if (is(typeof(hasher(T.init)) == size_t))
 
     invariant
     {
-        assert(this.lengthIndex < primes.length);
-        assert(this.data.length == 0
-            || this.data.length == primes[this.lengthIndex]);
+        assert(this.data.lengthIndex < primes.length);
+        assert(this.data.array.length == 0
+            || this.data.array.length == primes[this.data.lengthIndex]);
     }
 
     /**
@@ -196,7 +200,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(allocator);
+        this.data = typeof(this.data)(Buckets(allocator));
     }
 
     /**
@@ -218,7 +222,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(init.data, allocator);
+        this.data = typeof(this.data)(Buckets(init.data, allocator));
     }
 
     /// ditto
@@ -230,7 +234,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(move(init.data), allocator);
+        this.data = typeof(this.data)(Buckets(move(init.data), allocator));
         this.lengthIndex = init.lengthIndex;
         init.lengthIndex = 0;
     }
@@ -276,7 +280,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        return cast(shared Allocator) this.data.allocator;
+        return this.data.array.allocator;
     }
 
     /**
@@ -290,7 +294,7 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     @property size_t capacity() const
     {
-        return this.data.length;
+        return this.data.capacity;
     }
 
     ///
@@ -311,7 +315,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     @property size_t length() const
     {
         size_t count;
-        foreach (ref e; this.data[])
+        foreach (ref e; this.data.array[])
         {
             if (e.status == BucketStatus.used)
             {
@@ -334,31 +338,6 @@ if (is(typeof(hasher(T.init)) == size_t))
     /// The maximum number of buckets the container can have.
     enum size_t maxBucketCount = primes[$ - 1];
 
-    /*
-     * Inserts the value in an empty or deleted bucket. If the value is
-     * already in there, does nothing and returns InsertStatus.found. If the
-     * hash array is full returns InsertStatus.failed. Otherwise,
-     * InsertStatus.added is returned.
-     */
-    private InsertStatus insertInUnusedBucket(ref T value)
-    {
-        auto bucketPosition = locateBucket(this.data, hasher(value));
-
-        foreach (ref e; this.data[bucketPosition .. $])
-        {
-            if (e == value) // Already in the set.
-            {
-                return InsertStatus.found;
-            }
-            else if (e.status != BucketStatus.used) // Insert the value.
-            {
-                e.key = value;
-                return InsertStatus.added;
-            }
-        }
-        return InsertStatus.failed;
-    }
-
     /**
      * Inserts a new element.
      *
@@ -369,17 +348,13 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     size_t insert(T value)
     {
-        InsertStatus status = insertInUnusedBucket(value);
-        for (; !status; status = insertInUnusedBucket(value))
+        auto e = ((ref v) @trusted => &this.data.insert(v))(value);
+        if (e.status != BucketStatus.used)
         {
-            if (primes.length == (this.lengthIndex + 1))
-            {
-                this.data.insertBack(Bucket!T(value));
-                return 1;
-            }
-            rehashToSize(this.lengthIndex + 1);
+            e.key = value;
+            return 1;
         }
-        return status == InsertStatus.added;
+        return 0;
     }
 
     ///
@@ -411,8 +386,8 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     size_t remove(T value)
     {
-        auto bucketPosition = locateBucket(this.data, hasher(value));
-        foreach (ref e; this.data[bucketPosition .. $])
+        auto bucketPosition = this.data.locateBucket(value);
+        foreach (ref e; this.data.array[bucketPosition .. $])
         {
             if (e == value) // Found.
             {
@@ -452,8 +427,8 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     bool opBinaryRight(string op : "in")(auto ref const T value) const
     {
-        auto bucketPosition = locateBucket(this.data, hasher(value));
-        foreach (ref e; this.data[bucketPosition .. $])
+        auto bucketPosition = this.data.locateBucket(value);
+        foreach (ref e; this.data.array[bucketPosition .. $])
         {
             if (e == value) // Found.
             {
@@ -501,42 +476,9 @@ if (is(typeof(hasher(T.init)) == size_t))
      * Params:
      *  n = Minimum number of buckets.
      */
-    void rehash(const size_t n)
+    void rehash(size_t n)
     {
-        size_t lengthIndex;
-        for (; lengthIndex < primes.length; ++lengthIndex)
-        {
-            if (primes[lengthIndex] >= n)
-            {
-                break;
-            }
-        }
-        rehashToSize(lengthIndex);
-    }
-
-    // Takes an index in the primes array.
-    private void rehashToSize(const size_t n)
-    {
-        auto storage = DataType(primes[n], allocator);
-        DataLoop: foreach (ref e1; this.data[])
-        {
-            if (e1.status == BucketStatus.used)
-            {
-                auto bucketPosition = hasher(e1.key) % storage.length;
-
-                foreach (ref e2; storage[bucketPosition .. $])
-                {
-                    if (e2.status != BucketStatus.used) // Insert the value.
-                    {
-                        e2 = e1;
-                        continue DataLoop;
-                    }
-                }
-                return; // Rehashing failed.
-            }
-        }
-        move(storage, this.data);
-        this.lengthIndex = n;
+        this.data.rehash(n);
     }
 
     /**
@@ -545,17 +487,17 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     Range opIndex()
     {
-        return typeof(return)(this.data[]);
+        return typeof(return)(this.data.array[]);
     }
 
     /// ditto
     ConstRange opIndex() const
     {
-        return typeof(return)(this.data[]);
+        return typeof(return)(this.data.array[]);
     }
 
     ///
-    @nogc unittest
+    @nogc nothrow pure @safe unittest
     {
         Set!int set;
         assert(set[].empty);
@@ -568,10 +510,6 @@ if (is(typeof(hasher(T.init)) == size_t))
         set.remove(8);
         assert(set[].empty);
     }
-
-    private alias DataType = Array!(Bucket!T);
-    private DataType data;
-    private size_t lengthIndex;
 }
 
 // Basic insertion logic.
@@ -581,16 +519,16 @@ if (is(typeof(hasher(T.init)) == size_t))
 
     assert(set.insert(5) == 1);
     assert(5 in set);
-    assert(set.data.length == 3);
+    assert(set.data.array.length == 3);
 
     assert(set.insert(5) == 0);
     assert(5 in set);
-    assert(set.data.length == 3);
+    assert(set.data.array.length == 3);
 
     assert(set.insert(9) == 1);
     assert(9 in set);
     assert(5 in set);
-    assert(set.data.length == 3);
+    assert(set.data.array.length == 3);
 
     assert(set.insert(7) == 1);
     assert(set.insert(8) == 1);
@@ -598,11 +536,11 @@ if (is(typeof(hasher(T.init)) == size_t))
     assert(5 in set);
     assert(9 in set);
     assert(7 in set);
-    assert(set.data.length == 7);
+    assert(set.data.array.length == 7);
 
     assert(set.insert(16) == 1);
     assert(16 in set);
-    assert(set.data.length == 7);
+    assert(set.data.array.length == 7);
 }
 
 // Static checks.
