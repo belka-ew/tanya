@@ -112,9 +112,10 @@ if (is(typeof(hasher(Key.init)) == size_t))
     /// ditto
     alias ConstRange = .Range!(const HashTable);*/
 
-    private Array!(Bucket!(Key, Value)) buckets;
-
+    private HashArray!(hasher, Key, Value) data;
     private size_t length_;
+
+    private alias Buckets = typeof(this.data).Buckets;
 
     /**
      * Constructs a new hash table.
@@ -132,7 +133,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.buckets = typeof(this.buckets)(size, allocator);
+        this.data = typeof(this.data)(Buckets(size, allocator));
     }
 
     /// ditto
@@ -143,7 +144,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.buckets = typeof(this.buckets)(allocator);
+        this.data = typeof(this.data)(Buckets(allocator));
     }
 
     /**
@@ -171,7 +172,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     void clear()
     {
-        this.buckets.clear();
+        this.data.array.clear();
         this.length_ = 0;
     }
 
@@ -187,8 +188,25 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        return this.buckets.allocator;
+        return this.data.array.allocator;
     }
+
+    /**
+     * Maximum amount of elements this $(D_PSYMBOL Set) can hold without
+     * resizing and rehashing. Note that it doesn't mean that the
+     * $(D_PSYMBOL Set) will hold $(I exactly) $(D_PSYMBOL capacity) elements.
+     * $(D_PSYMBOL capacity) tells the size of the container under a best-case
+     * distribution of elements.
+     *
+     * Returns: $(D_PSYMBOL Set) capacity.
+     */
+    @property size_t capacity() const
+    {
+        return this.data.capacity;
+    }
+
+    /// The maximum number of buckets the container can have.
+    enum size_t maxBucketCount = primes[$ - 1];
 
     /**
      * Inserts a new value at $(D_PARAM key) or reassigns the element if
@@ -202,26 +220,14 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     ref Value opIndexAssign(Value value, Key key)
     {
-        const code = locateBucket(this.buckets, hasher(key));
-
-        foreach (ref e; this.buckets[code .. $])
+        auto e = ((ref v) @trusted => &this.data.insert(v))(key);
+        if (e.status != BucketStatus.used)
         {
-            if (e == key)
-            {
-                return e.value = value;
-            }
-            else if (e.status != BucketStatus.used) // Insert the value.
-            {
-                ++this.length_;
-                e.key = key;
-                e.value = value;
-                return e.value;
-            }
+            e.key = key;
+            ++this.length_;
         }
-        ++this.length_;
-        this.buckets.length = this.buckets.length + 1;
-        this.buckets[$ - 1] = Bucket!(Key, Value)(key, value);
-        return this.buckets[$ - 1].value;
+        e.value = value;
+        return e.value;
     }
 
     /**
@@ -236,9 +242,9 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     ref Value opIndex(Key key)
     {
-        const code = locateBucket(this.buckets, hasher(key));
+        const code = this.data.locateBucket(key);
 
-        for (auto range = this.buckets[code .. $]; !range.empty; range.popFront())
+        for (auto range = this.data.array[code .. $]; !range.empty; range.popFront())
         {
             if (key == range.front.key)
             {
@@ -263,9 +269,9 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     size_t remove(Key key)
     {
-        const code = locateBucket(this.buckets, hasher(key));
+        const code = this.data.locateBucket(key);
 
-        for (auto range = this.buckets[code .. $]; !range.empty; range.popFront())
+        for (auto range = this.data.array[code .. $]; !range.empty; range.popFront())
         {
             if (key == range.front.key)
             {
@@ -288,9 +294,9 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     bool opBinaryRight(string op : "in")(Key key)
     {
-        const code = locateBucket(this.buckets, hasher(key));
+        const code = this.data.locateBucket(key);
 
-        foreach (ref const e; this.buckets[code .. $])
+        foreach (ref const e; this.data.array[code .. $])
         {
             if (key == e.key)
             {
@@ -298,6 +304,34 @@ if (is(typeof(hasher(Key.init)) == size_t))
             }
         }
         return false;
+    }
+
+    /**
+     * Sets the number of buckets in the container to at least $(D_PARAM n)
+     * and rearranges all the elements according to their hash values.
+     *
+     * If $(D_PARAM n) is greater than the current $(D_PSYMBOL capacity)
+     * and lower than or equal to $(D_PSYMBOL maxBucketCount), a rehash is
+     * forced.
+     *
+     * If $(D_PARAM n) is greater than $(D_PSYMBOL maxBucketCount),
+     * $(D_PSYMBOL maxBucketCount) is used instead as a new number of buckets.
+     *
+     * If $(D_PARAM n) is equal to the current $(D_PSYMBOL capacity), rehashing
+     * is forced without resizing the container.
+     *
+     * If $(D_PARAM n) is lower than the current $(D_PSYMBOL capacity), the
+     * function may have no effect.
+     *
+     * Rehashing is automatically performed whenever the container needs space
+     * to insert new elements.
+     *
+     * Params:
+     *  n = Minimum number of buckets.
+     */
+    void rehash(size_t n)
+    {
+        this.data.rehash(n);
     }
 }
 
