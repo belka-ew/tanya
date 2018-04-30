@@ -314,15 +314,7 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     @property size_t length() const
     {
-        size_t count;
-        foreach (ref e; this.data.array[])
-        {
-            if (e.status == BucketStatus.used)
-            {
-                ++count;
-            }
-        }
-        return count;
+        return this.data.length;
     }
 
     ///
@@ -333,6 +325,24 @@ if (is(typeof(hasher(T.init)) == size_t))
 
         set.insert(8);
         assert(set.length == 1);
+    }
+
+    /**
+     * Tells whether the container contains any elements.
+     *
+     * Returns: Whether the container is empty.
+     */
+    @property bool empty() const
+    {
+        return length == 0;
+    }
+
+    /**
+     * Removes all elements.
+     */
+    void clear()
+    {
+        this.data.clear();
     }
 
     /// The maximum number of buckets the container can have.
@@ -386,20 +396,7 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     size_t remove(T value)
     {
-        auto bucketPosition = this.data.locateBucket(value);
-        foreach (ref e; this.data.array[bucketPosition .. $])
-        {
-            if (e == value) // Found.
-            {
-                e.remove();
-                return 1;
-            }
-            else if (e.status == BucketStatus.empty)
-            {
-                break;
-            }
-        }
-        return 0;
+        return this.data.remove(value);
     }
 
     ///
@@ -427,19 +424,7 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     bool opBinaryRight(string op : "in")(auto ref const T value) const
     {
-        auto bucketPosition = this.data.locateBucket(value);
-        foreach (ref e; this.data.array[bucketPosition .. $])
-        {
-            if (e == value) // Found.
-            {
-                return true;
-            }
-            else if (e.status == BucketStatus.empty)
-            {
-                break;
-            }
-        }
-        return false;
+        return this.data.find(value);
     }
 
     ///

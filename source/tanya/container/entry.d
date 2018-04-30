@@ -120,6 +120,7 @@ package struct HashArray(alias hasher, K, V = void)
 
     Array!Bucket array;
     size_t lengthIndex;
+    size_t length;
 
     /*
      * Returns bucket position for `hash`. `0` may mean the 0th position or an
@@ -144,8 +145,13 @@ package struct HashArray(alias hasher, K, V = void)
 
             foreach (ref e; this.array[bucketPosition .. $])
             {
-                if (e == key || e.status != BucketStatus.used)
+                if (e == key)
                 {
+                    return e;
+                }
+                else if (e.status != BucketStatus.used)
+                {
+                    ++this.length;
                     return e;
                 }
             }
@@ -206,5 +212,47 @@ package struct HashArray(alias hasher, K, V = void)
     @property size_t capacity() const
     {
         return this.array.length;
+    }
+
+    void clear()
+    {
+        this.array.clear();
+        this.length = 0;
+    }
+
+    size_t remove(ref K value)
+    {
+        auto bucketPosition = locateBucket(value);
+        foreach (ref e; this.array[bucketPosition .. $])
+        {
+            if (e == value) // Found.
+            {
+                e.remove();
+                --this.length;
+                return 1;
+            }
+            else if (e.status == BucketStatus.empty)
+            {
+                break;
+            }
+        }
+        return 0;
+    }
+
+    bool find(ref const K value) const
+    {
+        auto bucketPosition = locateBucket(value);
+        foreach (ref e; this.array[bucketPosition .. $])
+        {
+            if (e == value) // Found.
+            {
+                return true;
+            }
+            else if (e.status == BucketStatus.empty)
+            {
+                break;
+            }
+        }
+        return false;
     }
 }
