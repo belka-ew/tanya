@@ -113,7 +113,6 @@ if (is(typeof(hasher(Key.init)) == size_t))
     alias ConstRange = .Range!(const HashTable);*/
 
     private HashArray!(hasher, Key, Value) data;
-    private size_t length_;
 
     private alias Buckets = typeof(this.data).Buckets;
 
@@ -154,7 +153,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     @property size_t length() const
     {
-        return this.length_;
+        return this.data.length;
     }
 
     /**
@@ -164,7 +163,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     @property bool empty() const
     {
-        return this.length_ == 0;
+        return length == 0;
     }
 
     /**
@@ -172,8 +171,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     void clear()
     {
-        this.data.array.clear();
-        this.length_ = 0;
+        this.data.clear();
     }
 
     /**
@@ -224,7 +222,6 @@ if (is(typeof(hasher(Key.init)) == size_t))
         if (e.status != BucketStatus.used)
         {
             e.key = key;
-            ++this.length_;
         }
         e.value = value;
         return e.value;
@@ -269,18 +266,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     size_t remove(Key key)
     {
-        const code = this.data.locateBucket(key);
-
-        for (auto range = this.data.array[code .. $]; !range.empty; range.popFront())
-        {
-            if (key == range.front.key)
-            {
-                range.front.status = BucketStatus.deleted;
-                --this.length_;
-                return 1;
-            }
-        }
-        return 0;
+        return this.data.remove(key);
     }
 
     /**
@@ -294,16 +280,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     bool opBinaryRight(string op : "in")(Key key)
     {
-        const code = this.data.locateBucket(key);
-
-        foreach (ref const e; this.data.array[code .. $])
-        {
-            if (key == e.key)
-            {
-                return true;
-            }
-        }
-        return false;
+        return this.data.find(key);
     }
 
     /**
