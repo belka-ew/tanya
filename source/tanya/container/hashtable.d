@@ -18,43 +18,40 @@ import tanya.container.array;
 import tanya.container.entry;
 import tanya.hash.lookup;
 import tanya.memory;
-import tanya.range.primitive;
-import tanya.typecons;
+import tanya.meta.trait;
+import tanya.meta.transform;
 
-/*struct Range(T)
+/**
+ * Bidirectional range that iterates over the $(D_PSYMBOL Set)'s values.
+ *
+ * Params:
+ *  E = Element type.
+ */
+struct Range(E)
 {
-    static if (is(T == const))
+    static if (isMutable!E)
     {
-        private alias Buckets = T.buckets.ConstRange;
-        private alias Bucket = typeof(T.buckets[0]).ConstRange;
+        private alias DataRange = Array!(Bucket!(Unqual!E)).Range;
     }
     else
     {
-        private alias Buckets = T.buckets.Range;
-        private alias Bucket = typeof(T.buckets[0]).Range;
+        private alias DataRange = Array!(Bucket!(Unqual!E)).ConstRange;
     }
-    private alias E = ElementType!Bucket;
+    private DataRange dataRange;
 
-    private Buckets buckets;
-    private Bucket bucket;
+    @disable this();
 
-    private bool findNextBucket()
+    private this(DataRange dataRange)
     {
-        while (!this.buckets.empty)
+        while (!dataRange.empty && dataRange.front.status != BucketStatus.used)
         {
-            if (!this.buckets.front.empty)
-            {
-                return true;
-            }
-            this.buckets.popFront();
+            dataRange.popFront();
         }
-        return false;
-    }
-
-    private this(Buckets buckets)
-    {
-        this.buckets = buckets;
-        this.bucket = findNextBucket() ? this.buckets.front[] : Bucket.init;
+        while (!dataRange.empty && dataRange.back.status != BucketStatus.used)
+        {
+            dataRange.popBack();
+        }
+        this.dataRange = dataRange;
     }
 
     @property Range save()
@@ -64,36 +61,89 @@ import tanya.typecons;
 
     @property bool empty() const
     {
-        return this.buckets.empty;
+        return this.dataRange.empty();
+    }
+
+    @property void popFront()
+    in
+    {
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(this.dataRange.empty
+            || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        do
+        {
+            dataRange.popFront();
+        }
+        while (!dataRange.empty && dataRange.front.status != BucketStatus.used);
+    }
+
+    @property void popBack()
+    in
+    {
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(this.dataRange.empty
+            || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        do
+        {
+            dataRange.popBack();
+        }
+        while (!dataRange.empty && dataRange.back.status != BucketStatus.used);
     }
 
     @property ref inout(E) front() inout
     in
     {
-        assert(!empty);
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
     }
     do
     {
-        return this.bucket.front;
+        return dataRange.front.key;
     }
 
-    void popFront()
+    @property ref inout(E) back() inout
     in
     {
-        assert(!empty);
+        assert(!this.dataRange.empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
     }
     do
     {
-        this.bucket = findNextBucket() ? this.buckets.front[] : Bucket.init;
+        return dataRange.back.key;
+    }
+
+    Range opIndex()
+    {
+        return typeof(return)(this.dataRange[]);
+    }
+
+    Range!(const E) opIndex() const
+    {
+        return typeof(return)(this.dataRange[]);
     }
 }
 
 @nogc nothrow pure @safe unittest
 {
-    static assert(is(HashTable!(string, int)));
+    import tanya.range.primitive : isForwardRange;
+    static assert(is(HashTable!(string, int) a));
     static assert(is(const HashTable!(string, int)));
-    static assert(isForwardRange!(Range!(HashTable!(string, int))));
-}*/
+    static assert(isForwardRange!(HashTable!(string, int).Range));
+}
 
 /**
  * Hash table.
@@ -106,33 +156,34 @@ import tanya.typecons;
 struct HashTable(Key, Value, alias hasher = hash)
 if (is(typeof(hasher(Key.init)) == size_t))
 {
-    /* Forward range for $(D_PSYMBOL HashTable).
-    alias Range = .Range!HashTable;
-
-    /// ditto
-    alias ConstRange = .Range!(const HashTable);*/
-
     private HashArray!(hasher, Key, Value) data;
 
     private alias Buckets = typeof(this.data).Buckets;
 
+    /// The range types for $(D_PSYMBOL HashTable).
+    alias Range = .Range!Key;
+
+    /// ditto
+    alias ConstRange = .Range!(const Key);
+
     /**
-     * Constructs a new hash table.
+     * Constructor.
      *
      * Params:
-     *  size      = Initial, approximate hash table size.
+     *  n         = Minimum number of buckets.
      *  allocator = Allocator.
      *
-     * Precondition: `allocator !is null`.
+     * Precondition: $(D_INLINECODE allocator !is null).
      */
-    this(size_t size, shared Allocator allocator = defaultAllocator)
+    this(size_t n, shared Allocator allocator = defaultAllocator)
     in
     {
         assert(allocator !is null);
     }
     do
     {
-        this.data = typeof(this.data)(Buckets(size, allocator));
+        this(allocator);
+        rehash(n);
     }
 
     /// ditto
@@ -147,31 +198,68 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
 
     /**
-     * Returns the number of elements in the container.
+     * Initializes this $(D_PARAM HashTable) from another one.
      *
-     * Returns: The number of elements in the container.
+     * If $(D_PARAM init) is passed by reference, it will be copied.
+     * If $(D_PARAM init) is passed by value, it will be moved.
+     *
+     * Params:
+     *  S         = Source set type.
+     *  init      = Source set.
+     *  allocator = Allocator.
      */
-    @property size_t length() const
+    this(S)(ref S init, shared Allocator allocator = defaultAllocator)
+    if (is(Unqual!S == HashTable))
+    in
     {
-        return this.data.length;
+        assert(allocator !is null);
+    }
+    do
+    {
+        this.data = typeof(this.data)(Buckets(init.data, allocator));
+    }
+
+    /// ditto
+    this(S)(S init, shared Allocator allocator = defaultAllocator)
+    if (is(S == HashTable))
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        this.data = typeof(this.data)(Buckets(move(init.data), allocator));
+        this.lengthIndex = init.lengthIndex;
+        init.lengthIndex = 0;
     }
 
     /**
-     * Tells whether the container contains any elements.
+     * Assigns another hash table.
      *
-     * Returns: Whether the container is empty.
+     * If $(D_PARAM that) is passed by reference, it will be copied.
+     * If $(D_PARAM that) is passed by value, it will be moved.
+     *
+     * Params:
+     *  S    = Content type.
+     *  that = The value should be assigned.
+     *
+     * Returns: $(D_KEYWORD this).
      */
-    @property bool empty() const
+    ref typeof(this) opAssign(S)(ref S that)
+    if (is(Unqual!S == HashTable))
     {
-        return length == 0;
+        this.data = that.data;
+        this.data.lengthIndex = that.data.lengthIndex;
+        return this;
     }
 
-    /**
-     * Removes all elements.
-     */
-    void clear()
+    /// ditto
+    ref typeof(this) opAssign(S)(S that) @trusted
+    if (is(S == HashTable))
     {
-        this.data.clear();
+        swap(this.data, that.data);
+        swap(this.lengthIndex, that.lengthIndex);
+        return this;
     }
 
     /**
@@ -190,17 +278,84 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
 
     /**
-     * Maximum amount of elements this $(D_PSYMBOL Set) can hold without
+     * Maximum amount of elements this $(D_PSYMBOL HashTable) can hold without
      * resizing and rehashing. Note that it doesn't mean that the
      * $(D_PSYMBOL Set) will hold $(I exactly) $(D_PSYMBOL capacity) elements.
      * $(D_PSYMBOL capacity) tells the size of the container under a best-case
      * distribution of elements.
      *
-     * Returns: $(D_PSYMBOL Set) capacity.
+     * Returns: $(D_PSYMBOL HashTable) capacity.
      */
     @property size_t capacity() const
     {
         return this.data.capacity;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        assert(hashTable.capacity == 0);
+
+        hashTable["eight"] = 8;
+        assert(hashTable.capacity == 3);
+    }
+
+    /**
+     * Returns the number of elements in the container.
+     *
+     * Returns: The number of elements in the container.
+     */
+    @property size_t length() const
+    {
+        return this.data.length;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        assert(hashTable.length == 0);
+
+        hashTable["eight"] = 8;
+        assert(hashTable.length == 1);
+    }
+
+    /**
+     * Tells whether the container contains any elements.
+     *
+     * Returns: Whether the container is empty.
+     */
+    @property bool empty() const
+    {
+        return length == 0;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        assert(hashTable.empty);
+        hashTable["five"] = 5;
+        assert(!hashTable.empty);
+    }
+
+    /**
+     * Removes all elements.
+     */
+    void clear()
+    {
+        this.data.clear();
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        hashTable["five"] = 5;
+        assert(!hashTable.empty);
+        hashTable.clear();
+        assert(hashTable.empty);
     }
 
     /// The maximum number of buckets the container can have.
