@@ -337,12 +337,31 @@ if (is(typeof(hasher(T.init)) == size_t))
         return length == 0;
     }
 
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        Set!int set;
+        assert(set.empty);
+        set.insert(5);
+        assert(!set.empty);
+    }
+
     /**
      * Removes all elements.
      */
     void clear()
     {
         this.data.clear();
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        Set!int set;
+        set.insert(5);
+        assert(!set.empty);
+        set.clear();
+        assert(set.empty);
     }
 
     /// The maximum number of buckets the container can have.
