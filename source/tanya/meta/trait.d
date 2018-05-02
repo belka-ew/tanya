@@ -70,17 +70,7 @@ enum bool isWideString(T) = is(T : const dchar[]) && !isStaticArray!T;
     static assert(!isWideString!(dchar[10]));
 }
 
-/**
- * Finds the type with the smallest size in the $(D_PARAM Args) list. If
- * several types have the same type, the leftmost is returned.
- *
- * Params:
- *  Args = Type list.
- *
- * Returns: The smallest type.
- *
- * See_Also: $(D_PSYMBOL Largest).
- */
+deprecated("Use tanya.meta.transform.Smallest instead")
 template Smallest(Args...)
 if (Args.length >= 1)
 {
@@ -98,15 +88,6 @@ if (Args.length >= 1)
     {
         alias Smallest = Args[0];
     }
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(Smallest!(int, ushort, uint, short) == ushort));
-    static assert(is(Smallest!(short) == short));
-    static assert(is(Smallest!(ubyte[8], ubyte[5]) == ubyte[5]));
-    static assert(!is(Smallest!(short, 5)));
 }
 
 /**
@@ -185,6 +166,9 @@ enum bool isPolymorphicType(T) = is(T == class) || is(T == interface);
 }
 
 /**
+ * Determines whether the type $(D_PARAM T) has a static method
+ * named $(D_PARAM member).
+ *
  * Params:
  *  T      = Aggregate type.
  *  member = Symbol name.
@@ -944,17 +928,7 @@ template mostNegative(T)
     static assert(mostNegative!cfloat == -cfloat.max);
 }
 
-/**
- * Finds the type with the largest size in the $(D_PARAM Args) list. If several
- * types have the same type, the leftmost is returned.
- *
- * Params:
- *  Args = Type list.
- *
- * Returns: The largest type.
- *
- * See_Also: $(D_PSYMBOL Smallest).
- */
+deprecated("Use tanya.meta.transform.Largest instead")
 template Largest(Args...)
 if (Args.length >= 1)
 {
@@ -972,15 +946,6 @@ if (Args.length >= 1)
     {
         alias Largest = Args[0];
     }
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(Largest!(int, short, uint) == int));
-    static assert(is(Largest!(short) == short));
-    static assert(is(Largest!(ubyte[8], ubyte[5]) == ubyte[8]));
-    static assert(!is(Largest!(short, 5)));
 }
 
 /**

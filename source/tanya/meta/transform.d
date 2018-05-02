@@ -901,3 +901,81 @@ if (allSatisfy!(isType, Args))
     static assert(is(CommonType!(S, int) == void));
     static assert(is(CommonType!(const S, S) == const S));
 }
+
+/**
+ * Finds the type with the smallest size in the $(D_PARAM Args) list. If
+ * several types have the same type, the leftmost is returned.
+ *
+ * Params:
+ *  Args = Type list.
+ *
+ * Returns: The smallest type.
+ *
+ * See_Also: $(D_PSYMBOL Largest).
+ */
+template Smallest(Args...)
+if (Args.length >= 1)
+{
+    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
+
+    static if (Args.length == 1)
+    {
+        alias Smallest = Args[0];
+    }
+    else static if (Smallest!(Args[1 .. $]).sizeof < Args[0].sizeof)
+    {
+        alias Smallest = Smallest!(Args[1 .. $]);
+    }
+    else
+    {
+        alias Smallest = Args[0];
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(Smallest!(int, ushort, uint, short) == ushort));
+    static assert(is(Smallest!(short) == short));
+    static assert(is(Smallest!(ubyte[8], ubyte[5]) == ubyte[5]));
+    static assert(!is(Smallest!(short, 5)));
+}
+
+/**
+ * Finds the type with the largest size in the $(D_PARAM Args) list. If several
+ * types have the same type, the leftmost is returned.
+ *
+ * Params:
+ *  Args = Type list.
+ *
+ * Returns: The largest type.
+ *
+ * See_Also: $(D_PSYMBOL Smallest).
+ */
+template Largest(Args...)
+if (Args.length >= 1)
+{
+    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
+
+    static if (Args.length == 1)
+    {
+        alias Largest = Args[0];
+    }
+    else static if (Largest!(Args[1 .. $]).sizeof > Args[0].sizeof)
+    {
+        alias Largest = Largest!(Args[1 .. $]);
+    }
+    else
+    {
+        alias Largest = Args[0];
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(Largest!(int, short, uint) == int));
+    static assert(is(Largest!(short) == short));
+    static assert(is(Largest!(ubyte[8], ubyte[5]) == ubyte[8]));
+    static assert(!is(Largest!(short, 5)));
+}
