@@ -67,6 +67,7 @@ else version (Windows)
                                        send,
                                        setsockopt,
                                        shutdown,
+                                       SO_TYPE,
                                        SOCKADDR,
                                        sockaddr,
                                        sockaddr_in,
@@ -75,7 +76,6 @@ else version (Windows)
                                        socket,
                                        socklen_t,
                                        SOL_SOCKET,
-                                       SO_TYPE,
                                        WSAGetLastError;
     import tanya.async.iocp;
     import tanya.sys.windows.def;
