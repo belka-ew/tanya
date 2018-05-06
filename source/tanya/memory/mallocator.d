@@ -104,6 +104,7 @@ final class Mallocator : Allocator
     bool reallocateInPlace(ref void[] p, size_t size)
     @nogc nothrow pure shared @system
     {
+        cast(void) size;
         return false;
     }
 

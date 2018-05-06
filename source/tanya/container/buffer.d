@@ -20,7 +20,6 @@ import tanya.meta.trait;
 version (unittest)
 {
     private int fillBuffer(ubyte[] buffer,
-                           in size_t size,
                            int start = 0,
                            int end = 10) @nogc pure nothrow
     in
@@ -173,7 +172,7 @@ struct ReadBuffer(T = ubyte)
         assert(b.free == 0);
 
         // Fills the buffer with values 0..10
-        numberRead = fillBuffer(b[], b.free, 0, 10);
+        numberRead = fillBuffer(b[], 0, 10);
         b += numberRead;
         assert(b.free == b.blockSize - numberRead);
         b.clear();
@@ -204,7 +203,7 @@ struct ReadBuffer(T = ubyte)
         ubyte[] result;
 
         // Fills the buffer with values 0..10
-        numberRead = fillBuffer(b[], b.free, 0, 10);
+        numberRead = fillBuffer(b[], 0, 10);
         b += numberRead;
 
         result = b[0 .. $];
@@ -214,10 +213,10 @@ struct ReadBuffer(T = ubyte)
         b.clear();
 
         // It shouldn't overwrite, but append another 5 bytes to the buffer
-        numberRead = fillBuffer(b[], b.free, 0, 10);
+        numberRead = fillBuffer(b[], 0, 10);
         b += numberRead;
 
-        numberRead = fillBuffer(b[], b.free, 20, 25);
+        numberRead = fillBuffer(b[], 20, 25);
         b += numberRead;
 
         result = b[0..$];
@@ -279,7 +278,7 @@ struct ReadBuffer(T = ubyte)
         ubyte[] result;
 
         // Fills the buffer with values 0..10
-        numberRead = fillBuffer(b[], b.free, 0, 10);
+        numberRead = fillBuffer(b[], 0, 10);
         b += numberRead;
 
         assert(b.length == 10);
@@ -599,8 +598,6 @@ struct WriteBuffer(T = ubyte)
      */
     T[] opSlice(in size_t start, in size_t end)
     {
-        immutable internStart = this.start + start;
-
         if (position > ring || position < start) // Buffer overflowed
         {
             return buffer_[this.start .. ring + 1 - length + end];

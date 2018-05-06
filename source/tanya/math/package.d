@@ -632,7 +632,6 @@ do
     size_t i;
     auto tmp1 = Integer(x, x.allocator);
     auto result = Integer(x.allocator);
-    bool firstBit;
 
     if (x.size == 0 && y.size != 0)
     {
