@@ -2,10 +2,10 @@
 
 
 // fabsf.
-	.globl _D5tanya4math8nbtheory10__T3absTfZ3absFNaNbNiNffZf
-	.type _D5tanya4math8nbtheory10__T3absTfZ3absFNaNbNiNffZf, @function
+	.globl _D5tanya4math8nbtheory4fabsFNaNbNiNffZf
+	.type _D5tanya4math8nbtheory4fabsFNaNbNiNffZf, @function
 
-_D5tanya4math8nbtheory10__T3absTfZ3absFNaNbNiNffZf:
+_D5tanya4math8nbtheory4fabsFNaNbNiNffZf:
 	mov $0x7fffffff, %eax
 	movq %rax, %xmm1
 	andpd %xmm1, %xmm0
@@ -13,10 +13,10 @@ _D5tanya4math8nbtheory10__T3absTfZ3absFNaNbNiNffZf:
 
 
 // fabs.
-	.globl _D5tanya4math8nbtheory10__T3absTdZ3absFNaNbNiNfdZd
-	.type _D5tanya4math8nbtheory10__T3absTdZ3absFNaNbNiNfdZd, @function
+	.globl _D5tanya4math8nbtheory4fabsFNaNbNiNfdZd
+	.type _D5tanya4math8nbtheory4fabsFNaNbNiNfdZd, @function
 
-_D5tanya4math8nbtheory10__T3absTdZ3absFNaNbNiNfdZd:
+_D5tanya4math8nbtheory4fabsFNaNbNiNfdZd:
 	mov $0x7fffffffffffffff, %rax
 	movq %rax, %xmm1
 	andpd %xmm1, %xmm0
@@ -24,12 +24,12 @@ _D5tanya4math8nbtheory10__T3absTdZ3absFNaNbNiNfdZd:
 
 
 // fabsl.
-	.globl _D5tanya4math8nbtheory10__T3absTeZ3absFNaNbNiNfeZe
-	.type _D5tanya4math8nbtheory10__T3absTeZ3absFNaNbNiNfeZe, @function
+	.globl _D5tanya4math8nbtheory4fabsFNaNbNiNfeZe
+	.type _D5tanya4math8nbtheory4fabsFNaNbNiNfeZe, @function
 
 // Load the parameter from the stack onto FP stack, execute 'fabs' instruction
 // The result is returned in ST0.
-_D5tanya4math8nbtheory10__T3absTeZ3absFNaNbNiNfeZe:
+_D5tanya4math8nbtheory4fabsFNaNbNiNfeZe:
 	fldt 0x8(%rsp)
 	fabs
 	ret

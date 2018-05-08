@@ -16,9 +16,17 @@ module tanya.math.nbtheory;
 
 import tanya.math.mp;
 import tanya.meta.trait;
+import tanya.meta.transform;
 
 version (TanyaNative)
 {
+    private extern float fabs(float) @nogc nothrow pure @safe;
+    private extern double fabs(double) @nogc nothrow pure @safe;
+    private extern real fabs(real) @nogc nothrow pure @safe;
+
+    private extern double log(double) @nogc nothrow pure @safe;
+    private extern float logf(float) @nogc nothrow pure @safe;
+    private extern real logl(real) @nogc nothrow pure @safe;
 }
 else
 {
@@ -35,7 +43,7 @@ else
  *
  * Returns: Absolute value of $(D_PARAM x).
  */
-T abs(T)(T x)
+Unqual!T abs(T)(T x)
 if (isIntegral!T)
 {
     static if (isSigned!T)
@@ -60,24 +68,11 @@ if (isIntegral!T)
     static assert(is(typeof(u.abs) == uint));
 }
 
-version (D_Ddoc)
+/// ditto
+Unqual!T abs(T)(T x)
+if (isFloatingPoint!T)
 {
-    /// ditto
-    T abs(T)(T x)
-    if (isFloatingPoint!T);
-}
-else version (TanyaNative)
-{
-    extern T abs(T)(T number) @nogc nothrow pure @safe
-    if (isFloatingPoint!T);
-}
-else
-{
-    T abs(T)(T x)
-    if (isFloatingPoint!T)
-    {
-        return fabs(cast(real) x);
-    }
+    return fabs(x);
 }
 
 ///
@@ -122,17 +117,31 @@ version (D_Ddoc)
      *
      * Returns: Natural logarithm of $(D_PARAM x).
      */
-    T ln(T)(T x)
+    Unqual!T ln(T)(T x)
     if (isFloatingPoint!T);
 }
 else version (TanyaNative)
 {
-    extern T ln(T)(T x) @nogc nothrow pure @safe
-    if (isFloatingPoint!T);
+    Unqual!T ln(T)(T x) @nogc nothrow pure @safe
+    if (isFloatingPoint!T)
+    {
+        static if (is(Unqual!T == float))
+        {
+            return logf(x);
+        }
+        else static if (is(Unqual!T == double))
+        {
+            return log(x);
+        }
+        else
+        {
+            return logl(x);
+        }
+    }
 }
 else
 {
-    T ln(T)(T x)
+    Unqual!T ln(T)(T x)
     if (isFloatingPoint!T)
     {
         return log(x);
