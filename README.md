@@ -1,6 +1,6 @@
 # Tanya
 
-[![Build status](https://travis-ci.org/caraus-ecms/tanya.svg?branch=master)](https://travis-ci.org/caraus-ecms/tanya)
+[![Build Status](https://travis-ci.com/caraus-ecms/tanya.svg?branch=master)](https://travis-ci.com/caraus-ecms/tanya)
 [![Build status](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/master?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/master)
 [![codecov](https://codecov.io/gh/caraus-ecms/tanya/branch/master/graph/badge.svg)](https://codecov.io/gh/caraus-ecms/tanya)
 [![Dub version](https://img.shields.io/dub/v/tanya.svg)](https://code.dlang.org/packages/tanya)
@@ -176,14 +176,6 @@ parameter is used)
 | 2.079.1 |           |
 | 2.078.3 |           |
 | 2.077.1 |           |
-
-### Current status
-
-Following modules are under development:
-
-| Feature    | Branch    | Build status                                                                                                                                                                                                                                                                                  |
-|------------|:---------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Hash table | bitvector | [![bitvector](https://travis-ci.org/caraus-ecms/tanya.svg?branch=bitvector)](https://travis-ci.org/caraus-ecms/tanya) [![bitvector](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/bitvector?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/bitvector) |
 
 ### Release management
 
