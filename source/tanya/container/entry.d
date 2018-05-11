@@ -46,44 +46,46 @@ package enum BucketStatus : byte
 
 package struct Bucket(K, V = void)
 {
-    private alias Key = K;
-    private alias Value = V;
+    static if (is(V == void))
+    {
+        K key_;
+    }
+    else
+    {
+        alias KV = Pair!(K, "key", V, "value");
+        KV kv;
+    }
+    BucketStatus status = BucketStatus.empty;
+
+    this(ref K key)
+    {
+        this.key = key;
+    }
 
     @property void key(ref K key)
     {
-        this.key_ = key;
+        this.key() = key;
         this.status = BucketStatus.used;
     }
 
     @property ref inout(K) key() inout
     {
-        return this.key_;
-    }
-
-    bool opEquals(ref K key)
-    {
-        if (this.status == BucketStatus.used && this.key == key)
+        static if (is(V == void))
         {
-            return true;
+            return this.key_;
         }
-        return false;
-    }
-
-    bool opEquals(ref const K key) const
-    {
-        if (this.status == BucketStatus.used && this.key == key)
+        else
         {
-            return true;
+            return this.kv.key;
         }
-        return false;
     }
 
-    bool opEquals(ref typeof(this) that)
+    bool opEquals(ref inout(K) key) inout
     {
-        return key == that.key && this.status == that.status;
+        return this.status == BucketStatus.used && this.key == key;
     }
 
-    bool opEquals(ref typeof(this) that) const
+    bool opEquals(ref inout(typeof(this)) that) inout
     {
         return key == that.key && this.status == that.status;
     }
@@ -96,13 +98,6 @@ package struct Bucket(K, V = void)
         }
         this.status = BucketStatus.deleted;
     }
-
-    private K key_;
-    static if (!is(V == void))
-    {
-        V value;
-    }
-    BucketStatus status = BucketStatus.empty;
 }
 
 // Possible sizes for the hash-based containers.
@@ -115,10 +110,12 @@ package static immutable size_t[33] primes = [
 
 package struct HashArray(alias hasher, K, V = void)
 {
-    alias Bucket = .Bucket!(K, V);
+    alias Key = K;
+    alias Value = V;
+    alias Bucket = .Bucket!(Key, Value);
     alias Buckets = Array!Bucket;
 
-    Array!Bucket array;
+    Buckets array;
     size_t lengthIndex;
     size_t length;
 
@@ -126,18 +123,16 @@ package struct HashArray(alias hasher, K, V = void)
      * Returns bucket position for `hash`. `0` may mean the 0th position or an
      * empty `buckets` array.
      */
-    size_t locateBucket(ref const K key) const
+    size_t locateBucket(ref const Key key) const
     {
         return this.array.length == 0 ? 0 : hasher(key) % this.array.length;
     }
 
     /*
-     * Inserts the value in an empty or deleted bucket. If the value is
-     * already in there, does nothing and returns InsertStatus.found. If the
-     * hash array is full returns InsertStatus.failed. Otherwise,
-     * InsertStatus.added is returned.
+     * Inserts a key into an empty or deleted bucket. If the key is
+     * already in there, does nothing. Returns the bucket with the key.
      */
-    ref Bucket insert(ref K key)
+    ref Bucket insert(ref Key key)
     {
         while (true)
         {
@@ -170,6 +165,11 @@ package struct HashArray(alias hasher, K, V = void)
 
     // Takes an index in the primes array.
     bool rehashToSize(const size_t n)
+    in
+    {
+        assert(n < primes.length);
+    }
+    do
     {
         auto storage = typeof(this.array)(primes[n], this.array.allocator);
         DataLoop: foreach (ref e1; this.array[])
@@ -180,7 +180,7 @@ package struct HashArray(alias hasher, K, V = void)
 
                 foreach (ref e2; storage[bucketPosition .. $])
                 {
-                    if (e2.status != BucketStatus.used) // Insert the value.
+                    if (e2.status != BucketStatus.used) // Insert the key
                     {
                         e2 = e1;
                         continue DataLoop;
@@ -220,12 +220,12 @@ package struct HashArray(alias hasher, K, V = void)
         this.length = 0;
     }
 
-    size_t remove(ref K value)
+    size_t remove(ref Key key)
     {
-        auto bucketPosition = locateBucket(value);
+        auto bucketPosition = locateBucket(key);
         foreach (ref e; this.array[bucketPosition .. $])
         {
-            if (e == value) // Found.
+            if (e == key) // Found.
             {
                 e.remove();
                 --this.length;
@@ -239,12 +239,12 @@ package struct HashArray(alias hasher, K, V = void)
         return 0;
     }
 
-    bool find(ref const K value) const
+    bool canFind(ref const Key key) const
     {
-        auto bucketPosition = locateBucket(value);
+        auto bucketPosition = locateBucket(key);
         foreach (ref e; this.array[bucketPosition .. $])
         {
-            if (e == value) // Found.
+            if (e == key) // Found.
             {
                 return true;
             }

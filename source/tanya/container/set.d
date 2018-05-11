@@ -27,17 +27,18 @@ import tanya.meta.transform;
  * Bidirectional range that iterates over the $(D_PSYMBOL Set)'s values.
  *
  * Params:
- *  E = Element type.
+ *  T = Type of the internal hash storage.
  */
-struct Range(E)
+struct Range(T)
 {
-    static if (isMutable!E)
+    private alias E = CopyConstness!(T, T.Key);
+    static if (isMutable!T)
     {
-        private alias DataRange = Array!(Bucket!(Unqual!E)).Range;
+        private alias DataRange = T.array.Range;
     }
     else
     {
-        private alias DataRange = Array!(Bucket!(Unqual!E)).ConstRange;
+        private alias DataRange = T.array.ConstRange;
     }
     private DataRange dataRange;
 
@@ -69,63 +70,61 @@ struct Range(E)
     @property void popFront()
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.front.status == BucketStatus.used);
     }
     out
     {
-        assert(this.dataRange.empty
-            || this.dataRange.back.status == BucketStatus.used);
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
     }
     do
     {
         do
         {
-            dataRange.popFront();
+            this.dataRange.popFront();
         }
-        while (!dataRange.empty && dataRange.front.status != BucketStatus.used);
+        while (!empty && dataRange.front.status != BucketStatus.used);
     }
 
     @property void popBack()
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.back.status == BucketStatus.used);
     }
     out
     {
-        assert(this.dataRange.empty
-            || this.dataRange.back.status == BucketStatus.used);
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
     }
     do
     {
         do
         {
-            dataRange.popBack();
+            this.dataRange.popBack();
         }
-        while (!dataRange.empty && dataRange.back.status != BucketStatus.used);
+        while (!empty && dataRange.back.status != BucketStatus.used);
     }
 
     @property ref inout(E) front() inout
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.front.status == BucketStatus.used);
     }
     do
     {
-        return dataRange.front.key;
+        return this.dataRange.front.key;
     }
 
     @property ref inout(E) back() inout
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.back.status == BucketStatus.used);
     }
     do
     {
-        return dataRange.back.key;
+        return this.dataRange.back.key;
     }
 
     Range opIndex()
@@ -133,7 +132,7 @@ struct Range(E)
         return typeof(return)(this.dataRange[]);
     }
 
-    Range!(const E) opIndex() const
+    Range!(const T) opIndex() const
     {
         return typeof(return)(this.dataRange[]);
     }
@@ -146,7 +145,9 @@ struct Range(E)
  * This $(D_PSYMBOL Set) is implemented using closed hashing. Hash collisions
  * are resolved with linear probing.
  *
- * Currently works only with integral types.
+ * $(D_PARAM T) should be hashable with $(D_PARAM hasher). $(D_PARAM hasher) is
+ * a callable that accepts an argument of type $(D_PARAM T) and returns a hash
+ * value for it ($(D_KEYWORD size_t)).
  *
  * Params:
  *  T      = Element type.
@@ -155,15 +156,16 @@ struct Range(E)
 struct Set(T, alias hasher = hash)
 if (is(typeof(hasher(T.init)) == size_t))
 {
-    private HashArray!(hasher, T) data;
+    private alias HashArray = .HashArray!(hasher, T);
+    private alias Buckets = HashArray.Buckets;
 
-    private alias Buckets = typeof(this.data).Buckets;
+    private HashArray data;
 
     /// The range types for $(D_PSYMBOL Set).
-    alias Range = .Range!T;
+    alias Range = .Range!HashArray;
 
     /// ditto
-    alias ConstRange = .Range!(const T);
+    alias ConstRange = .Range!(const HashArray);
 
     invariant
     {
@@ -200,7 +202,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(Buckets(allocator));
+        this.data = HashArray(Buckets(allocator));
     }
 
     /**
@@ -222,7 +224,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(Buckets(init.data, allocator));
+        this.data = HashArray(Buckets(init.data, allocator));
     }
 
     /// ditto
@@ -234,7 +236,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(Buckets(move(init.data), allocator));
+        this.data = HashArray(Buckets(move(init.data), allocator));
         this.lengthIndex = init.lengthIndex;
         init.lengthIndex = 0;
     }
@@ -443,7 +445,7 @@ if (is(typeof(hasher(T.init)) == size_t))
      */
     bool opBinaryRight(string op : "in")(auto ref const T value) const
     {
-        return this.data.find(value);
+        return this.data.canFind(value);
     }
 
     ///
@@ -486,8 +488,9 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
 
     /**
-     * Returns: A bidirectional range that iterates over the $(D_PSYMBOL Set)'s
-     *          elements.
+     * Returns a bidirectional range over the container.
+     *
+     * Returns: A bidirectional range that iterates over the container.
      */
     Range opIndex()
     {
