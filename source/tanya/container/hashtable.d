@@ -20,22 +20,25 @@ import tanya.hash.lookup;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.typecons;
 
 /**
- * Bidirectional range that iterates over the $(D_PSYMBOL Set)'s values.
+ * Bidirectional range whose element type is a tuple of a key and the
+ * respective value.
  *
  * Params:
- *  E = Element type.
+ *  T = Type of the internal hash storage.
  */
-struct Range(E)
+struct Range(T)
 {
-    static if (isMutable!E)
+    private alias KV = CopyConstness!(T, T.Bucket.KV);
+    static if (isMutable!T)
     {
-        private alias DataRange = Array!(Bucket!(Unqual!E)).Range;
+        private alias DataRange = T.array.Range;
     }
     else
     {
-        private alias DataRange = Array!(Bucket!(Unqual!E)).ConstRange;
+        private alias DataRange = T.array.ConstRange;
     }
     private DataRange dataRange;
 
@@ -67,63 +70,61 @@ struct Range(E)
     @property void popFront()
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.front.status == BucketStatus.used);
     }
     out
     {
-        assert(this.dataRange.empty
-            || this.dataRange.back.status == BucketStatus.used);
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
     }
     do
     {
         do
         {
-            dataRange.popFront();
+            this.dataRange.popFront();
         }
-        while (!dataRange.empty && dataRange.front.status != BucketStatus.used);
+        while (!empty && dataRange.front.status != BucketStatus.used);
     }
 
     @property void popBack()
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.back.status == BucketStatus.used);
     }
     out
     {
-        assert(this.dataRange.empty
-            || this.dataRange.back.status == BucketStatus.used);
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
     }
     do
     {
         do
         {
-            dataRange.popBack();
+            this.dataRange.popBack();
         }
-        while (!dataRange.empty && dataRange.back.status != BucketStatus.used);
+        while (!empty && dataRange.back.status != BucketStatus.used);
     }
 
-    @property ref inout(E) front() inout
+    @property ref inout(KV) front() inout
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.front.status == BucketStatus.used);
     }
     do
     {
-        return dataRange.front.key;
+        return this.dataRange.front.kv;
     }
 
-    @property ref inout(E) back() inout
+    @property ref inout(KV) back() inout
     in
     {
-        assert(!this.dataRange.empty);
+        assert(!empty);
         assert(this.dataRange.back.status == BucketStatus.used);
     }
     do
     {
-        return dataRange.back.key;
+        return this.dataRange.back.kv;
     }
 
     Range opIndex()
@@ -131,40 +132,41 @@ struct Range(E)
         return typeof(return)(this.dataRange[]);
     }
 
-    Range!(const E) opIndex() const
+    Range!(const T) opIndex() const
     {
         return typeof(return)(this.dataRange[]);
     }
 }
 
-@nogc nothrow pure @safe unittest
-{
-    import tanya.range.primitive : isForwardRange;
-    static assert(is(HashTable!(string, int) a));
-    static assert(is(const HashTable!(string, int)));
-    static assert(isForwardRange!(HashTable!(string, int).Range));
-}
-
 /**
- * Hash table.
+ * Hash table is a data structure that stores pairs of keys and values without
+ * any particular order.
+ *
+ * This $(D_PSYMBOL HashTable) is implemented using closed hashing. Hash
+ * collisions are resolved with linear probing.
+ *
+ * $(D_PARAM Key) should be hashable with $(D_PARAM hasher). $(D_PARAM hasher)
+ * is a callable that accepts an argument of type $(D_PARAM Key) and returns a
+ * hash value for it ($(D_KEYWORD size_t)).
  *
  * Params:
  *  Key    = Key type.
  *  Value  = Value type.
- *  hasher = Hash function for $(D_PARAM Key).
+ *  hasher = Hash function for $(D_PARAM K).
  */
 struct HashTable(Key, Value, alias hasher = hash)
 if (is(typeof(hasher(Key.init)) == size_t))
 {
-    private HashArray!(hasher, Key, Value) data;
+    private alias HashArray = .HashArray!(hasher, Key, Value);
+    private alias Buckets = HashArray.Buckets;
 
-    private alias Buckets = typeof(this.data).Buckets;
+    private HashArray data;
 
     /// The range types for $(D_PSYMBOL HashTable).
-    alias Range = .Range!Key;
+    alias Range = .Range!HashArray;
 
     /// ditto
-    alias ConstRange = .Range!(const Key);
+    alias ConstRange = .Range!(const HashArray);
 
     /**
      * Constructor.
@@ -194,7 +196,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(Buckets(allocator));
+        this.data = HashArray(Buckets(allocator));
     }
 
     /**
@@ -216,7 +218,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(Buckets(init.data, allocator));
+        this.data = HashArray(Buckets(init.data, allocator));
     }
 
     /// ditto
@@ -228,7 +230,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.data = typeof(this.data)(Buckets(move(init.data), allocator));
+        this.data = HashArray(Buckets(move(init.data), allocator));
         this.lengthIndex = init.lengthIndex;
         init.lengthIndex = 0;
     }
@@ -378,8 +380,8 @@ if (is(typeof(hasher(Key.init)) == size_t))
         {
             e.key = key;
         }
-        e.value = value;
-        return e.value;
+        e.kv.value = value;
+        return e.kv.value;
     }
 
     /**
@@ -400,7 +402,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
         {
             if (key == range.front.key)
             {
-                return range.front.value;
+                return range.front.kv.value;
             }
         }
         assert(false, "Range violation");
@@ -435,7 +437,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      */
     bool opBinaryRight(string op : "in")(Key key)
     {
-        return this.data.find(key);
+        return this.data.canFind(key);
     }
 
     /**
@@ -464,6 +466,23 @@ if (is(typeof(hasher(Key.init)) == size_t))
     void rehash(size_t n)
     {
         this.data.rehash(n);
+    }
+
+    /**
+     * Returns a bidirectional range whose element type is a tuple of a key and
+     * the respective value.
+     *
+     * Returns: A bidirectional range that iterates over the container.
+     */
+    Range opIndex()
+    {
+        return typeof(return)(this.data.array[]);
+    }
+
+    /// ditto
+    ConstRange opIndex() const
+    {
+        return typeof(return)(this.data.array[]);
     }
 }
 
@@ -500,4 +519,12 @@ if (is(typeof(hasher(Key.init)) == size_t))
 
     dinos.clear();
     assert(dinos.empty);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    import tanya.range.primitive : isForwardRange;
+    static assert(is(HashTable!(string, int) a));
+    static assert(is(const HashTable!(string, int)));
+    static assert(isForwardRange!(HashTable!(string, int).Range));
 }
