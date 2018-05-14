@@ -52,7 +52,7 @@ package struct Bucket(K, V = void)
     }
     else
     {
-        alias KV = Pair!(K, "key", V, "value");
+        alias KV = Tuple!(K, "key", V, "value");
         KV kv;
     }
     BucketStatus status = BucketStatus.empty;
@@ -239,7 +239,7 @@ package struct HashArray(alias hasher, K, V = void)
         return 0;
     }
 
-    bool canFind(ref const Key key) const
+    bool opBinaryRight(string op : "in")(ref inout(Key) key) inout
     {
         auto bucketPosition = locateBucket(key);
         foreach (ref e; this.array[bucketPosition .. $])

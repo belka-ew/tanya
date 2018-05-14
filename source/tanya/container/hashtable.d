@@ -20,7 +20,6 @@ import tanya.hash.lookup;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
-import tanya.typecons;
 
 /**
  * Bidirectional range whose element type is a tuple of a key and the
@@ -161,6 +160,9 @@ if (is(typeof(hasher(Key.init)) == size_t))
     private alias Buckets = HashArray.Buckets;
 
     private HashArray data;
+
+    /// Type of the key-value pair stored in the hash table.
+    alias KeyValue = HashArray.Bucket.KV;
 
     /// The range types for $(D_PSYMBOL HashTable).
     alias Range = .Range!HashArray;
@@ -384,6 +386,21 @@ if (is(typeof(hasher(Key.init)) == size_t))
         return e.kv.value;
     }
 
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        assert("Pachycephalosaurus" !in hashTable);
+
+        hashTable["Pachycephalosaurus"] = 6;
+        assert(hashTable.length == 1);
+        assert("Pachycephalosaurus" in hashTable);
+
+        hashTable["Pachycephalosaurus"] = 6;
+        assert(hashTable.length == 1);
+        assert("Pachycephalosaurus" in hashTable);
+    }
+
     /**
      * Find the element with the key $(D_PARAM key).
      *
@@ -408,6 +425,14 @@ if (is(typeof(hasher(Key.init)) == size_t))
         assert(false, "Range violation");
     }
 
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        hashTable["Triceratops"] = 7;
+        assert(hashTable["Triceratops"] == 7);
+    }
+
     /**
      * Removes the element with the key $(D_PARAM key).
      *
@@ -426,6 +451,18 @@ if (is(typeof(hasher(Key.init)) == size_t))
         return this.data.remove(key);
     }
 
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        hashTable["Euoplocephalus"] = 6;
+
+        assert("Euoplocephalus" in hashTable);
+        assert(hashTable.remove("Euoplocephalus") == 1);
+        assert(hashTable.remove("Euoplocephalus") == 0);
+        assert("Euoplocephalus" !in hashTable);
+    }
+
     /**
      * Looks for $(D_PARAM key) in this hash table.
      *
@@ -435,9 +472,21 @@ if (is(typeof(hasher(Key.init)) == size_t))
      * Returns: $(D_KEYWORD true) if $(D_PARAM key) exists in the hash table,
      *          $(D_KEYWORD false) otherwise.
      */
-    bool opBinaryRight(string op : "in")(Key key)
+    bool opBinaryRight(string op : "in")(auto ref inout(Key) key) inout
     {
-        return this.data.canFind(key);
+        return key in this.data;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+
+        assert("Shantungosaurus" !in hashTable);
+        hashTable["Shantungosaurus"] = 15;
+        assert("Shantungosaurus" in hashTable);
+
+        assert("Ceratopsia" !in hashTable);
     }
 
     /**
@@ -484,6 +533,18 @@ if (is(typeof(hasher(Key.init)) == size_t))
     {
         return typeof(return)(this.data.array[]);
     }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        assert(hashTable[].empty);
+
+        hashTable["Iguanodon"] = 9;
+        assert(!hashTable[].empty);
+        assert(hashTable[].front == hashTable.KeyValue("Iguanodon", 9));
+        assert(hashTable[].back == hashTable.KeyValue("Iguanodon", 9));
+    }
 }
 
 @nogc nothrow pure @safe unittest
@@ -491,31 +552,18 @@ if (is(typeof(hasher(Key.init)) == size_t))
     auto dinos = HashTable!(string, int)(17);
     assert(dinos.empty);
 
-    dinos["Euoplocephalus"] = 6;
-    dinos["Triceratops"] = 7;
-    dinos["Pachycephalosaurus"] = 6;
-    dinos["Shantungosaurus"] = 15;
     dinos["Ornithominus"] = 4;
     dinos["Tyrannosaurus"] = 12;
     dinos["Deinonychus"] = 3;
-    dinos["Iguanodon"] = 9;
     dinos["Stegosaurus"] = 6;
     dinos["Brachiosaurus"] = 25;
 
-    assert(dinos.length == 10);
-    assert(dinos["Iguanodon"] == 9);
+    assert(dinos.length == 5);
     assert(dinos["Ornithominus"] == 4);
     assert(dinos["Stegosaurus"] == 6);
-    assert(dinos["Euoplocephalus"] == 6);
     assert(dinos["Deinonychus"] == 3);
     assert(dinos["Tyrannosaurus"] == 12);
-    assert(dinos["Pachycephalosaurus"] == 6);
-    assert(dinos["Shantungosaurus"] == 15);
-    assert(dinos["Triceratops"] == 7);
     assert(dinos["Brachiosaurus"] == 25);
-
-    assert("Shantungosaurus" in dinos);
-    assert("Ceratopsia" !in dinos);
 
     dinos.clear();
     assert(dinos.empty);

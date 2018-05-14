@@ -424,11 +424,9 @@ if (is(typeof(hasher(T.init)) == size_t))
     @nogc nothrow pure @safe unittest
     {
         Set!int set;
-        assert(8 !in set);
-
         set.insert(8);
-        assert(8 in set);
 
+        assert(8 in set);
         assert(set.remove(8) == 1);
         assert(set.remove(8) == 0);
         assert(8 !in set);
@@ -443,9 +441,9 @@ if (is(typeof(hasher(T.init)) == size_t))
      * Returns: $(D_KEYWORD true) if the given element exists in the container,
      *          $(D_KEYWORD false) otherwise.
      */
-    bool opBinaryRight(string op : "in")(auto ref const T value) const
+    bool opBinaryRight(string op : "in")(auto ref inout(T) value) inout
     {
-        return this.data.canFind(value);
+        return value in this.data;
     }
 
     ///
@@ -513,9 +511,6 @@ if (is(typeof(hasher(T.init)) == size_t))
         assert(!set[].empty);
         assert(set[].front == 8);
         assert(set[].back == 8);
-
-        set.remove(8);
-        assert(set[].empty);
     }
 }
 
