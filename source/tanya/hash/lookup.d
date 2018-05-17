@@ -77,10 +77,11 @@ private struct FNV
 }
 
 /**
- * Takes an a argument of an arbitrary type $(D_PARAM T) and calculates the hash value.
+ * Takes an argument of an arbitrary type $(D_PARAM T) and calculates the hash
+ * value.
  *
  * Hash calculation is supported for all scalar types. Aggregate types, like
- *$(D_KEYWORD struct)s should implement `toHash`-function:
+ * $(D_KEYWORD struct)s, should implement `toHash`-function:
  * ---
  * size_t toHash() const
  * {
@@ -96,7 +97,7 @@ private struct FNV
  * Individual values are combined then and the resulting hash is returned.
  *
  * Params:
- *  T = Hashable type.
+ *  T   = Hashable type.
  *  key = Hashable value.
  *
  * Returns: Calculated hash value.
@@ -124,7 +125,7 @@ version (unittest)
                                ~ r10!x ~ r10!x ~ r10!x ~ r10!x ~ r10!x;
     enum string r500(string x) = r100!x ~ r100!x ~ r100!x ~ r100!x ~ r100!x;
 
-    private struct ToHash
+    private static struct ToHash
     {
         size_t toHash() const @nogc nothrow pure @safe
         {
@@ -132,7 +133,7 @@ version (unittest)
         }
     }
 
-    private struct HashRange
+    private static struct HashRange
     {
         string fo = "fo";
 
@@ -152,7 +153,7 @@ version (unittest)
         }
     }
 
-    private struct ToHashRange
+    private static struct ToHashRange
     {
         bool empty_;
 
