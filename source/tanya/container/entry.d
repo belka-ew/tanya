@@ -16,7 +16,9 @@ module tanya.container.entry;
 
 import tanya.algorithm.mutation;
 import tanya.container.array;
+import tanya.memory.allocator;
 import tanya.meta.trait;
+import tanya.meta.transform;
 import tanya.typecons;
 
 package struct SEntry(T)
@@ -119,6 +121,49 @@ package struct HashArray(alias hasher, K, V = void)
     size_t lengthIndex;
     size_t length;
 
+    this(shared Allocator allocator)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        this.array = Buckets(allocator);
+    }
+
+    this(T)(ref T data, shared Allocator allocator)
+    if (is(Unqual!T == HashArray))
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        this.array = Buckets(data.array, allocator);
+        this.lengthIndex = data.lengthIndex;
+        this.length = data.length;
+    }
+
+    // Move constructor
+    void move(ref HashArray data, shared Allocator allocator)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        this.array = Buckets(.move(data.array), allocator);
+        this.lengthIndex = data.lengthIndex;
+        this.length = data.length;
+    }
+
+    void swap(ref HashArray data)
+    {
+        .swap(this.array, data.array);
+        .swap(this.lengthIndex, data.lengthIndex);
+        .swap(this.length, data.length);
+    }
+
     /*
      * Returns bucket position for `hash`. `0` may mean the 0th position or an
      * empty `buckets` array.
@@ -189,7 +234,7 @@ package struct HashArray(alias hasher, K, V = void)
                 return false; // Rehashing failed.
             }
         }
-        move(storage, this.array);
+        .move(storage, this.array);
         return true;
     }
 

@@ -151,7 +151,7 @@ struct Range(T)
  * Params:
  *  Key    = Key type.
  *  Value  = Value type.
- *  hasher = Hash function for $(D_PARAM K).
+ *  hasher = Hash function for $(D_PARAM Key).
  */
 struct HashTable(Key, Value, alias hasher = hash)
 if (is(typeof(hasher(Key.init)) == size_t))
@@ -169,6 +169,13 @@ if (is(typeof(hasher(Key.init)) == size_t))
 
     /// ditto
     alias ConstRange = .Range!(const HashArray);
+
+    invariant
+    {
+        assert(this.data.lengthIndex < primes.length);
+        assert(this.data.array.length == 0
+            || this.data.array.length == primes[this.data.lengthIndex]);
+    }
 
     /**
      * Constructor.
@@ -190,6 +197,13 @@ if (is(typeof(hasher(Key.init)) == size_t))
         rehash(n);
     }
 
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        auto hashTable = HashTable!(string, int)(5);
+        assert(hashTable.capacity == 7);
+    }
+
     /// ditto
     this(shared Allocator allocator)
     in
@@ -198,7 +212,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.data = HashArray(Buckets(allocator));
+        this.data = HashArray(allocator);
     }
 
     /**
@@ -220,7 +234,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.data = HashArray(Buckets(init.data, allocator));
+        this.data = HashArray(init.data, allocator);
     }
 
     /// ditto
@@ -232,9 +246,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     }
     do
     {
-        this.data = HashArray(Buckets(move(init.data), allocator));
-        this.lengthIndex = init.lengthIndex;
-        init.lengthIndex = 0;
+        this.data.move(init.data, allocator);
     }
 
     /**
@@ -261,8 +273,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     ref typeof(this) opAssign(S)(S that) @trusted
     if (is(S == HashTable))
     {
-        swap(this.data, that.data);
-        swap(this.lengthIndex, that.lengthIndex);
+        this.data.swap(that.data);
         return this;
     }
 
@@ -575,4 +586,28 @@ if (is(typeof(hasher(Key.init)) == size_t))
     static assert(is(HashTable!(string, int) a));
     static assert(is(const HashTable!(string, int)));
     static assert(isForwardRange!(HashTable!(string, int).Range));
+}
+
+// Constructs by reference
+@nogc nothrow pure @safe unittest
+{
+    auto hashTable1 = HashTable!(string, int)(7);
+    auto hashTable2 = HashTable!(string, int)(hashTable1);
+    assert(hashTable1.length == hashTable2.length);
+    assert(hashTable1.capacity == hashTable2.capacity);
+}
+
+// Constructs by value
+@nogc nothrow pure @safe unittest
+{
+    auto hashTable = HashTable!(string, int)(HashTable!(string, int)(7));
+    assert(hashTable.capacity == 7);
+}
+
+// Assigns by value
+@nogc nothrow pure @safe unittest
+{
+    HashTable!(string, int) hashTable;
+    hashTable = HashTable!(string, int)(7);
+    assert(hashTable.capacity == 7);
 }

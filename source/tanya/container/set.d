@@ -194,6 +194,13 @@ if (is(typeof(hasher(T.init)) == size_t))
         rehash(n);
     }
 
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        auto set = Set!int(5);
+        assert(set.capacity == 7);
+    }
+
     /// ditto
     this(shared Allocator allocator)
     in
@@ -202,7 +209,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = HashArray(Buckets(allocator));
+        this.data = HashArray(allocator);
     }
 
     /**
@@ -224,7 +231,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = HashArray(Buckets(init.data, allocator));
+        this.data = HashArray(init.data, allocator);
     }
 
     /// ditto
@@ -236,9 +243,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     }
     do
     {
-        this.data = HashArray(Buckets(move(init.data), allocator));
-        this.lengthIndex = init.lengthIndex;
-        init.lengthIndex = 0;
+        this.data.move(init.data, allocator);
     }
 
     /**
@@ -257,7 +262,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     if (is(Unqual!S == Set))
     {
         this.data = that.data;
-        this.lengthIndex = that.lengthIndex;
+        this.data.lengthIndex = that.data.lengthIndex;
         return this;
     }
 
@@ -265,8 +270,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     ref typeof(this) opAssign(S)(S that) @trusted
     if (is(S == Set))
     {
-        swap(this.data, that.data);
-        swap(this.lengthIndex, that.lengthIndex);
+        this.data.swap(that.data);
         return this;
     }
 
@@ -597,4 +601,28 @@ if (is(typeof(hasher(T.init)) == size_t))
 {
     auto set = Set!int(8);
     assert(set.capacity == 13);
+}
+
+// Constructs by reference
+@nogc nothrow pure @safe unittest
+{
+    auto set1 = Set!int(7);
+    auto set2 = Set!int(set1);
+    assert(set1.length == set2.length);
+    assert(set1.capacity == set2.capacity);
+}
+
+// Constructs by value
+@nogc nothrow pure @safe unittest
+{
+    auto set = Set!int(Set!int(7));
+    assert(set.capacity == 7);
+}
+
+// Assigns by value
+@nogc nothrow pure @safe unittest
+{
+    Set!int set;
+    set = Set!int(7);
+    assert(set.capacity == 7);
 }
