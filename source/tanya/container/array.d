@@ -123,7 +123,7 @@ struct Range(A)
         --this.end;
     }
 
-    ref inout(E) opIndex(const size_t i) inout @trusted
+    ref inout(E) opIndex(size_t i) inout @trusted
     in
     {
         assert(i < length);
@@ -143,7 +143,7 @@ struct Range(A)
         return typeof(return)(*this.container, this.begin, this.end);
     }
 
-    Range opSlice(const size_t i, const size_t j) @trusted
+    Range opSlice(size_t i, size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -154,7 +154,7 @@ struct Range(A)
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
-    A.ConstRange opSlice(const size_t i, const size_t j) const @trusted
+    A.ConstRange opSlice(size_t i, size_t j) const @trusted
     in
     {
         assert(i <= j);
@@ -218,9 +218,9 @@ struct Array(T)
      *  allocator = Allocator.
      */
     this(R)(R init, shared Allocator allocator = defaultAllocator)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         this(allocator);
         insertBack(init);
@@ -244,7 +244,7 @@ struct Array(T)
      *  allocator = Allocator.
      */
     this(R)(ref R init, shared Allocator allocator = defaultAllocator)
-        if (is(Unqual!R == Array))
+    if (is(Unqual!R == Array))
     {
         this(allocator);
         insertBack(init[]);
@@ -252,7 +252,7 @@ struct Array(T)
 
     /// ditto
     this(R)(R init, shared Allocator allocator = defaultAllocator) @trusted
-        if (is(R == Array))
+    if (is(R == Array))
     {
         this(allocator);
         if (allocator is init.allocator)
@@ -300,16 +300,16 @@ struct Array(T)
      *  init      = Initial value to fill the array with.
      *  allocator = Allocator.
      */
-    this(const size_t len, T init, shared Allocator allocator = defaultAllocator) @trusted
+    this(size_t len, T init, shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         reserve(len);
-        uninitializedFill(this.data[0 .. len], init);
+        uninitializedFill(slice(len), init);
         length_ = len;
     }
 
     /// ditto
-    this(const size_t len, shared Allocator allocator = defaultAllocator)
+    this(size_t len, shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         length = len;
@@ -349,10 +349,10 @@ struct Array(T)
     /**
      * Destroys this $(D_PSYMBOL Array).
      */
-    ~this() @trusted
+    ~this()
     {
         clear();
-        allocator.deallocate(this.data[0 .. capacity]);
+        (() @trusted => allocator.deallocate(slice(capacity)))();
     }
 
     /**
@@ -360,7 +360,7 @@ struct Array(T)
      */
     this(this)
     {
-        auto buf = this.data[0 .. this.length_];
+        auto buf = slice(this.length);
         this.length_ = capacity_ = 0;
         this.data = null;
         insertBack(buf);
@@ -418,7 +418,7 @@ struct Array(T)
      * Params:
      *  len = New length.
      */
-    @property void length(const size_t len) @trusted
+    @property void length(size_t len) @trusted
     {
         if (len == length)
         {
@@ -475,7 +475,7 @@ struct Array(T)
      * Params:
      *  size = Desired size.
      */
-    void reserve(const size_t size) @trusted
+    void reserve(size_t size) @trusted
     {
         if (capacity_ >= size)
         {
@@ -532,14 +532,14 @@ struct Array(T)
      * Params:
      *  size = Desired size.
      */
-    void shrink(const size_t size) @trusted
+    void shrink(size_t size) @trusted
     {
         if (capacity <= size)
         {
             return;
         }
         const n = max(length, size);
-        void[] buf = this.data[0 .. this.capacity_];
+        void[] buf = slice(this.capacity_);
         if (allocator.reallocateInPlace(buf, n * T.sizeof))
         {
             this.capacity_ = n;
@@ -597,7 +597,7 @@ struct Array(T)
      *
      * Returns: The number of elements removed
      */
-    size_t removeBack(const size_t howMany)
+    size_t removeBack(size_t howMany)
     out (removed)
     {
         assert(removed <= howMany);
@@ -622,7 +622,17 @@ struct Array(T)
         assert(v.removeBack(3) == 0);
     }
 
-    private @property inout(T)* end() inout
+    private inout(T)[] slice(size_t length) inout @trusted
+    in
+    {
+        assert(length <= capacity);
+    }
+    do
+    {
+        return this.data[0 .. length];
+    }
+
+    private @property inout(T)* end() inout @trusted
     {
         return this.data + this.length_;
     }
@@ -638,22 +648,24 @@ struct Array(T)
      *
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
-    Range remove(Range r) @trusted
+    Range remove(Range r)
     in
     {
         assert(r.container is &this);
         assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
+        assert(r.end <= end);
     }
     do
     {
         auto target = r.begin;
-        for (auto source = r.end; source != end; ++source, ++target)
+        auto source = r.end;
+        while (source !is end)
         {
             move(*source, *target);
+            ((ref s, ref t) @trusted {++s; ++t;})(source, target);
         }
         length = length - r.length;
-        return Range(this, r.begin, this.data + length);
+        return Range(this, r.begin, end);
     }
 
     ///
@@ -678,7 +690,7 @@ struct Array(T)
     }
 
     private void moveBack(R)(ref R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         reserve(this.length + 1);
         moveEmplace(el, *end);
@@ -695,20 +707,20 @@ struct Array(T)
      * Returns: The number of elements inserted.
      */
     size_t insertBack(R)(R el)
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     {
         moveBack(el);
         return 1;
     }
 
     /// ditto
-    size_t insertBack(R)(ref R el) @trusted
-        if (isImplicitlyConvertible!(R, T))
+    size_t insertBack(R)(ref R el)
+    if (isImplicitlyConvertible!(R, T))
     {
-        this.length = this.length + 1;
+        length = length + 1;
         scope (failure)
         {
-            this.length = this.length - 1;
+            length = length - 1;
         }
         opIndex(this.length - 1) = el;
         return 1;
@@ -716,9 +728,9 @@ struct Array(T)
 
     /// ditto
     size_t insertBack(R)(R el)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         static if (hasLength!R)
         {
@@ -795,9 +807,9 @@ struct Array(T)
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     size_t insertAfter(R)(Range r, R el)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
         assert(r.container is &this);
@@ -828,7 +840,7 @@ struct Array(T)
 
     /// ditto
     size_t insertAfter(R)(Range r, auto ref R el)
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     in
     {
         assert(r.container is &this);
@@ -855,9 +867,9 @@ struct Array(T)
 
     /// ditto
     size_t insertBefore(R)(Range r, R el)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     in
     {
         assert(r.container is &this);
@@ -884,7 +896,7 @@ struct Array(T)
 
     /// ditto
     size_t insertBefore(R)(Range r, auto ref R el)
-        if (isImplicitlyConvertible!(R, T))
+    if (isImplicitlyConvertible!(R, T))
     in
     {
         assert(r.container is &this);
@@ -993,7 +1005,7 @@ struct Array(T)
      *
      * Precondition: $(D_INLINECODE length > pos).
      */
-    ref T opIndexAssign(E : T)(auto ref E value, const size_t pos)
+    ref T opIndexAssign(E : T)(auto ref E value, size_t pos)
     {
         return opIndex(pos) = value;
     }
@@ -1058,7 +1070,7 @@ struct Array(T)
      *
      * Precondition: $(D_INLINECODE length > pos).
      */
-    ref inout(T) opIndex(const size_t pos) inout @trusted
+    ref inout(T) opIndex(size_t pos) inout @trusted
     in
     {
         assert(length > pos);
@@ -1133,7 +1145,7 @@ struct Array(T)
      *          $(D_KEYWORD false) otherwise.
      */
     bool opEquals(R)(R that) const
-        if (is(R == Range) || is(R == ConstRange))
+    if (is(R == Range) || is(R == ConstRange))
     {
         return equal(opIndex(), that);
     }
@@ -1222,7 +1234,7 @@ struct Array(T)
      *
      * Precondition: $(D_INLINECODE i <= j && j <= length).
      */
-    Range opSlice(const size_t i, const size_t j) @trusted
+    Range opSlice(size_t i, size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -1234,7 +1246,7 @@ struct Array(T)
     }
 
     /// ditto
-    ConstRange opSlice(const size_t i, const size_t j) const @trusted
+    ConstRange opSlice(size_t i, size_t j) const @trusted
     in
     {
         assert(i <= j);
@@ -1295,7 +1307,7 @@ struct Array(T)
      * Precondition: $(D_INLINECODE i <= j && j <= length
      *                           && value.length == j - i)
      */
-    Range opSliceAssign(size_t R)(T[R] value, const size_t i, const size_t j)
+    Range opSliceAssign(size_t R)(T[R] value, size_t i, size_t j)
     @trusted
     in
     {
@@ -1309,7 +1321,7 @@ struct Array(T)
     }
 
     /// ditto
-    Range opSliceAssign(R : T)(auto ref R value, const size_t i, const size_t j)
+    Range opSliceAssign(R : T)(auto ref R value, size_t i, size_t j)
     @trusted
     in
     {
@@ -1323,7 +1335,7 @@ struct Array(T)
     }
 
     /// ditto
-    Range opSliceAssign(Range value, const size_t i, const size_t j) @trusted
+    Range opSliceAssign(Range value, size_t i, size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -1402,14 +1414,14 @@ struct Array(T)
      * Returns: $(D_KEYWORD this).
      */
     ref typeof(this) opAssign(R)(ref R that)
-        if (is(Unqual!R == Array))
+    if (is(Unqual!R == Array))
     {
         return this = that[];
     }
 
     /// ditto
-    ref typeof(this) opAssign(R)(R that) @trusted
-        if (is(R == Array))
+    ref typeof(this) opAssign(R)(R that)
+    if (is(R == Array))
     {
         swap(this.data, that.data);
         swap(this.length_, that.length_);
@@ -1428,9 +1440,9 @@ struct Array(T)
      * Returns: $(D_KEYWORD this).
      */
     ref typeof(this) opAssign(R)(R that)
-        if (!isInfinite!R
-         && isInputRange!R
-         && isImplicitlyConvertible!(ElementType!R, T))
+    if (!isInfinite!R
+     && isInputRange!R
+     && isImplicitlyConvertible!(ElementType!R, T))
     {
         length = 0;
         insertBack(that);
@@ -1669,4 +1681,15 @@ struct Array(T)
 {
     Array!int v1;
     v1 = Array!int([5, 15, 8]);
+}
+
+// Postblit is safe
+@nogc nothrow pure @safe unittest
+{
+    auto array = Array!int(3);
+    void func(Array!int arg)
+    {
+        assert(arg.capacity == 3);
+    }
+    func(array);
 }
