@@ -194,7 +194,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
     do
     {
         this(allocator);
-        rehash(n);
+        this.data.rehash(n);
     }
 
     ///
@@ -265,7 +265,6 @@ if (is(typeof(hasher(Key.init)) == size_t))
     if (is(Unqual!S == HashTable))
     {
         this.data = that.data;
-        this.data.lengthIndex = that.data.lengthIndex;
         return this;
     }
 
@@ -604,10 +603,31 @@ if (is(typeof(hasher(Key.init)) == size_t))
     assert(hashTable.capacity == 7);
 }
 
+// Assigns by reference
+@nogc nothrow pure @safe unittest
+{
+    auto hashTable1 = HashTable!(string, int)(7);
+    HashTable!(string, int) hashTable2;
+    hashTable1 = hashTable2;
+    assert(hashTable1.length == hashTable2.length);
+    assert(hashTable1.capacity == hashTable2.capacity);
+}
+
 // Assigns by value
 @nogc nothrow pure @safe unittest
 {
     HashTable!(string, int) hashTable;
     hashTable = HashTable!(string, int)(7);
     assert(hashTable.capacity == 7);
+}
+
+// Postblit copies
+@nogc nothrow pure @safe unittest
+{
+    auto hashTable = HashTable!(string, int)(7);
+    void testFunc(HashTable!(string, int) hashTable)
+    {
+        assert(hashTable.capacity == 7);
+    }
+    testFunc(hashTable);
 }

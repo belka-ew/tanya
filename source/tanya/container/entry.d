@@ -164,13 +164,22 @@ package struct HashArray(alias hasher, K, V = void)
         .swap(this.length, data.length);
     }
 
+    void opAssign(ref typeof(this) that)
+    {
+        this.array = that.array;
+        this.lengthIndex = that.lengthIndex;
+        this.length = that.length;
+    }
+
     /*
      * Returns bucket position for `hash`. `0` may mean the 0th position or an
      * empty `buckets` array.
      */
     size_t locateBucket(ref const Key key) const
     {
-        return this.array.length == 0 ? 0 : hasher(key) % this.array.length;
+        return this.array.length == 0
+             ? 0
+             : hasher(key) % primes[this.lengthIndex];
     }
 
     /*
@@ -179,11 +188,9 @@ package struct HashArray(alias hasher, K, V = void)
      */
     ref Bucket insert(ref Key key)
     {
-        while (true)
+        while ((this.lengthIndex + 1) != primes.length)
         {
-            auto bucketPosition = locateBucket(key);
-
-            foreach (ref e; this.array[bucketPosition .. $])
+            foreach (ref e; this.array[locateBucket(key) .. $])
             {
                 if (e == key)
                 {
@@ -196,16 +203,13 @@ package struct HashArray(alias hasher, K, V = void)
                 }
             }
 
-            if (primes.length == (this.lengthIndex + 1))
-            {
-                this.array.insertBack(Bucket(key));
-                return this.array[$ - 1];
-            }
             if (this.rehashToSize(this.lengthIndex + 1))
             {
                 ++this.lengthIndex;
             }
         }
+        this.array.insertBack(Bucket(key));
+        return this.array[$ - 1];
     }
 
     // Takes an index in the primes array.
@@ -221,7 +225,7 @@ package struct HashArray(alias hasher, K, V = void)
         {
             if (e1.status == BucketStatus.used)
             {
-                auto bucketPosition = hasher(e1.key) % storage.length;
+                auto bucketPosition = hasher(e1.key) % primes[n];
 
                 foreach (ref e2; storage[bucketPosition .. $])
                 {
@@ -267,8 +271,7 @@ package struct HashArray(alias hasher, K, V = void)
 
     size_t remove(ref Key key)
     {
-        auto bucketPosition = locateBucket(key);
-        foreach (ref e; this.array[bucketPosition .. $])
+        foreach (ref e; this.array[locateBucket(key) .. $])
         {
             if (e == key) // Found.
             {
@@ -286,8 +289,7 @@ package struct HashArray(alias hasher, K, V = void)
 
     bool opBinaryRight(string op : "in")(ref inout(Key) key) inout
     {
-        auto bucketPosition = locateBucket(key);
-        foreach (ref e; this.array[bucketPosition .. $])
+        foreach (ref e; this.array[locateBucket(key) .. $])
         {
             if (e == key) // Found.
             {

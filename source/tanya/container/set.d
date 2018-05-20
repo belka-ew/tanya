@@ -191,7 +191,7 @@ if (is(typeof(hasher(T.init)) == size_t))
     do
     {
         this(allocator);
-        rehash(n);
+        this.data.rehash(n);
     }
 
     ///
@@ -262,7 +262,6 @@ if (is(typeof(hasher(T.init)) == size_t))
     if (is(Unqual!S == Set))
     {
         this.data = that.data;
-        this.data.lengthIndex = that.data.lengthIndex;
         return this;
     }
 
@@ -619,10 +618,31 @@ if (is(typeof(hasher(T.init)) == size_t))
     assert(set.capacity == 7);
 }
 
+// Assigns by reference
+@nogc nothrow pure @safe unittest
+{
+    auto set1 = Set!int(7);
+    Set!int set2;
+    set1 = set2;
+    assert(set1.length == set2.length);
+    assert(set1.capacity == set2.capacity);
+}
+
 // Assigns by value
 @nogc nothrow pure @safe unittest
 {
     Set!int set;
     set = Set!int(7);
     assert(set.capacity == 7);
+}
+
+// Postblit copies
+@nogc nothrow pure @safe unittest
+{
+    auto set = Set!int(7);
+    void testFunc(Set!int set)
+    {
+        assert(set.capacity == 7);
+    }
+    testFunc(set);
 }
