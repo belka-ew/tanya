@@ -264,6 +264,30 @@ final class ConvException : Exception
     }
 }
 
+package bool stringToInt(R)(R range, ref ushort n)
+{
+    import tanya.encoding.ascii;
+    import tanya.range.array;
+
+    size_t i = 1;
+    uint lPort;
+
+    for (; !range.empty && range.front.isDigit() && i <= 6; ++i, range.popFront())
+    {
+        lPort = lPort * 10 + (range.front - '0');
+    }
+    if (i != 1 && (range.empty || range.front == '/'))
+    {
+        if (lPort > ushort.max)
+        {
+            return false;
+        }
+        n = cast(ushort) lPort;
+        return true;
+    }
+    return false;
+}
+
 /**
  * If the source type $(D_PARAM From) and the target type $(D_PARAM To) are
  * equal, does nothing. If $(D_PARAM From) can be implicitly converted to

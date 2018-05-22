@@ -14,6 +14,7 @@
  */
 module tanya.net.uri;
 
+import tanya.conv;
 import tanya.encoding.ascii;
 import tanya.memory;
 
@@ -37,7 +38,7 @@ final class URIException : Exception
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
-         Throwable next = null) @nogc @safe pure nothrow
+         Throwable next = null) @nogc nothrow pure @safe
     {
         super(msg, file, line, next);
     }
@@ -82,7 +83,7 @@ struct URL
      *
      * Throws: $(D_PSYMBOL URIException) if the URL is malformed.
      */
-    this(const char[] source) pure @nogc
+    this(const char[] source) @nogc pure
     {
         ptrdiff_t pos = -1, endPos = source.length, start;
 
@@ -152,16 +153,13 @@ struct URL
                     goto ParsePath;
                 }
             }
-            else
+            else if (!parsePort(source[pos .. $]))
             {
                 // Schemas like mailto: and zlib: may not have any slash after
                 // them.
-                if (!parsePort(source[pos .. $]))
-                {
-                    this.scheme = source[0 .. pos];
-                    start = pos + 1;
-                    goto ParsePath;
-                }
+                this.scheme = source[0 .. pos];
+                start = pos + 1;
+                goto ParsePath;
             }
         }
         else if (pos == 0 && parsePort(source[pos .. $]))
@@ -305,26 +303,9 @@ struct URL
      *
      * Returns: Whether the port could be found.
      */
-    private bool parsePort(const char[] port) pure nothrow @safe @nogc
+    private bool parsePort(const(char)[] port) @nogc nothrow pure @safe
     {
-        ptrdiff_t i = 1;
-        float lPort = 0;
-
-        for (; i < port.length && port[i].isDigit() && i <= 6; ++i)
-        {
-            lPort += (port[i] - '0') / cast(float) (10 ^^ (i - 1));
-        }
-        if (i != 1 && (i == port.length || port[i] == '/'))
-        {
-            lPort *= 10 ^^ (i - 2);
-            if (lPort > ushort.max)
-            {
-                return false;
-            }
-            this.port = cast(ushort) lPort;
-            return true;
-        }
-        return false;
+        return stringToInt(port[1 .. $], this.port);
     }
 }
 
