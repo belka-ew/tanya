@@ -22,6 +22,7 @@ import tanya.hash.lookup;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.range.primitive;
 
 /**
  * Bidirectional range that iterates over the $(D_PSYMBOL Set)'s values.
@@ -222,6 +223,8 @@ if (is(typeof(hasher(T.init)) == size_t))
      *  S         = Source set type.
      *  init      = Source set.
      *  allocator = Allocator.
+     *
+     * Precondition: $(D_INLINECODE allocator !is null).
      */
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     if (is(Unqual!S == Set))
@@ -244,6 +247,66 @@ if (is(typeof(hasher(T.init)) == size_t))
     do
     {
         this.data.move(init.data, allocator);
+    }
+
+    /**
+     * Initializes the set from a forward range.
+     *
+     * Params:
+     *  R         = Range type.
+     *  range     = Forward range.
+     *  allocator = Allocator.
+     *
+     * Precondition: $(D_INLINECODE allocator !is null).
+     */
+    this(R)(R range, shared Allocator allocator = defaultAllocator)
+    if (isForwardRange!R && isImplicitlyConvertible!(ElementType!R, T))
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        insert(range);
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        int[2] range = [1, 2];
+        Set!int set = Set!int(range[]);
+
+        assert(1 in set);
+        assert(2 in set);
+    }
+
+    /**
+     * Initializes the set from a static array.
+     *
+     * Params:
+     *  n         = Array size.
+     *  array     = Static array.
+     *  allocator = Allocator.
+     *
+     * Precondition: $(D_INLINECODE allocator !is null).
+     */
+    this(size_t n)(T[n] array, shared Allocator allocator = defaultAllocator)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        insert(array[]);
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        Set!int set = Set!int([1, 2]);
+
+        assert(1 in set);
+        assert(2 in set);
     }
 
     /**
@@ -407,6 +470,38 @@ if (is(typeof(hasher(T.init)) == size_t))
 
         assert(set.remove(8));
         assert(set.insert(8) == 1);
+    }
+
+    /**
+     * Inserts the value from a forward range into the set.
+     *
+     * Params:
+     *  R     = Range type.
+     *  range = Forward range.
+     *
+     * Returns: The number of new elements inserted.
+     */
+    size_t insert(R)(R range)
+    if (isForwardRange!R && isImplicitlyConvertible!(ElementType!R, T))
+    {
+        size_t count;
+        foreach (e; range)
+        {
+            count += insert(e);
+        }
+        return count;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        Set!int set;
+
+        int[3] range = [2, 1, 2];
+
+        assert(set.insert(range[]) == 2);
+        assert(1 in set);
+        assert(2 in set);
     }
 
     /**

@@ -20,6 +20,7 @@ import tanya.hash.lookup;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.range.primitive;
 
 /**
  * Bidirectional range whose element type is a tuple of a key and the
@@ -225,6 +226,8 @@ if (is(typeof(hasher(Key.init)) == size_t))
      *  S         = Source set type.
      *  init      = Source set.
      *  allocator = Allocator.
+     *
+     * Precondition: $(D_INLINECODE allocator !is null).
      */
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     if (is(Unqual!S == HashTable))
@@ -247,6 +250,71 @@ if (is(typeof(hasher(Key.init)) == size_t))
     do
     {
         this.data.move(init.data, allocator);
+    }
+
+    /**
+     * Constructs the hash table from a forward range.
+     *
+     * Params:
+     *  R         = Range type.
+     *  range     = Forward range.
+     *  allocator = Allocator.
+     *
+     * Precondition: $(D_INLINECODE allocator !is null).
+     */
+    this(R)(R range, shared Allocator allocator = defaultAllocator)
+    if (isForwardRange!R && is(ElementType!R == KeyValue))
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        this(allocator);
+        insert(range);
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        alias KeyValue = HashTable!(string, int).KeyValue;
+
+        KeyValue[2] range = [KeyValue("one", 1), KeyValue("two", 2)];
+        auto hashTable = HashTable!(string, int)(range[]);
+
+        assert(hashTable["one"] == 1);
+        assert(hashTable["two"] == 2);
+    }
+
+    /**
+     * Initializes the hash table from a static array.
+     *
+     * Params:
+     *  n         = Array size.
+     *  array     = Static array.
+     *  allocator = Allocator.
+     *
+     * Precondition: $(D_INLINECODE allocator !is null).
+     */
+    this(size_t n)(KeyValue[n] array,
+         shared Allocator allocator = defaultAllocator)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
+    {
+        insert(array[]);
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        alias KeyValue = HashTable!(string, int).KeyValue;
+        auto hashTable = HashTable!(string, int)([KeyValue("one", 1), KeyValue("two", 2)]);
+
+        assert(hashTable["one"] == 1);
+        assert(hashTable["two"] == 2);
     }
 
     /**
@@ -392,8 +460,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
         {
             e.key = key;
         }
-        e.kv.value = value;
-        return e.kv.value;
+        return e.kv.value = value;
     }
 
     ///
@@ -409,6 +476,81 @@ if (is(typeof(hasher(Key.init)) == size_t))
         hashTable["Pachycephalosaurus"] = 6;
         assert(hashTable.length == 1);
         assert("Pachycephalosaurus" in hashTable);
+    }
+
+    /**
+     * Inserts a new element in the hash table.
+     *
+     * If the element with the same key was already in the table, it reassigns
+     * it with the new value, but $(D_PSYMBOL insert) returns `0`. Otherwise
+     * `1` is returned.
+     *
+     * Params:
+     *  keyValue = Key/value pair.
+     *
+     * Returns: The number of the inserted elements with a unique key.
+     */
+    size_t insert(KeyValue keyValue)
+    {
+        auto e = ((ref v) @trusted => &this.data.insert(v))(keyValue.key);
+        size_t inserted;
+        if (e.status != BucketStatus.used)
+        {
+            e.key = keyValue.key;
+            inserted = 1;
+        }
+        e.kv.value = keyValue.value;
+        return inserted;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+
+        assert(hashTable.insert(hashTable.KeyValue("number", 1)) == 1);
+        assert(hashTable["number"] == 1);
+        assert(hashTable.insert(hashTable.KeyValue("number", 2)) == 0);
+        assert(hashTable["number"] == 2);
+    }
+
+    /**
+     * Inserts a forward range of key/value pairs into the hash table.
+     *
+     * If some of the elements in the $(D_PARAM range) have the same key, they
+     * are reassigned but are not counted as inserted elements. So the value
+     * returned by this function will be less than the range length.
+     *
+     * Params:
+     *  R     = Range type.
+     *  range = Forward range.
+     *
+     * Returns: The number of the inserted elements with a unique key.
+     */
+    size_t insert(R)(R range)
+    if (isForwardRange!R && is(ElementType!R == KeyValue))
+    {
+        size_t count;
+        foreach (e; range)
+        {
+            count += insert(e);
+        }
+        return count;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+
+        hashTable.KeyValue[2] range = [
+            hashTable.KeyValue("one", 1),
+            hashTable.KeyValue("two", 2),
+        ];
+
+        assert(hashTable.insert(range[]) == 2);
+        assert(hashTable["one"] == 1);
+        assert(hashTable["two"] == 2);
     }
 
     /**
