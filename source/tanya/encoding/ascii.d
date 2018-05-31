@@ -8,7 +8,7 @@
  * ASCII is $(B A)merican $(B S)tandard $(B C)ode for $(B I)nformation
  * $(B I)nterchange.
  *
- * Copyright: Eugene Wissner 2017.
+ * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -19,23 +19,23 @@ module tanya.encoding.ascii;
 
 import tanya.meta.trait;
 
-const string fullHexDigits = "0123456789ABCDEFabcdef"; /// 0..9A..Fa..f.
-const string hexDigits = "0123456789ABCDEF"; /// 0..9A..F.
-const string lowerHexDigits = "0123456789abcdef"; /// 0..9a..f.
-const string digits = "0123456789"; /// 0..9.
-const string octalDigits = "01234567"; /// 0..7.
+immutable string fullHexDigits = "0123456789ABCDEFabcdef"; /// 0..9A..Fa..f.
+immutable string hexDigits = "0123456789ABCDEF"; /// 0..9A..F.
+immutable string lowerHexDigits = "0123456789abcdef"; /// 0..9a..f.
+immutable string digits = "0123456789"; /// 0..9.
+immutable string octalDigits = "01234567"; /// 0..7.
 
 /// A..Za..z.
-const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+immutable string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z.
-const string lowercase = "abcdefghijklmnopqrstuvwxyz"; /// a..z.
+immutable string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z.
+immutable string lowercase = "abcdefghijklmnopqrstuvwxyz"; /// a..z.
 
 /**
  * Whitespace, Horizontal Tab (HT), Line Feed (LF), Carriage Return (CR),
  * Vertical Tab (VT) or Form Feed (FF).
  */
-const string whitespace = "\t\n\v\f\r ";
+immutable string whitespace = "\t\n\v\f\r ";
 
 /// Letter case specifier.
 enum LetterCase : bool
@@ -61,7 +61,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isUpper('A'));
     assert(isUpper('Z'));
@@ -87,7 +87,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isLower('a'));
     assert(isLower('z'));
@@ -113,7 +113,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isAlpha('A'));
     assert(isAlpha('Z'));
@@ -141,7 +141,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isDigit('0'));
     assert(isDigit('1'));
@@ -174,7 +174,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isAlphaNum('0'));
     assert(isAlphaNum('1'));
@@ -205,7 +205,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isASCII('0'));
     assert(isASCII('L'));
@@ -240,7 +240,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isControl('\t'));
     assert(isControl('\0'));
@@ -281,7 +281,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isWhite('\t'));
     assert(isWhite('\n'));
@@ -312,7 +312,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isGraphical('a'));
     assert(isGraphical('0'));
@@ -343,7 +343,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isPrintable('a'));
     assert(isPrintable('0'));
@@ -372,7 +372,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isHexDigit('0'));
     assert(isHexDigit('1'));
@@ -403,7 +403,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isOctalDigit('0'));
     assert(isOctalDigit('1'));
@@ -436,7 +436,7 @@ if (isSomeChar!C)
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(isPunctuation('!'));
     assert(isPunctuation(':'));
@@ -459,14 +459,14 @@ pure nothrow @safe @nogc unittest
  * Returns: The lowercase of $(D_PARAM c) if available, just $(D_PARAM c)
  *          otherwise.
  */
-C toUpper(C)(const C c)
+C toUpper(C)(C c)
 if (isSomeChar!C)
 {
     return isLower(c) ? (cast(C) (c - 32)) : c;
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(toUpper('a') == 'A');
     assert(toUpper('A') == 'A');
@@ -486,14 +486,14 @@ pure nothrow @safe @nogc unittest
  * Returns: The uppercase of $(D_PARAM c) if available, just $(D_PARAM c)
  *          otherwise.
  */
-C toLower(C)(const C c)
+C toLower(C)(C c)
 if (isSomeChar!C)
 {
     return isUpper(c) ? (cast(C) (c + 32)) : c;
 }
 
 ///
-pure nothrow @safe @nogc unittest
+@nogc nothrow pure @safe unittest
 {
     assert(toLower('A') == 'a');
     assert(toLower('a') == 'a');
