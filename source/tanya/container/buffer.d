@@ -164,7 +164,7 @@ struct ReadBuffer(T = ubyte)
     }
 
     ///
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         ReadBuffer!ubyte b;
         size_t numberRead;
@@ -196,7 +196,7 @@ struct ReadBuffer(T = ubyte)
     }
 
     ///
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         ReadBuffer!ubyte b;
         size_t numberRead;
@@ -271,7 +271,7 @@ struct ReadBuffer(T = ubyte)
     }
 
     ///
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         ReadBuffer!ubyte b;
         size_t numberRead;
@@ -398,7 +398,7 @@ struct WriteBuffer(T = ubyte)
     alias opDollar = length;
 
     ///
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         auto b = WriteBuffer!ubyte(4);
         ubyte[3] buf = [48, 23, 255];
@@ -570,7 +570,7 @@ struct WriteBuffer(T = ubyte)
     }
 
     ///
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         auto b = WriteBuffer!ubyte(6);
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
@@ -609,7 +609,7 @@ struct WriteBuffer(T = ubyte)
     }
 
     ///
-    @nogc nothrow pure unittest
+    @nogc nothrow pure @system unittest
     {
         auto b = WriteBuffer!ubyte(6);
         ubyte[6] buf = [23, 23, 255, 128, 127, 9];
@@ -652,7 +652,7 @@ struct WriteBuffer(T = ubyte)
     static assert(is(typeof(WriteBuffer!int(5))));
 }
 
-@nogc nothrow pure unittest
+@nogc nothrow pure @system unittest
 {
     auto b = WriteBuffer!ubyte(4);
     ubyte[3] buf = [48, 23, 255];
@@ -674,7 +674,7 @@ struct WriteBuffer(T = ubyte)
         && b.buffer_[2] == 48 && b.buffer_[3] == 23 && b.buffer_[4] == 255);
 }
 
-@nogc nothrow pure unittest
+@nogc nothrow pure @system unittest
 {
     auto b = WriteBuffer!ubyte(2);
     ubyte[3] buf = [48, 23, 255];

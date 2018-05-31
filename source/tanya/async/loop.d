@@ -173,7 +173,7 @@ abstract class Loop
         return 128U;
     }
 
-    private unittest
+    @nogc @system unittest
     {
         auto loop = defaultAllocator.make!TestLoop;
         assert(loop.maxEvents == 64);
@@ -226,7 +226,7 @@ abstract class Loop
         this.done = true;
     }
 
-    private unittest
+    @nogc @system unittest
     {
         auto loop = defaultAllocator.make!TestLoop;
         assert(loop.done);
@@ -237,7 +237,7 @@ abstract class Loop
         defaultAllocator.dispose(loop);
     }
 
-    private unittest
+    @nogc @system unittest
     {
         auto loop = defaultAllocator.make!TestLoop;
         auto watcher = defaultAllocator.make!DummyWatcher;
@@ -327,7 +327,7 @@ abstract class Loop
         blockTime_ = blockTime;
     }
 
-    private unittest
+    @nogc @system unittest
     {
         auto loop = defaultAllocator.make!TestLoop;
         assert(loop.blockTime == 1.dur!"minutes");
@@ -417,7 +417,7 @@ do
 
 private Loop defaultLoop_;
 
-private unittest
+@nogc @system unittest
 {
     auto oldLoop = defaultLoop_;
     auto loop = defaultAllocator.make!TestLoop;
