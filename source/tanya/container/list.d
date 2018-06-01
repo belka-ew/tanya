@@ -178,7 +178,6 @@ struct SList(T)
     @nogc nothrow pure @safe unittest
     {
         auto l = SList!int(2, 3);
-        assert(l.length == 2);
         assert(l.front == 3);
     }
 
@@ -192,7 +191,6 @@ struct SList(T)
     @nogc nothrow pure @safe unittest
     {
         auto l = SList!int(2);
-        assert(l.length == 2);
         assert(l.front == 0);
     }
 
@@ -432,7 +430,6 @@ struct SList(T)
         assert(l2.front == 25);
 
         l2.insertFront(l1[]);
-        assert(l2.length == 5);
         assert(l2.front == 9);
     }
 
@@ -564,12 +561,6 @@ struct SList(T)
         r.popFront();
         l2.insertBefore(r, [234, 30]);
         assert(l1 == l2);
-    }
-
-    deprecated
-    @property size_t length() const
-    {
-        return count(this[]);
     }
 
     /**
@@ -1154,7 +1145,6 @@ struct DList(T)
     @nogc nothrow pure @safe unittest
     {
         auto l = DList!int(2, 3);
-        assert(l.length == 2);
         assert(l.front == 3);
         assert(l.back == 3);
     }
@@ -1169,7 +1159,6 @@ struct DList(T)
     @nogc nothrow pure @safe unittest
     {
         auto l = DList!int(2);
-        assert(l.length == 2);
         assert(l.front == 0);
     }
 
@@ -1480,7 +1469,6 @@ struct DList(T)
         assert(l2.back == 15);
 
         l2.insertFront(l1[]);
-        assert(l2.length == 5);
         assert(l2.front == 9);
         assert(l2.back == 15);
     }
@@ -1600,7 +1588,6 @@ struct DList(T)
         assert(l2.back == 15);
 
         l2.insertBack(l1[]);
-        assert(l2.length == 5);
         assert(l2.back == 9);
     }
 
@@ -1853,12 +1840,6 @@ struct DList(T)
     size_t insertAfter(size_t R)(Range r, T[R] el)
     {
         return insertAfter!(T[])(r, el[]);
-    }
-
-    deprecated
-    @property size_t length() const
-    {
-        return count(this[]);
     }
 
     /**
@@ -2354,7 +2335,6 @@ struct DList(T)
     l.insertAfter(l[], 234);
     assert(l.front == 234);
     assert(l.back == 234);
-    assert(l.length == 1);
 }
 
 @nogc nothrow pure @safe unittest
