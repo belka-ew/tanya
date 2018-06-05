@@ -20,6 +20,8 @@ import tanya.memory;
 import tanya.memory.op;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.range.array;
+import tanya.range.primitive;
 
 version (unittest)
 {
@@ -264,28 +266,100 @@ final class ConvException : Exception
     }
 }
 
-package bool stringToInt(R)(R range, ref ushort n)
+package bool readString(T, R)(ref R range, out T n)
+if (isForwardRange!R && isSomeChar!(ElementType!R)
+ && isIntegral!T && isUnsigned!T)
 {
-    import tanya.encoding.ascii;
-    import tanya.range.array;
+    import tanya.encoding.ascii : isDigit;
 
-    size_t i = 1;
-    uint lPort;
-
-    for (; !range.empty && range.front.isDigit() && i <= 6; ++i, range.popFront())
+    enum T boundary = T.max / 10;
+    if (range.empty)
     {
-        lPort = lPort * 10 + (range.front - '0');
+        return false;
     }
-    if (i != 1 && (range.empty || range.front == '/'))
+
+    while (n <= boundary)
     {
-        if (lPort > ushort.max)
+        if (!range.front.isDigit)
         {
             return false;
         }
-        n = cast(ushort) lPort;
-        return true;
+        n = cast(T) (n * 10 + (range.front - '0'));
+        range.popFront();
+
+        if (range.empty)
+        {
+            return true;
+        }
     }
-    return false;
+    if (range.length > 1)
+    {
+        return false;
+    }
+
+    int digit = range.front - '0';
+    if (n > cast(T) ((T.max - digit) / 10))
+    {
+        return false;
+    }
+    n = cast(T) (n * 10 + digit);
+
+    return true;
+}
+
+// reads ubyte.max
+@nogc nothrow pure @safe unittest
+{
+    ubyte n;
+    string number = "255";
+    assert(readString(number, n));
+    assert(n == 255);
+    assert(number.empty);
+}
+
+// detects integer overflow
+@nogc nothrow pure @safe unittest
+{
+    ubyte n;
+    string number = "500";
+    assert(!readString(number, n));
+    assert(number.front == '0');
+    assert(number.length == 1);
+}
+
+// stops on a non-digit
+@nogc nothrow pure @safe unittest
+{
+    ubyte n;
+    string number = "10-";
+    assert(!readString(number, n));
+    assert(number.front == '-');
+}
+
+// returns false if the number string is empty
+@nogc nothrow pure @safe unittest
+{
+    ubyte n;
+    string number = "";
+    assert(!readString(number, n));
+    assert(number.empty);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    ubyte n;
+    string number = "29";
+    assert(readString(number, n));
+    assert(n == 29);
+    assert(number.empty);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    ubyte n;
+    string number = "25467";
+    assert(!readString(number, n));
+    assert(number.front == '6');
 }
 
 /**

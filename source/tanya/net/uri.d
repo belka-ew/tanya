@@ -305,7 +305,8 @@ struct URL
      */
     private bool parsePort(const(char)[] port) @nogc nothrow pure @safe
     {
-        return stringToInt(port[1 .. $], this.port);
+        auto portNumber = port[1 .. $];
+        return readString(portNumber, this.port) || portNumber[0] == '/';
     }
 }
 
