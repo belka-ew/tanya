@@ -266,63 +266,100 @@ final class ConvException : Exception
     }
 }
 
-package bool readString(T, R)(ref R range, out T n)
-if (isForwardRange!R && isSomeChar!(ElementType!R)
- && isIntegral!T && isUnsigned!T)
+/*
+ * Converts a string $(D_PARAM range) into an integral value of type
+ * $(D_PARAM T) in $(D_PARAM base).
+ *
+ * The convertion stops when $(D_PARAM range) is empty of if the next character
+ * cannot be converted because it is not a digit (with respect to the
+ * $(D_PARAM base)) or if the reading the next character would cause integer
+ * overflow. The function returns the value converted so far then. The front
+ * element of the $(D_PARAM range) points to the first character cannot be
+ * converted or $(D_PARAM range) is empty if the whole string could be
+ * converted.
+ *
+ * Base must be between 2 and 36 inclursive. Default base is 10.
+ *
+ * The function doesn't handle the sign (+ or -) or number prefixes (like 0x).
+ */
+package T readIntegral(T, R)(ref R range, ubyte base = 10)
+if (isForwardRange!R
+ && isSomeChar!(ElementType!R)
+ && isIntegral!T
+ && isUnsigned!T)
+in
 {
-    import tanya.encoding.ascii : isDigit;
-
-    enum T boundary = T.max / 10;
+    assert(base >= 2);
+    assert(base <= 36);
+}
+do
+{
+    T boundary = cast(T) (T.max / base);
     if (range.empty)
     {
-        return false;
+        return T.init;
     }
 
+    T n;
     while (n <= boundary)
     {
-        if (!range.front.isDigit)
+        int digit;
+        if (range.front >= 'a')
         {
-            return false;
+            digit = range.front - 'W';
         }
-        n = cast(T) (n * 10 + (range.front - '0'));
+        else if (range.front >= 'A')
+        {
+            digit = range.front - '7';
+        }
+        else if (range.front >= '0')
+        {
+            digit = range.front - '0';
+        }
+        else
+        {
+            return n;
+        }
+        if (digit >= base)
+        {
+            return n;
+        }
+        n = cast(T) (n * base + digit);
         range.popFront();
 
         if (range.empty)
         {
-            return true;
+            return n;
         }
     }
     if (range.length > 1)
     {
-        return false;
+        return n;
     }
 
     int digit = range.front - '0';
-    if (n > cast(T) ((T.max - digit) / 10))
+    if (n > cast(T) ((T.max - digit) / base))
     {
-        return false;
+        return n;
     }
-    n = cast(T) (n * 10 + digit);
+    n = cast(T) (n * base + digit);
 
-    return true;
+    return n;
 }
 
 // reads ubyte.max
 @nogc nothrow pure @safe unittest
 {
-    ubyte n;
     string number = "255";
-    assert(readString(number, n));
-    assert(n == 255);
+    assert(readIntegral!ubyte(number) == 255);
     assert(number.empty);
 }
 
 // detects integer overflow
 @nogc nothrow pure @safe unittest
 {
-    ubyte n;
     string number = "500";
-    assert(!readString(number, n));
+    readIntegral!ubyte(number);
     assert(number.front == '0');
     assert(number.length == 1);
 }
@@ -330,36 +367,47 @@ if (isForwardRange!R && isSomeChar!(ElementType!R)
 // stops on a non-digit
 @nogc nothrow pure @safe unittest
 {
-    ubyte n;
     string number = "10-";
-    assert(!readString(number, n));
+    readIntegral!ubyte(number);
     assert(number.front == '-');
 }
 
 // returns false if the number string is empty
 @nogc nothrow pure @safe unittest
 {
-    ubyte n;
     string number = "";
-    assert(!readString(number, n));
+    readIntegral!ubyte(number);
     assert(number.empty);
 }
 
 @nogc nothrow pure @safe unittest
 {
-    ubyte n;
     string number = "29";
-    assert(readString(number, n));
-    assert(n == 29);
+    assert(readIntegral!ubyte(number) == 29);
     assert(number.empty);
 }
 
 @nogc nothrow pure @safe unittest
 {
-    ubyte n;
     string number = "25467";
-    assert(!readString(number, n));
+    readIntegral!ubyte(number);
     assert(number.front == '6');
+}
+
+// Converts lower case hexadecimals
+@nogc nothrow pure @safe unittest
+{
+    string number = "a";
+    assert(readIntegral!ubyte(number, 16) == 10);
+    assert(number.empty);
+}
+
+// Converts upper case hexadecimals
+@nogc nothrow pure @safe unittest
+{
+    string number = "FF";
+    assert(readIntegral!ubyte(number, 16) == 255);
+    assert(number.empty);
 }
 
 /**
