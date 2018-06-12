@@ -15,7 +15,6 @@
 module tanya.container.array;
 
 import core.checkedint;
-import std.algorithm.comparison : equal;
 import std.algorithm.mutation : bringToFront,
                                 copy,
                                 fill,

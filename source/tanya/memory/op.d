@@ -40,6 +40,11 @@ version (TanyaNative)
         fillMemory(buffer[1 .. $], 0);
         assert(buffer[0] == 1 && buffer[1] == 0);
     }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(cmp(null, null) == 0);
+    }
 }
 
 private enum alignMask = size_t.sizeof - 1;

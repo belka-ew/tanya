@@ -15,7 +15,6 @@
  */
 module tanya.container.list;
 
-import std.algorithm.comparison : equal;
 import std.algorithm.searching;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
@@ -574,7 +573,7 @@ struct SList(T)
      */
     bool opEquals()(auto ref typeof(this) that) inout
     {
-        return equal(this[], that[]);
+        return equal(opIndex(), that[]);
     }
 
     ///

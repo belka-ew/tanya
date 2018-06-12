@@ -16,6 +16,7 @@ module tanya.algorithm.comparison;
 
 import tanya.algorithm.mutation;
 import tanya.math : isNaN;
+import tanya.memory.op;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -269,4 +270,64 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
         assert(min(s2, s3).s == 2);
         assert(max(s2, s3).s == 3);
     }
+}
+
+/**
+ * Compares element-wise two ranges for equality.
+ *
+ * If the ranges have different lengths, they aren't equal.
+ *
+ * Params:
+ *  R1     = First range type.
+ *  R2     = Second range type.
+ *  range1 = First range.
+ *  range2 = Second range.
+ *
+ * Returns: $(D_KEYWORD true) if both ranges are equal, $(D_KEYWORD false)
+ *          otherwise.
+ */
+bool equal(R1, R2)(R1 r1, R2 r2)
+if (allSatisfy!(isInputRange, R1, R2) && is(typeof(r1.front == r2.front)))
+{
+    static if (isDynamicArray!R1
+            && is(R1 == R2)
+            && __traits(isPOD, ElementType!R1))
+    {
+        return cmp(r1, r2) == 0;
+    }
+    else
+    {
+        static if (hasLength!R1 && hasLength!R2)
+        {
+            if (r1.length != r2.length)
+            {
+                return false;
+            }
+        }
+        for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
+        {
+            if (r1.front != r2.front)
+            {
+                return false;
+            }
+        }
+        static if (hasLength!R1 && hasLength!R2)
+        {
+            return true;
+        }
+        else
+        {
+            return r1.empty && r2.empty;
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[2] range1 = [1, 2];
+    assert(equal(range1[], range1[]));
+
+    int[3] range2 = [1, 2, 3];
+    assert(!equal(range1[], range2[]));
 }

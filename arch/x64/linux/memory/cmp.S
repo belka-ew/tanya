@@ -47,6 +47,7 @@ _D5tanya6memory2op9cmpMemoryFNaNbNixAvxAvZi:
 
 	aligned_1: // Compare the remaining bytes
 		mov %rdx, %rcx
+		cmp $0x0, %rcx
 
 		repe cmpsb
 		jl less
