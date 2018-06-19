@@ -17,6 +17,7 @@
  */
 module tanya.typecons;
 
+import tanya.format;
 import tanya.meta.metafunction : AliasSeq, AliasTuple = Tuple, Map;
 
 deprecated("Use tanya.typecons.Tuple instead")
@@ -77,11 +78,10 @@ template Pair(Specs...)
 }
 
 /**
- * $(D_PSYMBOL Tuple) can store two heterogeneous objects.
+ * $(D_PSYMBOL Tuple) can store two or more heterogeneous objects.
  *
- * The objects can by accessed by index as $(D_INLINECODE obj[0]) and
- * $(D_INLINECODE obj[1]) or by optional names (e.g.
- * $(D_INLINECODE obj.first)).
+ * The objects can by accessed by index as `obj[0]` and `obj[1]` or by optional
+ * names (e.g. `obj.first`).
  *
  * $(D_PARAM Specs) contains a list of object types and names. First
  * comes the object type, then an optional string containing the name.
@@ -123,7 +123,26 @@ template Tuple(Specs...)
     alias ChooseType(alias T) = T.Seq[0];
     alias ParsedSpecs = parseSpecs!(0, Specs);
 
-    static assert(ParsedSpecs.length == 2, "Invalid argument count");
+    static assert(ParsedSpecs.length > 1, "Invalid argument count");
+
+    private string formatAliases(size_t n, Specs...)()
+    {
+        static if (Specs.length == 0)
+        {
+            return "";
+        }
+        else
+        {
+            string fieldAlias;
+            static if (Specs[0].length == 2)
+            {
+                char[21] buffer;
+                fieldAlias = "alias " ~ Specs[0][1] ~ " = expand["
+                           ~ integral2String(n, buffer).idup ~ "];";
+            }
+            return fieldAlias ~ formatAliases!(n + 1, Specs[1 .. $])();
+        }
+    }
 
     struct Tuple
     {
@@ -131,14 +150,7 @@ template Tuple(Specs...)
         alias Types = Map!(ChooseType, ParsedSpecs);
 
         // Create field aliases.
-        static if (ParsedSpecs[0].length == 2)
-        {
-            mixin("alias " ~ ParsedSpecs[0][1] ~ " = expand[0];");
-        }
-        static if (ParsedSpecs[1].length == 2)
-        {
-            mixin("alias " ~ ParsedSpecs[1][1] ~ " = expand[1];");
-        }
+        mixin(formatAliases!(0, ParsedSpecs[0 .. $])());
 
         /// Represents the values of the $(D_PSYMBOL Tuple) as a list of values.
         Types expand;
@@ -171,4 +183,7 @@ template Tuple(Specs...)
     static assert(!is(Tuple!(int, int, int)));
 
     static assert(!is(Tuple!(int, "first")));
+
+    static assert(!is(Tuple!(int, double, char)));
+    static assert(!is(Tuple!(int, "first", double, "second", char, "third")));
 }
