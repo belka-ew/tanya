@@ -51,7 +51,7 @@ version (unittest)
  *  T = Buffer type.
  */
 struct ReadBuffer(T = ubyte)
-    if (isScalarType!T)
+if (isScalarType!T)
 {
     /// Internal buffer.
     private T[] buffer_;
@@ -66,16 +66,16 @@ struct ReadBuffer(T = ubyte)
     private size_t ring;
 
     /// Available space.
-    private immutable size_t minAvailable = 1024;
+    private size_t minAvailable = 1024;
 
     /// Size by which the buffer will grow.
-    private immutable size_t blockSize = 8192;
+    private size_t blockSize = 8192;
 
     invariant
     {
-        assert(length_ <= buffer_.length);
-        assert(blockSize > 0);
-        assert(minAvailable > 0);
+        assert(this.length_ <= this.buffer_.length);
+        assert(this.blockSize > 0);
+        assert(this.minAvailable > 0);
     }
 
     /**
@@ -89,14 +89,14 @@ struct ReadBuffer(T = ubyte)
      *                 $(D_PSYMBOL free) < $(D_PARAM minAvailable)).
      *  allocator    = Allocator.
      */
-    this(in size_t size,
-         in size_t minAvailable = 1024,
+    this(size_t size,
+         size_t minAvailable = 1024,
          shared Allocator allocator = defaultAllocator) @trusted
     {
         this(allocator);
         this.minAvailable = minAvailable;
         this.blockSize = size;
-        buffer_ = cast(T[]) allocator_.allocate(size * T.sizeof);
+        this.buffer_ = cast(T[]) allocator_.allocate(size * T.sizeof);
     }
 
     /// ditto
@@ -115,7 +115,7 @@ struct ReadBuffer(T = ubyte)
      */
     ~this() @trusted
     {
-        allocator.deallocate(buffer_);
+        allocator.deallocate(this.buffer_);
     }
 
     ///
@@ -131,7 +131,7 @@ struct ReadBuffer(T = ubyte)
      */
     @property size_t capacity() const
     {
-        return buffer_.length;
+        return this.buffer_.length;
     }
 
     /**
@@ -139,7 +139,7 @@ struct ReadBuffer(T = ubyte)
      */
     @property size_t length() const
     {
-        return length_ - start;
+        return this.length_ - start;
     }
 
     /// ditto
@@ -152,7 +152,7 @@ struct ReadBuffer(T = ubyte)
      */
     void clear()
     {
-        start = length_ = ring;
+        start = this.length_ = ring;
     }
 
     /**
@@ -187,10 +187,10 @@ struct ReadBuffer(T = ubyte)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref ReadBuffer opOpAssign(string op)(in size_t length)
+    ref ReadBuffer opOpAssign(string op)(size_t length)
         if (op == "+")
     {
-        length_ += length;
+        this.length_ += length;
         ring = start;
         return this;
     }
@@ -234,9 +234,9 @@ struct ReadBuffer(T = ubyte)
      *
      * Returns: Array between $(D_PARAM start) and $(D_PARAM end).
      */
-    T[] opSlice(in size_t start, in size_t end)
+    T[] opSlice(size_t start, size_t end)
     {
-        return buffer_[this.start + start .. this.start + end];
+        return this.buffer_[this.start + start .. this.start + end];
     }
 
     /**
@@ -250,23 +250,24 @@ struct ReadBuffer(T = ubyte)
     {
         if (start > 0)
         {
-            auto ret = buffer_[0 .. start];
+            auto ret = this.buffer_[0 .. start];
             ring = 0;
             return ret;
         }
         else
         {
-            if (capacity - length < minAvailable)
+            if (capacity - length < this.minAvailable)
             {
-                void[] buf = buffer_;
-                immutable cap = capacity;
+                void[] buf = this.buffer_;
+                const cap = capacity;
                 () @trusted {
-                    allocator.reallocate(buf, (cap + blockSize) * T.sizeof);
-                    buffer_ = cast(T[]) buf;
+                    allocator.reallocate(buf,
+                                         (cap + this.blockSize) * T.sizeof);
+                    this.buffer_ = cast(T[]) buf;
                 }();
             }
-            ring = length_;
-            return buffer_[length_ .. $];
+            ring = this.length_;
+            return this.buffer_[this.length_ .. $];
         }
     }
 
@@ -310,7 +311,7 @@ struct ReadBuffer(T = ubyte)
  *  T = Buffer type.
  */
 struct WriteBuffer(T = ubyte)
-    if (isScalarType!T)
+if (isScalarType!T)
 {
     /// Internal buffer.
     private T[] buffer_;
@@ -322,16 +323,16 @@ struct WriteBuffer(T = ubyte)
     private size_t ring;
 
     /// Size by which the buffer will grow.
-    private immutable size_t blockSize;
+    private const size_t blockSize;
 
     /// The position of the free area in the buffer.
     private size_t position;
 
     invariant
     {
-        assert(blockSize > 0);
+        assert(this.blockSize > 0);
         // Position can refer to an element outside the buffer if the buffer is full.
-        assert(position <= buffer_.length);
+        assert(this.position <= this.buffer_.length);
     }
 
     /**
@@ -342,7 +343,7 @@ struct WriteBuffer(T = ubyte)
      *
      * Precondition: $(D_INLINECODE size > 0 && allocator !is null)
      */
-    this(in size_t size, shared Allocator allocator = defaultAllocator) @trusted
+    this(size_t size, shared Allocator allocator = defaultAllocator) @trusted
     in
     {
         assert(size > 0);
@@ -350,10 +351,10 @@ struct WriteBuffer(T = ubyte)
     }
     do
     {
-        blockSize = size;
+        this.blockSize = size;
         ring = size - 1;
         allocator_ = allocator;
-        buffer_ = cast(T[]) allocator_.allocate(size * T.sizeof);
+        this.buffer_ = cast(T[]) allocator_.allocate(size * T.sizeof);
     }
 
     @disable this();
@@ -363,7 +364,7 @@ struct WriteBuffer(T = ubyte)
      */
     ~this()
     {
-        allocator.deallocate(buffer_);
+        allocator.deallocate(this.buffer_);
     }
 
     /**
@@ -371,7 +372,7 @@ struct WriteBuffer(T = ubyte)
      */
     @property size_t capacity() const
     {
-        return buffer_.length;
+        return this.buffer_.length;
     }
 
     /**
@@ -384,13 +385,13 @@ struct WriteBuffer(T = ubyte)
      */
     @property size_t length() const
     {
-        if (position > ring || position < start) // Buffer overflowed
+        if (this.position > ring || this.position < start) // Buffer overflowed
         {
             return ring - start + 1;
         }
         else
         {
-            return position - start;
+            return this.position - start;
         }
     }
 
@@ -433,61 +434,62 @@ struct WriteBuffer(T = ubyte)
      * Params:
      *  buffer = Buffer chunk got with $(D_PSYMBOL opIndex).
      */
-    ref WriteBuffer opOpAssign(string op)(in T[] buffer)
+    ref WriteBuffer opOpAssign(string op)(const T[] buffer)
         if (op == "~")
     {
         size_t end, start;
 
-        if (position >= this.start && position <= ring)
+        if (this.position >= this.start && this.position <= ring)
         {
             auto afterRing = ring + 1;
 
-            end = position + buffer.length;
+            end = this.position + buffer.length;
             if (end > afterRing)
             {
                 end = afterRing;
             }
-            start = end - position;
-            buffer_[position .. end] = buffer[0 .. start];
+            start = end - this.position;
+            this.buffer_[this.position .. end] = buffer[0 .. start];
             if (end == afterRing)
             {
-                position = this.start == 0 ? afterRing : 0;
+                this.position = this.start == 0 ? afterRing : 0;
             }
             else
             {
-                position = end;
+                this.position = end;
             }
         }
 
         // Check if we have some free space at the beginning
-        if (start < buffer.length && position < this.start)
+        if (start < buffer.length && this.position < this.start)
         {
-            end = position + buffer.length - start;
+            end = this.position + buffer.length - start;
             if (end > this.start)
             {
                 end = this.start;
             }
-            auto areaEnd = end - position + start;
-            buffer_[position .. end] = buffer[start .. areaEnd];
-            position = end == this.start ? ring + 1 : end - position;
+            auto areaEnd = end - this.position + start;
+            this.buffer_[this.position .. end] = buffer[start .. areaEnd];
+            this.position = end == this.start ? ring + 1 : end - this.position;
             start = areaEnd;
         }
 
         // And if we still haven't found any place, save the rest in the overflow area
         if (start < buffer.length)
         {
-            end = position + buffer.length - start;
+            end = this.position + buffer.length - start;
             if (end > capacity)
             {
-                auto newSize = (end / blockSize * blockSize + blockSize) * T.sizeof;
+                const newSize = end / this.blockSize * this.blockSize
+                              + this.blockSize;
                 () @trusted {
-                    void[] buf = buffer_;
-                    allocator.reallocate(buf, newSize);
-                    buffer_ = cast(T[]) buf;
+                    void[] buf = this.buffer_;
+                    allocator.reallocate(buf, newSize * T.sizeof);
+                    this.buffer_ = cast(T[]) buf;
                 }();
             }
-            buffer_[position .. end] = buffer[start .. $];
-            position = end;
+            this.buffer_[this.position .. end] = buffer[start .. $];
+            this.position = end;
             if (this.start == 0)
             {
                 ring = capacity - 1;
@@ -506,7 +508,7 @@ struct WriteBuffer(T = ubyte)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref WriteBuffer opOpAssign(string op)(in size_t length)
+    ref WriteBuffer opOpAssign(string op)(size_t length)
         if (op == "+")
     in
     {
@@ -521,42 +523,42 @@ struct WriteBuffer(T = ubyte)
         {
             return this;
         }
-        else if (position <= afterRing)
+        else if (this.position <= afterRing)
         {
             start += length;
-            if (start > 0 && position == afterRing)
+            if (start > 0 && this.position == afterRing)
             {
-                position = oldStart;
+                this.position = oldStart;
             }
         }
         else
         {
-            auto overflow = position - afterRing;
+            auto overflow = this.position - afterRing;
 
             if (overflow > length)
             {
-                immutable afterLength = afterRing + length;
-                buffer_[start .. start + length] = buffer_[afterRing .. afterLength];
-                buffer_[afterRing .. afterLength] = buffer_[afterLength .. position];
-                position -= length;
+                const afterLength = afterRing + length;
+                this.buffer_[start .. start + length] = this.buffer_[afterRing .. afterLength];
+                this.buffer_[afterRing .. afterLength] = this.buffer_[afterLength .. this.position];
+                this.position -= length;
             }
             else if (overflow == length)
             {
-                buffer_[start .. start + overflow] = buffer_[afterRing .. position];
-                position -= overflow;
+                this.buffer_[start .. start + overflow] = this.buffer_[afterRing .. this.position];
+                this.position -= overflow;
             }
             else
             {
-                buffer_[start .. start + overflow] = buffer_[afterRing .. position];
-                position = overflow;
+                this.buffer_[start .. start + overflow] = this.buffer_[afterRing .. this.position];
+                this.position = overflow;
             }
             start += length;
 
-            if (start == position)
+            if (start == this.position)
             {
-                if (position != afterRing)
+                if (this.position != afterRing)
                 {
-                    position = 0;
+                    this.position = 0;
                 }
                 start = 0;
                 ring = capacity - 1;
@@ -596,15 +598,15 @@ struct WriteBuffer(T = ubyte)
      *
      * Returns: A chunk of data buffer.
      */
-    T[] opSlice(in size_t start, in size_t end)
+    T[] opSlice(size_t start, size_t end)
     {
-        if (position > ring || position < start) // Buffer overflowed
+        if (this.position > ring || this.position < start) // Buffer overflowed
         {
-            return buffer_[this.start .. ring + 1 - length + end];
+            return this.buffer_[this.start .. ring + 1 - length + end];
         }
         else
         {
-            return buffer_[this.start .. this.start + end];
+            return this.buffer_[this.start .. this.start + end];
         }
     }
 

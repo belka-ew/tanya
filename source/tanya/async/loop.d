@@ -13,50 +13,52 @@
  *
  * class EchoProtocol : TransmissionControlProtocol
  * {
- *  private DuplexTransport transport;
+ *     private DuplexTransport transport;
  *
- *  void received(in ubyte[] data) @nogc
- *  {
- *      transport.write(data);
- *  }
+ *     void received(in ubyte[] data) @nogc
+ *     {
+ *         ubyte[512] buffer;
+ *         buffer[0 .. data.length] = data;
+ *         transport.write(buffer[]);
+ *     }
  *
- *  void connected(DuplexTransport transport) @nogc
- *  {
- *      this.transport = transport;
- *  }
+ *     void connected(DuplexTransport transport) @nogc
+ *     {
+ *         this.transport = transport;
+ *     }
  *
- *  void disconnected(SocketException e) @nogc
- *  {
- *  }
+ *     void disconnected(SocketException e) @nogc
+ *     {
+ *     }
  * }
  *
  * void main()
  * {
- *  auto address = defaultAllocator.make!InternetAddress("127.0.0.1", cast(ushort) 8192);
+ *     auto address = defaultAllocator.make!InternetAddress("127.0.0.1", cast(ushort) 8192);
  *
- *  version (Windows)
- *  {
- *      auto sock = defaultAllocator.make!OverlappedStreamSocket(AddressFamily.inet);
- *  }
- *  else
- *  {
- *      auto sock = defaultAllocator.make!StreamSocket(AddressFamily.inet);
- *      sock.blocking = false;
- *  }
+ *     version (Windows)
+ *     {
+ *         auto sock = defaultAllocator.make!OverlappedStreamSocket(AddressFamily.inet);
+ *     }
+ *     else
+ *     {
+ *         auto sock = defaultAllocator.make!StreamSocket(AddressFamily.inet);
+ *         sock.blocking = false;
+ *     }
  *
- *  sock.bind(address);
- *  sock.listen(5);
+ *     sock.bind(address);
+ *     sock.listen(5);
  *
- *  auto io = defaultAllocator.make!ConnectionWatcher(sock);
- *  io.setProtocol!EchoProtocol;
+ *     auto io = defaultAllocator.make!ConnectionWatcher(sock);
+ *     io.setProtocol!EchoProtocol;
  *
- *  defaultLoop.start(io);
- *  defaultLoop.run();
+ *     defaultLoop.start(io);
+ *     defaultLoop.run();
  *
- *  sock.shutdown();
- *  defaultAllocator.dispose(io);
- *  defaultAllocator.dispose(sock);
- *  defaultAllocator.dispose(address);
+ *     sock.shutdown();
+ *     defaultAllocator.dispose(io);
+ *     defaultAllocator.dispose(sock);
+ *     defaultAllocator.dispose(address);
  * }
  * ---
  *

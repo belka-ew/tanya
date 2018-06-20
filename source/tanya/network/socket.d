@@ -5,7 +5,43 @@
 /**
  * Low-level socket programming.
  *
- * Copyright: Eugene Wissner 2016-2017.
+ * Current API supports only server-side TCP communication.
+ *
+ * Here is an example of a cross-platform blocking server:
+ *
+ * ---
+ * import std.stdio;
+ * import tanya.memory;
+ * import tanya.network;
+ *
+ * void main()
+ * {
+ *     auto socket = defaultAllocator.make!StreamSocket(AddressFamily.inet);
+ *     auto address = defaultAllocator.make!InternetAddress("127.0.0.1",
+ *                                                          cast(ushort) 8192);
+ *
+ *     socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+ *     socket.blocking = true;
+ *     socket.bind(address);
+ *     socket.listen(5);
+ *
+ *     auto client = socket.accept();
+ *     client.send(cast(const(ubyte)[]) "Test\n");
+ *
+ *     ubyte[100] buf;
+ *     auto response = client.receive(buf[]);
+ *
+ *     writeln(cast(const(char)[]) buf[0 .. response]);
+ *
+ *     defaultAllocator.dispose(client);
+ *     defaultAllocator.dispose(socket);
+ * }
+ * ---
+ *
+ * For an example of an asynchronous server refer to the documentation of the
+ * $(D_PSYMBOL tanya.async.loop) module.
+ *
+ * Copyright: Eugene Wissner 2016-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)

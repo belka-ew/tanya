@@ -38,7 +38,7 @@ enum IEEEPrecision : ubyte
 /**
  * Tests the precision of floating-point type $(D_PARAM F).
  *
- * For $(D_KEYWORD float), $(D_PSYMBOL ieeePrecision) always evaluates to
+ * For $(D_KEYWORD float) $(D_PSYMBOL ieeePrecision) always evaluates to
  * $(D_INLINECODE IEEEPrecision.single); for $(D_KEYWORD double) - to
  * $(D_INLINECODE IEEEPrecision.double). It returns different values only
  * for $(D_KEYWORD real), since $(D_KEYWORD real) is a platform-dependent type.
@@ -396,7 +396,7 @@ if (isFloatingPoint!F)
 
 /**
  * Determines whether $(D_PARAM x) is a denormilized number or not.
-
+ *
  * Denormalized number is a number between `0` and `1` that cannot be
  * represented as
  *
@@ -459,7 +459,7 @@ if (isFloatingPoint!F)
 
 /**
  * Determines whether $(D_PARAM x) is a normilized number or not.
-
+ *
  * Normalized number is a number that can be represented as
  *
  * <pre>

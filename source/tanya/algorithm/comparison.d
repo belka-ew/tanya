@@ -278,10 +278,10 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
  * If the ranges have different lengths, they aren't equal.
  *
  * Params:
- *  R1     = First range type.
- *  R2     = Second range type.
- *  range1 = First range.
- *  range2 = Second range.
+ *  R1 = First range type.
+ *  R2 = Second range type.
+ *  r1 = First range.
+ *  r2 = Second range.
  *
  * Returns: $(D_KEYWORD true) if both ranges are equal, $(D_KEYWORD false)
  *          otherwise.
