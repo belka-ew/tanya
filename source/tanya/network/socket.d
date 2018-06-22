@@ -112,17 +112,10 @@ else version (Windows)
                                        socket,
                                        socklen_t,
                                        SOL_SOCKET,
+                                       WSAEWOULDBLOCK,
                                        WSAGetLastError;
     import tanya.async.iocp;
     import tanya.sys.windows.def;
-    import tanya.sys.windows.error : ECONNABORTED = WSAECONNABORTED,
-                                     ENOBUFS = WSAENOBUFS,
-                                     EOPNOTSUPP = WSAEOPNOTSUPP,
-                                     EPROTONOSUPPORT = WSAEPROTONOSUPPORT,
-                                     EPROTOTYPE = WSAEPROTOTYPE,
-                                     ESOCKTNOSUPPORT = WSAESOCKTNOSUPPORT,
-                                     ETIMEDOUT = WSAETIMEDOUT,
-                                     EWOULDBLOCK = WSAEWOULDBLOCK;
     public import tanya.sys.windows.winbase;
     public import tanya.sys.windows.winsock2;
 
@@ -614,37 +607,6 @@ enum AddressFamily : int
     atmpvc    = 8,     /// ATM PVCs.
     x25       = 9,     /// Reserved for X.25 project.
     inet6     = 10,    /// IP version 6.
-}
-
-deprecated("Use tanya.os.error.ErrorCode.ErrorNo instead")
-enum SocketError : int
-{
-    /// Unknown error.
-    unknown                = 0,
-    /// Firewall rules forbid connection.
-    accessDenied           = EPERM,
-    /// A socket operation was attempted on a non-socket.
-    notSocket              = EBADF,
-    /// The network is not available.
-    networkDown            = ECONNABORTED,
-    /// An invalid pointer address was detected by the underlying socket provider.
-    fault                  = EFAULT,
-    /// An invalid argument was supplied to a $(D_PSYMBOL Socket) member.
-    invalidArgument        = EINVAL,
-    /// The limit on the number of open sockets has been reached.
-    tooManyOpenSockets     = ENFILE,
-    /// No free buffer space is available for a Socket operation.
-    noBufferSpaceAvailable = ENOBUFS,
-    /// The address family is not supported by the protocol family.
-    operationNotSupported  = EOPNOTSUPP,
-    /// The protocol is not implemented or has not been configured.
-    protocolNotSupported   = EPROTONOSUPPORT,
-    /// Protocol error.
-    protocolError          = EPROTOTYPE,
-    /// The connection attempt timed out, or the connected host has failed to respond.
-    timedOut               = ETIMEDOUT,
-    /// The support for the specified socket type does not exist in this address family.
-    socketNotSupported     = ESOCKTNOSUPPORT,
 }
 
 /**
@@ -1476,7 +1438,7 @@ bool wouldHaveBlocked() nothrow @trusted @nogc
     else version (Windows)
     {
         return WSAGetLastError() == ERROR_IO_PENDING
-            || WSAGetLastError() == EWOULDBLOCK
+            || WSAGetLastError() == WSAEWOULDBLOCK
             || WSAGetLastError() == ERROR_IO_INCOMPLETE;
     }
 }

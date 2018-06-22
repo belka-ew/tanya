@@ -70,26 +70,6 @@ enum bool isWideString(T) = is(T : const dchar[]) && !isStaticArray!T;
     static assert(!isWideString!(dchar[10]));
 }
 
-deprecated("Use tanya.meta.transform.Smallest instead")
-template Smallest(Args...)
-if (Args.length >= 1)
-{
-    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
-
-    static if (Args.length == 1)
-    {
-        alias Smallest = Args[0];
-    }
-    else static if (Smallest!(Args[1 .. $]).sizeof < Args[0].sizeof)
-    {
-        alias Smallest = Smallest!(Args[1 .. $]);
-    }
-    else
-    {
-        alias Smallest = Args[0];
-    }
-}
-
 /**
  * Determines whether $(D_PARAM T) is a complex type.
  *
@@ -178,7 +158,7 @@ enum bool isPolymorphicType(T) = is(T == class) || is(T == interface);
  */
 template hasStaticMember(T, string member)
 {
-    static if (__traits(hasMember, T, member))
+    static if (hasMember!(T, member))
     {
         alias Member = Alias!(__traits(getMember, T, member));
 
@@ -928,26 +908,6 @@ template mostNegative(T)
     static assert(mostNegative!cfloat == -cfloat.max);
 }
 
-deprecated("Use tanya.meta.transform.Largest instead")
-template Largest(Args...)
-if (Args.length >= 1)
-{
-    static assert(is(Args[0]), T.stringof ~ " doesn't have .sizeof property");
-
-    static if (Args.length == 1)
-    {
-        alias Largest = Args[0];
-    }
-    else static if (Largest!(Args[1 .. $]).sizeof > Args[0].sizeof)
-    {
-        alias Largest = Largest!(Args[1 .. $]);
-    }
-    else
-    {
-        alias Largest = Args[0];
-    }
-}
-
 /**
  * Determines whether the type $(D_PARAM T) is copyable.
  *
@@ -1540,7 +1500,6 @@ if (F.length == 1)
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) defines a symbol
  *          $(D_PARAM member), $(D_KEYWORD false) otherwise.
  */
-deprecated("Use __traits(hasMember) instead")
 enum bool hasMember(T, string member) = __traits(hasMember, T, member);
 
 ///

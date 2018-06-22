@@ -20,63 +20,6 @@ module tanya.typecons;
 import tanya.format;
 import tanya.meta.metafunction : AliasSeq, AliasTuple = Tuple, Map;
 
-deprecated("Use tanya.typecons.Tuple instead")
-template Pair(Specs...)
-{
-    template parseSpecs(size_t fieldCount, Specs...)
-    {
-        static if (Specs.length == 0)
-        {
-            alias parseSpecs = AliasSeq!();
-        }
-        else static if (is(Specs[0]) && fieldCount < 2)
-        {
-            static if (is(typeof(Specs[1]) == string))
-            {
-                alias parseSpecs
-                    = AliasSeq!(AliasTuple!(Specs[0], Specs[1]),
-                                parseSpecs!(fieldCount + 1, Specs[2 .. $]));
-            }
-            else
-            {
-                alias parseSpecs
-                    = AliasSeq!(AliasTuple!(Specs[0]),
-                                parseSpecs!(fieldCount + 1, Specs[1 .. $]));
-            }
-        }
-        else
-        {
-            static assert(false, "Invalid argument: " ~ Specs[0].stringof);
-        }
-    }
-
-    alias ChooseType(alias T) = T.Seq[0];
-    alias ParsedSpecs = parseSpecs!(0, Specs);
-
-    static assert(ParsedSpecs.length == 2, "Invalid argument count");
-
-    struct Pair
-    {
-        /// Field types.
-        alias Types = Map!(ChooseType, ParsedSpecs);
-
-        // Create field aliases.
-        static if (ParsedSpecs[0].length == 2)
-        {
-            mixin("alias " ~ ParsedSpecs[0][1] ~ " = expand[0];");
-        }
-        static if (ParsedSpecs[1].length == 2)
-        {
-            mixin("alias " ~ ParsedSpecs[1][1] ~ " = expand[1];");
-        }
-
-        /// Represents the values of the $(D_PSYMBOL Pair) as a list of values.
-        Types expand;
-
-        alias expand this;
-    }
-}
-
 /**
  * $(D_PSYMBOL Tuple) can store two or more heterogeneous objects.
  *

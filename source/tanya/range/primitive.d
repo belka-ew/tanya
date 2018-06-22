@@ -14,8 +14,8 @@
  */
 module tanya.range.primitive;
 
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
-import tanya.math;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.array;
