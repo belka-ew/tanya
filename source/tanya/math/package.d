@@ -87,7 +87,7 @@ if (isFloatingPoint!F)
     static assert(ieeePrecision!double == IEEEPrecision.double_);
 }
 
-private union FloatBits(F)
+package(tanya) union FloatBits(F)
 {
     Unqual!F floating;
     static if (ieeePrecision!F == IEEEPrecision.single)
