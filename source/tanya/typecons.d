@@ -17,8 +17,10 @@
  */
 module tanya.typecons;
 
+import tanya.algorithm.mutation;
 import tanya.format;
 import tanya.meta.metafunction : AliasSeq, AliasTuple = Tuple, Map;
+import tanya.meta.trait;
 
 /**
  * $(D_PSYMBOL Tuple) can store two or more heterogeneous objects.
@@ -129,4 +131,324 @@ template Tuple(Specs...)
 
     static assert(!is(Tuple!(int, double, char)));
     static assert(!is(Tuple!(int, "first", double, "second", char, "third")));
+}
+
+/**
+ * $(D_PSYMBOL Option) is a type that contains an optional value.
+ *
+ * Params:
+ *  T = Type of the encapsulated value.
+ */
+struct Option(T)
+{
+    private bool isNothing_ = true;
+    private T value = void;
+
+    /**
+     * Constructs a new option with $(D_PARAM value).
+     *
+     * Params:
+     *  value = Encapsulated value.
+     */
+    this()(ref T value)
+    {
+        this.value = value;
+        this.isNothing_ = false;
+    }
+
+    /// ditto
+    this()(T value) @trusted
+    {
+        moveEmplace(value, this.value);
+        this.isNothing_ = false;
+    }
+
+    /**
+     * Tells if the option is just a value or nothing.
+     *
+     * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Option) contains a nothing,
+     *          $(D_KEYWORD false) if it contains a value.
+     */
+    @property bool isNothing() const
+    {
+        return this.isNothing_;
+    }
+
+    /**
+     * Returns the encapsulated value.
+     *
+     * Returns: Value encapsulated in this $(D_PSYMBOL Option).
+     *
+     * See_Also: $(D_PSYMBOL or).
+     *
+     * Precondition: `!isNothing`.
+     */
+    @property ref inout(T) get() inout
+    in
+    {
+        assert(!isNothing, "Option is nothing");
+    }
+    do
+    {
+        return this.value;
+    }
+
+    /**
+     * Returns the encapsulated value if available or a default value
+     * otherwise.
+     *
+     * Note that the contained value can be returned by reference only if the
+     * default value is passed by reference as well.
+     *
+     * Params:
+     *  U            = Type of the default value.
+     *  defaultValue = Default value.
+     *
+     * Returns: The value of this $(D_PSYMBOL Option) if available,
+     *          $(D_PARAM defaultValue) otherwise.
+     *
+     * See_Also: $(D_PSYMBOL isNothing), $(D_PSYMBOL get).
+     */
+    @property U or(U)(U defaultValue) inout
+    if (is(U == T) && isCopyable!T)
+    {
+        return isNothing ? defaultValue : this.value;
+    }
+
+    /// ditto
+    @property ref inout(T) or(ref inout(T) defaultValue) inout
+    {
+        return isNothing ? defaultValue : this.value;
+    }
+
+    /**
+     * Casts this $(D_PSYMBOL Option) to $(D_KEYWORD bool).
+     *
+     * An $(D_PSYMBOL Option) is $(D_KEYWORD true) if it contains a value,
+     * ($D_KEYWORD false) if it contains nothing.
+     *
+     * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Option) contains a value,
+     *          ($D_KEYWORD false) if it contains nothing.
+     */
+    bool opCast(U : bool)()
+    {
+        return !isNothing;
+    }
+
+    /**
+     * Compares this $(D_PSYMBOL Option) with $(D_PARAM that).
+     *
+     * If both objects are options of the same type and they don't contain a
+     * value, they are considered equal. If only one of them contains a value,
+     * they aren't equal. Otherwise, the encapsulated values are compared for
+     * equality.
+     *
+     * If $(D_PARAM U) is a type comparable with the type encapsulated by this
+     * $(D_PSYMBOL Option), the value of this $(D_PSYMBOL Option) is compared
+     * with $(D_PARAM that), this $(D_PSYMBOL Option) must have a value then.
+     *
+     * Params:
+     *  U    = Type of the object to compare with.
+     *  that = Object to compare with.
+     *
+     * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Option) and
+     *          $(D_PARAM that) are equal, $(D_KEYWORD false) if not.
+     *
+     * Precondition: `!isNothing` if $(D_PARAM U) is equality comparable with
+     *               $(D_PARAM T).
+     */
+    bool opEquals(U)(auto ref const U that) const
+    if (is(U == Option))
+    {
+        if (!isNothing && !that.isNothing)
+        {
+            return this.value == that.value;
+        }
+        return isNothing == that.isNothing;
+    }
+
+    /// ditto
+    bool opEquals(U)(auto ref const U that) const
+    if (ifTestable!(U, a => a == T.init) && !is(U == Option))
+    in
+    {
+        assert(!isNothing);
+    }
+    do
+    {
+        return get == that;
+    }
+
+    /**
+     * Resets this $(D_PSYMBOL Option) and destroys the contained value.
+     *
+     * $(D_PSYMBOL reset) can be safely called on an $(D_PSYMBOL Option) that
+     * doesn't contain any value.
+     */
+    void reset()
+    {
+        static if (hasElaborateDestructor!T)
+        {
+            destroy(this.value);
+        }
+        this.isNothing_ = true;
+    }
+
+    /**
+     * Assigns a new value.
+     *
+     * Params:
+     *  U    = Type of the new value.
+     *  that = New value.
+     *
+     * Returns: $(D_KEYWORD this).
+     */
+    ref typeof(this) opAssign(U)(ref U that)
+    if (is(U : T) && !is(U == Option))
+    {
+        this.value = that;
+        this.isNothing_ = false;
+        return this;
+    }
+
+    /// ditto
+    ref typeof(this) opAssign(U)(U that)
+    if (is(U == T))
+    {
+        move(that, this.value);
+        this.isNothing_ = false;
+        return this;
+    }
+
+    /// ditto
+    ref typeof(this) opAssign(U)(ref U that)
+    if (is(U == Option))
+    {
+        this.value = that;
+        this.isNothing_ = that.isNothing;
+        return this;
+    }
+
+    /// ditto
+    ref typeof(this) opAssign(U)(U that)
+    if (is(U == Option))
+    {
+        move(that.value, this.value);
+        this.isNothing_ = that.isNothing_;
+        return this;
+    }
+
+    alias get this;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    Option!int option;
+    assert(option.isNothing);
+    assert(option.or(8) == 8);
+    
+    option = 5;
+    assert(!option.isNothing);
+    assert(option.get == 5);
+    assert(option.or(8) == 5);
+
+    option.reset();
+    assert(option.isNothing);
+}
+
+// Assigns a new value
+@nogc nothrow pure @safe unittest
+{
+    {
+        Option!int option = 5;
+        option = 8;
+        assert(!option.isNothing);
+        assert(option == 8);
+    }
+    {
+        Option!int option;
+        const int newValue = 8;
+        assert(option.isNothing);
+        option = newValue;
+        assert(!option.isNothing);
+        assert(option == newValue);
+    }
+    {
+        Option!int option1;
+        Option!int option2 = 5;
+        assert(option1.isNothing);
+        option1 = option2;
+        assert(!option1.isNothing);
+        assert(option1.get == 5);
+    }
+}
+
+// Constructs with a value passed by reference
+@nogc nothrow pure @safe unittest
+{
+    int i = 5;
+    assert(Option!int(i).get == 5);
+}
+
+// Moving
+@nogc nothrow pure @safe unittest
+{
+    static struct NotCopyable
+    {
+        @disable this(this);
+    }
+
+    static assert(is(typeof(Option!NotCopyable(NotCopyable()))));
+    // The value cannot be returned by reference because the default value
+    // isn't passed by reference
+    static assert(!is(typeof(Option!DisabledPostblit().or(NotCopyable()))));
+    {
+        NotCopyable notCopyable;
+        static assert(is(typeof(Option!NotCopyable().or(notCopyable))));
+    }
+    {
+        Option!NotCopyable option;
+        assert(option.isNothing);
+        option = NotCopyable();
+        assert(!option.isNothing);
+    }
+    {
+        Option!NotCopyable option;
+        assert(option.isNothing);
+        option = Option!NotCopyable(NotCopyable());
+        assert(!option.isNothing);
+    }
+}
+
+// Cast to bool is done before touching the encapsulated value
+@nogc nothrow pure @safe unittest
+{
+    assert(Option!bool(false));
+}
+
+// Option can be const
+@nogc nothrow pure @safe unittest
+{
+    assert((const Option!int(5)).get == 5);
+    assert((const Option!int()).or(5) == 5);
+}
+
+// Equality
+@nogc nothrow pure @safe unittest
+{
+    assert(Option!int() == Option!int());
+    assert(Option!int(0) != Option!int());
+    assert(Option!int(5) == Option!int(5));
+    assert(Option!int(5) == 5);
+    assert(Option!int(5) == cast(ubyte) 5);
+}
+
+// Returns default value
+@nogc nothrow pure @safe unittest
+{
+    {
+        int i = 5;
+        assert(((ref e) => e)(Option!int().or(i)) == 5);
+    }
 }
