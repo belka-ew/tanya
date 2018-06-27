@@ -171,24 +171,29 @@ package struct HashArray(alias hasher, K, V = void)
         this.length = that.length;
     }
 
+    @property size_t bucketCount() const
+    {
+        return primes[this.lengthIndex];
+    }
+
     /*
      * Returns bucket position for `hash`. `0` may mean the 0th position or an
      * empty `buckets` array.
      */
     size_t locateBucket(ref const Key key) const
     {
-        return this.array.length == 0
-             ? 0
-             : hasher(key) % primes[this.lengthIndex];
+        return this.array.length == 0 ? 0 : hasher(key) % bucketCount;
     }
 
     /*
-     * Inserts a key into an empty or deleted bucket. If the key is
-     * already in there, does nothing. Returns the bucket with the key.
+     * If the key doesn't already exists, returns an empty bucket the key can
+     * be inserted in and adjusts the element count. Otherwise returns the
+     * bucket containing the key.
      */
     ref Bucket insert(ref Key key)
     {
-        while ((this.lengthIndex + 1) != primes.length)
+        const newLengthIndex = this.lengthIndex + 1;
+        if (newLengthIndex != primes.length)
         {
             foreach (ref e; this.array[locateBucket(key) .. $])
             {
@@ -203,17 +208,29 @@ package struct HashArray(alias hasher, K, V = void)
                 }
             }
 
-            if (this.rehashToSize(this.lengthIndex + 1))
+            this.rehashToSize(newLengthIndex);
+        }
+
+        foreach (ref e; this.array[locateBucket(key) .. $])
+        {
+            if (e == key)
             {
-                ++this.lengthIndex;
+                return e;
+            }
+            else if (e.status != BucketStatus.used)
+            {
+                ++this.length;
+                return e;
             }
         }
-        this.array.insertBack(Bucket(key));
+
+        this.array.length = this.array.length + 1;
+        ++this.length;
         return this.array[$ - 1];
     }
 
     // Takes an index in the primes array.
-    bool rehashToSize(const size_t n)
+    void rehashToSize(const size_t n)
     in
     {
         assert(n < primes.length);
@@ -231,15 +248,15 @@ package struct HashArray(alias hasher, K, V = void)
                 {
                     if (e2.status != BucketStatus.used) // Insert the key
                     {
-                        e2 = e1;
+                        .move(e1, e2);
                         continue DataLoop;
                     }
                 }
-                return false; // Rehashing failed.
+                storage.insertBack(.move(e1));
             }
         }
         .move(storage, this.array);
-        return true;
+        this.lengthIndex = n;
     }
 
     void rehash(const size_t n)
@@ -252,9 +269,9 @@ package struct HashArray(alias hasher, K, V = void)
                 break;
             }
         }
-        if (this.rehashToSize(lengthIndex))
+        if (lengthIndex > this.lengthIndex)
         {
-            this.lengthIndex = lengthIndex;
+            this.rehashToSize(lengthIndex);
         }
     }
 

@@ -174,8 +174,6 @@ if (is(typeof(hasher(Key.init)) == size_t))
     invariant
     {
         assert(this.data.lengthIndex < primes.length);
-        assert(this.data.array.length == 0
-            || this.data.array.length == primes[this.data.lengthIndex]);
     }
 
     /**
@@ -440,6 +438,23 @@ if (is(typeof(hasher(Key.init)) == size_t))
         assert(hashTable.empty);
     }
 
+    /**
+     * Returns current bucket count in the container.
+     *
+     * Bucket count equals to the number of the elements can be saved in the
+     * container in the best case scenario for key distribution, i.d. every key
+     * has a unique hash value. In a worse case the bucket count can be less
+     * than the number of elements stored in the container.
+     *
+     * Returns: Current bucket count.
+     *
+     * See_Also: $(D_PSYMBOL rehash).
+     */
+    @property size_t bucketCount() const
+    {
+        return this.data.bucketCount;
+    }
+
     /// The maximum number of buckets the container can have.
     enum size_t maxBucketCount = primes[$ - 1];
 
@@ -645,18 +660,15 @@ if (is(typeof(hasher(Key.init)) == size_t))
      * Sets the number of buckets in the container to at least $(D_PARAM n)
      * and rearranges all the elements according to their hash values.
      *
-     * If $(D_PARAM n) is greater than the current $(D_PSYMBOL capacity)
+     * If $(D_PARAM n) is greater than the current $(D_PSYMBOL bucketCount)
      * and lower than or equal to $(D_PSYMBOL maxBucketCount), a rehash is
      * forced.
      *
      * If $(D_PARAM n) is greater than $(D_PSYMBOL maxBucketCount),
      * $(D_PSYMBOL maxBucketCount) is used instead as a new number of buckets.
      *
-     * If $(D_PARAM n) is equal to the current $(D_PSYMBOL capacity), rehashing
-     * is forced without resizing the container.
-     *
-     * If $(D_PARAM n) is lower than the current $(D_PSYMBOL capacity), the
-     * function may have no effect.
+     * If $(D_PARAM n) is less than or equal to the current
+     * $(D_PSYMBOL bucketCount), the function may have no effect.
      *
      * Rehashing is automatically performed whenever the container needs space
      * to insert new elements.
@@ -772,4 +784,28 @@ if (is(typeof(hasher(Key.init)) == size_t))
         assert(hashTable.capacity == 7);
     }
     testFunc(hashTable);
+}
+
+// Issue 53: https://github.com/caraus-ecms/tanya/issues/53
+@nogc nothrow pure @safe unittest
+{
+    {
+        HashTable!(uint, uint) hashTable;
+        foreach (uint i; 0 .. 14)
+        {
+            hashTable[i + 1] = i;
+        }
+        assert(hashTable.length == 14);
+    }
+    {
+        HashTable!(int, int) hashtable;
+
+        hashtable[1194250162] = 3;
+        hashtable[-1131293824] = 6;
+        hashtable[838100082] = 9;
+
+        hashtable.rehash(11);
+
+        assert(hashtable[-1131293824] == 6);
+    }
 }
