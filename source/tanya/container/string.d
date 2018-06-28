@@ -31,6 +31,7 @@ import std.algorithm.mutation : bringToFront, copy;
 import std.algorithm.searching;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
+import tanya.hash.lookup;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -1612,6 +1613,16 @@ struct String
         s = String("Казнить нельзя помиловать.");
         s.insertBefore(s[14 .. $], ',');
         assert(s == "Казнить, нельзя помиловать.");
+    }
+
+    /**
+     * Calculates the hash value for the string.
+     *
+     * Returns: Hash value for the string.
+     */
+    size_t toHash() const @nogc nothrow pure @safe
+    {
+        return hash(get);
     }
 
     mixin DefaultAllocator;

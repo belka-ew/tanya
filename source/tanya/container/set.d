@@ -15,7 +15,6 @@
  */
 module tanya.container.set;
 
-import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.container.entry;
 import tanya.hash.lookup;
@@ -460,6 +459,17 @@ if (is(typeof(hasher(T.init)) == size_t))
      *
      * Returns: Amount of new elements inserted.
      */
+    size_t insert(ref T value)
+    {
+        auto e = ((ref v) @trusted => &this.data.insert(v))(value);
+        if (e.status != BucketStatus.used)
+        {
+            e.moveKey(value);
+            return 1;
+        }
+        return 0;
+    }
+
     size_t insert(T value)
     {
         auto e = ((ref v) @trusted => &this.data.insert(v))(value);
@@ -551,12 +561,14 @@ if (is(typeof(hasher(T.init)) == size_t))
      * $(D_KEYWORD in) operator.
      *
      * Params:
+     *  U     = Type comparable with the element type, used for the lookup.
      *  value = Element to be searched for.
      *
      * Returns: $(D_KEYWORD true) if the given element exists in the container,
      *          $(D_KEYWORD false) otherwise.
      */
-    bool opBinaryRight(string op : "in")(auto ref inout(T) value) inout
+    bool opBinaryRight(string op : "in", U)(auto ref const U value) const
+    if (ifTestable!(U, a => T.init == a))
     {
         return value in this.data;
     }

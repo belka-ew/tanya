@@ -14,6 +14,7 @@
  */
 module tanya.container.hashtable;
 
+import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.container.entry;
 import tanya.hash.lookup;
@@ -155,7 +156,7 @@ struct Range(T)
  *  hasher = Hash function for $(D_PARAM Key).
  */
 struct HashTable(Key, Value, alias hasher = hash)
-if (is(typeof(hasher(Key.init)) == size_t))
+if (is(typeof(((Key k) => hasher(k))(Key.init)) == size_t))
 {
     private alias HashArray = .HashArray!(hasher, Key, Value);
     private alias Buckets = HashArray.Buckets;
@@ -468,14 +469,28 @@ if (is(typeof(hasher(Key.init)) == size_t))
      *
      * Returns: Just inserted element.
      */
-    ref Value opIndexAssign(Value value, Key key)
+    ref Value opIndexAssign()(auto ref Value value, auto ref Key key)
     {
         auto e = ((ref v) @trusted => &this.data.insert(v))(key);
         if (e.status != BucketStatus.used)
         {
-            e.key = key;
+            static if (__traits(isRef, key))
+            {
+                e.key = key;
+            }
+            else
+            {
+                e.moveKey(key);
+            }
         }
-        return e.kv.value = value;
+        static if (__traits(isRef, value))
+        {
+            return e.kv.value = value;
+        }
+        else
+        {
+            return e.kv.value = move(value);
+        }
     }
 
     ///
@@ -505,7 +520,7 @@ if (is(typeof(hasher(Key.init)) == size_t))
      *
      * Returns: The number of the inserted elements with a unique key.
      */
-    size_t insert(KeyValue keyValue)
+    size_t insert(ref KeyValue keyValue)
     {
         auto e = ((ref v) @trusted => &this.data.insert(v))(keyValue.key);
         size_t inserted;
@@ -515,6 +530,20 @@ if (is(typeof(hasher(Key.init)) == size_t))
             inserted = 1;
         }
         e.kv.value = keyValue.value;
+        return inserted;
+    }
+
+    /// ditto
+    size_t insert(KeyValue keyValue)
+    {
+        auto e = ((ref v) @trusted => &this.data.insert(v))(keyValue.key);
+        size_t inserted;
+        if (e.status != BucketStatus.used)
+        {
+            e.moveKey(keyValue.key);
+            inserted = 1;
+        }
+        move(keyValue.value, e.kv.value);
         return inserted;
     }
 
@@ -572,13 +601,15 @@ if (is(typeof(hasher(Key.init)) == size_t))
      * Find the element with the key $(D_PARAM key).
      *
      * Params:
+     *  T   = Type comparable with the key type, used for the lookup.
      *  key = The key to be find.
      *
      * Returns: The value associated with $(D_PARAM key).
      *
      * Precondition: Element with $(D_PARAM key) is in this hash table.
      */
-    ref Value opIndex(Key key)
+    ref Value opIndex(T)(auto ref const T key)
+    if (ifTestable!(T, a => Key.init == a))
     {
         const code = this.data.locateBucket(key);
 
@@ -634,12 +665,14 @@ if (is(typeof(hasher(Key.init)) == size_t))
      * Looks for $(D_PARAM key) in this hash table.
      *
      * Params:
+     *  T   = Type comparable with the key type, used for the lookup.
      *  key = The key to look for.
      *
      * Returns: $(D_KEYWORD true) if $(D_PARAM key) exists in the hash table,
      *          $(D_KEYWORD false) otherwise.
      */
-    bool opBinaryRight(string op : "in")(auto ref inout(Key) key) inout
+    bool opBinaryRight(string op : "in", T)(auto ref const T key) const
+    if (ifTestable!(T, a => Key.init == a))
     {
         return key in this.data;
     }
@@ -739,6 +772,9 @@ if (is(typeof(hasher(Key.init)) == size_t))
     static assert(is(HashTable!(string, int) a));
     static assert(is(const HashTable!(string, int)));
     static assert(isForwardRange!(HashTable!(string, int).Range));
+
+    static assert(is(HashTable!(int, int, (ref const int) => size_t.init)));
+    static assert(is(HashTable!(int, int, (int) => size_t.init)));
 }
 
 // Constructs by reference
@@ -808,4 +844,37 @@ if (is(typeof(hasher(Key.init)) == size_t))
 
         assert(hashtable[-1131293824] == 6);
     }
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct String
+    {
+        bool opEquals(string) const @nogc nothrow pure @safe
+        {
+            return true;
+        }
+
+        bool opEquals(ref const string) const @nogc nothrow pure @safe
+        {
+            return true;
+        }
+
+        bool opEquals(String) const @nogc nothrow pure @safe
+        {
+            return true;
+        }
+
+        bool opEquals(ref const String) const @nogc nothrow pure @safe
+        {
+            return true;
+        }
+
+        size_t toHash() const @nogc nothrow pure @safe
+        {
+            return 0;
+        }
+    }
+    static assert(is(typeof("asdf" in HashTable!(String, int)())));
+    static assert(is(typeof(HashTable!(String, int)()["asdf"])));
 }

@@ -82,12 +82,18 @@ package struct Bucket(K, V = void)
         }
     }
 
-    bool opEquals(ref inout(K) key) inout
+    void moveKey(ref K key)
+    {
+        move(key, this.key());
+        this.status = BucketStatus.used;
+    }
+
+    bool opEquals(T)(ref const T key) const
     {
         return this.status == BucketStatus.used && this.key == key;
     }
 
-    bool opEquals(ref inout(typeof(this)) that) inout
+    bool opEquals(ref const(typeof(this)) that) const
     {
         return key == that.key && this.status == that.status;
     }
@@ -180,7 +186,7 @@ package struct HashArray(alias hasher, K, V = void)
      * Returns bucket position for `hash`. `0` may mean the 0th position or an
      * empty `buckets` array.
      */
-    size_t locateBucket(ref const Key key) const
+    size_t locateBucket(T)(ref const T key) const
     {
         return this.array.length == 0 ? 0 : hasher(key) % bucketCount;
     }
@@ -304,7 +310,7 @@ package struct HashArray(alias hasher, K, V = void)
         return 0;
     }
 
-    bool opBinaryRight(string op : "in")(ref inout(Key) key) inout
+    bool opBinaryRight(string op : "in", T)(ref const T key) const
     {
         foreach (ref e; this.array[locateBucket(key) .. $])
         {
