@@ -140,6 +140,236 @@ struct Range(T)
 }
 
 /**
+ * Bidirectional range iterating over the key of a $(D_PSYMBOL HashTable).
+ *
+ * Params:
+ *  T = Type of the internal hash storage.
+ */
+struct ByKey(T)
+{
+    private alias Key = CopyConstness!(T, T.Key);
+    static if (isMutable!T)
+    {
+        private alias DataRange = T.array.Range;
+    }
+    else
+    {
+        private alias DataRange = T.array.ConstRange;
+    }
+    private DataRange dataRange;
+
+    @disable this();
+
+    private this(DataRange dataRange)
+    {
+        while (!dataRange.empty && dataRange.front.status != BucketStatus.used)
+        {
+            dataRange.popFront();
+        }
+        while (!dataRange.empty && dataRange.back.status != BucketStatus.used)
+        {
+            dataRange.popBack();
+        }
+        this.dataRange = dataRange;
+    }
+
+    @property ByKey save()
+    {
+        return this;
+    }
+
+    @property bool empty() const
+    {
+        return this.dataRange.empty();
+    }
+
+    @property void popFront()
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        do
+        {
+            this.dataRange.popFront();
+        }
+        while (!empty && dataRange.front.status != BucketStatus.used);
+    }
+
+    @property void popBack()
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        do
+        {
+            this.dataRange.popBack();
+        }
+        while (!empty && dataRange.back.status != BucketStatus.used);
+    }
+
+    @property ref inout(Key) front() inout
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    do
+    {
+        return this.dataRange.front.key;
+    }
+
+    @property ref inout(Key) back() inout
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        return this.dataRange.back.key;
+    }
+
+    ByKey opIndex()
+    {
+        return typeof(return)(this.dataRange[]);
+    }
+
+    ByKey!(const T) opIndex() const
+    {
+        return typeof(return)(this.dataRange[]);
+    }
+}
+
+/**
+ * Bidirectional range iterating over the key of a $(D_PSYMBOL HashTable).
+ *
+ * Params:
+ *  T = Type of the internal hash storage.
+ */
+struct ByValue(T)
+{
+    private alias Value = CopyConstness!(T, T.Value);
+    static if (isMutable!T)
+    {
+        private alias DataRange = T.array.Range;
+    }
+    else
+    {
+        private alias DataRange = T.array.ConstRange;
+    }
+    private DataRange dataRange;
+
+    @disable this();
+
+    private this(DataRange dataRange)
+    {
+        while (!dataRange.empty && dataRange.front.status != BucketStatus.used)
+        {
+            dataRange.popFront();
+        }
+        while (!dataRange.empty && dataRange.back.status != BucketStatus.used)
+        {
+            dataRange.popBack();
+        }
+        this.dataRange = dataRange;
+    }
+
+    @property ByValue save()
+    {
+        return this;
+    }
+
+    @property bool empty() const
+    {
+        return this.dataRange.empty();
+    }
+
+    @property void popFront()
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        do
+        {
+            this.dataRange.popFront();
+        }
+        while (!empty && dataRange.front.status != BucketStatus.used);
+    }
+
+    @property void popBack()
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        do
+        {
+            this.dataRange.popBack();
+        }
+        while (!empty && dataRange.back.status != BucketStatus.used);
+    }
+
+    @property ref inout(Value) front() inout
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    do
+    {
+        return this.dataRange.front.kv.value;
+    }
+
+    @property ref inout(Value) back() inout
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    do
+    {
+        return this.dataRange.back.kv.value;
+    }
+
+    ByValue opIndex()
+    {
+        return typeof(return)(this.dataRange[]);
+    }
+
+    ByValue!(const T) opIndex() const
+    {
+        return typeof(return)(this.dataRange[]);
+    }
+}
+
+/**
  * Hash table is a data structure that stores pairs of keys and values without
  * any particular order.
  *
@@ -171,6 +401,15 @@ if (is(typeof(((Key k) => hasher(k))(Key.init)) == size_t))
 
     /// ditto
     alias ConstRange = .Range!(const HashArray);
+
+    /// ditto
+    alias ByKey = .ByKey!(const HashArray);
+
+    /// ditto
+    alias ByValue = .ByValue!HashArray;
+
+    /// ditto
+    alias ConstByValue = .ByValue!(const HashArray);
 
     invariant
     {
@@ -741,6 +980,86 @@ if (is(typeof(((Key k) => hasher(k))(Key.init)) == size_t))
         assert(!hashTable[].empty);
         assert(hashTable[].front == hashTable.KeyValue("Iguanodon", 9));
         assert(hashTable[].back == hashTable.KeyValue("Iguanodon", 9));
+    }
+
+    /**
+     * Returns a bidirectional range that iterats over the keys of this
+     * $(D_PSYMBOL HashTable).
+     *
+     * This function always returns a $(D_KEYWORD const) range, since changing
+     * a key of a hash table would probably change its hash value and require
+     * rehashing.
+     *
+     * Returns: $(D_KEYWORD const) bidirectional range that iterates over the
+     *          keys of the container.
+     *
+     * See_Also: $(D_PSYMBOL byValue).
+     */
+    ByKey byKey() const
+    {
+        return typeof(return)(this.data.array[]);
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        hashTable["one"] = 1;
+        hashTable["two"] = 2;
+
+        auto byKey = hashTable.byKey();
+        assert(!byKey.empty);
+
+        assert(byKey.front == "one" || byKey.front == "two");
+        assert(byKey.back == "one" || byKey.back == "two");
+        assert(byKey.front != byKey.back);
+
+        byKey.popFront();
+        assert(byKey.front == byKey.back);
+
+        byKey.popBack();
+        assert(byKey.empty);
+    }
+
+    /**
+     * Returns a bidirectional range that iterats over the values of this
+     * $(D_PSYMBOL HashTable).
+     *
+     * Returns: A bidirectional range that iterates over the values of the
+     *          container.
+     *
+     * See_Also: $(D_PSYMBOL byKey).
+     */
+    ByValue byValue()
+    {
+        return typeof(return)(this.data.array[]);
+    }
+
+    /// ditto
+    ConstByValue byValue() const
+    {
+        return typeof(return)(this.data.array[]);
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        HashTable!(string, int) hashTable;
+        hashTable["one"] = 1;
+        hashTable["two"] = 2;
+
+        auto byValue = hashTable.byValue();
+        assert(!byValue.empty);
+
+        assert(byValue.front == 1 || byValue.front == 2);
+        assert(byValue.back == 1 || byValue.back == 2);
+        assert(byValue.front != byValue.back);
+
+        byValue.popFront();
+        assert(byValue.front == byValue.back);
+
+        byValue.popBack();
+        assert(byValue.empty);
     }
 }
 
