@@ -15,6 +15,7 @@
  */
 module tanya.format;
 
+import tanya.algorithm.comparison;
 import tanya.container.string;
 import tanya.encoding.ascii;
 import tanya.math;
@@ -24,6 +25,7 @@ import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
+import tanya.typecons : Tuple;
 
 // Returns the last part of buffer with converted number.
 package(tanya) char[] integral2String(T)(T number, return ref char[21] buffer)
@@ -917,6 +919,299 @@ private char[] errol1(const double value,
 
     assert(errol1(0.23432e304, buf, e) == "23432");
     assert(e == 304);
+}
+
+private struct uint128
+{
+    ulong[2] data;
+
+    this(ulong upper, ulong lower) @nogc nothrow pure @safe
+    {
+        this.data[0] = upper;
+        this.data[1] = lower;
+    }
+
+    this(ulong lower) @nogc nothrow pure @safe
+    {
+        this.data[1] = lower;
+    }
+
+    this(double value) @nogc nothrow pure @safe
+    {
+        FloatBits!double bits = { floating: value };
+        const ulong unbiased = bits.integral >> 52;
+
+        this((bits.integral & 0xfffffffffffff) + 0x10000000000000);
+        this = this << (unbiased - 1075);
+    }
+
+    ref uint128 opUnary(string op : "++")()
+    {
+        ++this.data[1];
+        if (this.data[1] == 0)
+        {
+            ++this.data[0];
+        }
+        return this;
+    }
+
+    uint128 opBinary(string op : "+")(uint128 rhs) const
+    {
+        uint128 result;
+        result.data[1] = this.data[1] + rhs.data[1];
+        result.data[0] = this.data[0] + rhs.data[0];
+
+        if (result.data[1] < this.data[1])
+        {
+            ++result.data[0];
+        }
+        return result;
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert((uint128() + uint128(1)) == uint128(1));
+        assert((uint128(ulong.max) + uint128(1)) == uint128(1, 0));
+    }
+
+    uint128 opBinary(string op : "-")(uint128 rhs) const
+    {
+        uint128 result;
+        result.data[1] = this.data[1] - rhs.data[1];
+        result.data[0] = this.data[0] - rhs.data[0];
+
+        if (result.data[1] > this.data[1])
+        {
+             --result.data[0];
+        }
+        return result;
+    }
+
+    ref uint128 opUnary(string op : "--")()
+    {
+        --this.data[1];
+        if (this.data[1] == ulong.max)
+        {
+             --this.data[0];
+        }
+        return this;
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert((uint128(1, 0) - uint128(1)) == uint128(ulong.max));
+    }
+
+    uint128 opBinary(string op : "&")(ulong rhs) const
+    {
+        return uint128(this.data[1] & rhs);
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert((uint128(0xf0f0f, 0xf0f) & 0xf0f) == uint128(0xf0f));
+    }
+
+    uint128 opBinary(string op : ">>")(ulong shift) const
+    {
+        if (shift == 0)
+        {
+            return this;
+        }
+        else if (shift < 64)
+        {
+            const ulong lower = (this.data[0] << (64 - shift))
+                              + (this.data[1] >> shift);
+            return uint128(this.data[0] >> shift, lower);
+        }
+        else if (shift < 128)
+        {
+            return uint128((this.data[0] >> (shift - 64)));
+        }
+        return uint128();
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert((uint128(ulong.max, ulong.max) >> 128) == uint128());
+        assert((uint128(1, 2) >> 64) == uint128(1));
+        assert((uint128(1, 2) >> 0) == uint128(1, 2));
+        assert((uint128(1, 0) >> 1) == uint128(0x8000000000000000));
+        assert((uint128(2, 0) >> 65) == uint128(1));
+    }
+
+    uint128 opBinary(string op : "<<")(ulong shift) const
+    {
+        if (shift == 0)
+        {
+            return this;
+        }
+        else if (shift < 64)
+        {
+            const ulong upper = (this.data[0] << shift)
+                              + (this.data[1] >> (64 - shift));
+            return uint128(upper, this.data[1] << shift);
+        }
+        else if (shift < 128)
+        {
+            return uint128(this.data[1] << (shift - 64), 0);
+        }
+        return uint128();
+    }
+
+    bool opEquals(uint128 that) const @nogc nothrow pure @safe
+    {
+        return equal(this.data[], that.data[]);
+    }
+
+    int opCmp(uint128 that) const @nogc nothrow pure @safe
+    {
+        if (this.data[0] > that.data[0]
+         || (this.data[0] == that.data[0] && this.data[1] > that.data[1]))
+        {
+            return 1;
+        }
+        else if (this.data[0] == that.data[0] && this.data[1] == that.data[1])
+        {
+            return 0;
+        }
+        return -1;
+    }
+
+    bool opEquals(ulong that) const @nogc nothrow pure @safe
+    {
+        return this.data[0] == 0 && this.data[1] == that;
+    }
+
+    int opCmp(ulong that) const @nogc nothrow pure @safe
+    {
+        if (this.data[0] != 0 || (this.data[0] == 0 && this.data[1] > that))
+        {
+            return 1;
+        }
+        return (this.data[1] == that) ? 0 : -1;
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(uint128(1, 2) >= uint128(1, 2));
+        assert(uint128(1, ulong.max) < uint128(2, 0));
+        assert(uint128(40) < uint128(50));
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(uint128(1, 0) != uint128(1));
+        assert(uint128(1, 2) == uint128(1, 2));
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(uint128(1, 2) <= uint128(1, 2));
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(uint128(1, 2) <= uint128(1, 2));
+        assert(uint128(2, 0) > uint128(1, ulong.max));
+        assert(uint128(50) > uint128(40));
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(uint128(1, 2) >= uint128(1, 2));
+    }
+
+    private @property ubyte bits() const @nogc nothrow pure @safe
+    {
+        ubyte count;
+        if (this.data[0] > 0)
+        {
+            count = 64;
+            for (ulong digit = this.data[0]; digit > 0; digit >>= 1)
+            {
+                ++count;
+            }
+        }
+        else
+        {
+            for (ulong digit = this.data[1]; digit > 0; digit >>= 1)
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    @nogc nothrow pure @safe unittest
+    {
+        assert(uint128().bits == 0);
+        assert(uint128(1, 0).bits == 65);
+    }
+
+    T opCast(T : bool)()
+    {
+        return this.data[0] != 0 || this.data[1] != 0;
+    }
+
+    T opCast(T : ulong)()
+    {
+        return this.data[1];
+    }
+
+    Tuple!(uint128, uint128) divMod(ulong rhs) const @nogc nothrow pure @safe
+    in
+    {
+        assert(rhs != uint128(), "Division by 0");
+    }
+    do
+    {
+        if (rhs == 1)
+        {
+            return typeof(return)(this, uint128());
+        }
+        else if (this == rhs)
+        {
+            return typeof(return)(uint128(1), uint128());
+        }
+        else if (this == uint128() || this < rhs)
+        {
+            return typeof(return)(uint128(), this);
+        }
+
+        typeof(return) result;
+        for (ubyte x = this.bits; x > 0; --x)
+        {
+            result[0]  = result[0] << 1;
+            result[1] = result[1] << 1;
+
+            if ((this >> (x - 1U)) & 1)
+            {
+                ++result[1];
+            }
+
+            if (result[1] >= rhs)
+            {
+                if (result[1].data[1] < rhs)
+                {
+                    --result[1].data[0];
+                }
+                result[1].data[1] -= rhs;
+                ++result[0];
+            }
+        }
+        return result;
+    }
+
+    uint128 opBinary(string op : "/")(ulong rhs)
+    {
+        return divMod(rhs)[0];
+    }
+
+    uint128 opBinary(string op : "%")(ulong rhs) const
+    {
+        return divMod(rhs)[1];
+    }
 }
 
 /*
