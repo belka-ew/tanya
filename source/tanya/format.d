@@ -843,17 +843,13 @@ private char[] errol1(const double value,
     const double factor = t.base / (2.0 + epsilon);
 
     // Upper narrow boundary
-    FloatBits!double neighbour = { value };
-    --neighbour.integral;
     auto nMinus = HP(scaledInput.base, scaledInput.offset
-                                     + (neighbour.floating - value) * factor);
+                                     + (previous(value) - value) * factor);
     nMinus.normalize();
 
     // Lower narrow boundary
-    neighbour.floating = value;
-    ++neighbour.integral;
     auto nPlus = HP(scaledInput.base, scaledInput.offset
-                                    + (neighbour.floating - value) * factor);
+                                    + (next(value) - value) * factor);
     nPlus.normalize();
 
     // Phase 3: Exponent Rectification
@@ -911,7 +907,7 @@ private char[] errol1(const double value,
 
 @nogc nothrow pure @safe unittest
 {
-	char[512] buf;
+    char[512] buf;
     int e;
 
     assert(errol1(18.51234334, buf, e) == "1851234334");
@@ -1214,6 +1210,142 @@ private struct uint128
     }
 }
 
+private double next(const double value) @nogc nothrow pure @safe
+{
+    FloatBits!double bits = { floating: value };
+    ++bits.integral;
+    return bits.floating;
+}
+
+private double previous(const double value) @nogc nothrow pure @safe
+{
+    FloatBits!double bits = { floating: value };
+    --bits.integral;
+    return bits.floating;
+}
+
+private uint128 raise2ToExp(double value) @nogc nothrow pure @safe
+{
+    FloatBits!double bits = { floating: value };
+
+    return uint128(1) << ((bits.integral >> 52) - 1023);
+}
+
+private int indexMismatch(ulong low, ulong high) @nogc nothrow pure @safe
+{
+    enum ulong power10 = 10000000000U;
+    const ulong a = low / power10;
+    const ulong b = high / power10;
+    int index;
+
+    if (a != b)
+    {
+        index = 10;
+        low = a;
+        high = b;
+    }
+
+    for (;; ++index)
+    {
+        low /= 10;
+        high /= 10;
+
+        if (low == high)
+        {
+            return index;
+        }
+    }
+}
+
+private char[] errol2(double value,
+                      return ref char[512] buffer,
+                      out int exponent) @nogc nothrow pure @safe
+in
+{
+    assert(value > 9.007199254740992e15 && value < 3.40282366920938e38);
+}
+do
+{
+    auto v = uint128(value);
+    auto leftBoundary = v + raise2ToExp((value - previous(value)) / 2.0);
+    auto rightBoundary = v - raise2ToExp((next(value) - value) / 2.0);
+    FloatBits!double bits = { floating: value };
+
+    if (bits.integral & 0x1)
+    {
+        --leftBoundary;
+    }
+    else
+    {
+        --rightBoundary;
+    }
+
+    enum ulong power19 = cast(ulong) 1e19;
+
+    auto qr = leftBoundary.divMod(power19);
+    auto low = cast(ulong) qr[1];
+    const lowFactor = cast(ulong) (qr[0] % power19);
+
+    qr = rightBoundary.divMod(power19);
+    auto high = cast(ulong) qr[1];
+    const highFactor = cast(ulong) (qr[0] % power19);
+    size_t digitIndex;
+
+    if (lowFactor != highFactor)
+    {
+        low = lowFactor;
+        high = highFactor;
+        v = v / cast(ulong) 1e18;
+    }
+    else
+    {
+        digitIndex = 1;
+    }
+
+    int mismatch = indexMismatch(low, high);
+    ulong tens = 1;
+    for (; digitIndex < mismatch; ++digitIndex)
+    {
+        tens *= 10;
+    }
+    const midpoint = cast(ulong) (v / tens);
+
+    if (lowFactor != highFactor)
+    {
+        mismatch += 19;
+    }
+
+    char[21] intBuffer;
+    auto intSlice = integral2String(midpoint, intBuffer);
+
+    if (mismatch != 0)
+    {
+        if (intSlice[$ - 1] >= '5')
+        {
+            ++intSlice[$ - 2];
+        }
+        intSlice.popBack();
+    }
+    const begin = buffer.length - intSlice.length;
+    copy(intSlice, buffer[begin .. $]);
+
+    exponent = cast(int) (intSlice.length + mismatch);
+
+    return buffer[begin .. $];
+}
+
+@nogc nothrow pure @safe unittest
+{
+    char[512] buf;
+    int e;
+
+    assert(errol2(9.007199254740994e15, buf, e) == "9007199254740994");
+    assert(e == 16);
+
+    assert(errol2(9.007199254740994e25, buf, e) == "9007199254740994");
+    assert(e == 26);
+}
+
 /*
  * Given a float value, returns the significant bits, and the position of the
  * decimal point in $(D_PARAM exponent). +/-Inf and NaN are specified by
@@ -1254,7 +1386,14 @@ private const(char)[] real2String(double value,
         return buffer;
     }
 
-    return errol1(value, buffer, exponent);
+    if (value > 9.007199254740992e15 && value < 3.40282366920938e38)
+    {
+        return errol2(value, buffer, exponent);
+    }
+    else
+    {
+        return errol1(value, buffer, exponent);
+    }
 }
 
 private void formatReal(T)(ref T arg, ref String result)
