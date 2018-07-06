@@ -500,7 +500,7 @@ struct String
         }
     }
 
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String(0, 'K');
         assert(s.length == 0);
@@ -580,16 +580,10 @@ struct String
      * Params:
      *  chr = The character should be inserted.
      *
-     * Returns: The number of bytes inserted.
-     *
-     * Throws: $(D_PSYMBOL UTFException).
+     * Returns: The number of bytes inserted (1).
      */
-    size_t insertBack(const char chr) @nogc pure @trusted
+    size_t insertBack(char chr) @nogc nothrow pure @trusted
     {
-        if ((chr & 0x80) != 0)
-        {
-            throw defaultAllocator.make!UTFException("Invalid UTF-8 character");
-        }
         reserve(length + 1);
 
         *(data + length) = chr;
@@ -653,8 +647,6 @@ struct String
      *  str = String should be inserted.
      *
      * Returns: The number of bytes inserted.
-     *
-     * Throws: $(D_PSYMBOL UTFException).
      */
     size_t insertBack(R)(R str) @trusted
     if (!isInfinite!R
@@ -674,46 +666,18 @@ struct String
             this.length_ = size;
             return str.length;
         }
+        else static if (isInstanceOf!(ByCodeUnit, R))
+        {
+            str.get.copy(this.data[length .. size]);
+            this.length_ = size;
+            return str.length;
+        }
         else
         {
             size_t insertedLength;
-            while (!str.empty)
+            foreach (c; str)
             {
-                ubyte expectedLength;
-                if ((str.front & 0x80) == 0x00)
-                {
-                    expectedLength = 1;
-                }
-                else if ((str.front & 0xe0) == 0xc0)
-                {
-                    expectedLength = 2;
-                }
-                else if ((str.front & 0xf0) == 0xe0)
-                {
-                    expectedLength = 3;
-                }
-                else if ((str.front & 0xf8) == 0xf0)
-                {
-                    expectedLength = 4;
-                }
-                else
-                {
-                    throw defaultAllocator.make!UTFException("Invalid UTF-8 sequeunce");
-                }
-                size = length + expectedLength;
-                reserve(size);
-
-                for (; expectedLength > 0; --expectedLength)
-                {
-                    if (str.empty)
-                    {
-                        throw defaultAllocator.make!UTFException("Invalid UTF-8 sequeunce");
-                    }
-                    *(data + length) = str.front;
-                    str.popFront();
-                }
-                insertedLength += expectedLength;
-                this.length_ = size;
+                insertedLength += insertBack(c);
             }
             return insertedLength;
         }
@@ -829,7 +793,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         String s;
         assert(s.capacity == 0);
@@ -870,7 +834,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Die Alten lasen laut.");
         assert(s.capacity == 21);
@@ -895,7 +859,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("In allem Schreiben ist Schamlosigkeit.");
         assert(s.capacity == 38);
@@ -992,7 +956,7 @@ struct String
      *
      * Returns: Null-terminated string.
      */
-    const(char)* toStringz() @nogc nothrow pure
+    const(char)* toStringz() @nogc nothrow pure @system
     {
         reserve(length + 1);
         this.data[length] = '\0';
@@ -1000,7 +964,7 @@ struct String
     }
 
     ///
-    @nogc pure unittest
+    @nogc nothrow pure @system unittest
     {
         auto s = String("C string.");
         assert(s.toStringz()[0] == 'C');
@@ -1019,7 +983,7 @@ struct String
     alias opDollar = length;
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Piscis primuin a capite foetat.");
         assert(s.length == 31);
@@ -1045,7 +1009,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Alea iacta est.");
         assert(s[0] == 'A');
@@ -1068,7 +1032,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Plutarchus");
         auto r = s[];
@@ -1087,7 +1051,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = const String("Was ich vermag, soll gern geschehen. Goethe");
         auto r1 = s[];
@@ -1163,7 +1127,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         String s;
         assert(s.empty);
@@ -1208,7 +1172,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Vladimir Soloviev");
         auto r = s[9 .. $];
@@ -1272,7 +1236,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Черная, потом пропахшая выть!");
         s = String("Как мне тебя не ласкать, не любить?");
@@ -1300,10 +1264,11 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Оловом светится лужная голь...");
         s = "Грустная песня, ты - русская боль.";
+        assert(s == "Грустная песня, ты - русская боль.");
     }
 
     /**
@@ -1345,7 +1310,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         assert(String("Голубая кофта.") < String("Синие глаза."));
         assert(String("Никакой я правды") < String("милой не сказал")[]);
@@ -1398,7 +1363,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         assert(String("Милая спросила:") != String("Крутит ли метель?"));
         assert(String("Затопить бы печку,") != String("постелить постель.")[]);
@@ -1431,7 +1396,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("alea iacta est.");
 
@@ -1456,7 +1421,7 @@ struct String
         return opSliceAssign(value, 0, length);
     }
 
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s1 = String("Buttercup");
         auto s2 = String("Cap");
@@ -1470,7 +1435,7 @@ struct String
         return opSliceAssign(value, 0, length);
     }
 
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s1 = String("Wow");
         s1[] = 'a';
@@ -1483,7 +1448,7 @@ struct String
         return opSliceAssign(value, 0, length);
     }
 
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s1 = String("ö");
         s1[] = "oe";
@@ -1575,7 +1540,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Казнить нельзя помиловать.");
         s.insertAfter(s[0 .. 27], ",");
@@ -1604,7 +1569,7 @@ struct String
     }
 
     ///
-    @nogc pure @safe unittest
+    @nogc nothrow pure @safe unittest
     {
         auto s = String("Казнить нельзя помиловать.");
         s.insertBefore(s[27 .. $], ",");
@@ -1628,8 +1593,8 @@ struct String
     mixin DefaultAllocator;
 }
 
-// Postblit works.
-@nogc pure @safe unittest
+// Postblit works
+@nogc nothrow pure @safe unittest
 {
     void internFunc(String arg)
     {
@@ -1648,7 +1613,7 @@ struct String
     topFunc(String("asdf"));
 }
 
-// Const range produces mutable ranges.
+// Const range produces mutable ranges
 @nogc pure @safe unittest
 {
     auto s = const String("И снизу лед, и сверху - маюсь между.");
@@ -1674,7 +1639,7 @@ struct String
     }
 }
 
-// Can pop multibyte characters.
+// Can pop multibyte characters
 @nogc pure @safe unittest
 {
     auto s = String("\U00024B62\U00002260");
@@ -1690,4 +1655,13 @@ struct String
     range.popFront();
     s[$ - 3] = 0xf0;
     assertThrown!UTFException(&(range.popFront));
+}
+
+// Inserts own char range correctly
+@nogc nothrow pure @safe unittest
+{
+    auto s1 = String(`ü`);
+    String s2;
+    s2.insertBack(s1[]);
+    assert(s1 == s2);
 }
