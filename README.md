@@ -32,6 +32,8 @@ types.
 * `encoding`: This package provides tools to work with text encodings.
 * `exception`: Common exceptions and errors.
 * `format`: Formatting and conversion functions.
+* `functional`: Functions that manipulate other functions and their argument
+lists.
 * `hash`: Hash algorithms.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).
@@ -172,7 +174,8 @@ parameter is used)
 
 | DMD     | GCC       |
 |:-------:|:---------:|
-| 2.080.1 | *master*  |
+| 2.081.0 | *master*  |
+| 2.080.1 |           |
 | 2.079.1 |           |
 | 2.078.3 |           |
 | 2.077.1 |           |
