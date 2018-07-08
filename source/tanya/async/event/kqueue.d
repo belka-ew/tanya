@@ -84,12 +84,12 @@ enum : short
 
 struct kevent_t
 {
-    uintptr_t    ident; /* identifier for this event */
-    short       filter; /* filter for event */
-    ushort       flags;
-    uint        fflags;
-    intptr_t      data;
-    void        *udata; /* opaque user data identifier */
+    uintptr_t ident; // Identifier for this event
+    short filter; // Filter for event
+    ushort flags;
+    uint fflags;
+    intptr_t data;
+    void* udata; // Opaque user data identifier
 }
 
 enum
@@ -168,7 +168,7 @@ final class KqueueLoop : SelectorLoop
                filter,
                flags,
                0U,
-               0L,
+               0,
                null);
         ++changeCount;
     }
