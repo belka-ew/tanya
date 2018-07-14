@@ -1748,7 +1748,37 @@ private ref String printToString(string fmt, Args...)(return ref String result,
 package(tanya) String format(string fmt, Args...)(auto ref Args args)
 {
     String formatted;
-    return printToString!fmt(formatted, args);
+
+    alias Specs = ParseFmt!fmt;
+    enum bool FormatSpecFilter(alias spec) = is(typeof(spec) == FormatSpec);
+    static assert((Filter!(FormatSpecFilter, ParseFmt!fmt)).length == Args.length,
+                  "Number of the arguments doesn't match the format strign");
+
+    foreach (spec; Specs)
+    {
+        static if (FormatSpecFilter!spec)
+        {
+            printToString!"{}"(formatted, args);
+        }
+        else static if (isSomeString!(typeof(spec)))
+        {
+            formatted.insertBack(spec);
+        }
+        else
+        {
+            static assert(false, "Format string parsed incorrectly");
+        }
+    }
+    return formatted;
+}
+
+@nogc nothrow pure @safe unittest
+{
+    assert(format!"Without arguments"() == "Without arguments");
+    assert(format!""().length == 0);
+
+    static assert(!is(typeof(format!"{}"())));
+    static assert(!is(typeof(format!"{j}"(5))));
 }
 
 // Enum.
@@ -2007,14 +2037,18 @@ private template ParseFmt(string fmt, size_t pos = 0)
         else
         {
             enum size_t pos = specPosition!(fmt[1 .. $], '}') + 1;
-            static if (pos < fmt.length)
+            static if (pos >= fmt.length)
+            {
+                static assert(false, "Enclosing '}' is missing");
+            }
+            else static if (pos == 1)
             {
                 alias ParseFmt = AliasSeq!(FormatSpec(),
                                            ParseFmt!(fmt[pos + 1 .. $], pos + 1));
             }
             else
             {
-                static assert(false, "Enclosing '}' is missing");
+                static assert(false, "Argument formatting isn't supported");
             }
         }
     }
@@ -2034,4 +2068,7 @@ private template ParseFmt(string fmt, size_t pos = 0)
     static assert(ParseFmt!"asdf"[0] == "asdf");
 
     static assert(ParseFmt!"{}".length == 1);
+
+    static assert(ParseFmt!"aasdf{}qwer"[2] == "qwer");
+    static assert(ParseFmt!"{}{}".length == 2);
 }
