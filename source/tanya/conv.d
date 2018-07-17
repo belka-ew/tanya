@@ -282,8 +282,8 @@ final class ConvException : Exception
  *
  * The function doesn't handle the sign (+ or -) or number prefixes (like 0x).
  */
-package T readIntegral(T, R)(ref R range, ubyte base = 10)
-if (isForwardRange!R
+package T readIntegral(T, R)(ref R range, const ubyte base = 10)
+if (isInputRange!R
  && isSomeChar!(ElementType!R)
  && isIntegral!T
  && isUnsigned!T)
@@ -301,9 +301,9 @@ do
     }
 
     T n;
-    while (n <= boundary)
+    int digit;
+    do
     {
-        int digit;
         if (range.front >= 'a')
         {
             digit = range.front - 'W';
@@ -332,17 +332,30 @@ do
             return n;
         }
     }
-    if (range.length > 1)
+    while (n < boundary);
+
+    if (range.front >= 'a')
+    {
+        digit = range.front - 'W';
+    }
+    else if (range.front >= 'A')
+    {
+        digit = range.front - '7';
+    }
+    else if (range.front >= '0')
+    {
+        digit = range.front - '0';
+    }
+    else
     {
         return n;
     }
-
-    int digit = range.front - '0';
     if (n > cast(T) ((T.max - digit) / base))
     {
         return n;
     }
     n = cast(T) (n * base + digit);
+    range.popFront();
 
     return n;
 }
@@ -408,6 +421,14 @@ do
     string number = "FF";
     assert(readIntegral!ubyte(number, 16) == 255);
     assert(number.empty);
+}
+
+// Handles small overflows
+@nogc nothrow pure @safe unittest
+{
+    string number = "256";
+    assert(readIntegral!ubyte(number, 10) == 25);
+    assert(number.front == '6');
 }
 
 /**
