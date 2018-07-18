@@ -875,3 +875,135 @@ if (is(Unqual!To == String))
     static assert(is(typeof((const String("true")).to!bool)));
     static assert(is(typeof(false.to!(const String) == "false")));
 }
+
+/**
+ * Converts a stringish range to an integral value.
+ *
+ * Params:
+ *  From = Source type.
+ *  To   = Target type.
+ *  from = Source value.
+ *
+ * Returns: $(D_PARAM from) converted to $(D_PARAM To).
+ *
+ * Throws: $(D_PSYMBOL ConvException) if $(D_PARAM from) doesn't contain an
+ *         integral value.
+ */
+To to(To, From)(auto ref From from)
+if (isInputRange!From && isSomeChar!(ElementType!From) && isIntegral!To)
+{
+    if (from.empty)
+    {
+        throw make!ConvException(defaultAllocator, "Input range is empty");
+    }
+
+    static if (isSigned!To)
+    {
+        bool negative;
+    }
+    if (from.front == '-')
+    {
+        static if (isUnsigned!To)
+        {
+            throw make!ConvException(defaultAllocator,
+                                     "Negative integer overflow");
+        }
+        else
+        {
+            negative = true;
+            from.popFront();
+        }
+    }
+
+    if (from.empty)
+    {
+        throw make!ConvException(defaultAllocator, "Input range is empty");
+    }
+
+    ubyte base = 10;
+    if (from.front == '0')
+    {
+        from.popFront();
+        if (from.empty)
+        {
+            return To.init;
+        }
+        else if (from.front == 'x' || from.front == 'X')
+        {
+            base = 16;
+            from.popFront();
+        }
+        else if (from.front == 'b' || from.front == 'B')
+        {
+            base = 2;
+            from.popFront();
+        }
+        else
+        {
+            base = 8;
+        }
+    }
+
+    auto unsigned = readIntegral!(Unsigned!To, From)(from, base);
+    if (!from.empty)
+    {
+        throw make!ConvException(defaultAllocator, "Integer overflow");
+    }
+
+    static if (isSigned!To)
+    {
+        if (negative)
+        {
+            auto predecessor = cast(Unsigned!To) (unsigned - 1);
+            if (predecessor > cast(Unsigned!To) To.max)
+            {
+                throw make!ConvException(defaultAllocator,
+                                         "Negative integer overflow");
+            }
+            return cast(To) (-(cast(Largest!(To, ptrdiff_t)) predecessor) - 1);
+        }
+        else if (unsigned > cast(Unsigned!To) To.max)
+        {
+            throw make!ConvException(defaultAllocator, "Integer overflow");
+        }
+        else
+        {
+            return unsigned;
+        }
+    }
+    else
+    {
+        return unsigned;
+    }
+}
+
+///
+@nogc pure @safe unittest
+{
+    assert("1234".to!uint() == 1234);
+    assert("1234".to!int() == 1234);
+    assert("1234".to!int() == 1234);
+
+    assert("0".to!int() == 0);
+    assert("-0".to!int() == 0);
+
+    assert("0x10".to!int() == 16);
+    assert("0X10".to!int() == 16);
+    assert("-0x10".to!int() == -16);
+
+    assert("0b10".to!int() == 2);
+    assert("0B10".to!int() == 2);
+    assert("-0b10".to!int() == -2);
+
+    assert("010".to!int() == 8);
+    assert("-010".to!int() == -8);
+
+
+    assert("-128".to!byte == cast(byte) -128);
+
+    assertThrown!ConvException(() => "".to!int);
+    assertThrown!ConvException(() => "-".to!int);
+    assertThrown!ConvException(() => "-5".to!uint);
+    assertThrown!ConvException(() => "-129".to!byte);
+    assertThrown!ConvException(() => "256".to!ubyte);
+}
