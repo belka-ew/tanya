@@ -1233,7 +1233,7 @@ private uint128 raise2ToExp(double value) @nogc nothrow pure @safe
 
 private int indexMismatch(ulong low, ulong high) @nogc nothrow pure @safe
 {
-    enum ulong power10 = 10000000000U;
+    enum ulong power10 = 10000000000UL;
     const ulong a = low / power10;
     const ulong b = high / power10;
     int index;
@@ -1346,6 +1346,83 @@ do
     assert(e == 26);
 }
 
+private char[] errolFixed(double value,
+                          return ref char[512] buffer,
+                          out int exponent) @nogc nothrow pure @safe
+in
+{
+    assert(value >= 16.0 && value <= 9.007199254740992e15);
+}
+do
+{
+    auto decimal = cast(ulong) value;
+    auto n = cast(double) decimal;
+
+    double midpoint = value - n;
+    double leftBoundary = (previous(value) - n + midpoint) / 2.0;
+    double rightBoundary = (next(value) - n + midpoint) / 2.0;
+
+    char[21] intBuffer;
+    auto intSlice = integral2String(decimal, intBuffer);
+    copy(intSlice, buffer);
+    exponent = cast(int) intSlice.length;
+
+    size_t position = exponent;
+    if (midpoint != 0.0)
+    {
+        while (midpoint != 0.0)
+        {
+            leftBoundary *= 10.0;
+            const leftDigit = cast(ubyte) leftBoundary;
+            leftBoundary -= leftDigit;
+
+            midpoint *= 10.0;
+            const middleDigit = cast(ubyte) midpoint;
+            midpoint -= middleDigit;
+
+            rightBoundary *= 10.0;
+            const rightDigit = cast(ubyte) rightBoundary;
+            rightBoundary -= rightDigit;
+
+            buffer[position++] = cast(char) (middleDigit + '0');
+
+            if (rightDigit != leftDigit || position > 50)
+            {
+                break;
+            }
+        }
+
+        if (midpoint > 0.5
+         || ((midpoint == 0.5) && (buffer[position - 1] & 0x1)))
+        {
+            ++buffer[position - 1];
+        }
+    }
+    else
+    {
+        for (; buffer[position - 1] == '0'; --position)
+        {
+            buffer[position - 1] = '\0';
+        }
+    }
+
+    return buffer[0 .. position];
+}
+
+@nogc nothrow pure @safe unittest
+{
+    char[512] num;
+    int exponent;
+    {
+        assert(errolFixed(16.0, num, exponent) == "16");
+        assert(exponent == 2);
+    }
+    {
+        assert(errolFixed(38234.1234, num, exponent) == "382341234");
+        assert(exponent == 5);
+    }
+}
+
 /*
  * Given a float value, returns the significant bits, and the position of the
  * decimal point in $(D_PARAM exponent). +/-Inf and NaN are specified by
@@ -1371,22 +1448,23 @@ private const(char)[] real2String(double value,
         exponent = special;
         return (bits.integral & ((1UL << 52) - 1)) != 0 ? "NaN" : "Inf";
     }
-
-    if (exponent == 0 && (bits.integral << 1) == 0) // Is zero?
+    else if (exponent == 0 && (bits.integral << 1) == 0) // Is zero?
     {
         exponent = 1;
         buffer[0] = '0';
         return buffer[0 .. 1];
     }
-
-    if (value == double.max)
+    else if (value == double.max)
     {
         copy("17976931348623157", buffer);
         exponent = 309;
         return buffer;
     }
-
-    if (value > 9.007199254740992e15 && value < 3.40282366920938e38)
+    else if (value >= 16.0 && value <= 9.007199254740992e15)
+    {
+        return errolFixed(value, buffer, exponent);
+    }
+    else if (value > 9.007199254740992e15 && value < 3.40282366920938e38)
     {
         return errol2(value, buffer, exponent);
     }
