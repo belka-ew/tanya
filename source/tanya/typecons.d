@@ -19,7 +19,7 @@ module tanya.typecons;
 
 import tanya.algorithm.mutation;
 import tanya.format;
-import tanya.meta.metafunction : AliasSeq, AliasTuple = Tuple, Map;
+import tanya.meta.metafunction;
 import tanya.meta.trait;
 
 /**
@@ -49,13 +49,13 @@ template Tuple(Specs...)
             static if (is(typeof(Specs[1]) == string))
             {
                 alias parseSpecs
-                    = AliasSeq!(AliasTuple!(Specs[0], Specs[1]),
+                    = AliasSeq!(Pack!(Specs[0], Specs[1]),
                                 parseSpecs!(fieldCount + 1, Specs[2 .. $]));
             }
             else
             {
                 alias parseSpecs
-                    = AliasSeq!(AliasTuple!(Specs[0]),
+                    = AliasSeq!(Pack!(Specs[0]),
                                 parseSpecs!(fieldCount + 1, Specs[1 .. $]));
             }
         }

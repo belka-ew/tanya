@@ -116,7 +116,7 @@ if (Args.length > 0 && __traits(isTemplate, pred))
 }
 
 /**
- * Zips one or more $(D_PSYMBOL Tuple)s with $(D_PARAM f).
+ * Zips one or more $(D_PSYMBOL Pack)s with $(D_PARAM f).
  *
  * Given $(D_PARAM f) and tuples t1, t2, ..., tk, where tk[i] denotes the
  * $(I i)-th element of the tuple $(I k)-th tuple, $(D_PSYMBOL ZipWith)
@@ -129,7 +129,7 @@ if (Args.length > 0 && __traits(isTemplate, pred))
  * f(tk[0], tk[1], ... tk[i]),
  * ---
  *
- * $(D_PSYMBOL ZipWith) begins with the first elements from $(D_PARAM Tuples)
+ * $(D_PSYMBOL ZipWith) begins with the first elements from $(D_PARAM Packs)
  * and applies $(D_PARAM f) to them, then it takes the second
  * ones and does the same, and so on.
  *
@@ -140,16 +140,17 @@ if (Args.length > 0 && __traits(isTemplate, pred))
  *
  * Params:
  *  f      = Some template that can be applied to the elements of
- *           $(D_PARAM Tuples).
- *  Tuples = $(D_PSYMBOL Tuple) instances.
+ *           $(D_PARAM Packs).
+ *  Packs  = $(D_PSYMBOL Pack) instances.
  *
  * Returns: A sequence, whose $(I i)-th element contains the $(I i)-th element
- *          from each of the $(D_PARAM Tuples).
+ *          from each of the $(D_PARAM Packs).
  */
-template ZipWith(alias f, Tuples...)
-if (Tuples.length > 0
+template ZipWith(alias f, Packs...)
+if (Packs.length > 0
  && __traits(isTemplate, f)
- && allSatisfy!(ApplyLeft!(isInstanceOf, Tuple), Tuples))
+ && (allSatisfy!(ApplyLeft!(isInstanceOf, Pack), Packs)
+ || allSatisfy!(ApplyLeft!(isInstanceOf, Tuple), Packs)))
 {
     private template GetIth(size_t i, Args...)
     {
@@ -164,43 +165,37 @@ if (Tuples.length > 0
     }
     private template Iterate(size_t i, Args...)
     {
-        alias Tuple = GetIth!(i, Args);
+        alias Pack = GetIth!(i, Args);
 
-        static if (Tuple.length < Tuples.length)
+        static if (Pack.length < Packs.length)
         {
             alias Iterate = AliasSeq!();
         }
         else
         {
-            alias Iterate = AliasSeq!(f!Tuple,
-                                      Iterate!(i + 1, Args));
+            alias Iterate = AliasSeq!(f!Pack, Iterate!(i + 1, Args));
         }
     }
-    alias ZipWith = Iterate!(0, Tuples);
+    alias ZipWith = Iterate!(0, Packs);
 }
 
 ///
 @nogc nothrow pure @safe unittest
 {
-    alias Result1 = ZipWith!(AliasSeq,
-                             Tuple!(1, 2),
-                             Tuple!(5, 6),
-                             Tuple!(9, 10));
+    alias Result1 = ZipWith!(AliasSeq, Pack!(1, 2), Pack!(5, 6), Pack!(9, 10));
     static assert(Result1 == AliasSeq!(1, 5, 9, 2, 6, 10));
 
-    alias Result2 = ZipWith!(AliasSeq,
-                             Tuple!(1, 2, 3),
-                             Tuple!(4, 5));
+    alias Result2 = ZipWith!(AliasSeq, Pack!(1, 2, 3), Pack!(4, 5));
     static assert(Result2 == AliasSeq!(1, 4, 2, 5));
 
-    alias Result3 = ZipWith!(AliasSeq, Tuple!(), Tuple!(4, 5));
+    alias Result3 = ZipWith!(AliasSeq, Pack!(), Pack!(4, 5));
     static assert(Result3.length == 0);
 }
 
 /**
  * Holds a typed sequence of template parameters.
  *
- * Different than $(D_PSYMBOL AliasSeq), $(D_PSYMBOL Tuple) doesn't unpack
+ * Different than $(D_PSYMBOL AliasSeq), $(D_PSYMBOL Pack) doesn't unpack
  * its template parameters automatically. Consider:
  *
  * ---
@@ -215,7 +210,7 @@ if (Tuples.length > 0
  * Using $(D_PSYMBOL AliasSeq) template `A` gets 4 parameters instead of 2,
  * because $(D_PSYMBOL AliasSeq) is just an alias for its template parameters.
  *
- * With $(D_PSYMBOL Tuple) it is possible to pass distinguishable
+ * With $(D_PSYMBOL Pack) it is possible to pass distinguishable
  * sequences of parameters to a template. So:
  *
  * ---
@@ -224,14 +219,26 @@ if (Tuples.length > 0
  *  static assert(Args.length == 2);
  * }
  *
- * alias BInstance = B!(Tuple!(int, uint), Tuple!(float, double));
+ * alias BInstance = B!(Pack!(int, uint), Pack!(float, double));
  * ---
  *
  * Params:
- *  Args = Elements of this $(D_PSYMBOL Tuple).
+ *  Args = Elements of this $(D_PSYMBOL Pack).
  *
  * See_Also: $(D_PSYMBOL AliasSeq).
  */
+struct Pack(Args...)
+{
+    /// Elements in this tuple as $(D_PSYMBOL AliasSeq).
+    alias Seq = Args;
+
+    /// The length of the tuple.
+    enum size_t length = Args.length;
+
+    alias Seq this;
+}
+
+deprecated("Use Pack instead")
 struct Tuple(Args...)
 {
     /// Elements in this tuple as $(D_PSYMBOL AliasSeq).
@@ -246,9 +253,9 @@ struct Tuple(Args...)
 ///
 @nogc nothrow pure @safe unittest
 {
-    alias A = Tuple!short;
-    alias B = Tuple!(3, 8, 9);
-    alias C = Tuple!(A, B);
+    alias A = Pack!short;
+    alias B = Pack!(3, 8, 9);
+    alias C = Pack!(A, B);
 
     static assert(C.length == 2);
 
@@ -257,7 +264,7 @@ struct Tuple(Args...)
     static assert(B.length == 3);
     static assert(B.Seq == AliasSeq!(3, 8, 9));
 
-    alias D = Tuple!();
+    alias D = Pack!();
     static assert(D.length == 0);
     static assert(is(D.Seq == AliasSeq!()));
 }
@@ -270,7 +277,7 @@ struct Tuple(Args...)
  * for determining if two items are equal.
  *
  * Params:
- *  Args = Elements of this $(D_PSYMBOL Tuple).
+ *  Args = Elements of this $(D_PSYMBOL Set).
  */
 struct Set(Args...)
 {
