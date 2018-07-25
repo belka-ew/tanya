@@ -498,7 +498,7 @@ struct Linger
      *
      * See_Also: $(D_PSYMBOL time).
      */
-    @property enabled(const bool value) pure nothrow @safe @nogc
+    @property void enabled(const bool value) pure nothrow @safe @nogc
     {
         this.l_onoff = value;
     }
