@@ -2327,7 +2327,7 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
     {
         static if (FormatSpecFilter!spec)
         {
-            printToString!"{}"(formatted, args);
+            printToString!"{}"(formatted, args[spec.position]);
         }
         else static if (isSomeString!(typeof(spec)))
         {
@@ -2339,6 +2339,12 @@ package(tanya) String format(string fmt, Args...)(auto ref Args args)
         }
     }
     return formatted;
+}
+
+// doesn't print the first argument repeatedly
+@nogc nothrow pure @safe unittest
+{
+    assert(format!"{}{}"(1, 2) == "12");
 }
 
 @nogc nothrow pure @safe unittest
@@ -2574,6 +2580,7 @@ nothrow pure @safe unittest
 
 private struct FormatSpec
 {
+    const size_t position;
 }
 
 // Returns the position of `tag` in `fmt`. If `tag` can't be found, returns the
@@ -2590,7 +2597,7 @@ private size_t specPosition(string fmt, char tag)()
     return fmt.length;
 }
 
-private template ParseFmt(string fmt, size_t pos = 0)
+private template ParseFmt(string fmt, size_t arg = 0, size_t pos = 0)
 {
     static if (fmt.length == 0)
     {
@@ -2602,7 +2609,7 @@ private template ParseFmt(string fmt, size_t pos = 0)
         {
             enum size_t pos = specPosition!(fmt[2 .. $], '{') + 2;
             alias ParseFmt = AliasSeq!(fmt[1 .. pos],
-                                       ParseFmt!(fmt[pos .. $], pos));
+                                       ParseFmt!(fmt[pos .. $], arg, pos));
         }
         else
         {
@@ -2613,8 +2620,8 @@ private template ParseFmt(string fmt, size_t pos = 0)
             }
             else static if (pos == 1)
             {
-                alias ParseFmt = AliasSeq!(FormatSpec(),
-                                           ParseFmt!(fmt[pos + 1 .. $], pos + 1));
+                alias ParseFmt = AliasSeq!(FormatSpec(arg),
+                                           ParseFmt!(fmt[2 .. $], arg + 1, 2));
             }
             else
             {
@@ -2626,7 +2633,7 @@ private template ParseFmt(string fmt, size_t pos = 0)
     {
         enum size_t pos = specPosition!(fmt, '{');
         alias ParseFmt = AliasSeq!(fmt[0 .. pos],
-                                   ParseFmt!(fmt[pos .. $], pos));
+                                   ParseFmt!(fmt[pos .. $], arg, pos));
     }
 }
 
