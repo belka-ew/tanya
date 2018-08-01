@@ -3,8 +3,32 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * This package doesn't yet contain public symbols. Refer to
- * $(D_PSYMBOL tanya.conv) for basic formatting and conversion functionality.
+ * This module provides $(D_PSYMBOL format) function that can convert different
+ * data types to a $(D_PSYMBOL String) according to a specified format.
+ *
+ * Format string is a $(D_PSYMBOL string) which can contain placeholders for
+ * arguments. Placeholder marker is `{}`, i.e. all occurrences of `{}` are
+ * replaced by the arguments passed to $(D_PSYMBOL format). An argument will be
+ * first converted to a string, then inserted into the resulting string instead
+ * of the corresponding placeholder. The number of the placeholders and
+ * arguments must match. The placeholders are replaced with the arguments in
+ * the order arguments are passed to $(D_PSYMBOL format).
+ *
+ * To escape `{` or `}`, use `{{` and `}}` respectively. `{{` will be outputted
+ * as a single `{`, `}}` - as a single `}`.
+ *
+ * If a custom data type (like $(D_KEYWORD struct) or $(D_KEYWORD class))
+ * defines a `stringify()` function that is callable without arguments and
+ * returns a $(D_PSYMBOL String), this function is used to produce a string
+ * representation for the value. String conversions for the most built-in
+ * data types a also available.
+ *
+ * $(D_KEYWORD char), $(D_KEYWORD wchar) and $(D_KEYWORD dchar) ranges are
+ * outputted as plain strings (without any delimiters between their elements).
+ *
+ * All floating point numbers are handled as $(D_KEYWORD double)s.
+ *
+ * More advanced formatting is currently not implemented.
  *
  * Copyright: Eugene Wissner 2017-2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
@@ -2314,7 +2338,17 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     return result;
 }
 
-package(tanya) String format(string fmt, Args...)(auto ref Args args)
+/**
+ * Produces a string according to the specified format.
+ *
+ * Params:
+ *  fmt  = Format.
+ *  Args = Types of the arguments.
+ *  args = Arguments.
+ *
+ * Returns: Formatted string.
+ */
+String format(string fmt, Args...)(auto ref Args args)
 {
     String formatted;
 

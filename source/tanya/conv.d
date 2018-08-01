@@ -847,33 +847,11 @@ if (is(Unqual!From == bool) && isNumeric!To && !is(Unqual!To == Unqual!From))
     assert(false.to!int == 0);
 }
 
-/**
- * Converts $(D_PARAM From) to a $(D_PSYMBOL String).
- *
- * Params:
- *  From = Source type.
- *  To   = Target type.
- *  from = Source value.
- *
- * Returns: $(D_PARAM from) converted to $(D_PSYMBOL String).
- */
+deprecated("Use tanya.format.format instead")
 To to(To, From)(auto ref From from)
 if (is(Unqual!To == String))
 {
     return format!"{}"(from);
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(true.to!String == "true");
-    assert(false.to!String == "false");
-}
-
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(typeof((const String("true")).to!bool)));
-    static assert(is(typeof(false.to!(const String) == "false")));
 }
 
 /**
