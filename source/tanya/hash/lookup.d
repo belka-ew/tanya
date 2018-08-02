@@ -89,7 +89,10 @@ private struct FNV
  * }
  * ---
  *
- * For scalar types FNV-1a (Fowler-Noll-Vo) hash function is used internally.
+ * For pointers and for scalar types implicitly convertible to `size_t` this
+ * is an identity operation (i.e. the value is cast to `size_t` and returned
+ * unaltered). Integer types wider than `size_t` are XOR folded down to
+ * `size_t`. Other scalar types use the FNV-1a (Fowler-Noll-Vo) hash function.
  * If the type provides a `toHash`-function, only `toHash()` is called and its
  * result is returned.
  *
@@ -109,6 +112,19 @@ size_t hash(T)(auto ref T key)
     static if (is(typeof(key.toHash()) == size_t))
     {
         return key.toHash();
+    }
+    else static if ((isIntegral!T || isSomeChar!T || isBoolean!T)
+            && T.sizeof <= size_t.sizeof)
+    {
+        return cast(size_t) key;
+    }
+    else static if (isIntegral!T && T.sizeof > size_t.sizeof)
+    {
+        return cast(size_t) (key ^ (key >>> (size_t.sizeof * 8)));
+    }
+    else static if (isPointer!T || is(T : typeof(null)))
+    {
+        return (() @trusted => cast(size_t) key)();
     }
     else
     {
@@ -177,30 +193,29 @@ version (unittest)
 // Tests that work for any hash size
 @nogc nothrow pure @safe unittest
 {
-    assert(hash(null) == FNV.offsetBasis);
+    assert(hash(null) == 0);
     assert(hash(ToHash()) == 0U);
+    assert(hash('a') == 'a');
 }
 
 static if (size_t.sizeof == 4) @nogc nothrow pure @safe unittest
 {
-    assert(hash('a') == 0xe40c292cU);
     assert(hash(HashRange()) == 0x6222e842U);
     assert(hash(ToHashRange()) == 1268118805U);
 }
 static if (size_t.sizeof == 8) @nogc nothrow pure @safe unittest
 {
-    assert(hash('a') == 0xaf63dc4c8601ec8cUL);
     assert(hash(HashRange()) == 0x08985907b541d342UL);
     assert(hash(ToHashRange()) == 12161962213042174405UL);
 }
 
 static if (size_t.sizeof == 4) @nogc nothrow pure @system unittest
 {
-    assert(hash(cast(void*) 0x6e6f6863) == 0xac297727U);
+    assert(hash(cast(void*) 0x6e6f6863) == 0x6e6f6863);
 }
 static if (size_t.sizeof == 8) @nogc nothrow pure @system unittest
 {
-    assert(hash(cast(void*) 0x77206f676e6f6863) == 0xd1edd10b507344d0UL);
+    assert(hash(cast(void*) 0x77206f676e6f6863) == 0x77206f676e6f6863);
 }
 
 /*
