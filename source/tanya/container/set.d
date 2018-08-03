@@ -154,7 +154,7 @@ struct Range(T)
  *  hasher = Hash function for $(D_PARAM T).
  */
 struct Set(T, alias hasher = hash)
-if (is(typeof(hasher(T.init)) == size_t))
+if (is(typeof(((T x) => hasher(x))(T.init)) == size_t))
 {
     private alias HashArray = .HashArray!(hasher, T);
     private alias Buckets = HashArray.Buckets;
@@ -766,4 +766,10 @@ if (is(typeof(hasher(T.init)) == size_t))
         assert(set.capacity == 7);
     }
     testFunc(set);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    // Using hasher that takes argument by ref.
+    Set!(int, (const ref x) => cast(size_t)x) set;
 }
