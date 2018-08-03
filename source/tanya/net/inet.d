@@ -16,7 +16,7 @@ module tanya.net.inet;
 
 import tanya.meta.trait;
 import tanya.meta.transform;
-import tanya.range.primitive;
+import tanya.range;
 
 /**
  * Represents an unsigned integer as an $(D_KEYWORD ubyte) range.
