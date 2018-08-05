@@ -15,14 +15,13 @@
 module tanya.math.mp;
 
 import std.algorithm.comparison : cmp;
-import std.algorithm.mutation : copy, fill, reverse;
+import std.algorithm.mutation : fill, reverse;
 import std.range;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.encoding.ascii;
 import tanya.memory;
-static import tanya.memory.op;
 import tanya.meta.trait;
 import tanya.meta.transform;
 
@@ -211,7 +210,7 @@ struct Integer
     this(this) @nogc nothrow pure @safe
     {
         auto tmp = allocator.resize!digit(null, this.size);
-        tanya.memory.op.copy(this.rep[0 .. this.size], tmp);
+        copy(this.rep[0 .. this.size], tmp);
         this.rep = tmp;
     }
 
@@ -344,8 +343,7 @@ struct Integer
     if (is(Unqual!T == Integer))
     {
         this.rep = allocator.resize(this.rep, value.size);
-        tanya.memory.op.copy(value.rep[0 .. value.size],
-                             this.rep[0 .. value.size]);
+        copy(value.rep[0 .. value.size], this.rep[0 .. value.size]);
         this.size = value.size;
         this.sign = value.sign;
 

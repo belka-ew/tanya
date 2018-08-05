@@ -14,8 +14,9 @@
  */
 module tanya.algorithm.mutation;
 
-import tanya.memory.op;
+static import tanya.memory.op;
 import tanya.meta.trait;
+import tanya.range;
 
 private void deinitialize(bool zero, T)(ref T value)
 {
@@ -39,11 +40,12 @@ private void deinitialize(bool zero, T)(ref T value)
         }
         static if (zero)
         {
-            fill!0((cast(void*) &value)[0 .. size]);
+            tanya.memory.op.fill!0((cast(void*) &value)[0 .. size]);
         }
         else
         {
-            copy(typeid(T).initializer()[0 .. size], (&value)[0 .. 1]);
+            tanya.memory.op.copy(typeid(T).initializer()[0 .. size],
+                                 (&value)[0 .. 1]);
         }
     }
 }
@@ -81,7 +83,7 @@ do
 {
     static if (is(T == struct) || isStaticArray!T)
     {
-        copy((&source)[0 .. 1], (&target)[0 .. 1]);
+        tanya.memory.op.copy((&source)[0 .. 1], (&target)[0 .. 1]);
 
         static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
         {
@@ -272,4 +274,54 @@ void swap(T)(ref T a, ref T b) @trusted
     swap(a, b);
     assert(a == 5);
     assert(b == 3);
+}
+
+/**
+ * Copies the $(D_PARAM source) range into the $(D_PARAM target) range.
+ *
+ * Params:
+ *  Source = Input range type.
+ *  Target = Output range type.
+ *  source = Source input range.
+ *  target = Target output range.
+ *
+ * Precondition: $(D_PARAM target) should be large enough to accept all
+ *               $(D_PARAM source) elements.
+ */
+void copy(Source, Target)(Source source, Target target)
+if (isInputRange!Source && isOutputRange!(Target, Source))
+in
+{
+    static if (hasLength!Source && hasLength!Target)
+    {
+        assert(target.length >= source.length);
+    }
+}
+do
+{
+    alias E = ElementType!Source;
+    static if (isDynamicArray!Source
+            && is(Source == Target)
+            && !hasElaborateCopyConstructor!E
+            && !hasElaborateAssign!E)
+    {
+        tanya.memory.op.copy(source, target);
+    }
+    else
+    {
+        for (; !source.empty; source.popFront())
+        {
+            put(target, source.front);
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[2] actual;
+    int[2] expected = [2, 3];
+
+    copy(actual[], expected[]);
+    assert(actual == expected);
 }
