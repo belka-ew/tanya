@@ -8,10 +8,9 @@
  * rdx - r2 length.
  * rcx - r2 data.
  */
-	.globl _D5tanya6memory2op9cmpMemoryFNaNbNixAvxAvZi
-	.type _D5tanya6memory2op9cmpMemoryFNaNbNixAvxAvZi, @function
-
-_D5tanya6memory2op9cmpMemoryFNaNbNixAvxAvZi:
+	.globl _D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi
+	.type _D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi, @function
+_D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi:
 		// Compare the lengths
 		cmp %rdx, %rdi
 		jl  less

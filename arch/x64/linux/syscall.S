@@ -23,10 +23,10 @@ syscall1:
 
 
 // 2 parameters.
-	.globl _D5tanya3sys5linux7syscall7syscallFNbNilllZl
-	.type _D5tanya3sys5linux7syscall7syscallFNbNilllZl, @function
+	.globl _D5tanya3sys5linux7syscallQiFNbNilllZl
+	.type _D5tanya3sys5linux7syscallQiFNbNilllZl, @function
 
-_D5tanya3sys5linux7syscall7syscallFNbNilllZl:
+_D5tanya3sys5linux7syscallQiFNbNilllZl:
 	movq %rdx, %rax
 
 	syscall
@@ -35,10 +35,10 @@ _D5tanya3sys5linux7syscall7syscallFNbNilllZl:
 
 
 // 6 parameters.
-	.globl _D5tanya3sys5linux7syscall7syscallFNbNilllllllZl
-	.type _D5tanya3sys5linux7syscall7syscallFNbNilllllllZl, @function
+	.globl _D5tanya3sys5linux7syscallQiFNbNilllllllZl
+	.type _D5tanya3sys5linux7syscallQiFNbNilllllllZl, @function
 
-_D5tanya3sys5linux7syscall7syscallFNbNilllllllZl:
+_D5tanya3sys5linux7syscallQiFNbNilllllllZl:
 	pushq %rbp
 	movq %rsp, %rbp
 
