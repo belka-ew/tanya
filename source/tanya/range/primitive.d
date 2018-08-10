@@ -851,6 +851,8 @@ void put(R, E)(ref R range, auto ref E e)
     }
     else static if (isInputRange!E)
     {
+        pragma(msg, "Putting an input range into an output range is "
+                  ~ "deprecated. Use tanya.algorithm.mutation.copy instead");
         for (; !e.empty; e.popFront())
         {
             put(range, e.front);
@@ -963,7 +965,22 @@ void put(R, E)(ref R range, auto ref E e)
  * Returns: $(D_KEYWORD true) if $(D_PARAM R) is an output range for the
  *          elements of the type $(D_PARAM E), $(D_KEYWORD false) otherwise.
  */
-enum bool isOutputRange(R, E) = is(typeof((ref R r, ref E e) => put(r, e)));
+template isOutputRange(R, E)
+{
+    static if (is(typeof((R r, E e) => put(r, e))))
+    {
+        enum bool isOutputRange = true;
+    }
+    else static if (isInputRange!E)
+    {
+        alias ET = ElementType!E;
+        enum bool isOutputRange = is(typeof((R r, ET e) => put(r, e)));
+    }
+    else
+    {
+        enum bool isOutputRange = false;
+    }
+}
 
 ///
 @nogc nothrow pure @safe unittest
