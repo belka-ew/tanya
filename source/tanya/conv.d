@@ -308,11 +308,11 @@ do
         {
             digit = range.front - 'W';
         }
-        else if (range.front >= 'A')
+        else if (range.front >= 'A' && range.front <= 'Z')
         {
             digit = range.front - '7';
         }
-        else if (range.front >= '0')
+        else if (range.front >= '0' && range.front <= '9')
         {
             digit = range.front - '0';
         }
@@ -358,6 +358,15 @@ do
     range.popFront();
 
     return n;
+}
+
+// ':' is not a hex value
+@nogc nothrow pure @safe unittest
+{
+    string colon = ":";
+    auto actual = readIntegral!ubyte(colon, 16);
+    assert(actual == 0);
+    assert(colon.length == 1);
 }
 
 // reads ubyte.max
