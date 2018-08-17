@@ -174,10 +174,7 @@ parameter is used)
 
 | DMD     | GCC       |
 |:-------:|:---------:|
-| 2.081.1 | *master*  |
-| 2.080.1 |           |
-| 2.079.1 |           |
-| 2.078.3 |           |
+| 2.081.2 | *master*  |
 
 ### Release management
 
