@@ -290,6 +290,10 @@ if (isInputRange!R && isSomeChar!(ElementType!R))
 
     for (; shift != cond; shift += Address4.step, range.popFront())
     {
+        if (range.empty || range.front == '.')
+        {
+            return typeof(return)();
+        }
         result.address |= readIntegral!ubyte(range) << shift;
         if (range.empty || range.front != '.')
         {
@@ -297,14 +301,23 @@ if (isInputRange!R && isSomeChar!(ElementType!R))
         }
     }
 
+    if (range.empty || range.front == '.')
+    {
+        return typeof(return)();
+    }
     result.address |= readIntegral!ubyte(range) << shift;
     return range.empty ? typeof(return)(result) : typeof(return)();
 }
 
-///
+// Rejects malformed addresses
 @nogc nothrow pure @safe unittest
 {
     assert(address4("256.0.0.1").isNothing);
+    assert(address4(".0.0.1").isNothing);
+    assert(address4("0..0.1").isNothing);
+    assert(address4("0.0.0.").isNothing);
+    assert(address4("0.0.").isNothing);
+    assert(address4("").isNothing);
 }
 
 /**
