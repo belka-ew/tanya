@@ -34,6 +34,18 @@ _D5tanya3sys5linux7syscallQiFNbNilllZl:
 	ret
 
 
+// 3 parameters.
+	.globl _D5tanya3sys5linux7syscallQiFNbNillllZl
+	.type _D5tanya3sys5linux7syscallQiFNbNillllZl, @function
+
+_D5tanya3sys5linux7syscallQiFNbNillllZl:
+	movq %rcx, %rax
+
+	syscall
+
+	ret
+
+
 // 6 parameters.
 	.globl _D5tanya3sys5linux7syscallQiFNbNilllllllZl
 	.type _D5tanya3sys5linux7syscallQiFNbNilllllllZl, @function
