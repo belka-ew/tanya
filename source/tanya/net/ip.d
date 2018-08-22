@@ -385,3 +385,143 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
     address1 = address2;
     assert(address1 == address2);
 }
+
+/**
+ * IPv6 internet address.
+ */
+struct Address6
+{
+    // Raw bytes
+    private ubyte[16] address;
+
+    /**
+     * Constructs an $(D_PSYMBOL Address6) from an unsigned integer in host
+     * byte order.
+     *
+     * Params:
+     *  address = The address as an unsigned integer in host byte order.
+     */
+    this(ulong address)
+    {
+        copy(NetworkOrder!8(address), this.address[]);
+    }
+}
+
+private void write2Bytes(R)(ref R range, ubyte[] address)
+{
+    ushort group = readIntegral!ushort(range, 16);
+    address[0] = cast(ubyte) (group >> 8);
+    address[1] = group & 0xff;
+}
+
+/**
+ * Parses a string containing an IPv6 address.
+ *
+ * Params:
+ *  R     = Input range type.
+ *  range = Stringish range containing the address.
+ *
+ * Returns: $(D_PSYMBOL Option) containing the address if the parsing was
+ *          successful, or nothing otherwise.
+ */
+Option!Address6 address6(R)(R range)
+if (isInputRange!R && isSomeChar!(ElementType!R))
+{
+    if (range.empty)
+    {
+        return typeof(return)();
+    }
+    Address6 result;
+    size_t i;
+
+    if (range.front == ':')
+    {
+        range.popFront();
+        if (range.empty || range.front != ':')
+        {
+            return typeof(return)();
+        }
+        range.popFront();
+        goto ParseTail;
+    }
+
+    for (; i < 13; i += 2)
+    {
+        write2Bytes(range, result.address[i .. $]);
+        if (range.empty || range.front != ':')
+        {
+            return typeof(return)();
+        }
+        range.popFront();
+        if (range.empty)
+        {
+            return typeof(return)();
+        }
+        if (range.front == ':')
+        {
+            range.popFront();
+            goto ParseTail;
+        }
+    }
+    write2Bytes(range, result.address[14 .. $]);
+
+    return range.empty ? typeof(return)(result) : typeof(return)();
+
+ParseTail:
+    ubyte[12] tail;
+    size_t j;
+
+    for (; !range.empty; i += 2, j += 2, range.popFront())
+    {
+        if (i > 11 || range.front == ':')
+        {
+            return typeof(return)();
+        }
+        write2Bytes(range, tail[j .. $]);
+
+        if (range.empty)
+        {
+            break;
+        }
+        if (range.front != ':')
+        {
+            return typeof(return)();
+        }
+    }
+    copy(tail[0 .. j + 2], result.address[$ - j - 2 .. $]);
+
+    return typeof(return)(result);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    {
+        ubyte[16] expected = [0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8];
+        auto actual = address6("1:2:3:4:5:6:7:8");
+        assert(actual.address == expected);
+    }
+    {
+        ubyte[16] expected;
+        auto actual = address6("::");
+        assert(actual.address == expected);
+    }
+    {
+        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+        auto actual = address6("::1");
+        assert(actual.address == expected);
+    }
+    {
+        ubyte[16] expected = [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        auto actual = address6("1::");
+        assert(actual.address == expected);
+    }
+}
+
+// Rejects malformed addresses
+@nogc nothrow pure @safe unittest
+{
+    assert(address6("").isNothing);
+    assert(address6(":").isNothing);
+    assert(address6(":a").isNothing);
+    assert(address6("a:").isNothing);
+}
