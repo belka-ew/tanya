@@ -28,7 +28,7 @@ install:
 before_build:
   - ps: if($env:arch -eq "x86"){
           $env:compilersetupargs = "x86";
-          $env:Darch = "x86";
+          $env:Darch = "x86_mscoff";
         }
         elseif($env:arch -eq "x64"){
           $env:compilersetupargs = "amd64";
