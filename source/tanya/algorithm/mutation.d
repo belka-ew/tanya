@@ -16,6 +16,7 @@ module tanya.algorithm.mutation;
 
 static import tanya.memory.op;
 import tanya.meta.trait;
+import tanya.meta.transform;
 import tanya.range;
 
 private void deinitialize(bool zero, T)(ref T value)
@@ -285,10 +286,13 @@ void swap(T)(ref T a, ref T b) @trusted
  *  source = Source input range.
  *  target = Target output range.
  *
+ * Returns: $(D_PARAM target) range, whose front element is the one past the
+ *          last element copied.
+ *
  * Precondition: $(D_PARAM target) should be large enough to accept all
  *               $(D_PARAM source) elements.
  */
-void copy(Source, Target)(Source source, Target target)
+Target copy(Source, Target)(Source source, Target target)
 if (isInputRange!Source && isOutputRange!(Target, Source))
 in
 {
@@ -301,11 +305,21 @@ do
 {
     alias E = ElementType!Source;
     static if (isDynamicArray!Source
-            && is(Source == Target)
+            && is(Unqual!E == ElementType!Target)
             && !hasElaborateCopyConstructor!E
-            && !hasElaborateAssign!E)
+            && !hasElaborateAssign!E
+            && !hasElaborateDestructor!E)
     {
-        tanya.memory.op.copy(source, target);
+        if (source.ptr < target.ptr
+         && (() @trusted => (target.ptr - source.ptr) < source.length)())
+        {
+            tanya.memory.op.copyBackward(source, target);
+        }
+        else if (source.ptr !is target.ptr)
+        {
+            tanya.memory.op.copy(source, target);
+        }
+        return target[source.length .. $];
     }
     else
     {
@@ -313,15 +327,64 @@ do
         {
             put(target, source.front);
         }
+        return target;
     }
 }
 
 ///
 @nogc nothrow pure @safe unittest
 {
-    int[2] actual;
-    int[2] expected = [2, 3];
+    import tanya.algorithm.comparison : equal;
 
-    copy(actual[], expected[]);
-    assert(actual == expected);
+    const int[2] source = [1, 2];
+    int[2] target = [3, 4];
+
+    copy(source[], target[]);
+    assert(equal(source[], target[]));
+}
+
+// Returns advanced target
+@nogc nothrow pure @safe unittest
+{
+    int[5] input = [1, 2, 3, 4, 5];
+    assert(copy(input[3 .. 5], input[]).front == 3);
+}
+
+// Copies overlapping arrays
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    int[6] actual = [1, 2, 3, 4, 5, 6];
+    const int[6] expected = [1, 2, 1, 2, 3, 4];
+
+    copy(actual[0 .. 4], actual[2 .. 6]);
+    assert(equal(actual[], expected[]));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(typeof(copy((ubyte[]).init, (ushort[]).init))));
+    static assert(!is(typeof(copy((ushort[]).init, (ubyte[]).init))));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct OutPutRange
+    {
+        int value;
+        void put(int value) @nogc nothrow pure @safe
+        in
+        {
+            assert(this.value == 0);
+        }
+        do
+        {
+            this.value = value;
+        }
+    }
+    int[1] source = [5];
+    OutPutRange target;
+
+    assert(copy(source[], target).value == 5);
 }
