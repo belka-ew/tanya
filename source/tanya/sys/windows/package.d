@@ -15,5 +15,7 @@ module tanya.sys.windows;
 version (Windows):
 
 public import tanya.sys.windows.def;
+public import tanya.sys.windows.ifdef;
+public import tanya.sys.windows.iphlpapi;
 public import tanya.sys.windows.winbase;
 public import tanya.sys.windows.winsock2;

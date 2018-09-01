@@ -30,6 +30,7 @@ version (Windows):
 alias BYTE = ubyte;
 alias TBYTE = wchar; // If Unicode, otherwise char.
 alias CHAR = char; // Signed or unsigned char.
+alias WCHAR = wchar;
 alias TCHAR = wchar; // If Unicode, otherwise char.
 alias SHORT = short;
 alias USHORT = ushort;
@@ -51,6 +52,10 @@ enum HANDLE INVALID_HANDLE_VALUE = cast(HANDLE) -1;
 
 enum TRUE = 1;
 enum FALSE = 0;
+
+alias PSTR = CHAR*;
+alias PWSTR = WCHAR*;
+alias PTSTR = TCHAR*;
 
 align(1) struct GUID
 {

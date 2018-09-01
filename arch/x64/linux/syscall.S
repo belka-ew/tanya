@@ -11,10 +11,11 @@ The returned value is placed in %rax.
 */
 	.text
 
-	.globl syscall1
-	.type syscall1, @function
+// 1 parameter.
+	.globl _D5tanya3sys5linux7syscallQiFNbNillZl
+	.type _D5tanya3sys5linux7syscallQiFNbNillZl, @function
 
-syscall1:
+_D5tanya3sys5linux7syscallQiFNbNillZl:
 	movq %rsi, %rax // Syscall number.
 
 	syscall

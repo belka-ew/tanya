@@ -14,6 +14,9 @@ module tanya.sys.linux.syscall;
 
 version (TanyaNative):
 
+extern ptrdiff_t syscall(ptrdiff_t, ptrdiff_t)
+@nogc nothrow @system;
+
 extern ptrdiff_t syscall(ptrdiff_t, ptrdiff_t, ptrdiff_t)
 @nogc nothrow @system;
 
@@ -37,14 +40,18 @@ private template getOverloadMangling(size_t n)
 }
 
 pragma(mangle, getOverloadMangling!0)
-extern ptrdiff_t syscall_(ptrdiff_t, ptrdiff_t, ptrdiff_t)
+extern ptrdiff_t syscall_(ptrdiff_t, ptrdiff_t)
 @nogc nothrow pure @system;
 
 pragma(mangle, getOverloadMangling!1)
-extern ptrdiff_t syscall(ptrdiff_t, ptrdiff_t, ptrdiff_t, ptrdiff_t)
+extern ptrdiff_t syscall_(ptrdiff_t, ptrdiff_t, ptrdiff_t)
 @nogc nothrow pure @system;
 
 pragma(mangle, getOverloadMangling!2)
+extern ptrdiff_t syscall_(ptrdiff_t, ptrdiff_t, ptrdiff_t, ptrdiff_t)
+@nogc nothrow pure @system;
+
+pragma(mangle, getOverloadMangling!3)
 extern ptrdiff_t syscall_(ptrdiff_t,
                           ptrdiff_t,
                           ptrdiff_t,

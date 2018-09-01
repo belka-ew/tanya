@@ -34,5 +34,7 @@
 		}
 	],
 
-	"libs-windows": ["advapi32"]
+	"libs-windows": ["advapi32"],
+	"libs-windows-x86_mscoff": ["iphlpapi"],
+	"libs-windows-x86_64": ["iphlpapi"]
 }
