@@ -14,7 +14,9 @@
  */
 module tanya.net.iface;
 
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
+import tanya.container.string;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
@@ -58,7 +60,6 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
             return 0;
         }
         ifreq ifreq_ = void;
-        ifreq_.ifr_ifindex = 8;
 
         copy(name, ifreq_.ifr_name[]);
         ifreq_.ifr_name[name.length] = '\0';
@@ -138,4 +139,90 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
         assert(nameToIndex("lo0") == 1);
     }
     assert(nameToIndex("ecafretni") == 0);
+}
+
+/**
+ * Converts the index of a network interface to its name.
+ *
+ * If an interface with the $(D_PARAM index) cannot be found or another
+ * error occurres, returns an empty $(D_PSYMBOL String).
+ *
+ * Params:
+ *  index = Interface index.
+ *
+ * Returns: Returns interface name or an empty $(D_PSYMBOL String).
+ */
+String indexToName(uint index) @nogc nothrow @trusted
+{
+    import tanya.memory.op : findNullTerminated;
+
+    version (TanyaNative)
+    {
+        ifreq ifreq_ = void;
+        ifreq_.ifr_ifindex = index;
+
+        auto socket = syscall(AF_INET,
+                              SOCK_DGRAM | SOCK_CLOEXEC,
+                              0,
+                              NR_socket);
+        if (socket <= 0)
+        {
+            return String();
+        }
+        scope (exit)
+        {
+            syscall(socket, NR_close);
+        }
+        if (syscall(socket,
+                    SIOCGIFNAME,
+                    cast(ptrdiff_t) &ifreq_,
+                    NR_ioctl) == 0)
+        {
+            return String(findNullTerminated(ifreq_.ifr_name));
+        }
+        return String();
+    }
+    else version (Windows)
+    {
+        NET_LUID luid;
+        if (ConvertInterfaceIndexToLuid(index, &luid) != 0)
+        {
+            return String();
+        }
+
+        char[IF_MAX_STRING_SIZE + 1] buffer;
+        if (ConvertInterfaceLuidToNameA(&luid,
+                                        buffer.ptr,
+                                        IF_MAX_STRING_SIZE + 1) != 0)
+        {
+            return String();
+        }
+        return String(findNullTerminated(buffer));
+    }
+    else version (Posix)
+    {
+        char[IF_NAMESIZE] buffer;
+        if (if_indextoname(index, buffer.ptr) is null)
+        {
+            return String();
+        }
+        return String(findNullTerminated(buffer));
+    }
+}
+
+@nogc nothrow @safe unittest
+{
+    version (linux)
+    {
+        assert(equal(indexToName(1)[], "lo"));
+    }
+    else version (Windows)
+    {
+        assert(equal(indexToName(1)[], "loopback_0"));
+    }
+    else
+    {
+        assert(equal(indexToName(1)[], "lo0"));
+    }
+    assert(indexToName(uint.max).empty);
 }
