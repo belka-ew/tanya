@@ -305,7 +305,7 @@ do
  *          first occurrence of $(D_PARAM needle). If $(D_PARAM needle)
  *          couldn't be found, an empty `inout void[]` is returned.
  */
-inout(void[]) find(return inout void[] haystack, const ubyte needle)
+inout(void[]) find(return inout void[] haystack, ubyte needle)
 @nogc nothrow pure @trusted
 in
 {
@@ -326,19 +326,19 @@ do
         {
             return bytes[0 .. length];
         }
-        bytes++;
-        length--;
+        ++bytes;
+        --length;
     }
 
     // Check if some of the words has the needle
     auto words = cast(inout(size_t)*) bytes;
     while (length >= size_t.sizeof)
     {
-        if (((*words ^ needleWord) - highBits) & (~*words) & mask)
+        if ((((*words ^ needleWord) - highBits) & (~*words) & mask) != 0)
         {
             break;
         }
-        words++;
+        ++words;
         length -= size_t.sizeof;
     }
 
@@ -350,8 +350,8 @@ do
         {
             return bytes[0 .. length];
         }
-        bytes++;
-        length--;
+        ++bytes;
+        --length;
     }
 
     return haystack[$ .. $];
@@ -362,14 +362,89 @@ do
 {
     const ubyte[9] haystack = ['a', 'b', 'c', 'd', 'e', 'f', 'b', 'g', 'h'];
 
-    assert(find(haystack, 'a') == haystack[]);
-    assert(find(haystack, 'b') == haystack[1 .. $]);
-    assert(find(haystack, 'c') == haystack[2 .. $]);
-    assert(find(haystack, 'd') == haystack[3 .. $]);
-    assert(find(haystack, 'e') == haystack[4 .. $]);
-    assert(find(haystack, 'f') == haystack[5 .. $]);
-    assert(find(haystack, 'h') == haystack[8 .. $]);
+    assert(cmp(find(haystack, 'a'), haystack[]) == 0);
+    assert(cmp(find(haystack, 'b'), haystack[1 .. $]) == 0);
+    assert(cmp(find(haystack, 'c'), haystack[2 .. $]) == 0);
+    assert(cmp(find(haystack, 'd'), haystack[3 .. $]) == 0);
+    assert(cmp(find(haystack, 'e'), haystack[4 .. $]) == 0);
+    assert(cmp(find(haystack, 'f'), haystack[5 .. $]) == 0);
+    assert(cmp(find(haystack, 'h'), haystack[8 .. $]) == 0);
     assert(find(haystack, 'i').length == 0);
 
     assert(find(null, 'a').length == 0);
+}
+
+/**
+ * Looks for `\0` in the $(D_PARAM haystack) and returns the part of the
+ * $(D_PARAM haystack) ahead of it.
+ *
+ * Returns $(D_KEYWORD null) if $(D_PARAM haystack) doesn't contain a null
+ * character.
+ *
+ * Params:
+ *  haystack = Memory block.
+ *
+ * Returns: The subrange that spans all bytes before the null character or
+ *          $(D_KEYWORD null) if the $(D_PARAM haystack) doesn't contain any.
+ */
+inout(char[]) findNullTerminated(return inout char[] haystack)
+@nogc nothrow pure @trusted
+in
+{
+    assert(haystack.length == 0 || haystack.ptr !is null);
+}
+do
+{
+    auto length = haystack.length;
+    enum size_t highBits = filledBytes!(0x01, 0);
+    enum size_t mask = filledBytes!(0x80, 0);
+
+    // Align
+    auto bytes = cast(inout(ubyte)*) haystack;
+    while (length > 0 && ((cast(size_t) bytes) & 3) != 0)
+    {
+        if (*bytes == '\0')
+        {
+            return haystack[0 .. haystack.length - length];
+        }
+        ++bytes;
+        --length;
+    }
+
+    // Check if some of the words contains 0
+    auto words = cast(inout(size_t)*) bytes;
+    while (length >= size_t.sizeof)
+    {
+        if (((*words - highBits) & (~*words) & mask) != 0)
+        {
+            break;
+        }
+        ++words;
+        length -= size_t.sizeof;
+    }
+
+    // Find the exact 0 position in the word
+    bytes = cast(inout(ubyte)*) words;
+    while (length > 0)
+    {
+        if (*bytes == '\0')
+        {
+            return haystack[0 .. haystack.length - length];
+        }
+        ++bytes;
+        --length;
+    }
+
+    return null;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(cmp(findNullTerminated("abcdef\0gh"), "abcdef") == 0);
+    assert(cmp(findNullTerminated("\0garbage"), "") == 0);
+    assert(cmp(findNullTerminated("\0"), "") == 0);
+    assert(cmp(findNullTerminated("cstring\0"), "cstring") == 0);
+    assert(findNullTerminated(null) is null);
+    assert(findNullTerminated("abcdef") is null);
 }
