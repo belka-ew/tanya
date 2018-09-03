@@ -7,6 +7,7 @@ os:
 language: d
 
 d:
+  - dmd-2.082.0
   - dmd-2.081.2
 
 env:
@@ -20,7 +21,7 @@ addons:
       - gcc-multilib
 
 before_script:
-  - if [ "`$DC --version | head -n 1 | grep 'v2.081.2'`" ]; then
+  - if [ "`$DC --version | head -n 1 | grep 'v2.082.0'`" ]; then
       export UNITTEST="unittest-cov";
     fi
 
@@ -28,7 +29,7 @@ script:
   - dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC
   - if [ "$UNITTEST" ] && [ "$ARCH" = "x86_64" ] && [ "$TRAVIS_OS_NAME" = "linux" ];
     then
-      dub fetch dscanner;
+      dub fetch dscanner --version=0.5.10;
       dub run dscanner -- --styleCheck ./source/;
     fi
 

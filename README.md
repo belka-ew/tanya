@@ -172,9 +172,10 @@ parameter is used)
 
 ### Supported compilers
 
-| DMD     | GCC       |
-|:-------:|:---------:|
-| 2.081.2 | *master*  |
+| DMD     | GCC    |
+|:-------:|:------:|
+| 2.082.0 | gdc-8  |
+| 2.081.2 | gdc-7  |
 
 ### Release management
 

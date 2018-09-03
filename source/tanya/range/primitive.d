@@ -909,17 +909,6 @@ void put(R, E)(ref R range, auto ref E e)
     assert(oc.e == 2);
 }
 
-///
-@nogc nothrow pure @safe unittest
-{
-    int[2] actual;
-    int[2] expected = [2, 3];
-    auto slice = actual[];
-
-    put(slice, expected[]);
-    assert(actual == expected);
-}
-
 /**
  * Determines whether $(D_PARAM R) is an output range for the elemens of type
  * $(D_PARAM E).
