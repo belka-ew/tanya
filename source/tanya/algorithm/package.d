@@ -15,4 +15,5 @@
 module tanya.algorithm;
 
 public import tanya.algorithm.comparison;
+public import tanya.algorithm.iteration;
 public import tanya.algorithm.mutation;

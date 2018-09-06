@@ -15,15 +15,14 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/range/adapter.d,
- *                 tanya/range/adapter.d)
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/algorithm/iteration.d,
+ *                 tanya/algorithm/iteration.d)
  */
-deprecated("Use tanya.algorithm.iteration instead")
-module tanya.range.adapter;
+module tanya.algorithm.iteration;
 
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
-import tanya.math;
-import tanya.range.primitive;
+import tanya.range;
 
 private mixin template Take(R, bool exactly)
 {
@@ -188,19 +187,6 @@ private mixin template Take(R, bool exactly)
             }
         }
     }
-    static if (hasSlicing!R)
-    {
-        auto opSlice(size_t i, size_t j)
-        in
-        {
-            assert(i <= j);
-            assert(j <= length);
-        }
-        do
-        {
-            return take(this.source[i .. j], length);
-        }
-    }
 }
 
 /**
@@ -226,11 +212,82 @@ private mixin template Take(R, bool exactly)
 auto take(R)(R range, size_t n)
 if (isInputRange!R)
 {
-    struct Take
+    static struct Take
     {
         mixin .Take!(R, false);
+
+        static if (hasSlicing!R)
+        {
+            auto opSlice(size_t i, size_t j)
+            in
+            {
+                assert(i <= j);
+                assert(j <= length);
+            }
+            do
+            {
+                return typeof(this)(this.source[i .. j], length);
+            }
+        }
     }
     return Take(range, n);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct InfiniteRange
+    {
+        private size_t front_ = 1;
+
+        enum bool empty = false;
+
+        @property size_t front() @nogc nothrow pure @safe
+        {
+            return this.front_;
+        }
+
+        @property void front(size_t i) @nogc nothrow pure @safe
+        {
+            this.front_ = i;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            ++this.front_;
+        }
+
+        size_t opIndex(size_t i) @nogc nothrow pure @safe
+        {
+            return this.front_ + i;
+        }
+
+        void opIndexAssign(size_t value, size_t i) @nogc nothrow pure @safe
+        {
+            this.front = i + value;
+        }
+
+        InfiniteRange save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+
+    auto t = InfiniteRange().take(3);
+    assert(t.length == 3);
+    assert(t.front == 1);
+    assert(t.back == 3);
+
+    t.popFront();
+    assert(t.front == 2);
+    assert(t.back == 3);
+
+    t.popBack();
+    assert(t.front == 2);
+    assert(t.back == 2);
+
+    t.popFront();
+    assert(t.empty);
 }
 
 /**
@@ -254,9 +311,99 @@ if (isInputRange!R)
 auto takeExactly(R)(R range, size_t n)
 if (isInputRange!R)
 {
-    struct TakeExactly
+    static if (hasSlicing!R)
     {
-        mixin Take!(R, true);
+        return range[0 .. n];
     }
-    return TakeExactly(range, n);
+    else
+    {
+        static struct TakeExactly
+        {
+            mixin Take!(R, true);
+        }
+        return TakeExactly(range, n);
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct InfiniteRange
+    {
+        private size_t front_ = 1;
+
+        enum bool empty = false;
+
+        @property size_t front() @nogc nothrow pure @safe
+        {
+            return this.front_;
+        }
+
+        @property void front(size_t i) @nogc nothrow pure @safe
+        {
+            this.front_ = i;
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+            ++this.front_;
+        }
+
+        size_t opIndex(size_t i) @nogc nothrow pure @safe
+        {
+            return this.front_ + i;
+        }
+
+        void opIndexAssign(size_t value, size_t i) @nogc nothrow pure @safe
+        {
+            this.front = i + value;
+        }
+
+        InfiniteRange save() @nogc nothrow pure @safe
+        {
+            return this;
+        }
+    }
+
+    auto t = InfiniteRange().takeExactly(3);
+    assert(t.length == 3);
+    assert(t.front == 1);
+    assert(t.back == 3);
+
+    t.popFront();
+    assert(t.front == 2);
+    assert(t.back == 3);
+
+    t.popBack();
+    assert(t.front == 2);
+    assert(t.back == 2);
+
+    t.popFront();
+    assert(t.empty);
+}
+
+// Takes minimum length if the range length > n
+@nogc nothrow pure @safe unittest
+{
+    auto range = take(cast(int[]) null, 8);
+    assert(range.length == 0);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    const int[9] range = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    {
+        auto slice = take(range[], 8)[1 .. 3];
+
+        assert(slice.length == 2);
+        assert(slice.front == 2);
+        assert(slice.back == 3);
+    }
+    {
+        auto slice = takeExactly(range[], 8)[1 .. 3];
+
+        assert(slice.length == 2);
+        assert(slice.front == 2);
+        assert(slice.back == 3);
+    }
 }
