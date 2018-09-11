@@ -26,9 +26,8 @@
  */
 module tanya.container.string;
 
-import std.algorithm.comparison : cmp;
 import std.algorithm.mutation : bringToFront;
-import std.algorithm.searching;
+import std.algorithm.searching : count;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.hash.lookup;
@@ -1284,29 +1283,29 @@ struct String
     int opCmp(S)(auto ref S that) const @trusted
     if (is(Unqual!S == String))
     {
-        return cmp(this.data[0 .. length], that.data[0 .. that.length]);
+        return compare(this.data[0 .. length], that.data[0 .. that.length]);
     }
 
     /// ditto
     int opCmp(S)(ByCodeUnit!S that) const @trusted
     if (is(Unqual!S == char))
     {
-        return cmp(this.data[0 .. length],
-                   that.begin[0 .. that.end - that.begin]);
+        return compare(this.data[0 .. length],
+                       that.begin[0 .. that.end - that.begin]);
     }
 
     /// ditto
     int opCmp(S)(ByCodePoint!S that) const @trusted
     if (is(Unqual!S == char))
     {
-        return cmp(this.data[0 .. length],
-                   that.begin[0 .. that.end - that.begin]);
+        return compare(this.data[0 .. length],
+                       that.begin[0 .. that.end - that.begin]);
     }
 
     /// ditto
     int opCmp()(const char[] that) const @trusted
     {
-        return cmp(this.data[0 .. length], that);
+        return compare(this.data[0 .. length], that);
     }
 
     ///

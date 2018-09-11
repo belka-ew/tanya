@@ -14,7 +14,6 @@
  */
 module tanya.math.mp;
 
-import std.algorithm.comparison : cmp;
 import std.algorithm.mutation : fill, reverse;
 import std.range;
 import tanya.algorithm.comparison;
@@ -629,7 +628,7 @@ struct Integer
         }
         return this.rep[0 .. this.size]
                    .retro
-                   .cmp(that.rep[0 .. that.size].retro);
+                   .compare(that.rep[0 .. that.size].retro);
     }
 
     /**

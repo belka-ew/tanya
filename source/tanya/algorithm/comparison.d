@@ -331,3 +331,130 @@ if (allSatisfy!(isInputRange, R1, R2) && is(typeof(r1.front == r2.front)))
     int[3] range2 = [1, 2, 3];
     assert(!equal(range1[], range2[]));
 }
+
+/**
+ * Compares element-wise two ranges for ordering.
+ *
+ * $(D_PSYMBOL compare) returns a negative value if $(D_PARAM r1) is less than
+ * $(D_PARAM r2), a positive value if $(D_PARAM r2) is less than $(D_PARAM r1),
+ * or `0` if $(D_PARAM r1) and $(D_PARAM r2) equal.
+ *
+ * $(D_PSYMBOL compare) iterates both ranges in lockstep. Whichever of them
+ * contains an element that is greater than the respective element at the same
+ * position in the other range is the greater one of the two.
+ *
+ * If one of the ranges becomes empty when iterating, but all elements equal so
+ * far, the range with more elements is the greater one.
+ *
+ * If $(D_PARAM pred) is given, it is used for comparison. $(D_PARAM pred) is
+ * called as $(D_INLINECODE pred(r1.front, r2.front)) and
+ * $(D_INLINECODE pred(r2.front, r1.front)) to perform three-way comparison.
+ * $(D_PARAM pred) should return a $(D_KEYWORD bool).
+ *
+ * If $(D_PARAM pred) is not given, but the element type of $(D_PARAM R1)
+ * defines `opCmp()` for the element type of $(D_PARAM R2), `opCmp()` is used.
+ *
+ * Otherwise the comparison is perfomed using the basic comparison operators.
+ *
+ * Params:
+ *  pred = Predicate used for comparison.
+ *  R1   = First range type.
+ *  R2   = Second range type.
+ *  r1   = First range.
+ *  r2   = Second range.
+ *
+ * Returns: A negative value if $(D_PARAM r1) is less than $(D_PARAM r2), a
+ *          positive value if $D(_PARAM r2) is less than $(D_PARAM r1), `0`
+ *          otherwise.
+ */
+int compare(alias pred, R1, R2)(R1 r1, R2 r2)
+if (allSatisfy!(isInputRange, R1, R2)
+ && is(typeof(pred(r1.front, r2.front)) == bool)
+ && is(typeof(pred(r2.front, r1.front)) == bool))
+{
+    alias predImpl = (ref r1, ref r2) {
+        return pred(r2.front, r1.front) - pred(r1.front, r2.front);
+    };
+    return compareImpl!(predImpl, R1, R2)(r1, r2);
+}
+
+/// ditto
+int compare(R1, R2)(R1 r1, R2 r2)
+if (allSatisfy!(isInputRange, R1, R2)
+ && is(typeof(r1.front < r2.front || r2.front < r1.front)))
+{
+    static if (is(typeof(r1.front.opCmp(r2.front)) == int))
+    {
+        alias pred = (ref r1, ref r2) => r1.front.opCmp(r2.front);
+    }
+    else
+    {
+        alias pred = (ref r1, ref r2) {
+            return (r2.front < r1.front) - (r1.front < r2.front);
+        };
+    }
+    return compareImpl!(pred, R1, R2)(r1, r2);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(compare("abc", "abc") == 0);
+    assert(compare("abcd", "abc") > 0);
+    assert(compare("ab", "abc") < 0);
+    assert(compare("abc", "abcd") < 0);
+    assert(compare("abc", "ab") > 0);
+    assert(compare("aec", "abc") > 0);
+    assert(compare("aac", "abc") < 0);
+    assert(compare("abc", "aec") < 0);
+    assert(compare("abc", "aab") > 0);
+    assert(compare("aacd", "abc") < 0);
+    assert(compare("abc", "aacd") > 0);
+
+    assert(compare!((a, b) => a > b)("aec", "abc") < 0);
+    assert(compare!((a, b) => a > b)("aac", "abc") > 0);
+}
+
+private int compareImpl(alias pred, R1, R2)(ref R1 r1, ref R2 r2)
+{
+    for (; !r1.empty || !r2.empty; r1.popFront(), r2.popFront())
+    {
+        if (r1.empty)
+        {
+            return -1;
+        }
+        else if (r2.empty)
+        {
+            return 1;
+        }
+        const comparison = pred(r1, r2);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+    }
+    return 0;
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct OpCmp(int value)
+    {
+        int opCmp(OpCmp) @nogc nothrow pure @safe
+        {
+            return value;
+        }
+    }
+    {
+        OpCmp!(-1)[1] range;
+        assert(compare(range[], range[]) < 0);
+    }
+    {
+        OpCmp!1[1] range;
+        assert(compare(range[], range[]) > 0);
+    }
+    {
+        OpCmp!0[1] range;
+        assert(compare(range[], range[]) == 0);
+    }
+}
