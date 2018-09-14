@@ -386,7 +386,7 @@ struct ByValue(T)
  *  hasher = Hash function for $(D_PARAM Key).
  */
 struct HashTable(Key, Value, alias hasher = hash)
-if (is(typeof(((Key k) => hasher(k))(Key.init)) == size_t))
+if (isHashFunction!(hasher, Key))
 {
     private alias HashArray = .HashArray!(hasher, Key, Value);
     private alias Buckets = HashArray.Buckets;

@@ -636,3 +636,27 @@ static if (size_t.sizeof == 8) @nogc nothrow pure @safe unittest
     assert(hash(r500!"~") == 0xc1af12bdfe16b5b5UL);
     assert(hash(r500!"\x7f") == 0x39e9f18f2f85e221UL);
 }
+
+/**
+ * Determines whether $(D_PARAM hasher) is hash function for $(D_PARAM T), i.e.
+ * it is callable with a value of type $(D_PARAM T) and returns a
+ * $(D_PSYMBOL size_t) value.
+ *
+ * Params:
+ *  hasher = Hash function candidate.
+ *  T      = Type to test the hash function with.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM hasher) is a hash function for
+ *          $(D_PARAM T), $(D_KEYWORD false) otherwise.
+ */
+template isHashFunction(alias hasher, T)
+{
+    private alias wrapper = (T x) => hasher(x);
+    enum bool isHashFunction = is(typeof(wrapper(T.init)) == size_t);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(isHashFunction!(hash, int));
+}
