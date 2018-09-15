@@ -1601,7 +1601,7 @@ if (is(T == class) || is(T == struct) || is(T == union))
 }
 
 ///
-pure nothrow @safe unittest
+@nogc pure nothrow @safe unittest
 {
     static struct S
     {
@@ -2613,14 +2613,23 @@ if (is(T == enum))
         }
         else
         {
-            alias getEnumMembers = AliasSeq!(__traits(getMember, T, Args[0]), getEnumMembers!(Args[1 .. $]));
+            alias getEnumMembers = AliasSeq!(__traits(getMember, T, Args[0]),
+                                             getEnumMembers!(Args[1 .. $]));
         }
     }
-    alias EnumMembers = getEnumMembers!(__traits(allMembers, T));
+    private alias allMembers = AliasSeq!(__traits(allMembers, T));
+    static if (allMembers.length == 1)
+    {
+        alias EnumMembers = AliasSeq!(__traits(getMember, T, allMembers));
+    }
+    else
+    {
+        alias EnumMembers = getEnumMembers!allMembers;
+    }
 }
 
 ///
-pure nothrow @nogc @safe unittest
+@nogc nothrow pure @safe unittest
 {
     enum E : int
     {
@@ -2628,7 +2637,17 @@ pure nothrow @nogc @safe unittest
         two,
         three,
     }
-    static assert([E.one, E.two, E.three] == [ EnumMembers!E ]);
+    static assert([EnumMembers!E] == [E.one, E.two, E.three]);
+}
+
+// Produces a tuple for an enum with only one member
+@nogc nothrow pure @safe unittest
+{
+    enum E : int
+    {
+        one = 0,
+    }
+    static assert(EnumMembers!E == AliasSeq!0);
 }
 
 /**
