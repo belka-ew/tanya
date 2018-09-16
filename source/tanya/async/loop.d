@@ -72,9 +72,9 @@
 module tanya.async.loop;
 
 import core.time;
-import std.typecons;
 import tanya.async.transport;
 import tanya.async.watcher;
+import tanya.bitmanip;
 import tanya.container.buffer;
 import tanya.container.list;
 import tanya.memory;

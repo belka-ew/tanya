@@ -25,6 +25,7 @@ Tanya consists of the following packages and (top-level) modules:
 
 * `algorithm`: Collection of generic algorithms.
 * `async`: Event loop (epoll, kqueue and IOCP).
+* `bitmanip`: Bit manipulation.
 * `container`: Queue, Array, Singly and doubly linked lists, Buffers, UTF-8
 string, Set, Hash table.
 * `conv`: This module provides functions for converting between different

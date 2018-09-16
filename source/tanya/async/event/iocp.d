@@ -318,7 +318,9 @@ final class IOCPLoop : Loop
 
                 connection.incoming.insertBack(transport);
 
-                reify(transport, EventMask(Event.none), EventMask(Event.read, Event.write));
+                reify(transport,
+                      EventMask(Event.none),
+                      EventMask(Event.read | Event.write));
 
                 pendings.insertBack(connection);
                 listener.beginAccept(overlapped);

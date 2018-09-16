@@ -140,7 +140,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
     {
         closing = true;
         loop.reify(this,
-                   EventMask(Event.read, Event.write),
+                   EventMask(Event.read | Event.write),
                    EventMask(Event.write));
     }
 
@@ -393,7 +393,9 @@ abstract class SelectorLoop : Loop
                 transport.socket = client;
             }
 
-            reify(transport, EventMask(Event.none), EventMask(Event.read, Event.write));
+            reify(transport,
+                  EventMask(Event.none),
+                  EventMask(Event.read | Event.write));
             connection.incoming.insertBack(transport);
         }
 
