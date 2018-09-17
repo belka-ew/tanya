@@ -278,16 +278,19 @@ if (isForwardRange!Range && isOrderingComparable!(ElementType!Range))
  * If the ranges have different lengths, they aren't equal.
  *
  * Params:
- *  R1 = First range type.
- *  R2 = Second range type.
- *  r1 = First range.
- *  r2 = Second range.
+ *  pred = Predicate used to compare individual element pairs.
+ *  R1   = First range type.
+ *  R2   = Second range type.
+ *  r1   = First range.
+ *  r2   = Second range.
  *
  * Returns: $(D_KEYWORD true) if both ranges are equal, $(D_KEYWORD false)
  *          otherwise.
  */
-bool equal(R1, R2)(R1 r1, R2 r2)
-if (allSatisfy!(isInputRange, R1, R2) && is(typeof(r1.front == r2.front)))
+bool equal(alias pred = (auto ref a, auto ref b) => a == b, R1, R2)
+          (R1 r1, R2 r2)
+if (allSatisfy!(isInputRange, R1, R2)
+ && is(typeof(pred(r1.front, r2.front)) == bool))
 {
     static if (isDynamicArray!R1
             && is(R1 == R2)
@@ -306,7 +309,7 @@ if (allSatisfy!(isInputRange, R1, R2) && is(typeof(r1.front == r2.front)))
         }
         for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
         {
-            if (r1.front != r2.front)
+            if (!pred(r1.front, r2.front))
             {
                 return false;
             }

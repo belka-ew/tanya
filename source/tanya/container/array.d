@@ -1554,14 +1554,14 @@ struct Array(T)
 {
     struct MutableEqualsStruct
     {
-        int opEquals(typeof(this) that) @nogc nothrow pure @safe
+        bool opEquals(typeof(this) that) @nogc nothrow pure @safe
         {
             return true;
         }
     }
     struct ConstEqualsStruct
     {
-        int opEquals(const typeof(this) that) const @nogc nothrow pure @safe
+        bool opEquals(const typeof(this) that) const @nogc nothrow pure @safe
         {
             return true;
         }
