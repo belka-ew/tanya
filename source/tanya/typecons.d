@@ -338,6 +338,24 @@ struct Option(T)
         return this;
     }
 
+    version (D_Ddoc)
+    {
+        /**
+         * If $(D_PARAM T) has a `toHash()` method, $(D_PSYMBOL Option) defines
+         * `toHash()` which returns `T.toHash()` if it is set or 0 otherwise.
+         *
+         * Returns: Hash value.
+         */
+        size_t toHash() const;
+    }
+    else static if (is(typeof(T.init.toHash()) == size_t))
+    {
+        size_t toHash() const
+        {
+            return isNothing ? 0U : this.value.toHash();
+        }
+    }
+
     alias get this;
 }
 
@@ -450,5 +468,25 @@ struct Option(T)
     {
         int i = 5;
         assert(((ref e) => e)(Option!int().or(i)) == 5);
+    }
+}
+
+// Implements toHash() for nothing
+@nogc nothrow pure @safe unittest
+{
+    static struct ToHash
+    {
+        size_t toHash() const @nogc nothrow pure @safe
+        {
+            return 1U;
+        }
+    }
+    {
+        Option!ToHash toHash;
+        assert(toHash.toHash() == 0U);
+    }
+    {
+        auto toHash = Option!ToHash(ToHash());
+        assert(toHash.toHash() == 1U);
     }
 }
