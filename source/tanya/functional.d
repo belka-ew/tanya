@@ -17,21 +17,6 @@ module tanya.functional;
 import tanya.algorithm.mutation;
 import tanya.meta.metafunction;
 
-private template forwardOne(alias arg)
-{
-    static if (__traits(isRef, arg) || __traits(isOut, arg))
-    {
-        alias forwardOne = arg;
-    }
-    else
-    {
-        @property auto forwardOne()
-        {
-            return move(arg);
-        }
-    }
-}
-
 /**
  * Forwards its argument list preserving $(D_KEYWORD ref) and $(D_KEYWORD out)
  * storage classes.
@@ -47,13 +32,35 @@ private template forwardOne(alias arg)
  */
 template forward(args...)
 {
-    static if (args.length == 1)
+    static if (args.length == 0)
     {
-        alias forward = forwardOne!(args[0]);
+        alias forward = AliasSeq!();
+    }
+    else static if (__traits(isRef, args[0]) || __traits(isOut, args[0]))
+    {
+        static if (args.length == 1)
+        {
+            alias forward = args[0];
+        }
+        else
+        {
+            alias forward = AliasSeq!(args[0], forward!(args[1 .. $]));
+        }
     }
     else
     {
-        alias forward = Map!(forwardOne, args);
+        @property auto forwardOne()
+        {
+            return move(args[0]);
+        }
+        static if (args.length == 1)
+        {
+            alias forward = forwardOne;
+        }
+        else
+        {
+            alias forward = AliasSeq!(forwardOne, forward!(args[1 .. $]));
+        }
     }
 }
 
