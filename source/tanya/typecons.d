@@ -19,6 +19,7 @@ module tanya.typecons;
 
 import tanya.algorithm.mutation;
 import tanya.format;
+import tanya.functional;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 
@@ -35,6 +36,8 @@ import tanya.meta.trait;
  *
  * Params:
  *  Specs = Field types and names.
+ *
+ * See_Also: $(D_PSYMBOL tuple).
  */
 template Tuple(Specs...)
 {
@@ -131,6 +134,43 @@ template Tuple(Specs...)
 
     static assert(!is(Tuple!(int, double, char)));
     static assert(!is(Tuple!(int, "first", double, "second", char, "third")));
+}
+
+/**
+ * Creates a new $(D_PSYMBOL Tuple).
+ *
+ * Params:
+ *  Names = Field names.
+ *
+ * See_Also: $(D_PSYMBOL Tuple).
+ */
+template tuple(Names...)
+{
+    /**
+     * Creates a new $(D_PSYMBOL Tuple).
+     *
+     * Params:
+     *  Args = Field types.
+     *  args = Field values.
+     *
+     * Returns: Newly created $(D_PSYMBOL Tuple).
+     */
+    auto tuple(Args...)(auto ref Args args)
+    if (Args.length >= Names.length && isTypeTuple!Args)
+    {
+        alias Zipped = ZipWith!(AliasSeq, Pack!Args, Pack!Names);
+        alias Nameless = Args[Names.length .. $];
+
+        return Tuple!(Zipped, Nameless)(forward!args);
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    auto t = tuple!("one", "two")(20, 5);
+    assert(t.one == 20);
+    assert(t.two == 5);
 }
 
 /**
