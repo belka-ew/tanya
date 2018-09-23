@@ -178,6 +178,8 @@ template tuple(Names...)
  *
  * Params:
  *  T = Type of the encapsulated value.
+ *
+ * See_Also: $(D_PSYMBOL option).
  */
 struct Option(T)
 {
@@ -529,4 +531,31 @@ struct Option(T)
         auto toHash = Option!ToHash(ToHash());
         assert(toHash.toHash() == 1U);
     }
+}
+
+/**
+ * Creates a new $(D_PSYMBOL Option).
+ *
+ * Params:
+ *  T     = Option type.
+ *  value = Initial value.
+ *
+ * See_Also: $(D_PSYMBOL Option).
+ */
+Option!T option(T)(auto ref T value)
+{
+    return Option!T(forward!value);
+}
+
+/// ditto
+Option!T option(T)()
+{
+    return Option!T();
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    assert(option!int().isNothing);
+    assert(option(5) == 5);
 }
