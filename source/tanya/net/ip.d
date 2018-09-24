@@ -14,6 +14,7 @@
  */
 module tanya.net.ip;
 
+import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.container.string;
 import tanya.conv;
@@ -64,6 +65,37 @@ struct Address4
     @nogc nothrow pure @safe unittest
     {
         assert(Address4(0x00202000U).toUInt() == 0x00202000U);
+    }
+
+    /**
+     * Compares two $(D_PARAM Address4) objects.
+     *
+     * Params:
+     *  that = Another address.
+     *
+     * Returns: Positive number if $(D_KEYWORD this) is larger than
+     *          $(D_PARAM that), negative - if it is smaller, or 0 if they
+     *          equal.
+     */
+    int opCmp(ref const Address4 that) const @nogc nothrow pure @safe
+    {
+        const lhs = toUInt();
+        const rhs = that.toUInt();
+        return (rhs < lhs) - (lhs < rhs);
+    }
+
+    /// ditto
+    int opCmp(const Address4 that) const @nogc nothrow pure @safe
+    {
+        return opCmp(that);
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        assert(address4("127.0.0.1") > address4("126.0.0.0"));
+        assert(address4("127.0.0.1") < address4("127.0.0.2"));
+        assert(address4("127.0.0.1") == address4("127.0.0.1"));
     }
 
     /**
@@ -421,6 +453,45 @@ struct Address6
         auto actual = Address6(expected, 1);
         assert(actual.toBytes() == expected);
         assert(actual.scopeID == 1);
+    }
+
+    /**
+     * Compares two $(D_PARAM Address6) objects.
+     *
+     * If $(D_KEYWORD this) and $(D_PARAM that) contain the same address, scope
+     * IDs are compared.
+     *
+     * Params:
+     *  that = Another address.
+     *
+     * Returns: Positive number if $(D_KEYWORD this) is larger than
+     *          $(D_PARAM that), negative - if it is smaller, or 0 if they
+     *          equal.
+     */
+    int opCmp(ref const Address6 that) const @nogc nothrow pure @safe
+    {
+        const diff = compare(this.address[], that.address[]);
+        if (diff == 0)
+        {
+            return (that.scopeID < this.scopeID) - (this.scopeID < that.scopeID);
+        }
+        return diff;
+    }
+
+    /// ditto
+    int opCmp(const Address6 that) const @nogc nothrow pure @safe
+    {
+        return opCmp(that);
+    }
+
+    ///
+    @nogc nothrow @safe unittest
+    {
+        assert(address6("::14") > address6("::1"));
+        assert(address6("::1") < address6("::14"));
+        assert(address6("::1") == address6("::1"));
+        assert(address6("::1%1") < address6("::1%2"));
+        assert(address6("::1%2") > address6("::1%1"));
     }
 
     /**
