@@ -1,37 +1,47 @@
 sudo: false
 
 os:
-  - linux
-  - osx
+- linux
+- osx
 
 language: d
 
 d:
-  - dmd-2.082.0
-  - dmd-2.081.2
+- dmd-2.082.0
+- dmd-2.081.2
 
 env:
   matrix:
-    - ARCH=x86_64
-    - ARCH=x86
+  - ARCH=x86_64
+  - ARCH=x86
+
+matrix:
+  include:
+  - name: "D-Scanner"
+    d: dmd-2.082.0
+    env: DSCANNER=0.5.10
+    os: linux
 
 addons:
   apt:
     packages:
-      - gcc-multilib
+    - gcc-multilib
 
 before_script:
-  - if [ "`$DC --version | head -n 1 | grep 'v2.082.0'`" ]; then
-      export UNITTEST="unittest-cov";
-    fi
+- if [ "`$DC --version | head -n 1 | grep 'v2.082.0'`" ] &&
+     [ -z "$DSCANNER" ]; then
+    export UNITTEST="unittest-cov";
+  fi
 
 script:
-  - dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC
-  - if [ "$UNITTEST" ] && [ "$ARCH" = "x86_64" ] && [ "$TRAVIS_OS_NAME" = "linux" ];
-    then
-      dub fetch dscanner --version=0.5.10;
-      dub run dscanner -- --styleCheck ./source/;
-    fi
+- if [ -z "$DSCANNER" ]; then
+    dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
+  else
+    dub fetch dscanner --version=$DSCANNER;
+
+    FILES=$(find source -type f);
+    dub run dscanner -- --styleCheck $FILES;
+  fi
 
 after_success:
-  - test "$UNITTEST" && bash <(curl -s https://codecov.io/bash)
+- test "$UNITTEST" && bash <(curl -s https://codecov.io/bash)
