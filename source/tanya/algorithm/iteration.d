@@ -407,3 +407,172 @@ if (isInputRange!R)
         assert(slice.back == 3);
     }
 }
+
+/**
+ * Iterates a bidirectional range backwards.
+ *
+ * If $(D_PARAM Range) is a random-access range as well, the resulting range
+ * is a random-access range too.
+ *
+ * Params:
+ *  Range = Bidirectional range type.
+ *  range = Bidirectional range.
+ *
+ * Returns: Bidirectional range with the elements order reversed.
+ */
+auto retro(Range)(Range range)
+if (isBidirectionalRange!Range)
+{
+    static struct Retro
+    {
+        Range source;
+
+        @disable this();
+
+        private this(Range source)
+        {
+            this.source = source;
+        }
+
+        Retro save()
+        {
+            return this;
+        }
+
+        @property auto ref front()
+        in (!empty)
+        {
+            return this.source.back;
+        }
+
+        void popFront()
+        in (!empty)
+        {
+            this.source.popBack();
+        }
+
+        @property auto ref back()
+        in (!empty)
+        {
+            return this.source.front;
+        }
+
+        void popBack()
+        in (!empty)
+        {
+            this.source.popFront();
+        }
+
+        @property bool empty()
+        {
+            return this.source.empty;
+        }
+
+        static if (hasLength!Range)
+        {
+            @property size_t length()
+            {
+                return this.source.length;
+            }
+        }
+
+        static if (isRandomAccessRange!Range && hasLength!Range)
+        {
+            auto ref opIndex(size_t i)
+            in (i < length)
+            {
+                return this.source[$ - ++i];
+            }
+        }
+
+        static if (hasAssignableElements!Range)
+        {
+            @property void front(ref ElementType!Range value)
+            in (!empty)
+            {
+                this.source.back = value;
+            }
+
+            @property void front(ElementType!Range value)
+            in (!empty)
+            {
+                this.source.back = move(value);
+            }
+
+            @property void back(ref ElementType!Range value)
+            in (!empty)
+            {
+                this.source.front = value;
+            }
+
+            @property void back(ElementType!Range value)
+            in (!empty)
+            {
+                this.source.front = move(value);
+            }
+
+            static if (isRandomAccessRange!Range && hasLength!Range)
+            {
+                void opIndexAssign(ref ElementType!Range value, size_t i)
+                in (i < length)
+                {
+                    this.source[$ - ++i] = value;
+                }
+
+                void opIndexAssign(ElementType!Range value, size_t i)
+                in (i < length)
+                {
+                    this.source[$ - ++i] = move(value);
+                }
+            }
+        }
+    }
+
+    return Retro(range);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    const int[3] given = [1, 2, 3];
+    const int[3] expected = [3, 2, 1];
+
+    auto actual = retro(given[]);
+
+    assert(actual.length == expected.length);
+    assert(!actual.empty);
+    assert(equal(actual, expected[]));
+}
+
+// Elements are accessible in reverse order
+@nogc nothrow pure @safe unittest
+{
+    const int[3] given = [1, 2, 3];
+    auto actual = retro(given[]);
+
+    assert(actual.back == given[].front);
+    assert(actual[0] == 3);
+    assert(actual[2] == 1);
+
+    actual.popBack();
+    assert(actual.back == 2);
+    assert(actual[1] == 2);
+}
+
+// Elements can be assigned
+@nogc nothrow pure @safe unittest
+{
+    int[4] given = [1, 2, 3, 4];
+    auto actual = retro(given[]);
+
+    actual.front = 5;
+    assert(given[].back == 5);
+
+    actual.back = 8;
+    assert(given[].front == 8);
+
+    actual[2] = 10;
+    assert(given[1] == 10);
+}

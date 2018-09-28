@@ -14,15 +14,16 @@
  */
 module tanya.math.mp;
 
-import std.algorithm.mutation : fill, reverse;
-import std.range;
+import std.algorithm.mutation : fill;
 import tanya.algorithm.comparison;
+import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.encoding.ascii;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
+import tanya.range;
 
 /**
  * Algebraic sign.
@@ -929,7 +930,7 @@ struct Integer
             const shift = digitBitCount - bit;
             digit carry;
 
-            foreach (ref d; this.rep[0 .. this.size].retro)
+            foreach_reverse (ref d; this.rep[0 .. this.size])
             {
                 const newCarry = d & mask;
                 d = (d >> bit) | (carry << shift);
@@ -1505,14 +1506,11 @@ struct Integer
             tmp = this;
         }
 
-        do
+        array.length = length;
+        for (size_t i = array.length - 1; tmp != 0; tmp >>= 8, --i)
         {
-            array.insertBack(cast(ubyte) (tmp.rep[0] & 0xff));
-            tmp >>= 8;
+            array[i] = (cast(ubyte) (tmp.rep[0] & 0xff));
         }
-        while (tmp != 0);
-
-        array[].reverse();
 
         return array;
     }
