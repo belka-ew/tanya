@@ -813,16 +813,27 @@ template isRandomAccessRange(R)
 /**
  * Puts $(D_PARAM e) into the $(D_PARAM range).
  *
- * $(D_PSYMBOL R) should be an output range for $(D_PARAM E).
- *
- * $(D_PARAM range) is advanced after putting an element into it if all of the
- * following conditions are met:
+ * $(D_PSYMBOL R) should be an output range for $(D_PARAM E). It doesn't mean
+ * that everything $(D_PARAM range) is an output range for can be put into it,
+ * but only if one of the following conditions is met:
  *
  * $(OL
- *  $(LI $(D_PSYMBOL R) is an input range)
- *  $(LI $(D_PSYMBOL R) doesn't define a `put`-method)
+ *  $(LI $(D_PARAM R) defines a `put`-method for $(D_PARAM E))
  *  $(LI $(D_PARAM e) can be assigned to $(D_INLINECODE range.front))
+ *  $(LI $(D_PARAM e) can be put into $(D_PARAM range) using
+ *       $(D_INLINECODE range(e))
+ *  )
  * )
+ *
+ * The method to put $(D_PARAM e) into $(D_PARAM range) is chosen based on the
+ * order specified above.
+ *
+ * If $(D_PARAM E) is an input range and $(D_PARAM R) is an output range for
+ * its elements as well, use $(D_PSYMBOL tanya.algorithm.mutation.copy)
+ * instead.
+ *
+ * $(D_PARAM range) is advanced after putting an element into it if it is an
+ * input range that doesn't define a `put`-method.
  *
  * Params:
  *  R     = Target range type.
@@ -848,15 +859,6 @@ void put(R, E)(ref R range, auto ref E e)
     else static if (is(typeof((R r, E e) => r(e))))
     {
         range(e);
-    }
-    else static if (isInputRange!E)
-    {
-        pragma(msg, "Putting an input range into an output range is "
-                  ~ "deprecated. Use tanya.algorithm.mutation.copy instead");
-        for (; !e.empty; e.popFront())
-        {
-            put(range, e.front);
-        }
     }
     else
     {

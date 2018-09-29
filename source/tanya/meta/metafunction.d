@@ -238,18 +238,6 @@ struct Pack(Args...)
     alias Seq this;
 }
 
-deprecated("Use Pack instead")
-struct Tuple(Args...)
-{
-    /// Elements in this tuple as $(D_PSYMBOL AliasSeq).
-    alias Seq = Args;
-
-    /// The length of the tuple.
-    enum size_t length = Args.length;
-
-    alias Seq this;
-}
-
 ///
 @nogc nothrow pure @safe unittest
 {

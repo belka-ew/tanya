@@ -856,13 +856,6 @@ if (is(Unqual!From == bool) && isNumeric!To && !is(Unqual!To == Unqual!From))
     assert(false.to!int == 0);
 }
 
-deprecated("Use tanya.format.format instead")
-To to(To, From)(auto ref From from)
-if (is(Unqual!To == String))
-{
-    return format!"{}"(from);
-}
-
 /**
  * Converts a stringish range to an integral value.
  *
