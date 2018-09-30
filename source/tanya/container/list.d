@@ -15,7 +15,6 @@
  */
 module tanya.container.list;
 
-import std.algorithm.searching;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.container.entry;

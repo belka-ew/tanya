@@ -27,7 +27,6 @@
 module tanya.container.string;
 
 import std.algorithm.mutation : bringToFront;
-import std.algorithm.searching : count;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.hash.lookup;
@@ -1485,6 +1484,8 @@ struct String
     ///
     @nogc pure @safe unittest
     {
+        import tanya.algorithm.searching : count;
+
         auto s = String("Из пословицы слова не выкинешь.");
 
         assert(s.remove(s[5 .. 24]).length == 33);

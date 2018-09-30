@@ -53,10 +53,10 @@ module tanya.network.socket;
 import core.stdc.errno;
 import core.time;
 public import std.socket : SocketOption, SocketOptionLevel;
-import std.traits;
-import std.typecons;
 import tanya.algorithm.comparison;
+import tanya.bitmanip;
 import tanya.memory;
+import tanya.meta.trait;
 import tanya.os.error;
 
 /// Value returned by socket operations on error.
