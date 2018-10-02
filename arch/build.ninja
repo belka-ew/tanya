@@ -6,9 +6,9 @@ rule archive
 
 build abs.o: gas x64/linux/math/abs.S
 build log.o: gas x64/linux/math/log.S
-build cmp.o: gas x64/linux/memory/cmp.S
+build equal.o: gas x64/linux/memory/equal.S
 build fill.o: gas x64/linux/memory/fill.S
 build copy.o: gas x64/linux/memory/copy.S
 build syscall.o: gas x64/linux/syscall.S
 
-build tanya.a: archive syscall.o copy.o fill.o cmp.o log.o abs.o
+build tanya.a: archive syscall.o copy.o fill.o equal.o log.o abs.o

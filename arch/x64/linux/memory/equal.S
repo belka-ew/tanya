@@ -1,20 +1,19 @@
 	.text
 
 /*
- * cmpMemory.
+ * equalMemory.
  *
  * rdi - r1 length
  * rsi - r1 data.
  * rdx - r2 length.
  * rcx - r2 data.
  */
-	.globl _D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi
-	.type _D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi, @function
-_D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi:
+	.globl _D5tanya6memory2op11equalMemoryFNaNbNixAvxQdZb
+	.type _D5tanya6memory2op11equalMemoryFNaNbNixAvxQdZb, @function
+_D5tanya6memory2op11equalMemoryFNaNbNixAvxQdZb:
 		// Compare the lengths
 		cmp %rdx, %rdi
-		jl  less
-		jg  greater
+		jne not_equal
 
 		mov %rcx, %rdi
 
@@ -26,8 +25,7 @@ _D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi:
 
 	naligned:
 		cmpsb
-		jl less
-		jg greater
+		jne not_equal
 
 		dec %rdx
 		test $0x07, %edi
@@ -38,8 +36,7 @@ _D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi:
 		shr $0x03, %rcx
 
 		repe cmpsq
-		jl less
-		jg greater
+		jne not_equal
 
 		and $0x07, %edx
 		jz equal
@@ -49,19 +46,14 @@ _D5tanya6memory2op9cmpMemoryFNaNbNixAvxQdZi:
 		cmp $0x0, %rcx
 
 		repe cmpsb
-		jl less
-		jg greater
+		jne not_equal
 
 	equal:
+		mov $0x01, %rax // Return 1
+		jmp end
+
+	not_equal:
 		xor %rax, %rax // Return 0
-		jmp end
-
-	greater:
-		mov $0x01, %rax
-		jmp end
-
-	less:
-		mov $-0x01, %rax
 
 	end:
 		ret

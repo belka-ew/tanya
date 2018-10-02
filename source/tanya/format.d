@@ -43,7 +43,7 @@ import tanya.algorithm.comparison;
 import tanya.container.string;
 import tanya.encoding.ascii;
 import tanya.math;
-import tanya.memory.op;
+static import tanya.memory.op;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -1351,7 +1351,7 @@ do
         intSlice.popBack();
     }
     const begin = buffer.length - intSlice.length;
-    copy(intSlice, buffer[begin .. $]);
+    tanya.memory.op.copy(intSlice, buffer[begin .. $]);
 
     exponent = cast(int) (intSlice.length + mismatch);
 
@@ -1388,7 +1388,7 @@ do
 
     char[21] intBuffer;
     auto intSlice = integral2String(decimal, intBuffer);
-    copy(intSlice, buffer);
+    tanya.memory.op.copy(intSlice, buffer);
     exponent = cast(int) intSlice.length;
 
     size_t position = exponent;
@@ -1903,7 +1903,7 @@ private char[] errol3(double value,
         if (pathologies[middle].representation == bits.integral)
         {
             exponent = pathologies[middle].exponent;
-            copy(pathologies[middle].digits, buffer);
+            tanya.memory.op.copy(pathologies[middle].digits, buffer);
             return buffer[0 .. pathologies[middle].digits.length];
         }
         else if (pathologies[middle].representation < bits.integral)
@@ -2054,7 +2054,7 @@ if (isFloatingPoint!T)
         {
             length = precision + 1;
         }
-        realString[1 .. length].copy(bufferSlice);
+        tanya.memory.op.copy(realString[1 .. length], bufferSlice);
         bufferSlice.popFrontExactly(length - 1);
 
         // Dump the exponent.
@@ -2116,7 +2116,7 @@ if (isFloatingPoint!T)
                 n = precision;
             }
 
-            fill!'0'(bufferSlice[0 .. n]);
+            tanya.memory.op.fill!'0'(bufferSlice[0 .. n]);
             bufferSlice.popFrontExactly(n);
 
             if ((length + n) > precision)
@@ -2124,7 +2124,7 @@ if (isFloatingPoint!T)
                 length = precision - n;
             }
 
-            realString[0 .. length].copy(bufferSlice);
+            tanya.memory.op.copy(realString[0 .. length], bufferSlice);
             bufferSlice.popFrontExactly(length);
         }
         else if (cast(uint) decimalPoint >= length)
@@ -2142,7 +2142,7 @@ if (isFloatingPoint!T)
             {
                 n = decimalPoint - n;
 
-                fill!'0'(bufferSlice[0 .. n]);
+                tanya.memory.op.fill!'0'(bufferSlice[0 .. n]);
                 bufferSlice.popFrontExactly(n);
             }
             if (precision != 0)
@@ -2173,7 +2173,7 @@ if (isFloatingPoint!T)
                 length = precision + decimalPoint;
             }
 
-            realString[n .. length].copy(bufferSlice);
+            tanya.memory.op.copy(realString[n .. length], bufferSlice);
             bufferSlice.popFrontExactly(length - n);
         }
     }

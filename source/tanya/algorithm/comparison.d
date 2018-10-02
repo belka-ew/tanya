@@ -15,8 +15,8 @@
 module tanya.algorithm.comparison;
 
 import tanya.algorithm.mutation;
-import tanya.math : isNaN;
-import tanya.memory.op;
+import tanya.math;
+static import tanya.memory.op;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -296,7 +296,7 @@ if (allSatisfy!(isInputRange, R1, R2)
             && is(R1 == R2)
             && __traits(isPOD, ElementType!R1))
     {
-        return cmp(r1, r2) == 0;
+        return tanya.memory.op.equal(r1, r2);
     }
     else
     {
