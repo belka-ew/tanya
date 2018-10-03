@@ -490,8 +490,8 @@ struct Address6
         assert(address6("::14") > address6("::1"));
         assert(address6("::1") < address6("::14"));
         assert(address6("::1") == address6("::1"));
-        assert(address6("::1%1") < address6("::1%2"));
-        assert(address6("::1%2") > address6("::1%1"));
+        assert(address6("fe80::1%1") < address6("fe80::1%2"));
+        assert(address6("fe80::1%2") > address6("fe80::1%1"));
     }
 
     /**
@@ -716,19 +716,16 @@ private void write2Bytes(R)(ref R range, ubyte[] address)
  * is specified (i.e. first character after `%` is not a digit), the parser
  * tries to convert it to the ID of that interface. If the interface with the
  * given name can't be found, the parser doesn't fail, but just ignores the
- * invalid interface name.
+ * invalid interface name, scope ID is `0` then.
  *
  * If an ID is given (i.e. first character after `%` is a digit),
  * $(D_PSYMBOL address6) just stores it in $(D_PSYMBOL Address6.scopeID) without
  * checking whether an interface with this ID really exists. If the ID is
  * invalid (if it is too long or contains non decimal characters), parsing
- * and nothing is returned.
+ * fails and nothing is returned.
  *
  * If neither an ID nor a name is given, $(D_PSYMBOL Address6.scopeID) is set
  * to `0`.
- *
- * The parser doesn't support notation with an embedded IPv4 address (e.g.
- * ::1.2.3.4).
  *
  * Params:
  *  R     = Input range type.
@@ -746,7 +743,6 @@ if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
     }
     Address6 result;
     ubyte[12] tail;
-    size_t i;
     size_t j;
 
     // An address begins with a number, not ':'. But there is a special case
@@ -764,22 +760,40 @@ if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
 
     // Parse the address before '::'.
     // This loop parses the whole address if it doesn't contain '::'.
-    for (; i < 13; i += 2)
+    static foreach (i; 0 .. 7)
     {
-        write2Bytes(range, result.address[i .. $]);
-        if (range.empty || range.front != ':')
-        {
-            return typeof(return)();
-        }
-        range.popFront();
-        if (range.empty)
-        {
-            return typeof(return)();
-        }
-        if (range.front == ':')
-        {
+        { // To make "state" definition local
+            static if (i == 6) // Can be embedded IPv4
+            {
+                auto state = range.save();
+            }
+            write2Bytes(range, result.address[i * 2 .. $]);
+            if (range.empty)
+            {
+                return typeof(return)();
+            }
+            static if (i == 6)
+            {
+                if (range.front == '.')
+                {
+                    swap(range, state);
+                    goto ParseIPv4;
+                }
+            }
+            if (range.front != ':')
+            {
+                return typeof(return)();
+            }
             range.popFront();
-            goto ParseTail;
+            if (range.empty)
+            {
+                return typeof(return)();
+            }
+            if (range.front == ':')
+            {
+                range.popFront();
+                goto ParseTail;
+            }
         }
     }
     write2Bytes(range, result.address[14 .. $]);
@@ -810,27 +824,38 @@ ParseTail: // after ::
     {
         return typeof(return)();
     }
-    write2Bytes(range, tail[j .. $]);
-    if (range.empty)
-    {
-        goto CopyTail;
-    }
-    else if (range.front == '%')
-    {
-        goto ParseIface;
-    }
-    else if (range.front != ':')
-    {
-        return typeof(return)();
-    }
-    range.popFront();
+    { // To make "state" definition local
+        auto state = range.save();
 
-    for (i = 2, j = 2; i <= 11; i += 2, j += 2, range.popFront())
+        write2Bytes(range, tail[j .. $]);
+        if (range.empty)
+        {
+            goto CopyTail;
+        }
+        else if (range.front == '%')
+        {
+            goto ParseIface;
+        }
+        else if (range.front == '.')
+        {
+            swap(range, state);
+            goto ParseIPv4;
+        }
+        else if (range.front != ':')
+        {
+            return typeof(return)();
+        }
+        range.popFront();
+    }
+
+    j = 2;
+    for (size_t i = 2; i <= 11; i += 2, j += 2, range.popFront())
     {
         if (range.empty || range.front == ':')
         {
             return typeof(return)();
         }
+        auto state = range.save();
         write2Bytes(range, tail[j .. $]);
 
         if (range.empty)
@@ -841,10 +866,43 @@ ParseTail: // after ::
         {
             goto ParseIface;
         }
+        else if (range.front == '.')
+        {
+            swap(range, state);
+            goto ParseIPv4;
+        }
         else if (range.front != ':')
         {
             return typeof(return)();
         }
+    }
+
+ParseIPv4:
+    // We know there is a number followed by '.'. We have to ensure this number
+    // is an octet
+    tail[j] = readIntegral!ubyte(range);
+    static foreach (i; 1 .. 4)
+    {
+        if (range.empty || range.front != '.')
+        {
+            return typeof(return)();
+        }
+        range.popFront();
+        if (range.empty)
+        {
+            return typeof(return)();
+        }
+        tail[j + i] = readIntegral!ubyte(range);
+    }
+    j += 2;
+
+    if (range.empty)
+    {
+        goto CopyTail;
+    }
+    else if (range.front != '%')
+    {
+        return typeof(return)();
     }
 
 ParseIface: // Scope name or ID
@@ -907,7 +965,31 @@ CopyTail:
     assert(address6(":a").isNothing);
     assert(address6("a:").isNothing);
     assert(address6("1:2:3:4::6:").isNothing);
-    assert(address6("1:2:3:4::6:7:8%").isNothing);
+    assert(address6("fe80:2:3:4::6:7:8%").isNothing);
+}
+
+// Parses embedded IPv4 address
+@nogc nothrow @safe unittest
+{
+    {
+        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
+        auto actual = address6("0:0:0:0:0:0:1.2.3.4");
+        assert(actual.address == expected);
+    }
+    {
+        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
+        auto actual = address6("::1.2.3.4");
+        assert(actual.address == expected);
+    }
+    {
+        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 6, 1, 2, 3, 4];
+        auto actual = address6("::5:6:1.2.3.4");
+        assert(actual.address == expected);
+    }
+    assert(address6("0:0:0:0:0:0:1.2.3.").isNothing);
+    assert(address6("0:0:0:0:0:0:1.2:3.4").isNothing);
+    assert(address6("0:0:0:0:0:0:1.2.3.4.").isNothing);
+    assert(address6("fe80:0:0:0:0:0:1.2.3.4%1").scopeID == 1);
 }
 
 /**
