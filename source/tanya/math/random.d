@@ -15,10 +15,11 @@
 module tanya.math.random;
 
 import std.digest.sha;
-import std.typecons;
 import tanya.memory;
+import tanya.typecons;
 
 /// Block size of entropy accumulator (SHA-512).
+deprecated
 enum blockSize = 64;
 
 /// Maximum amount gathered from the entropy sources.
@@ -39,7 +40,7 @@ class EntropyException : Exception
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
-         Throwable next = null) pure @safe nothrow const @nogc
+         Throwable next = null) const @nogc nothrow pure @safe
     {
         super(msg, file, line, next);
     }
@@ -56,17 +57,17 @@ abstract class EntropySource
     /**
      * Returns: Minimum bytes required from the entropy source.
      */
-    @property ubyte threshold() const pure nothrow @safe @nogc;
+    @property ubyte threshold() const @nogc nothrow pure @safe;
 
     /**
      * Returns: Whether this entropy source is strong.
      */
-    @property bool strong() const pure nothrow @safe @nogc;
+    @property bool strong() const @nogc nothrow pure @safe;
 
     /**
      * Returns: Amount of already generated entropy.
      */
-    @property ushort size() const pure nothrow @safe @nogc
+    @property ushort size() const @nogc nothrow pure @safe
     {
         return size_;
     }
@@ -76,7 +77,7 @@ abstract class EntropySource
      *  size = Amount of already generated entropy. Cannot be smaller than the
      *         already set value.
      */
-    @property void size(ushort size) pure nothrow @safe @nogc
+    @property void size(ushort size) @nogc nothrow pure @safe
     {
         size_ = size;
     }
@@ -89,9 +90,13 @@ abstract class EntropySource
      *           to fill the buffer).
      *
      * Returns: Number of bytes that were copied to the $(D_PARAM output)
-     *          or $(D_PSYMBOL Nullable!ubyte.init) on error.
+     *          or nothing on error.
+     *
+     * Postcondition: Returned length is less than or equal to
+     *                $(D_PARAM output) length.
      */
-    Nullable!ubyte poll(out ubyte[maxGather] output) @nogc;
+    Option!ubyte poll(out ubyte[maxGather] output) @nogc
+    out (length; length.isNothing || length.get <= maxGather);
 }
 
 version (CRuntime_Bionic)
@@ -118,7 +123,7 @@ else version (Solaris)
 version (linux)
 {
     import core.stdc.config : c_long;
-    extern (C) c_long syscall(c_long number, ...) nothrow @system @nogc;
+    private extern(C) c_long syscall(c_long number, ...) @nogc nothrow @system;
 
     /**
      * Uses getrandom system call.
@@ -128,7 +133,7 @@ version (linux)
         /**
          * Returns: Minimum bytes required from the entropy source.
          */
-        override @property ubyte threshold() const pure nothrow @safe @nogc
+        override @property ubyte threshold() const @nogc nothrow pure @safe
         {
             return 32;
         }
@@ -136,7 +141,7 @@ version (linux)
         /**
          * Returns: Whether this entropy source is strong.
          */
-        override @property bool strong() const pure nothrow @safe @nogc
+        override @property bool strong() const @nogc nothrow pure @safe
         {
             return true;
         }
@@ -149,19 +154,14 @@ version (linux)
          *           to fill the buffer).
          *
          * Returns: Number of bytes that were copied to the $(D_PARAM output)
-         *          or $(D_PSYMBOL Nullable!ubyte.init) on error.
+         *          or nothing on error.
          */
-        override Nullable!ubyte poll(out ubyte[maxGather] output) nothrow @nogc
-        out (length)
-        {
-            assert(length <= maxGather);
-        }
-        do
+        override Option!ubyte poll(out ubyte[maxGather] output) @nogc nothrow
         {
             // int getrandom(void *buf, size_t buflen, unsigned int flags);
             import mir.linux._asm.unistd : NR_getrandom;
             auto length = syscall(NR_getrandom, output.ptr, output.length, 0);
-            Nullable!ubyte ret;
+            Option!ubyte ret;
 
             if (length >= 0)
             {
@@ -170,19 +170,11 @@ version (linux)
             return ret;
         }
     }
-
-    @nogc @system unittest
-    {
-        auto entropy = defaultAllocator.make!Entropy();
-        ubyte[blockSize] output;
-        output = entropy.random;
-
-        defaultAllocator.dispose(entropy);
-    }
 }
 else version (SecureARC4Random)
 {
-    private extern (C) void arc4random_buf(scope void* buf, size_t nbytes) nothrow @nogc @system;
+    private extern(C) void arc4random_buf(scope void* buf, size_t nbytes)
+    @nogc nothrow @system;
 
     /**
      * Uses arc4random_buf.
@@ -192,7 +184,7 @@ else version (SecureARC4Random)
         /**
          * Returns: Minimum bytes required from the entropy source.
          */
-        override @property ubyte threshold() const pure nothrow @safe @nogc
+        override @property ubyte threshold() const @nogc nothrow pure @safe
         {
             return 32;
         }
@@ -200,7 +192,7 @@ else version (SecureARC4Random)
         /**
          * Returns: Whether this entropy source is strong.
          */
-        override @property bool strong() const pure nothrow @safe @nogc
+        override @property bool strong() const @nogc nothrow pure @safe
         {
             return true;
         }
@@ -213,22 +205,14 @@ else version (SecureARC4Random)
          *           to fill the buffer).
          *
          * Returns: Number of bytes that were copied to the $(D_PARAM output)
-         *          or $(D_PSYMBOL Nullable!ubyte.init) on error.
+         *          or nothing on error.
          */
-        override Nullable!ubyte poll(out ubyte[maxGather] output) nothrow @nogc @safe
+        override Option!ubyte poll(out ubyte[maxGather] output)
+        @nogc nothrow @safe
         {
             (() @trusted => arc4random_buf(output.ptr, output.length))();
-            return Nullable!ubyte(cast(ubyte) (output.length));
+            return Option!ubyte(cast(ubyte) (output.length));
         }
-    }
-
-    @nogc @system unittest
-    {
-        auto entropy = defaultAllocator.make!Entropy();
-        ubyte[blockSize] output;
-        output = entropy.random;
-
-        defaultAllocator.dispose(entropy);
     }
 }
 else version (Windows)
@@ -248,22 +232,31 @@ else version (Windows)
         BOOL CryptReleaseContext(HCRYPTPROV, ULONG_PTR);
     }
 
-    private bool initCryptGenRandom(scope ref HCRYPTPROV hProvider) @nogc nothrow @trusted
+    private bool initCryptGenRandom(scope ref HCRYPTPROV hProvider)
+    @nogc nothrow @trusted
     {
         // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379886(v=vs.85).aspx
         // For performance reasons, we recommend that you set the pszContainer
         // parameter to NULL and the dwFlags parameter to CRYPT_VERIFYCONTEXT
         // in all situations where you do not require a persisted key.
-        // CRYPT_SILENT is intended for use with applications for which the UI cannot be displayed by the CSP.
-        if (!CryptAcquireContextW(&hProvider, null, null, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
+        // CRYPT_SILENT is intended for use with applications for which the UI
+        // cannot be displayed by the CSP.
+        if (!CryptAcquireContextW(&hProvider,
+                                  null,
+                                  null,
+                                  PROV_RSA_FULL,
+                                  CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
         {
-            if (GetLastError() == NTE_BAD_KEYSET)
+            if (GetLastError() != NTE_BAD_KEYSET)
             {
-                // Attempt to create default container
-                if (!CryptAcquireContextA(&hProvider, null, null, PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_SILENT))
-                    return false;
+                return false;
             }
-            else
+            // Attempt to create default container
+            if (!CryptAcquireContextA(&hProvider,
+                                      null,
+                                      null,
+                                      PROV_RSA_FULL,
+                                      CRYPT_NEWKEYSET | CRYPT_SILENT))
             {
                 return false;
             }
@@ -299,7 +292,7 @@ else version (Windows)
         /**
          * Returns: Minimum bytes required from the entropy source.
          */
-        override @property ubyte threshold() const pure nothrow @safe @nogc
+        override @property ubyte threshold() const @nogc nothrow pure @safe
         {
             return 32;
         }
@@ -307,7 +300,7 @@ else version (Windows)
         /**
          * Returns: Whether this entropy source is strong.
          */
-        override @property bool strong() const pure nothrow @safe @nogc
+        override @property bool strong() const @nogc nothrow pure @safe
         {
             return true;
         }
@@ -320,16 +313,14 @@ else version (Windows)
          *           to fill the buffer).
          *
          * Returns: Number of bytes that were copied to the $(D_PARAM output)
-         *          or $(D_PSYMBOL Nullable!ubyte.init) on error.
+         *          or nothing on error.
          */
-        override Nullable!ubyte poll(out ubyte[maxGather] output) @nogc nothrow @safe
-        in
+        override Option!ubyte poll(out ubyte[maxGather] output)
+        @nogc nothrow @safe
         {
-            assert(hProvider > 0, "hProvider not properly initialized.");
-        }
-        do
-        {
-            Nullable!ubyte ret;
+            Option!ubyte ret;
+
+            assert(hProvider > 0, "hProvider not properly initialized");
             if ((() @trusted => CryptGenRandom(hProvider, output.length, cast(PBYTE) output.ptr))())
             {
                 ret = cast(ubyte) (output.length);
@@ -337,15 +328,16 @@ else version (Windows)
             return ret;
         }
     }
+}
 
-    @nogc @system unittest
-    {
-        auto entropy = defaultAllocator.make!Entropy();
-        ubyte[blockSize] output;
-        output = entropy.random;
+static if (is(PlatformEntropySource)) @nogc @system unittest
+{
+    import tanya.memory.smartref : unique;
 
-        defaultAllocator.dispose(entropy);
-    }
+    auto source = defaultAllocator.unique!PlatformEntropySource();
+
+    assert(source.threshold == 32);
+    assert(source.strong);
 }
 
 /**
@@ -360,6 +352,7 @@ else version (Windows)
  * defaultAllocator.dispose(entropy);
  * ---
  */
+deprecated
 class Entropy
 {
     /// Entropy sources.
@@ -396,7 +389,7 @@ class Entropy
     /**
      * Returns: Amount of the registered entropy sources.
      */
-    @property ubyte sourceCount() const pure nothrow @safe @nogc
+    @property ubyte sourceCount() const @nogc nothrow pure @safe
     {
         return sourceCount_;
     }
@@ -413,7 +406,7 @@ class Entropy
      *  $(D_PSYMBOL EntropySource)
      */
     Entropy opOpAssign(string op)(EntropySource source)
-    pure nothrow @safe @nogc
+    @nogc nothrow pure @safe
     if (op == "~")
     in
     {
@@ -451,7 +444,7 @@ class Entropy
             {
                 auto outputLength = sources[i].poll(buffer);
 
-                if (!outputLength.isNull)
+                if (!outputLength.isNothing)
                 {
                     if (outputLength > 0)
                     {
@@ -502,7 +495,7 @@ class Entropy
      */
     protected void update(in ubyte sourceId,
                           ref ubyte[maxGather] data,
-                          ubyte length) pure nothrow @safe @nogc
+                          ubyte length) @nogc nothrow pure @safe
     {
         ubyte[2] header;
 
