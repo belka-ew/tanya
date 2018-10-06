@@ -16,7 +16,6 @@ module tanya.container.array;
 
 import core.checkedint;
 import std.algorithm.mutation : bringToFront,
-                                fill,
                                 initializeAll,
                                 uninitializedFill;
 import tanya.algorithm.comparison;
@@ -25,7 +24,7 @@ import tanya.exception;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
-import tanya.range.primitive;
+import tanya.range;
 
 /**
  * Random-access range for the $(D_PSYMBOL Array).

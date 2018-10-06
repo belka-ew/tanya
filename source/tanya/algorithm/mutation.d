@@ -388,3 +388,76 @@ do
 
     assert(copy(source[], target).value == 5);
 }
+
+/**
+ * Fills $(D_PARAM range) with $(D_PARAM value).
+ *
+ * Params:
+ *  Range = Input range type.
+ *  Value = Filler type.
+ *  range = Input range.
+ *  value = Filler.
+ */
+void fill(Range, Value)(Range range, Value value)
+if (isInputRange!Range && isAssignable!(ElementType!Range, Value))
+{
+    static if (!isDynamicArray!Range && is(typeof(range[] = value)))
+    {
+        range[] = value;
+    }
+    else
+    {
+        for (; !range.empty; range.popFront())
+        {
+            range.front = value;
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    int[6] actual;
+    const int[6] expected = [1, 1, 1, 1, 1, 1];
+
+    fill(actual[], 1);
+    assert(equal(actual[], expected[]));
+}
+
+// [] is called where possible
+@nogc nothrow pure @system unittest
+{
+    static struct Slice
+    {
+        bool* slicingCalled;
+
+        int front() @nogc nothrow pure @safe
+        {
+            return 0;
+        }
+
+        void front(int) @nogc nothrow pure @safe
+        {
+        }
+
+        void popFront() @nogc nothrow pure @safe
+        {
+        }
+
+        bool empty() @nogc nothrow pure @safe
+        {
+            return true;
+        }
+
+        void opIndexAssign(int) @nogc nothrow pure @safe
+        {
+            *this.slicingCalled = true;
+        }
+    }
+    bool slicingCalled;
+    auto range = Slice(&slicingCalled);
+    fill(range, 0);
+    assert(slicingCalled);
+}

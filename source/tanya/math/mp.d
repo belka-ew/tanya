@@ -14,7 +14,6 @@
  */
 module tanya.math.mp;
 
-import std.algorithm.mutation : fill;
 import tanya.algorithm.comparison;
 import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
