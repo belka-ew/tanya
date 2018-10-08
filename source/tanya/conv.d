@@ -190,13 +190,17 @@ do
         static assert(is(typeof({ static T t; })),
                       "Default constructor is disabled");
     }
+    else static if (is(typeof(result.__ctor(args))))
+    {
+        result.__ctor(args);
+    }
     else static if (is(typeof(T(args))))
     {
         *result = T(args);
     }
-    else static if (is(typeof(result.__ctor(args))))
+    else static if (is(typeof(*result = args))) // Args.length == 1, assignment
     {
-        result.__ctor(args);
+        *result = args;
     }
     else
     {
@@ -243,6 +247,19 @@ do
         }
     }
     static assert(is(typeof(emplace!F((void[]).init))));
+}
+
+// Can emplace structs without a constructor
+@nogc nothrow pure @safe unittest
+{
+    static struct SWithDtor
+    {
+        ~this() @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(is(typeof(emplace!SWithDtor(null, SWithDtor()))));
+    static assert(is(typeof(emplace!SWithDtor(null))));
 }
 
 /**

@@ -1587,7 +1587,7 @@ struct Array(T)
 
 @nogc nothrow pure @safe unittest
 {
-    struct SWithDtor
+    static struct SWithDtor
     {
         ~this() @nogc nothrow pure @safe
         {
