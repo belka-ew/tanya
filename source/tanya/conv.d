@@ -14,6 +14,7 @@
  */
 module tanya.conv;
 
+import tanya.algorithm.mutation;
 import tanya.container.string;
 import tanya.format;
 import tanya.memory;
@@ -164,26 +165,12 @@ do
 /// ditto
 T* emplace(T, Args...)(void[] memory, auto ref Args args)
 if (!isPolymorphicType!T && isAggregateType!T)
-in
-{
-    assert(memory.length >= T.sizeof);
-}
-out (result)
-{
-    assert(memory.ptr is result);
-}
-do
+in(memory.length >= T.sizeof)
+out(result; memory.ptr is result)
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
-    static if (!hasElaborateAssign!T && isAssignable!T)
-    {
-        *result = T.init;
-    }
-    else
-    {
-        static const T init = T.init;
-        copy((cast(void*) &init)[0 .. T.sizeof], memory);
-    }
+    alias trustedCopy = (ref arg) @trusted =>
+        copy((cast(void*) &arg)[0 .. T.sizeof], memory);
 
     static if (Args.length == 0)
     {
@@ -192,15 +179,25 @@ do
     }
     else static if (is(typeof(result.__ctor(args))))
     {
+        static if (!hasElaborateAssign!T && isAssignable!T)
+        {
+            *result = T.init;
+        }
+        else
+        {
+            static const T init = T.init;
+            trustedCopy(init);
+        }
         result.__ctor(args);
     }
-    else static if (is(typeof(T(args))))
+    else static if (Args.length == 1 && is(typeof({ T t = args[0]; })))
     {
-        *result = T(args);
+        trustedCopy(args[0]);
     }
-    else static if (is(typeof(*result = args))) // Args.length == 1, assignment
+    else static if (is(typeof({ T t = T(args); })))
     {
-        *result = args;
+        auto init = T(args);
+        (() @trusted => moveEmplace(init, *result))();
     }
     else
     {
@@ -260,6 +257,25 @@ do
     }
     static assert(is(typeof(emplace!SWithDtor(null, SWithDtor()))));
     static assert(is(typeof(emplace!SWithDtor(null))));
+}
+
+// Doesn't call a destructor on uninitialized elements
+@nogc nothrow pure @system unittest
+{
+    static struct WithDtor
+    {
+        private bool canBeInvoked = false;
+        ~this() @nogc nothrow pure @safe
+        {
+            if (!this.canBeInvoked)
+            {
+                assert(false);
+            }
+        }
+    }
+    void[WithDtor.sizeof] memory = void;
+    auto actual = emplace!WithDtor(memory[], WithDtor(true));
+    assert(actual.canBeInvoked);
 }
 
 /**
