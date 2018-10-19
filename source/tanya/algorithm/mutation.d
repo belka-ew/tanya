@@ -89,13 +89,20 @@ do
 
         static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
         {
-            if (typeid(T).initializer().ptr is null)
+            static if (__VERSION__ >= 2083) // __traits(isZeroInit) available.
             {
-                deinitialize!true(source);
+                deinitialize!(__traits(isZeroInit, T))(source);
             }
             else
             {
-                deinitialize!false(source);
+                if (typeid(T).initializer().ptr is null)
+                {
+                    deinitialize!true(source);
+                }
+                else
+                {
+                    deinitialize!false(source);
+                }
             }
         }
     }

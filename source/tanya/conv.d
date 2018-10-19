@@ -185,8 +185,16 @@ out(result; memory.ptr is result)
         }
         else
         {
-            static const T init = T.init;
-            trustedCopy(init);
+            static if (__VERSION__ >= 2083 // __traits(isZeroInit) available.
+                && __traits(isZeroInit, T))
+            {
+                (() @trusted => memory.ptr[0 .. T.sizeof])().fill!0;
+            }
+            else
+            {
+                static immutable T init = T.init;
+                trustedCopy(init);
+            }
         }
         result.__ctor(args);
     }
