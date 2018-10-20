@@ -15,9 +15,7 @@
 module tanya.container.array;
 
 import core.checkedint;
-import std.algorithm.mutation : bringToFront,
-                                initializeAll,
-                                uninitializedFill;
+import std.algorithm.mutation : bringToFront, initializeAll;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.exception;

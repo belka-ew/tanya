@@ -14,6 +14,7 @@
  */
 module tanya.algorithm.mutation;
 
+import tanya.conv;
 static import tanya.memory.op;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -398,7 +399,7 @@ do
  *  range = Input range.
  *  value = Filler.
  */
-void fill(Range, Value)(Range range, Value value)
+void fill(Range, Value)(Range range, auto ref Value value)
 if (isInputRange!Range && isAssignable!(ElementType!Range, Value))
 {
     static if (!isDynamicArray!Range && is(typeof(range[] = value)))
@@ -460,4 +461,44 @@ if (isInputRange!Range && isAssignable!(ElementType!Range, Value))
     auto range = Slice(&slicingCalled);
     fill(range, 0);
     assert(slicingCalled);
+}
+
+/**
+ * Fills $(D_PARAM range) with $(D_PARAM value) assuming the elements of the
+ * $(D_PARAM range) aren't initialized.
+ *
+ * Params:
+ *  Range = Input range type.
+ *  Value = Initializer type.
+ *  range = Input range.
+ *  value = Initializer.
+ */
+void uninitializedFill(Range, Value)(Range range, auto ref Value value)
+if (isInputRange!Range && hasLvalueElements!Range
+ && isAssignable!(ElementType!Range, Value))
+{
+    static if (hasElaborateDestructor!(ElementType!Range))
+    {
+        for (; !range.empty; range.popFront())
+        {
+            ElementType!Range* p = &range.front;
+            emplace!(ElementType!Range)(cast(void[]) (p[0 .. 1]), value);
+        }
+    }
+    else
+    {
+        fill(range, value);
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    int[6] actual = void;
+    const int[6] expected = [1, 1, 1, 1, 1, 1];
+
+    uninitializedFill(actual[], 1);
+    assert(equal(actual[], expected[]));
 }

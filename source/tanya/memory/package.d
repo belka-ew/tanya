@@ -14,7 +14,7 @@
  */
 module tanya.memory;
 
-import std.algorithm.mutation : uninitializedFill;
+import tanya.algorithm.mutation;
 import tanya.conv;
 import tanya.exception;
 public import tanya.memory.allocator;
