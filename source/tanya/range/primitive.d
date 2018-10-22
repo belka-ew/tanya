@@ -1828,7 +1828,7 @@ template hasMobileElements(R)
  */
 template hasLvalueElements(R)
 {
-    private alias refDg = (ref ElementType!R e) => e;
+    private alias refDg = (ref ElementType!R e) => &e;
 
     static if (isRandomAccessRange!R)
     {
@@ -1884,6 +1884,16 @@ template hasLvalueElements(R)
         }
     }
     static assert(hasLvalueElements!R2);
+}
+
+// Works with non-copyable elements
+@nogc nothrow pure @safe unittest
+{
+    static struct NonCopyable
+    {
+        @disable this(this);
+    }
+    static assert(hasLvalueElements!(NonCopyable[]));
 }
 
 /**
