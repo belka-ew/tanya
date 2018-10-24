@@ -509,3 +509,55 @@ if (isInputRange!Range && hasLvalueElements!Range
     uninitializedFill(actual[], 1);
     assert(equal(actual[], expected[]));
 }
+
+/**
+ * Initializes all elements of the $(D_PARAM range) assuming that they are
+ * uninitialized.
+ *
+ * Params:
+ *  Range = Input range type
+ *  range = Input range.
+ */
+void initializeAll(Range)(Range range) @trusted
+if (isInputRange!Range && hasLvalueElements!Range)
+{
+    import tanya.memory.op : copy, fill;
+    alias T = ElementType!Range;
+
+    static if (__VERSION__ >= 2083
+            && isDynamicArray!Range
+            && __traits(isZeroInit, T))
+    {
+        fill!0(range);
+    }
+    else
+    {
+        static immutable init = T.init;
+        for (; !range.empty; range.popFront())
+        {
+            copy((&init)[0 .. 1], (&range.front)[0 .. 1]);
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    int[2] actual = void;
+    const int[2] expected = [0, 0];
+
+    initializeAll(actual[]);
+    assert(equal(actual[], expected[]));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct NonCopyable
+    {
+        @disable this(this);
+    }
+    NonCopyable[] nonCopyable;
+    initializeAll(nonCopyable);
+}
