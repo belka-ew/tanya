@@ -29,6 +29,11 @@ private struct FNV
         enum ulong offsetBasis = 14695981039346656037UL;
         enum ulong prime = 1099511628211UL;
     }
+    else static if (size_t.sizeof == 16)
+    {
+        enum size_t offsetBasis = (size_t(0x6c62272e07bb0142UL) << 64) + 0x62b821756295c58dUL;
+        enum size_t prime = (size_t(1) << 88) + (1 << 8) + 0x3b;
+    }
     else
     {
         static assert(false, "FNV requires at least 32-bit hash length");
