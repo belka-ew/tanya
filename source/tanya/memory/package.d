@@ -341,13 +341,7 @@ if (isPolymorphicType!T)
 
 package(tanya) void[] finalize(T)(ref T[] p)
 {
-    static if (hasElaborateDestructor!(typeof(p[0])))
-    {
-        foreach (ref e; p)
-        {
-            destroy(e);
-        }
-    }
+    destroyAll(p);
     return p;
 }
 

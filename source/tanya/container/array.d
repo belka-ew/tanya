@@ -414,27 +414,19 @@ struct Array(T)
      */
     @property void length(size_t len) @trusted
     {
-        if (len == length)
-        {
-            return;
-        }
-        else if (len > length)
+        if (len > length)
         {
             reserve(len);
             initializeAll(this.data[length_ .. len]);
         }
         else
         {
-            static if (hasElaborateDestructor!T)
-            {
-                const T* end = this.data + length_ - 1;
-                for (T* e = this.data + len; e != end; ++e)
-                {
-                    destroy(*e);
-                }
-            }
+            destroyAll(this.data[len .. this.length_]);
         }
-        length_ = len;
+        if (len != length)
+        {
+            length_ = len;
+        }
     }
 
     ///
