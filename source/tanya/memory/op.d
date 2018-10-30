@@ -419,8 +419,8 @@ do
  * Compares two memory areas $(D_PARAM r1) and $(D_PARAM r2) for equality.
  *
  * Params:
- *  haystack = First memory block.
- *  needle   = First memory block.
+ *  r1 = First memory block.
+ *  r2 = Second memory block.
  *
  * Returns: $(D_KEYWORD true) if $(D_PARAM r1) and $(D_PARAM r2) are equal,
  *          $(D_KEYWORD false) otherwise.

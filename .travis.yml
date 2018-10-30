@@ -10,15 +10,22 @@ d:
 - dmd-2.082.1
 
 env:
+  global:
+  - LATEST=2.082.1
+
   matrix:
   - ARCH=x86_64
   - ARCH=x86
 
 matrix:
   include:
-  - name: "D-Scanner"
-    d: dmd-2.082.1
+  - name: D-Scanner
+    d: dmd-$LATEST
     env: DSCANNER=0.5.11
+    os: linux
+  - name: DDoc
+    d: dmd-$LATEST
+    env: DDOC=true
     os: linux
 
 addons:
@@ -27,13 +34,15 @@ addons:
     - gcc-multilib
 
 before_script:
-- if [ "`$DC --version | head -n 1 | grep 'v2.082.1'`" ] &&
-     [ -z "$DSCANNER" ]; then
+- if [ "`$DC --version | head -n 1 | grep v$LATEST`" ] &&
+     [ -z "$DSCANNER$DDOC" ]; then
     export UNITTEST="unittest-cov";
   fi
 
 script:
-- if [ -z "$DSCANNER" ]; then
+- if [ -n "$DDOC" ]; then
+    dub build -b ddox --compiler=$DC;
+  elif [ -z "$DSCANNER" ]; then
     dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
   else
     dub fetch dscanner --version=$DSCANNER;
