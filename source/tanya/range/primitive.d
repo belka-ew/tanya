@@ -2051,3 +2051,41 @@ template hasSwappableElements(R)
     }
     static assert(!hasSwappableElements!R2);
 }
+
+/**
+ * Determines whether `r1.front` and `r2.front` point to the same element.
+ *
+ * Params:
+ *  r1 = First range.
+ *  r2 = Second range.
+ *
+ * Returns: $(D_KEYWORD true) if $(D_PARAM r1) and $(D_PARAM r2) have the same
+ *          head, $(D_KEYWORD false) otherwise.
+ */
+bool sameHead(Range)(Range r1, Range r2) @trusted
+if (isInputRange!Range && hasLvalueElements!Range)
+{
+    return &r1.front is &r2.front;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    const int[2] array;
+
+    auto r1 = array[];
+    auto r2 = array[];
+
+    assert(sameHead(r1, r2));
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    const int[2] array;
+
+    auto r1 = array[];
+    auto r2 = array[1 .. $];
+
+    assert(!sameHead(r1, r2));
+}
