@@ -54,7 +54,7 @@ module tanya.range.array;
  *
  * Precondition: $(D_INLINECODE array.length > 0).
  */
-@property ref T front(T)(T[] array)
+@property ref inout(T) front(T)(return scope inout(T)[] array)
 in
 {
     assert(array.length > 0);
@@ -94,7 +94,7 @@ do
  *
  * Precondition: $(D_INLINECODE array.length > 0).
  */
-@property ref T back(T)(T[] array)
+@property ref inout(T) back(T)(return scope inout(T)[] array)
 in
 {
     assert(array.length > 0);
@@ -133,7 +133,7 @@ do
  *
  * Precondition: $(D_INLINECODE array.length > 0).
  */
-void popFront(T)(ref T[] array)
+void popFront(T)(scope ref inout(T)[] array)
 in
 {
     assert(array.length > 0);
@@ -144,7 +144,7 @@ do
 }
 
 /// ditto
-void popBack(T)(ref T[] array)
+void popBack(T)(scope ref inout(T)[] array)
 in
 {
     assert(array.length > 0);
@@ -178,7 +178,7 @@ do
  * Returns: $(D_KEYWORD true) if $(D_PARAM array) has no elements,
  *          $(D_KEYWORD false) otherwise.
  */
-@property bool empty(T)(const T[] array)
+@property bool empty(T)(scope const T[] array)
 {
     return array.length == 0;
 }
@@ -203,7 +203,7 @@ do
  *
  * Returns: A copy of the slice $(D_PARAM array).
  */
-@property T[] save(T)(T[] array)
+@property inout(T)[] save(T)(return scope inout(T)[] array)
 {
     return array;
 }
