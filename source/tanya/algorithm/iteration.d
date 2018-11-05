@@ -24,7 +24,7 @@ import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.range;
 
-private mixin template Take(R, bool exactly)
+private struct Take(R, bool exactly)
 {
     private R source;
     size_t length_;
@@ -187,6 +187,22 @@ private mixin template Take(R, bool exactly)
             }
         }
     }
+
+    static if (!exactly && hasSlicing!R)
+    {
+        auto opSlice(size_t i, size_t j)
+        in
+        {
+            assert(i <= j);
+            assert(j <= length);
+        }
+        do
+        {
+            return typeof(this)(this.source[i .. j], length);
+        }
+    }
+
+    version (unittest) static assert(isInputRange!Take);
 }
 
 /**
@@ -212,25 +228,34 @@ private mixin template Take(R, bool exactly)
 auto take(R)(R range, size_t n)
 if (isInputRange!R)
 {
-    static struct Take
+    static if (hasSlicing!R && hasLength!R)
     {
-        mixin .Take!(R, false);
-
-        static if (hasSlicing!R)
-        {
-            auto opSlice(size_t i, size_t j)
-            in
-            {
-                assert(i <= j);
-                assert(j <= length);
-            }
-            do
-            {
-                return typeof(this)(this.source[i .. j], length);
-            }
-        }
+        if (range.length <= n)
+            return range;
+        else
+            return range[0 .. n];
     }
-    return Take(range, n);
+    // Special case: take(take(...), n)
+    else static if (is(Range == Take!(RRange, exact), RRange, bool exact))
+    {
+        if (n > range.length_)
+            n = range.length_;
+        static if (exact)
+            // `take(takeExactly(r, n0), n)` is rewritten `takeExactly(r, min(n0, n))`.
+            return Take!(RRange, true)(range.source, n);
+        else
+            // `take(take(r, n0), n)` is rewritten `take(r, min(n0, n))`.
+            return Take!(RRange, false)(range.source, n);
+    }
+    else static if (isInfinite!R)
+    {
+        // If the range is infinite then `take` is the same as `takeExactly`.
+        return Take!(R, true)(range, n);
+    }
+    else
+    {
+        return Take!(R, false)(range, n);
+    }
 }
 
 ///
@@ -315,13 +340,15 @@ if (isInputRange!R)
     {
         return range[0 .. n];
     }
+    // Special case: takeExactly(take(range, ...), n) is takeExactly(range, n)
+    else static if (is(Range == Take!(RRange, exact), RRange, bool exact))
+    {
+        assert(n <= range.length_);
+        return Take!(RRange, true)(range.source, n);
+    }
     else
     {
-        static struct TakeExactly
-        {
-            mixin Take!(R, true);
-        }
-        return TakeExactly(range, n);
+        return Take!(R, true)(range, n);
     }
 }
 
