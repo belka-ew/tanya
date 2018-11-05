@@ -408,22 +408,10 @@ if (isInputRange!R)
     }
 }
 
-/**
- * Iterates a bidirectional range backwards.
- *
- * If $(D_PARAM Range) is a random-access range as well, the resulting range
- * is a random-access range too.
- *
- * Params:
- *  Range = Bidirectional range type.
- *  range = Bidirectional range.
- *
- * Returns: Bidirectional range with the elements order reversed.
- */
-auto retro(Range)(Range range)
-if (isBidirectionalRange!Range)
+private
 {
-    static struct Retro
+    // Reverse-access-order range returned by `retro`.
+    struct Retro(Range)
     {
         Range source;
 
@@ -526,9 +514,31 @@ if (isBidirectionalRange!Range)
                 }
             }
         }
-    }
 
-    return Retro(range);
+        version (unittest) static assert(isBidirectionalRange!Retro);
+    }
+}
+
+/**
+ * Iterates a bidirectional range backwards.
+ *
+ * If $(D_PARAM Range) is a random-access range as well, the resulting range
+ * is a random-access range too.
+ *
+ * Params:
+ *  Range = Bidirectional range type.
+ *  range = Bidirectional range.
+ *
+ * Returns: Bidirectional range with the elements order reversed.
+ */
+auto retro(Range)(return Range range)
+if (isBidirectionalRange!Range)
+{
+    // Special case: retro(retro(range)) is range
+    static if (is(Range == Retro!RRange, RRange))
+        return range.source;
+    else
+        return Retro!Range(range);
 }
 
 ///
