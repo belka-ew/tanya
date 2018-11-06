@@ -408,6 +408,114 @@ if (isInputRange!R)
     }
 }
 
+// Reverse-access-order range returned by `retro`.
+private struct Retro(Range)
+{
+    Range source;
+
+    @disable this();
+
+    private this(Range source)
+    {
+        this.source = source;
+    }
+
+    Retro save()
+    {
+        return this;
+    }
+
+    @property auto ref front()
+    in (!empty)
+    {
+        return this.source.back;
+    }
+
+    void popFront()
+    in (!empty)
+    {
+        this.source.popBack();
+    }
+
+    @property auto ref back()
+    in (!empty)
+    {
+        return this.source.front;
+    }
+
+    void popBack()
+    in (!empty)
+    {
+        this.source.popFront();
+    }
+
+    @property bool empty()
+    {
+        return this.source.empty;
+    }
+
+    static if (hasLength!Range)
+    {
+        @property size_t length()
+        {
+            return this.source.length;
+        }
+    }
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        auto ref opIndex(size_t i)
+        in (i < length)
+        {
+            return this.source[$ - ++i];
+        }
+    }
+
+    static if (hasAssignableElements!Range)
+    {
+        @property void front(ref ElementType!Range value)
+        in (!empty)
+        {
+            this.source.back = value;
+        }
+
+        @property void front(ElementType!Range value)
+        in (!empty)
+        {
+            this.source.back = move(value);
+        }
+
+        @property void back(ref ElementType!Range value)
+        in (!empty)
+        {
+            this.source.front = value;
+        }
+
+        @property void back(ElementType!Range value)
+        in (!empty)
+        {
+            this.source.front = move(value);
+        }
+
+        static if (isRandomAccessRange!Range && hasLength!Range)
+        {
+            void opIndexAssign(ref ElementType!Range value, size_t i)
+            in (i < length)
+            {
+                this.source[$ - ++i] = value;
+            }
+
+            void opIndexAssign(ElementType!Range value, size_t i)
+            in (i < length)
+            {
+                this.source[$ - ++i] = move(value);
+            }
+        }
+    }
+
+    version (unittest) static assert(isBidirectionalRange!Retro);
+}
+
 /**
  * Iterates a bidirectional range backwards.
  *
@@ -420,115 +528,14 @@ if (isInputRange!R)
  *
  * Returns: Bidirectional range with the elements order reversed.
  */
-auto retro(Range)(Range range)
+auto retro(Range)(return Range range)
 if (isBidirectionalRange!Range)
 {
-    static struct Retro
-    {
-        Range source;
-
-        @disable this();
-
-        private this(Range source)
-        {
-            this.source = source;
-        }
-
-        Retro save()
-        {
-            return this;
-        }
-
-        @property auto ref front()
-        in (!empty)
-        {
-            return this.source.back;
-        }
-
-        void popFront()
-        in (!empty)
-        {
-            this.source.popBack();
-        }
-
-        @property auto ref back()
-        in (!empty)
-        {
-            return this.source.front;
-        }
-
-        void popBack()
-        in (!empty)
-        {
-            this.source.popFront();
-        }
-
-        @property bool empty()
-        {
-            return this.source.empty;
-        }
-
-        static if (hasLength!Range)
-        {
-            @property size_t length()
-            {
-                return this.source.length;
-            }
-        }
-
-        static if (isRandomAccessRange!Range && hasLength!Range)
-        {
-            auto ref opIndex(size_t i)
-            in (i < length)
-            {
-                return this.source[$ - ++i];
-            }
-        }
-
-        static if (hasAssignableElements!Range)
-        {
-            @property void front(ref ElementType!Range value)
-            in (!empty)
-            {
-                this.source.back = value;
-            }
-
-            @property void front(ElementType!Range value)
-            in (!empty)
-            {
-                this.source.back = move(value);
-            }
-
-            @property void back(ref ElementType!Range value)
-            in (!empty)
-            {
-                this.source.front = value;
-            }
-
-            @property void back(ElementType!Range value)
-            in (!empty)
-            {
-                this.source.front = move(value);
-            }
-
-            static if (isRandomAccessRange!Range && hasLength!Range)
-            {
-                void opIndexAssign(ref ElementType!Range value, size_t i)
-                in (i < length)
-                {
-                    this.source[$ - ++i] = value;
-                }
-
-                void opIndexAssign(ElementType!Range value, size_t i)
-                in (i < length)
-                {
-                    this.source[$ - ++i] = move(value);
-                }
-            }
-        }
-    }
-
-    return Retro(range);
+    // Special case: retro(retro(range)) is range
+    static if (is(Range == Retro!RRange, RRange))
+        return range.source;
+    else
+        return Retro!Range(range);
 }
 
 ///
