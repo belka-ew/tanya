@@ -15,7 +15,6 @@
 module tanya.container.array;
 
 import core.checkedint;
-import std.algorithm.mutation : bringToFront;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.exception;
@@ -804,10 +803,11 @@ struct Array(T)
     }
     do
     {
-        const oldLen = length;
-        const offset = r.end - this.data;
+        const oldLength = length;
+        const after = r.end - this.data;
         const inserted = insertBack(el);
-        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
+
+        rotate(this.data[after .. oldLength], this.data[oldLength .. length]);
         return inserted;
     }
 
@@ -846,7 +846,7 @@ struct Array(T)
         {
             moveBack(el);
         }
-        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
+        rotate(this.data[offset .. oldLen], this.data[oldLen .. length]);
 
         return 1;
     }
@@ -902,7 +902,7 @@ struct Array(T)
         {
             moveBack(el);
         }
-        bringToFront(this.data[offset .. oldLen], this.data[oldLen .. length]);
+        rotate(this.data[offset .. oldLen], this.data[oldLen .. length]);
 
         return 1;
     }

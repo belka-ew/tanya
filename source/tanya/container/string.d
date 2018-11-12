@@ -26,7 +26,6 @@
  */
 module tanya.container.string;
 
-import std.algorithm.mutation : bringToFront;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.hash.lookup;
@@ -1531,11 +1530,10 @@ struct String
     do
     {
         const oldLength = length;
-        const rangeEnd = r.end - this.data;
+        const after = r.end - this.data;
         const inserted = insertBack(el);
-        auto containerEnd = this.data + oldLength;
-        bringToFront(ByCodeUnit!char(this, this.data + rangeEnd, containerEnd),
-                     ByCodeUnit!char(this, containerEnd, this.data + length));
+
+        rotate(this.data[after .. oldLength], this.data[oldLength .. length]);
         return inserted;
     }
 

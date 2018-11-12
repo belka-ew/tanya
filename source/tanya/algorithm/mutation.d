@@ -607,3 +607,89 @@ if (isInputRange!Range && hasLvalueElements!Range)
 
     assert(counter == 2);
 }
+
+/**
+ * Rotates the elements of a union of two ranges.
+ *
+ * Performs a left rotation on the given ranges, as if it would be a signle
+ * range, so that [`front.front`, `back.front`$(RPAREN) is a valid range, that
+ * is $(D_PARAM back) would continue $(D_PARAM front).
+ *
+ * The elements are moved so, that the first element of $(D_PARAM back) becomes
+ * the first element of $(D_PARAM front) without changing the relative order of
+ * their elements.
+ *
+ * Params:
+ *  Range = Range type.
+ *  front = Left half.
+ *  back  = Right half.
+ */
+void rotate(Range)(Range front, Range back)
+if (isForwardRange!Range && hasSwappableElements!Range)
+{
+    auto next = back.save();
+
+    while (!front.empty && !next.empty && !sameHead(front, next))
+    {
+        swap(front.front, next.front);
+        front.popFront();
+        next.popFront();
+
+        if (next.empty)
+        {
+            next = back.save();
+        }
+        else if (front.empty)
+        {
+            front = back.save();
+            back = next.save();
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    const int[7] expected = [1, 2, 3, 4, 5, 6, 7];
+    int[7] actual = [5, 6, 3, 4, 1, 2, 7];
+
+    rotate(actual[0 .. 2], actual[4 .. 6]);
+    assert(equal(actual[], expected[]));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    const int[5] expected = [1, 2, 3, 4, 5];
+    int[5] actual = [4, 5, 1, 2, 3];
+
+    rotate(actual[0 .. 2], actual[2 .. $]);
+    assert(equal(actual[], expected[]));
+}
+
+// Doesn't cause an infinite loop if back is shorter than the front
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    const int[5] expected = [1, 2, 3, 4, 5];
+    int[5] actual = [3, 4, 5, 1, 2];
+
+    rotate(actual[0 .. 3], actual[3 .. $]);
+    assert(equal(actual[], expected[]));
+}
+
+// Doesn't call .front on an empty front
+@nogc nothrow pure @safe unittest
+{
+    import tanya.algorithm.comparison : equal;
+
+    const int[2] expected = [2, 8];
+    int[2] actual = expected;
+
+    rotate(actual[0 .. 0], actual[]);
+    assert(equal(actual[], expected[]));
+}
