@@ -1493,6 +1493,8 @@ if (F.length == 1)
 }
 
 /**
+ * Determines whether $(D_PARAM T) defines a symbol $(D_PARAM member).
+ *
  * Params:
  *  T      = Aggregate type.
  *  member = Symbol name.

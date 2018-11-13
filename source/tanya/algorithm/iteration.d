@@ -23,6 +23,7 @@ module tanya.algorithm.iteration;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.range;
+version (unittest) import tanya.test.range;
 
 private struct Take(R, bool exactly)
 {
@@ -73,13 +74,16 @@ private struct Take(R, bool exactly)
         }
         else
         {
-            return length == 0 || this.source.empty;
+            return this.length_ == 0 || this.source.empty;
         }
     }
 
-    @property size_t length()
+    static if (exactly || hasLength!R)
     {
-        return this.length_;
+        @property size_t length()
+        {
+            return this.length_;
+        }
     }
 
     static if (hasAssignableElements!R)
@@ -313,6 +317,19 @@ if (isInputRange!R)
 
     t.popFront();
     assert(t.empty);
+}
+
+// length is unknown when taking from a range without length
+@nogc nothrow pure @safe unittest
+{
+    @Empty
+    static struct R
+    {
+        mixin InputRange;
+    }
+    auto actual = take(R(), 100);
+
+    static assert(!hasLength!(typeof(actual)));
 }
 
 /**
