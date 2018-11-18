@@ -23,7 +23,7 @@ module tanya.algorithm.iteration;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.range;
-version (unittest) import tanya.test.range;
+version (unittest) import tanya.test.stub;
 
 private struct Take(R, bool exactly)
 {
@@ -322,10 +322,9 @@ if (isInputRange!R)
 // length is unknown when taking from a range without length
 @nogc nothrow pure @safe unittest
 {
-    @Empty
     static struct R
     {
-        mixin InputRange;
+        mixin InputRangeStub;
     }
     auto actual = take(R(), 100);
 

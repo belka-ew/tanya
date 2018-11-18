@@ -20,6 +20,19 @@ import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.array;
 
+version (unittest)
+{
+    import tanya.test.stub;
+
+    private struct AssertPostblit
+    {
+        this(this) @nogc nothrow pure @safe
+        {
+            assert(false);
+        }
+    }
+}
+
 /**
  * Returns the element type of the range $(D_PARAM R).
  *
@@ -73,10 +86,7 @@ template ElementType(R)
  *
  * See_Also: $(D_PSYMBOL isInfinite).
  */
-template hasLength(R)
-{
-    enum bool hasLength = is(ReturnType!((R r) => r.length) == size_t);
-}
+enum bool hasLength(R) = is(ReturnType!((R r) => r.length) == size_t);
 
 ///
 @nogc nothrow pure @safe unittest
@@ -294,34 +304,6 @@ template hasSlicing(R)
     static assert(hasSlicing!D);
 }
 
-version (unittest)
-{
-    mixin template InputRangeStub()
-    {
-        @property int front() @nogc nothrow pure @safe
-        {
-            return 0;
-        }
-        @property bool empty() const @nogc nothrow pure @safe
-        {
-            return false;
-        }
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-    }
-    mixin template BidirectionalRangeStub()
-    {
-        @property int back() @nogc nothrow pure @safe
-        {
-            return 0;
-        }
-        void popBack() @nogc nothrow pure @safe
-        {
-        }
-    }
-}
-
 private template isDynamicArrayRange(R)
 {
     static if (is(R E : E[]))
@@ -373,10 +355,12 @@ template isInputRange(R)
         void popFront() @nogc nothrow pure @safe
         {
         }
+
         int front() @nogc nothrow pure @safe
         {
             return 0;
         }
+
         bool empty() const @nogc nothrow pure @safe
         {
             return true;
@@ -391,13 +375,8 @@ template isInputRange(R)
 {
     static struct Range1(T)
     {
-        void popFront()
-        {
-        }
-        int front()
-        {
-            return 0;
-        }
+        mixin InputRangeStub;
+
         T empty() const
         {
             return true;
@@ -408,45 +387,29 @@ template isInputRange(R)
 
     static struct Range2
     {
+        mixin InputRangeStub;
+
         int popFront() @nogc nothrow pure @safe
         {
             return 100;
-        }
-        int front() @nogc nothrow pure @safe
-        {
-            return 100;
-        }
-        bool empty() const @nogc nothrow pure @safe
-        {
-            return true;
         }
     }
     static assert(isInputRange!Range2);
 
     static struct Range3
     {
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
+        mixin InputRangeStub;
+
         void front() @nogc nothrow pure @safe
         {
-        }
-        bool empty() const @nogc nothrow pure @safe
-        {
-            return true;
         }
     }
     static assert(!isInputRange!Range3);
 
     static struct Range4
     {
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-        int front() @nogc nothrow pure @safe
-        {
-            return 0;
-        }
+        mixin InputRangeStub;
+
         enum bool empty = false;
     }
     static assert(isInputRange!Range4);
@@ -489,14 +452,17 @@ template isForwardRange(R)
         void popFront() @nogc nothrow pure @safe
         {
         }
+
         int front() @nogc nothrow pure @safe
         {
             return 0;
         }
+
         bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
+
         typeof(this) save() @nogc nothrow pure @safe
         {
             return this;
@@ -515,6 +481,7 @@ template isForwardRange(R)
     static struct Range2
     {
         mixin InputRangeStub;
+
         Range1 save() @nogc nothrow pure @safe
         {
             return Range1();
@@ -525,6 +492,7 @@ template isForwardRange(R)
     static struct Range3
     {
         mixin InputRangeStub;
+
         const(typeof(this)) save() const @nogc nothrow pure @safe
         {
             return this;
@@ -573,21 +541,26 @@ template isBidirectionalRange(R)
         void popFront() @nogc nothrow pure @safe
         {
         }
+
         void popBack() @nogc nothrow pure @safe
         {
         }
+
         @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
+
         @property int back() @nogc nothrow pure @safe
         {
             return 0;
         }
+
         bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
+
         Range save() @nogc nothrow pure @safe
         {
             return this;
@@ -602,27 +575,16 @@ template isBidirectionalRange(R)
 {
     static struct Range(T, U)
     {
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-        void popBack() @nogc nothrow pure @safe
-        {
-        }
+        mixin BidirectionalRangeStub;
+
         @property T front() @nogc nothrow pure @safe
         {
             return T.init;
         }
+
         @property U back() @nogc nothrow pure @safe
         {
             return U.init;
-        }
-        bool empty() const @nogc nothrow pure @safe
-        {
-            return true;
-        }
-        Range save() @nogc nothrow pure @safe
-        {
-            return this;
         }
     }
     static assert(!isBidirectionalRange!(Range!(int, uint)));
@@ -674,29 +636,22 @@ template isRandomAccessRange(R)
         void popFront() @nogc nothrow pure @safe
         {
         }
-        void popBack() @nogc nothrow pure @safe
-        {
-        }
+
         @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
-        @property int back() @nogc nothrow pure @safe
-        {
-            return 0;
-        }
+
         bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
-        typeof(this) save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
-        int opIndex(const size_t pos) @nogc nothrow pure @safe
+
+        int opIndex(size_t) @nogc nothrow pure @safe
         {
             return 0;
         }
+
         size_t length() const @nogc nothrow pure @safe
         {
             return 0;
@@ -711,15 +666,14 @@ template isRandomAccessRange(R)
         void popFront() @nogc nothrow pure @safe
         {
         }
+
         @property int front() @nogc nothrow pure @safe
         {
             return 0;
         }
+
         enum bool empty = false;
-        typeof(this) save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
+
         int opIndex(const size_t pos) @nogc nothrow pure @safe
         {
             return 0;
@@ -732,34 +686,17 @@ template isRandomAccessRange(R)
 {
     static struct Range1
     {
-        mixin InputRangeStub;
         mixin BidirectionalRangeStub;
-
-        typeof(this) save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
-        int opIndex(const size_t pos) @nogc nothrow pure @safe
-        {
-            return 0;
-        }
+        mixin RandomAccessRangeStub;
     }
     static assert(!isRandomAccessRange!Range1);
 
+    @Length
     static struct Range2(Args...)
     {
-        mixin InputRangeStub;
         mixin BidirectionalRangeStub;
 
-        typeof(this) save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
         int opIndex(Args) @nogc nothrow pure @safe
-        {
-            return 0;
-        }
-        size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -768,21 +705,13 @@ template isRandomAccessRange(R)
     static assert(!isRandomAccessRange!(Range2!()));
     static assert(!isRandomAccessRange!(Range2!(size_t, size_t)));
 
+    @Length
     static struct Range3
     {
-        mixin InputRangeStub;
         mixin BidirectionalRangeStub;
 
-        typeof(this) save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
         int opIndex(const size_t pos1, const size_t pos2 = 0)
         @nogc nothrow pure @safe
-        {
-            return 0;
-        }
-        size_t length() const @nogc nothrow pure @safe
         {
             return 0;
         }
@@ -791,17 +720,9 @@ template isRandomAccessRange(R)
 
     static struct Range4
     {
-        mixin InputRangeStub;
         mixin BidirectionalRangeStub;
+        mixin RandomAccessRangeStub;
 
-        typeof(this) save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
-        int opIndex(const size_t pos1) @nogc nothrow pure @safe
-        {
-            return 0;
-        }
         size_t opDollar() const @nogc nothrow pure @safe
         {
             return 0;
@@ -1097,28 +1018,20 @@ template isInfinite(R)
 
 @nogc nothrow pure @safe unittest
 {
+    @Infinite
     static struct StaticConstRange
     {
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-        @property int front() @nogc nothrow pure @safe
-        {
-            return 0;
-        }
+        mixin InputRangeStub;
+
         static bool empty = false;
     }
     static assert(!isInfinite!StaticConstRange);
 
+    @Infinite
     static struct TrueRange
     {
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-        @property int front() @nogc nothrow pure @safe
-        {
-            return 0;
-        }
+        mixin InputRangeStub;
+
         static const bool empty = true;
     }
     static assert(!isInfinite!TrueRange);
@@ -1348,14 +1261,11 @@ if (isBidirectionalRange!R)
 
 @nogc nothrow pure @safe unittest
 {
+    @Infinite
     static struct InfiniteRange
     {
+        mixin ForwardRangeStub;
         private int i;
-
-        InfiniteRange save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
 
         void popFront() @nogc nothrow pure @safe
         {
@@ -1376,8 +1286,6 @@ if (isBidirectionalRange!R)
         {
             return this.i;
         }
-
-        enum bool empty = false;
     }
     {
         InfiniteRange range;
@@ -1497,44 +1405,19 @@ if (isInputRange!R)
 
 @nogc nothrow pure @safe unittest
 {
-    static struct Element
-    {
-        this(this) @nogc nothrow pure @safe
-        {
-            assert(false);
-        }
-    }
-
     // Returns its elements by reference.
+    @Infinite @WithLvalueElements
     static struct R1
     {
-        Element element;
-        enum bool empty = false;
-
-        ref Element front() @nogc nothrow pure @safe
-        {
-            return element;
-        }
-
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
+        mixin InputRangeStub!AssertPostblit;
     }
     static assert(is(typeof(moveFront(R1()))));
 
     // Returns elements with a postblit constructor by value. moveFront fails.
+    @Infinite
     static struct R2
     {
-        enum bool empty = false;
-
-        Element front() @nogc nothrow pure @safe
-        {
-            return Element();
-        }
-
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
+        mixin InputRangeStub!AssertPostblit;
     }
     static assert(!is(typeof(moveFront(R2()))));
 }
@@ -1582,58 +1465,19 @@ if (isBidirectionalRange!R)
 
 @nogc nothrow pure @safe unittest
 {
-    static struct Element
-    {
-        this(this) @nogc nothrow pure @safe
-        {
-            assert(false);
-        }
-    }
-
     // Returns its elements by reference.
+    @Infinite @WithLvalueElements
     static struct R1
     {
-        Element element;
-        enum bool empty = false;
-
-        ref Element back() @nogc nothrow pure @safe
-        {
-            return element;
-        }
-        alias front = back;
-
-        void popBack() @nogc nothrow pure @safe
-        {
-        }
-        alias popFront = popBack;
-
-        R1 save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
+        mixin BidirectionalRangeStub!AssertPostblit;
     }
     static assert(is(typeof(moveBack(R1()))));
 
     // Returns elements with a postblit constructor by value. moveBack fails.
+    @Infinite
     static struct R2
     {
-        enum bool empty = false;
-
-        Element back() @nogc nothrow pure @safe
-        {
-            return Element();
-        }
-        alias front = back;
-
-        void popBack() @nogc nothrow pure @safe
-        {
-        }
-        alias popFront = popBack;
-
-        R2 save() @nogc nothrow pure @safe
-        {
-            return this;
-        }
+        mixin BidirectionalRangeStub!AssertPostblit;
     }
     static assert(!is(typeof(moveBack(R2()))));
 }
@@ -1680,54 +1524,19 @@ if (isRandomAccessRange!R)
 
 @nogc nothrow pure @safe unittest
 {
-    static struct Element
-    {
-        this(this) @nogc nothrow pure @safe
-        {
-            assert(false);
-        }
-    }
-
     // Returns its elements by reference.
+    @Infinite @WithLvalueElements
     static struct R1
     {
-        Element element;
-        enum bool empty = false;
-
-        ref Element front() @nogc nothrow pure @safe
-        {
-            return element;
-        }
-
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-
-        ref Element opIndex(size_t)
-        {
-            return element;
-        }
+        mixin RandomAccessRangeStub!AssertPostblit;
     }
     static assert(is(typeof(moveAt(R1(), 0))));
 
     // Returns elements with a postblit constructor by value. moveAt fails.
+    @Infinite
     static struct R2
     {
-        enum bool empty = false;
-
-        Element front() @nogc nothrow pure @safe
-        {
-            return Element();
-        }
-
-        void popFront() @nogc nothrow pure @safe
-        {
-        }
-
-        Element opIndex() @nogc nothrow pure @safe
-        {
-            return Element();
-        }
+        mixin RandomAccessRangeStub!AssertPostblit;
     }
     static assert(!is(typeof(moveAt(R2(), 0))));
 }

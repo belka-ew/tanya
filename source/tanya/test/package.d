@@ -15,3 +15,4 @@
 module tanya.test;
 
 public import tanya.test.assertion;
+public import tanya.test.stub;

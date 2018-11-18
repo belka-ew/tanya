@@ -2857,6 +2857,46 @@ template hasUDA(alias symbol, alias attr)
 }
 
 /**
+ * If $(D_PARAM T) is a type, constructs its default value, otherwise
+ * $(D_PSYMBOL evalUDA) aliases itself to $(D_PARAM T).
+ *
+ * This template is useful when working with UDAs with default parameters,
+ * i.e. if an attribute can be given as `@Attr` or `@Attr("param")`,
+ * $(D_PSYMBOL evalUDA) makes `@Attr()` from `@Attr`, but returns
+ * `@Attr("param")` as is.
+ *
+ * $(D_PARAM T) (or its type if it isn't a type already) should have a default
+ * constructor.
+ *
+ * Params:
+ *  T = User Defined Attribute.
+ */
+alias evalUDA(alias T) = T;
+
+/// ditto
+alias evalUDA(T) = Alias!(T());
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct Length
+    {
+        size_t length = 8;
+    }
+    @Length @Length(0) int i;
+    alias uda = AliasSeq!(__traits(getAttributes, i));
+
+    alias attr1 = evalUDA!(uda[0]);
+    alias attr2 = evalUDA!(uda[1]);
+
+    static assert(is(typeof(attr1) == Length));
+    static assert(is(typeof(attr2) == Length));
+
+    static assert(attr1.length == 8);
+    static assert(attr2.length == 0);
+}
+
+/**
  * Tests whether $(D_PARAM T) is an inner class, i.e. a class nested inside
  * another class.
  *
