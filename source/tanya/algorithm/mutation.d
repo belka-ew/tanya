@@ -19,6 +19,7 @@ static import tanya.memory.op;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
+version (unittest) import tanya.test.stub;
 
 private void deinitialize(bool zero, T)(ref T value)
 {
@@ -554,10 +555,6 @@ if (isInputRange!Range && hasLvalueElements!Range)
 
 @nogc nothrow pure @safe unittest
 {
-    static struct NonCopyable
-    {
-        @disable this(this);
-    }
     NonCopyable[] nonCopyable;
     initializeAll(nonCopyable);
 }

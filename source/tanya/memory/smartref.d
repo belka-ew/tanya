@@ -30,6 +30,7 @@ import tanya.exception;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.range.primitive;
+version (unittest) import tanya.test.stub;
 
 private template Payload(T)
 {
@@ -611,19 +612,11 @@ do
 
 @nogc @system unittest
 {
-    static bool destroyed;
-
-    static struct F
+    size_t destroyed;
     {
-        ~this() @nogc nothrow @safe
-        {
-            destroyed = true;
-        }
+        auto rc = defaultAllocator.refCounted!WithDtor(destroyed);
     }
-    {
-        auto rc = defaultAllocator.refCounted!F();
-    }
-    assert(destroyed);
+    assert(destroyed == 1);
 }
 
 /**

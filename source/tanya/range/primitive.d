@@ -316,6 +316,26 @@ private template isDynamicArrayRange(R)
     }
 }
 
+private struct Primitive(Candidate, string primitive)
+{
+    auto ref returnType(Candidate candidate)
+    {
+        mixin("return candidate." ~ primitive ~ ";");
+    }
+
+    alias ReturnType = .ReturnType!returnType;
+    static assert(!is(ReturnType == void));
+
+    enum uint attributes = functionAttributes!returnType
+                         & FunctionAttribute.ref_;
+
+    bool opEquals(That)(That) const
+    {
+        return is(ReturnType == That.ReturnType)
+            && attributes == That.attributes;
+    }
+}
+
 /**
  * Determines whether $(D_PARAM R) is an input range.
  *
@@ -335,11 +355,11 @@ private template isDynamicArrayRange(R)
  */
 template isInputRange(R)
 {
-    static if (is(ReturnType!((R r) => r.front()) U)
+    static if (is(Primitive!(R, "front()") U)
             && is(ReturnType!((R r) => r.empty) == bool)
             && is(typeof(R.popFront())))
     {
-        enum bool isInputRange = !is(U == void);
+        enum bool isInputRange = true;
     }
     else
     {
@@ -413,6 +433,28 @@ template isInputRange(R)
         enum bool empty = false;
     }
     static assert(isInputRange!Range4);
+}
+
+// Ranges with non-copyable elements can be input ranges
+@nogc nothrow pure @safe unittest
+{
+    @WithLvalueElements
+    static struct R
+    {
+        mixin InputRangeStub!NonCopyable;
+    }
+    static assert(isInputRange!R);
+}
+
+// Ranges with const non-copyable elements can be input ranges
+@nogc nothrow pure @safe unittest
+{
+    @WithLvalueElements
+    static struct R
+    {
+        mixin InputRangeStub!(const(NonCopyable));
+    }
+    static assert(isInputRange!R);
 }
 
 /**
@@ -521,11 +563,11 @@ template isForwardRange(R)
  */
 template isBidirectionalRange(R)
 {
-    static if (is(ReturnType!((R r) => r.back()) U)
+    static if (is(Primitive!(R, "back()") U)
             && is(typeof(R.popBack())))
     {
         enum bool isBidirectionalRange = isForwardRange!R
-                                      && is(U == ReturnType!((R r) => r.front()));
+                                      && (U() == Primitive!(R, "front()")());
     }
     else
     {
@@ -591,6 +633,17 @@ template isBidirectionalRange(R)
     static assert(!isBidirectionalRange!(Range!(int, const int)));
 }
 
+// Ranges with non-copyable elements can be bidirectional ranges
+@nogc nothrow pure @safe unittest
+{
+    @WithLvalueElements
+    static struct R
+    {
+        mixin BidirectionalRangeStub!NonCopyable;
+    }
+    static assert(isBidirectionalRange!R);
+}
+
 /**
  * Determines whether $(D_PARAM R) is a random-access range.
  *
@@ -616,11 +669,11 @@ template isBidirectionalRange(R)
  */
 template isRandomAccessRange(R)
 {
-    static if (is(ReturnType!((R r) => r.opIndex(size_t.init)) U))
+    static if (is(Primitive!(R, "opIndex(size_t.init)") U))
     {
         enum bool isRandomAccessRange = isInputRange!R
                                      && (hasLength!R || isInfinite!R)
-                                     && is(U == ReturnType!((R r) => r.front()));
+                                     && (U() == Primitive!(R, "front()")());
     }
     else
     {
@@ -729,6 +782,17 @@ template isRandomAccessRange(R)
         }
     }
     static assert(!isRandomAccessRange!Range4);
+}
+
+// Ranges with non-copyable elements can be random-access ranges
+@nogc nothrow pure @safe unittest
+{
+    @WithLvalueElements @Infinite
+    static struct R
+    {
+        mixin RandomAccessRangeStub!NonCopyable;
+    }
+    static assert(isRandomAccessRange!R);
 }
 
 /**
@@ -1698,10 +1762,6 @@ template hasLvalueElements(R)
 // Works with non-copyable elements
 @nogc nothrow pure @safe unittest
 {
-    static struct NonCopyable
-    {
-        @disable this(this);
-    }
     static assert(hasLvalueElements!(NonCopyable[]));
 }
 

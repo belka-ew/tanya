@@ -27,6 +27,7 @@ import tanya.range.primitive;
 version (unittest)
 {
     import tanya.test.assertion;
+    import tanya.test.stub;
 }
 
 /**
@@ -257,32 +258,23 @@ out(result; memory.ptr is result)
 // Can emplace structs without a constructor
 @nogc nothrow pure @safe unittest
 {
-    static struct SWithDtor
-    {
-        ~this() @nogc nothrow pure @safe
-        {
-        }
-    }
-    static assert(is(typeof(emplace!SWithDtor(null, SWithDtor()))));
-    static assert(is(typeof(emplace!SWithDtor(null))));
+    static assert(is(typeof(emplace!WithDtor(null, WithDtor()))));
+    static assert(is(typeof(emplace!WithDtor(null))));
 }
 
 // Doesn't call a destructor on uninitialized elements
 @nogc nothrow pure @system unittest
 {
-    static struct WithDtor
+    static struct SWithDtor
     {
         private bool canBeInvoked = false;
         ~this() @nogc nothrow pure @safe
         {
-            if (!this.canBeInvoked)
-            {
-                assert(false);
-            }
+            assert(this.canBeInvoked);
         }
     }
-    void[WithDtor.sizeof] memory = void;
-    auto actual = emplace!WithDtor(memory[], WithDtor(true));
+    void[SWithDtor.sizeof] memory = void;
+    auto actual = emplace!SWithDtor(memory[], SWithDtor(true));
     assert(actual.canBeInvoked);
 }
 

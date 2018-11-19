@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Range generators.
+ * Range and generic type generators.
  *
  * Copyright: Eugene Wissner 2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
@@ -248,6 +248,9 @@ mixin template BidirectionalRangeStub(E = int)
  * This mixin includes input range primitives as well, but can be combined with
  * $(D_PSYMBOL ForwardRangeStub) or $(D_PSYMBOL BidirectionalRangeStub).
  *
+ * Note that a random-access range also requires $(D_PSYMBOL Length) or
+ * $(D_PARAM Infinite) by definition.
+ *
  * Params:
  *  E = Element type.
  */
@@ -270,6 +273,40 @@ mixin template RandomAccessRangeStub(E = int)
         E opIndex(size_t) @nogc nothrow pure @safe
         {
             return E.init;
+        }
+    }
+}
+
+/**
+ * Struct with a disabled postblit constructor.
+ */
+struct NonCopyable
+{
+    @disable this(this);
+}
+
+/**
+ * Struct with an elaborate destructor.
+ *
+ * The constructor of $(D_PSYMBOL WithDtor) accepts an additional `counter`
+ * argument, which is incremented by the destructor. $(D_PSYMBOL WithDtor)
+ * stores a pointer to the passed variable, so the variable can be
+ * investigated after the struct isn't available anymore.
+ */
+struct WithDtor
+{
+    size_t* counter;
+
+    this(ref size_t counter) @nogc nothrow pure @trusted
+    {
+        this.counter = &counter;
+    }
+
+    ~this() @nogc nothrow pure @safe
+    {
+        if (this.counter !is null)
+        {
+            ++*this.counter;
         }
     }
 }

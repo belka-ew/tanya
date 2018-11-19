@@ -3,13 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Range adapters.
+ * Iteration algorithms.
  *
- * A range adapter wraps another range and modifies the way, how the original
+ * These algorithms wrap other ranges and modify the way, how the original
  * range is iterated, or the order in which its elements are accessed.
  *
- * All adapters are lazy algorithms, they request the next element of the
- * adapted range on demand.
+ * All algorithms in this module are lazy, they request the next element of the
+ * original range on demand.
  *
  * Copyright: Eugene Wissner 2018.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,

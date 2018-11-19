@@ -22,6 +22,7 @@ import tanya.format;
 import tanya.functional;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
+version (unittest) import tanya.test.stub;
 
 /**
  * $(D_PSYMBOL Tuple) can store two or more heterogeneous objects.
@@ -454,29 +455,24 @@ struct Option(T)
 // Moving
 @nogc nothrow pure @safe unittest
 {
-    static struct NotCopyable
-    {
-        @disable this(this);
-    }
-
-    static assert(is(typeof(Option!NotCopyable(NotCopyable()))));
+    static assert(is(typeof(Option!NonCopyable(NonCopyable()))));
     // The value cannot be returned by reference because the default value
     // isn't passed by reference
-    static assert(!is(typeof(Option!DisabledPostblit().or(NotCopyable()))));
+    static assert(!is(typeof(Option!DisabledPostblit().or(NonCopyable()))));
     {
-        NotCopyable notCopyable;
-        static assert(is(typeof(Option!NotCopyable().or(notCopyable))));
+        NonCopyable notCopyable;
+        static assert(is(typeof(Option!NonCopyable().or(notCopyable))));
     }
     {
-        Option!NotCopyable option;
+        Option!NonCopyable option;
         assert(option.isNothing);
-        option = NotCopyable();
+        option = NonCopyable();
         assert(!option.isNothing);
     }
     {
-        Option!NotCopyable option;
+        Option!NonCopyable option;
         assert(option.isNothing);
-        option = Option!NotCopyable(NotCopyable());
+        option = Option!NonCopyable(NonCopyable());
         assert(!option.isNothing);
     }
 }
