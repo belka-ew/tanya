@@ -163,6 +163,24 @@ do
     return result;
 }
 
+private void initializeOne(T)(ref void[] memory, ref T* result) @trusted
+{
+    static if (!hasElaborateAssign!T && isAssignable!T)
+    {
+        *result = T.init;
+    }
+    else static if (__VERSION__ >= 2083 // __traits(isZeroInit) available.
+        && __traits(isZeroInit, T))
+    {
+        memory.ptr[0 .. T.sizeof].fill!0;
+    }
+    else
+    {
+        static immutable T init = T.init;
+        copy((&init)[0 .. 1], memory);
+    }
+}
+
 /// ditto
 T* emplace(T, Args...)(void[] memory, auto ref Args args)
 if (!isPolymorphicType!T && isAggregateType!T)
@@ -170,38 +188,22 @@ in(memory.length >= T.sizeof)
 out(result; memory.ptr is result)
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
-    alias trustedCopy = (ref arg) @trusted =>
-        copy((cast(void*) &arg)[0 .. T.sizeof], memory);
 
     static if (Args.length == 0)
     {
         static assert(is(typeof({ static T t; })),
                       "Default constructor is disabled");
+        initializeOne(memory, result);
     }
     else static if (is(typeof(result.__ctor(args))))
     {
-        static if (!hasElaborateAssign!T && isAssignable!T)
-        {
-            *result = T.init;
-        }
-        else
-        {
-            static if (__VERSION__ >= 2083 // __traits(isZeroInit) available.
-                && __traits(isZeroInit, T))
-            {
-                (() @trusted => memory.ptr[0 .. T.sizeof])().fill!0;
-            }
-            else
-            {
-                static immutable T init = T.init;
-                trustedCopy(init);
-            }
-        }
+        initializeOne(memory, result);
         result.__ctor(args);
     }
     else static if (Args.length == 1 && is(typeof({ T t = args[0]; })))
     {
-        trustedCopy(args[0]);
+        ((ref arg) @trusted =>
+            copy((cast(void*) &arg)[0 .. T.sizeof], memory))(args[0]);
     }
     else static if (is(typeof({ T t = T(args); })))
     {
@@ -276,6 +278,18 @@ out(result; memory.ptr is result)
     void[SWithDtor.sizeof] memory = void;
     auto actual = emplace!SWithDtor(memory[], SWithDtor(true));
     assert(actual.canBeInvoked);
+}
+
+// Initializes structs if no arguments are given
+@nogc nothrow pure @safe unittest
+{
+    static struct SEntry
+    {
+        byte content;
+    }
+    ubyte[1] mem = [3];
+
+    assert(emplace!SEntry(cast(void[]) mem[0 .. 1]).content == 0);
 }
 
 /**
