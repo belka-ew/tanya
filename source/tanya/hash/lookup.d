@@ -16,6 +16,7 @@ module tanya.hash.lookup;
 
 import tanya.meta.trait;
 import tanya.range.primitive;
+version (unittest) import tanya.test.stub;
 
 private struct FNV
 {
@@ -146,14 +147,6 @@ version (unittest)
                                ~ r10!x ~ r10!x ~ r10!x ~ r10!x ~ r10!x;
     enum string r500(string x) = r100!x ~ r100!x ~ r100!x ~ r100!x ~ r100!x;
 
-    private static struct ToHash
-    {
-        size_t toHash() const @nogc nothrow pure @safe
-        {
-            return 0;
-        }
-    }
-
     private static struct HashRange
     {
         string fo = "fo";
@@ -178,9 +171,9 @@ version (unittest)
     {
         bool empty_;
 
-        @property ToHash front() const @nogc nothrow pure @safe
+        @property Hashable front() const @nogc nothrow pure @safe
         {
-            return ToHash();
+            return Hashable();
         }
 
         void popFront() @nogc nothrow pure @safe
@@ -199,7 +192,7 @@ version (unittest)
 @nogc nothrow pure @safe unittest
 {
     assert(hash(null) == 0);
-    assert(hash(ToHash()) == 0U);
+    assert(hash(Hashable()) == 0U);
     assert(hash('a') == 'a');
 }
 

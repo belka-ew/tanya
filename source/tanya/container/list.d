@@ -23,6 +23,7 @@ import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
+version (unittest) import tanya.test.stub;
 
 /**
  * Forward range for the $(D_PSYMBOL SList).
@@ -155,8 +156,9 @@ struct SList(T)
      *  init      = Initial value to fill the list with.
      *  allocator = Allocator.
      */
-    this(size_t len, T init, shared Allocator allocator = defaultAllocator)
-    @trusted
+    this()(size_t len,
+           auto ref T init,
+           shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         if (len == 0)
@@ -182,7 +184,18 @@ struct SList(T)
     /// ditto
     this(size_t len, shared Allocator allocator = defaultAllocator)
     {
-        this(len, T.init, allocator);
+        this(allocator);
+        if (len == 0)
+        {
+            return;
+        }
+
+        Entry* next = this.head = allocator.make!Entry();
+        foreach (i; 1 .. len)
+        {
+            next.next = allocator.make!Entry();
+            next = next.next;
+        }
     }
 
     ///
@@ -271,14 +284,18 @@ struct SList(T)
         clear();
     }
 
-    /**
-     * Copies the list.
-     */
-    this(this)
+    static if (isCopyable!T)
     {
-        auto list = typeof(this)(this[], this.allocator);
-        this.head = list.head;
-        list.head = null;
+        this(this)
+        {
+            auto list = typeof(this)(this[], this.allocator);
+            this.head = list.head;
+            list.head = null;
+        }
+    }
+    else
+    {
+        @disable this(this);
     }
 
     ///
@@ -512,7 +529,7 @@ struct SList(T)
     }
 
     /// ditto
-    size_t insertBefore(Range r, ref T el) @trusted
+    size_t insertBefore()(Range r, ref T el) @trusted
     in
     {
         assert(checkRangeBelonging(r));
@@ -1120,8 +1137,9 @@ struct DList(T)
      *  init      = Initial value to fill the list with.
      *  allocator = Allocator.
      */
-    this(size_t len, T init, shared Allocator allocator = defaultAllocator)
-    @trusted
+    this()(size_t len,
+           auto ref T init,
+           shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         if (len == 0)
@@ -1150,7 +1168,20 @@ struct DList(T)
     /// ditto
     this(size_t len, shared Allocator allocator = defaultAllocator)
     {
-        this(len, T.init, allocator);
+        this(allocator);
+        if (len == 0)
+        {
+            return;
+        }
+
+        Entry* next = this.head = allocator.make!Entry();
+        foreach (i; 1 .. len)
+        {
+            next.next = allocator.make!Entry();
+            next.next.prev = next;
+            next = next.next;
+        }
+        this.tail = next;
     }
 
     ///
@@ -1242,15 +1273,19 @@ struct DList(T)
         clear();
     }
 
-    /**
-     * Copies the list.
-     */
-    this(this)
+    static if (isCopyable!T)
     {
-        auto list = typeof(this)(this[], this.allocator);
-        this.head = list.head;
-        this.tail = list.tail;
-        list.head = list .tail = null;
+        this(this)
+        {
+            auto list = typeof(this)(this[], this.allocator);
+            this.head = list.head;
+            this.tail = list.tail;
+            list.head = list .tail = null;
+        }
+    }
+    else
+    {
+        @disable this(this);
     }
 
     ///
@@ -1641,7 +1676,7 @@ struct DList(T)
     }
 
     /// ditto
-    size_t insertBefore(Range r, ref T el) @trusted
+    size_t insertBefore()(Range r, ref T el) @trusted
     in
     {
         assert(checkRangeBelonging(r));
@@ -1758,7 +1793,7 @@ struct DList(T)
     }
 
     /// ditto
-    size_t insertAfter(Range r, ref T el) @trusted
+    size_t insertAfter()(Range r, ref T el) @trusted
     in
     {
         assert(checkRangeBelonging(r));
@@ -2354,4 +2389,11 @@ struct DList(T)
 
     assert(!l1.remove(r).empty);
     assert(l1 == l2);
+}
+
+// Can have non-copyable elements
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(SList!NonCopyable));
+    static assert(is(DList!NonCopyable));
 }

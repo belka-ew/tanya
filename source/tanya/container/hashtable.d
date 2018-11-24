@@ -22,6 +22,7 @@ import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.primitive;
+version (unittest) import tanya.test.stub;
 
 /**
  * Bidirectional range whose element type is a tuple of a key and the
@@ -68,7 +69,7 @@ struct Range(T)
         return this.dataRange.empty();
     }
 
-    @property void popFront()
+    void popFront()
     in
     {
         assert(!empty);
@@ -87,7 +88,7 @@ struct Range(T)
         while (!empty && dataRange.front.status != BucketStatus.used);
     }
 
-    @property void popBack()
+    void popBack()
     in
     {
         assert(!empty);
@@ -759,7 +760,7 @@ if (isHashFunction!(hasher, Key))
      *
      * Returns: The number of the inserted elements with a unique key.
      */
-    size_t insert(ref KeyValue keyValue)
+    size_t insert()(ref KeyValue keyValue)
     {
         auto e = ((ref v) @trusted => &this.data.insert(v))(keyValue.key);
         size_t inserted;
@@ -773,7 +774,7 @@ if (isHashFunction!(hasher, Key))
     }
 
     /// ditto
-    size_t insert(KeyValue keyValue)
+    size_t insert()(KeyValue keyValue)
     {
         auto e = ((ref v) @trusted => &this.data.insert(v))(keyValue.key);
         size_t inserted;
@@ -1196,4 +1197,17 @@ if (isHashFunction!(hasher, Key))
     }
     static assert(is(typeof("asdf" in HashTable!(String, int)())));
     static assert(is(typeof(HashTable!(String, int)()["asdf"])));
+}
+
+// Can have non-copyable keys and elements
+@nogc nothrow pure @safe unittest
+{
+    @NonCopyable @Hashable
+    static struct S
+    {
+        mixin StructStub;
+    }
+    static assert(is(HashTable!(S, int)));
+    static assert(is(HashTable!(int, S)));
+    static assert(is(HashTable!(S, S)));
 }

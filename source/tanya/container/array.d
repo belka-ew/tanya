@@ -22,6 +22,7 @@ import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
+version (unittest) import tanya.test.stub;
 
 /**
  * Random-access range for the $(D_PSYMBOL Array).
@@ -293,7 +294,9 @@ struct Array(T)
      *  init      = Initial value to fill the array with.
      *  allocator = Allocator.
      */
-    this(size_t len, T init, shared Allocator allocator = defaultAllocator)
+    this()(size_t len,
+           auto ref T init,
+           shared Allocator allocator = defaultAllocator)
     {
         this(allocator);
         reserve(len);
@@ -348,15 +351,19 @@ struct Array(T)
         (() @trusted => allocator.deallocate(slice(capacity)))();
     }
 
-    /**
-     * Copies the array.
-     */
-    this(this)
+    static if (isCopyable!T)
     {
-        auto buf = slice(this.length);
-        this.length_ = capacity_ = 0;
-        this.data = null;
-        insertBack(buf);
+        this(this)
+        {
+            auto buf = slice(this.length);
+            this.length_ = capacity_ = 0;
+            this.data = null;
+            insertBack(buf);
+        }
+    }
+    else
+    {
+        @disable this(this);
     }
 
     /**
@@ -1027,7 +1034,7 @@ struct Array(T)
     }
 
     /// ditto
-    Range opIndexAssign(Range value)
+    Range opIndexAssign()(Range value)
     {
         return opSliceAssign(value, 0, length);
     }
@@ -1321,7 +1328,7 @@ struct Array(T)
     }
 
     /// ditto
-    Range opSliceAssign(Range value, size_t i, size_t j) @trusted
+    Range opSliceAssign()(Range value, size_t i, size_t j) @trusted
     in
     {
         assert(i <= j);
@@ -1575,15 +1582,10 @@ struct Array(T)
     assert(v7[].equal(v8[]));
 }
 
+// Destructor can destroy empty arrays
 @nogc nothrow pure @safe unittest
 {
-    static struct SWithDtor
-    {
-        ~this() @nogc nothrow pure @safe
-        {
-        }
-    }
-    auto v = Array!SWithDtor(); // Destructor can destroy empty arrays.
+    auto v = Array!WithDtor();
 }
 
 @nogc nothrow pure @safe unittest
@@ -1594,7 +1596,6 @@ struct Array(T)
     A a1, a2;
     auto v1 = Array!A([a1, a2]);
 
-    // Issue 232: https://issues.caraus.io/issues/232.
     static assert(is(Array!(A*)));
 }
 
@@ -1678,4 +1679,10 @@ struct Array(T)
         assert(arg.capacity == 3);
     }
     func(array);
+}
+
+// Can have non-copyable elements
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(Array!NonCopyable));
 }

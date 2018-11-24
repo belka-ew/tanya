@@ -503,30 +503,16 @@ struct Option(T)
 // Returns default value
 @nogc nothrow pure @safe unittest
 {
-    {
-        int i = 5;
-        assert(((ref e) => e)(Option!int().or(i)) == 5);
-    }
+    int i = 5;
+    assert(((ref e) => e)(Option!int().or(i)) == 5);
 }
 
 // Implements toHash() for nothing
 @nogc nothrow pure @safe unittest
 {
-    static struct ToHash
-    {
-        size_t toHash() const @nogc nothrow pure @safe
-        {
-            return 1U;
-        }
-    }
-    {
-        Option!ToHash toHash;
-        assert(toHash.toHash() == 0U);
-    }
-    {
-        auto toHash = Option!ToHash(ToHash());
-        assert(toHash.toHash() == 1U);
-    }
+    alias OptionT = Option!Hashable;
+    assert(OptionT().toHash() == 0U);
+    assert(OptionT(Hashable(1U)).toHash() == 1U);
 }
 
 /**

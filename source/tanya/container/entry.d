@@ -20,6 +20,7 @@ import tanya.memory.allocator;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.typecons;
+version (unittest) import tanya.test.stub;
 
 package struct SEntry(T)
 {
@@ -59,12 +60,12 @@ package struct Bucket(K, V = void)
     }
     BucketStatus status = BucketStatus.empty;
 
-    this(ref K key)
+    this()(ref K key)
     {
         this.key = key;
     }
 
-    @property void key(ref K key)
+    @property void key()(ref K key)
     {
         this.key() = key;
         this.status = BucketStatus.used;
@@ -170,7 +171,7 @@ package struct HashArray(alias hasher, K, V = void)
         .swap(this.length, data.length);
     }
 
-    void opAssign(ref typeof(this) that)
+    void opAssign()(ref typeof(this) that)
     {
         this.array = that.array;
         this.lengthIndex = that.lengthIndex;
@@ -325,4 +326,14 @@ package struct HashArray(alias hasher, K, V = void)
         }
         return false;
     }
+}
+
+// Can be constructed with non-copyable key/values
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(Bucket!NonCopyable));
+    static assert(is(Bucket!(NonCopyable, NonCopyable)));
+
+    static assert(is(HashArray!((ref NonCopyable) => 0U, NonCopyable)));
+    static assert(is(HashArray!((ref NonCopyable) => 0U, NonCopyable, NonCopyable)));
 }

@@ -91,7 +91,7 @@ struct WithLvalueElements
 mixin template InputRangeStub(E = int)
 {
     import tanya.meta.metafunction : Alias;
-    import tanya.meta.trait : getUDAs, hasUDA;
+    import tanya.meta.trait : evalUDA, getUDAs, hasUDA;
 
     /*
      * Aliases for the attribute lookups to access them faster
@@ -279,6 +279,9 @@ mixin template RandomAccessRangeStub(E = int)
 
 /**
  * Struct with a disabled postblit constructor.
+ *
+ * $(D_PSYMBOL NonCopyable) can be used as an attribute for
+ * $(D_PSYMBOL StructStub) or as a standalone type.
  */
 struct NonCopyable
 {
@@ -288,10 +291,14 @@ struct NonCopyable
 /**
  * Struct with an elaborate destructor.
  *
- * The constructor of $(D_PSYMBOL WithDtor) accepts an additional `counter`
- * argument, which is incremented by the destructor. $(D_PSYMBOL WithDtor)
- * stores a pointer to the passed variable, so the variable can be
- * investigated after the struct isn't available anymore.
+ * $(D_PSYMBOL WithDtor) can be used as an attribute for
+ * $(D_PSYMBOL StructStub) or as a standalone type.
+ *
+ * When used as a standalone object the constructor of $(D_PSYMBOL WithDtor)
+ * accepts an additional `counter` argument, which is incremented by the
+ * destructor. $(D_PSYMBOL WithDtor) stores a pointer to the passed variable,
+ * so the variable can be investigated after the struct isn't available
+ * anymore.
  */
 struct WithDtor
 {
@@ -307,6 +314,60 @@ struct WithDtor
         if (this.counter !is null)
         {
             ++*this.counter;
+        }
+    }
+}
+
+/**
+ * Struct supporting hashing.
+ *
+ * $(D_PSYMBOL Hashable) can be used as an attribute for
+ * $(D_PSYMBOL StructStub) or as a standalone type.
+ *
+ * The constructor accepts an additional parameter, which is returned by the
+ * `toHash()`-function. `0U` is returned if no hash value is given.
+ */
+struct Hashable
+{
+    size_t hash;
+
+    size_t toHash() const @nogc nothrow pure @safe
+    {
+        return this.hash;
+    }
+}
+
+/**
+ * Generates a $(D_KEYWORD struct) with common functionality.
+ *
+ * To specify the needed functionality use user-defined attributes on the
+ * $(D_KEYWORD struct) $(D_PSYMBOL StructStub) is mixed in.
+ *
+ * Supported attributes are: $(D_PSYMBOL NonCopyable), $(D_PSYMBOL Hashable),
+ * $(D_PSYMBOL WithDtor).
+ */
+mixin template StructStub()
+{
+    import tanya.meta.trait : evalUDA, getUDAs, hasUDA;
+
+    static if (hasUDA!(typeof(this), NonCopyable))
+    {
+        @disable this(this);
+    }
+
+    private alias Hashable = getUDAs!(typeof(this), .Hashable);
+    static if (Hashable.length > 0)
+    {
+        size_t toHash() const @nogc nothrow pure @safe
+        {
+            return evalUDA!(Hashable[0]).hash;
+        }
+    }
+
+    static if (hasUDA!(typeof(this), WithDtor))
+    {
+        ~this() @nogc nothrow pure @safe
+        {
         }
     }
 }

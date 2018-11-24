@@ -22,6 +22,7 @@ import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.primitive;
+version (unittest) import tanya.test.stub;
 
 /**
  * Bidirectional range that iterates over the $(D_PSYMBOL Set)'s values.
@@ -67,7 +68,7 @@ struct Range(T)
         return this.dataRange.empty();
     }
 
-    @property void popFront()
+    void popFront()
     in
     {
         assert(!empty);
@@ -86,7 +87,7 @@ struct Range(T)
         while (!empty && dataRange.front.status != BucketStatus.used);
     }
 
-    @property void popBack()
+    void popBack()
     in
     {
         assert(!empty);
@@ -459,7 +460,7 @@ if (isHashFunction!(hasher, T))
      *
      * Returns: Amount of new elements inserted.
      */
-    size_t insert(ref T value)
+    size_t insert()(ref T value)
     {
         auto e = ((ref v) @trusted => &this.data.insert(v))(value);
         if (e.status != BucketStatus.used)
@@ -470,7 +471,7 @@ if (isHashFunction!(hasher, T))
         return 0;
     }
 
-    size_t insert(T value)
+    size_t insert()(T value)
     {
         auto e = ((ref v) @trusted => &this.data.insert(v))(value);
         if (e.status != BucketStatus.used)
@@ -772,4 +773,15 @@ if (isHashFunction!(hasher, T))
 @nogc nothrow pure @safe unittest
 {
     static assert(is(Set!(int, (const ref x) => cast(size_t) x)));
+}
+
+// Can have non-copyable elements
+@nogc nothrow pure @safe unittest
+{
+    @NonCopyable @Hashable
+    static struct S
+    {
+        mixin StructStub;
+    }
+    static assert(is(Set!S));
 }
