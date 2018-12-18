@@ -18,6 +18,7 @@ import core.checkedint;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.exception;
+import tanya.functional;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -1000,7 +1001,7 @@ struct Array(T)
      */
     ref T opIndexAssign(E : T)(auto ref E value, size_t pos)
     {
-        return opIndex(pos) = value;
+        return opIndex(pos) = forward!value;
     }
 
     /// ditto
@@ -1685,4 +1686,5 @@ struct Array(T)
 @nogc nothrow pure @safe unittest
 {
     static assert(is(Array!NonCopyable));
+    static assert(is(typeof({ Array!NonCopyable.init[0] = NonCopyable(); })));
 }
