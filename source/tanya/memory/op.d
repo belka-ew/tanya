@@ -225,41 +225,6 @@ do
 }
 
 /**
- * Compares two memory areas $(D_PARAM r1) and $(D_PARAM r2).
- *
- * $(D_PSYMBOL cmp) returns a positive integer if
- * $(D_INLINECODE r1.length > r2.length) or the first `n` compared bytes of
- * $(D_PARAM r1) found to be greater than the first `n` bytes of $(D_PARAM r2),
- *
- * $(D_PSYMBOL cmp) returns a negative integer if
- * $(D_INLINECODE r2.length > r1.length) or the first `n` compared bytes of
- * $(D_PARAM r1) found to be less than the first `n` bytes of $(D_PARAM r2),
- *
- * `0` is returned otherwise.
- *
- * Returns: Positive integer if $(D_INLINECODE r1 > r2),
- *          negative integer if $(D_INLINECODE r2 > r1),
- *          `0` if $(D_INLINECODE r1 == r2).
- */
-deprecated("Use tanya.memory.op.equal() or tanya.algorithm.comparison.compare() instead")
-int cmp(const void[] r1, const void[] r2) @nogc nothrow pure @trusted
-in
-{
-    assert(r1.length == 0 || r1.ptr !is null);
-    assert(r2.length == 0 || r2.ptr !is null);
-}
-do
-{
-    import core.stdc.string : memcmp;
-
-    if (r1.length > r2.length)
-    {
-        return 1;
-    }
-    return r1.length < r2.length ? -1 : memcmp(r1.ptr, r2.ptr, r1.length);
-}
-
-/**
  * Finds the first occurrence of $(D_PARAM needle) in $(D_PARAM haystack) if
  * any.
  *
