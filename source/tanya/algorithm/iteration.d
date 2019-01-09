@@ -514,6 +514,22 @@ private struct Retro(Range)
         }
     }
 
+    static if (hasLength!Range && hasSlicing!Range)
+    {
+        alias opDollar = length;
+
+        auto opSlice(size_t i, size_t j)
+        in
+        {
+            assert(i <= j);
+            assert(j <= length);
+        }
+        do
+        {
+            return typeof(this)(this.source[$-j .. $-i]);
+        }
+    }
+
     static if (hasAssignableElements!Range)
     {
         @property void front(ref ElementType!Range value)
@@ -609,6 +625,10 @@ if (isBidirectionalRange!Range)
     actual.popBack();
     assert(actual.back == 2);
     assert(actual[1] == 2);
+
+    // Check slicing.
+    auto slice = retro(given[])[1 .. $];
+    assert(slice.length == 2 && slice.front == 2 && slice.back == 1);
 }
 
 // Elements can be assigned
