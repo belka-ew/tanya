@@ -5,7 +5,7 @@
 /**
  * Internet Protocol implementation.
  *
- * Copyright: Eugene Wissner 2018.
+ * Copyright: Eugene Wissner 2018-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -1039,5 +1039,159 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
     }
     {
         assert(address6(cast(ubyte[]) []).isNothing);
+    }
+}
+
+/**
+ * Address storage, that can hold either an IPv4 or IPv6 address.
+ */
+struct Address
+{
+    private Variant!(Address4, Address6) address;
+
+    /**
+     * Initializes the addres with an IPv4 address.
+     *
+     * Params:
+     *  address = IPv6 address.
+     */
+    this(Address4 address) @nogc nothrow pure @safe
+    {
+        this.address = address;
+    }
+
+    /**
+     * Initializes the addres with an IPv4 address.
+     *
+     * Params:
+     *  address = IPv6 address.
+     */
+    this(Address6 address) @nogc nothrow pure @safe
+    {
+        this.address = address;
+    }
+
+    /**
+     * Determines whether this is an IPv4 address.
+     *
+     * Returns: $(D_KEYWORD true) if this is an IPv4 address,
+     *          $(D_KEYWORD false) otherwise.
+     */
+    bool isV4() const @nogc nothrow pure @safe
+    {
+        return this.address.peek!Address4;
+    }
+
+    /**
+     * Determines whether this is an IPv6 address.
+     *
+     * Returns: $(D_KEYWORD true) if this is an IPv6 address,
+     *          $(D_KEYWORD false) otherwise.
+     */
+    bool isV6() const @nogc nothrow pure @safe
+    {
+        return this.address.peek!Address6;
+    }
+
+    /**
+     * Get the address as an IPv4 address.
+     *
+     * This method doesn't convert the address, so the address should be
+     * already an IPv4 one.
+     *
+     * Returns: IPv4 address.
+     *
+     * Precondition: This is an IPv4 address.
+     */
+    Address4 toV4() const @nogc nothrow pure @safe
+    in (this.address.peek!Address4)
+    {
+        return this.address.get!Address4;
+    }
+
+    /**
+     * Get the address as an IPv6 address.
+     *
+     * This method doesn't convert the address, so the address should be
+     * already an IPv6 one.
+     *
+     * Returns: IPv6 address.
+     *
+     * Precondition: This is an IPv6 address.
+     */
+    Address6 toV6() const @nogc nothrow pure @safe
+    in (this.address.peek!Address6)
+    {
+        return this.address.get!Address6;
+    }
+
+    /**
+     * Determines whether this is a loopback address.
+     *
+     * Returns: $(D_KEYWORD true) if this is a loopback address,
+     *          $(D_KEYWORD false) otherwise.
+     *
+     * See_Also: $(D_PSYMBOL Address4.loopback),
+     *           $(D_PSYMBOL Address6.loopback).
+     */
+    bool isLoopback() const @nogc nothrow pure @safe
+    in (this.address.hasValue)
+    {
+        if (this.address.peek!Address4)
+        {
+            return this.address.get!Address4.isLoopback();
+        }
+        return this.address.get!Address6.isLoopback();
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        assert(Address(Address4.loopback()).isLoopback());
+        assert(Address(Address6.loopback()).isLoopback());
+    }
+
+    /**
+     * Determines whether this address' destination is a group of endpoints.
+     *
+     * Returns: $(D_KEYWORD true) if this is a multicast address,
+     *          $(D_KEYWORD false) otherwise.
+     *
+     * See_Also: $(D_PSYMBOL Address4.isMulticast),
+     *           $(D_PSYMBOL Address6.isMulticast).
+     */
+    bool isMulticast() const @nogc nothrow pure @safe
+    in (this.address.hasValue)
+    {
+        if (this.address.peek!Address4)
+        {
+            return this.address.get!Address4.isMulticast();
+        }
+        return this.address.get!Address6.isMulticast();
+    }
+
+    /**
+     * Determines whether this is an unspecified address.
+     *
+     * Returns: $(D_KEYWORD true) if this is an unspecified address,
+     *          $(D_KEYWORD false) otherwise.
+     *
+     * See_Also: $(D_PSYMBOL Address4.isAny), $(D_PSYMBOL Address6.isAny).
+     */
+    bool isAny() const @nogc nothrow pure @safe
+    in (this.address.hasValue)
+    {
+        if (this.address.peek!Address4)
+        {
+            return this.address.get!Address4.isAny();
+        }
+        return this.address.get!Address6.isAny();
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        assert(Address(Address4.any()).isAny());
+        assert(Address(Address6.any()).isAny());
     }
 }

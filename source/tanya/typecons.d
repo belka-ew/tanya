@@ -8,7 +8,7 @@
  * This module contains templates that allow to build new types from the
  * available ones.
  *
- * Copyright: Eugene Wissner 2017-2018.
+ * Copyright: Eugene Wissner 2017-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -540,4 +540,191 @@ Option!T option(T)()
 {
     assert(option!int().isNothing);
     assert(option(5) == 5);
+}
+
+private struct VariantAccessorInfo
+{
+    string accessor;
+    size_t tag;
+}
+
+/**
+ * Tagged union.
+ *
+ * Params:
+ *  Specs = Types of the union members.
+ */
+template Variant(Specs...)
+if (isTypeTuple!Specs)
+{
+    union AlignedUnion(Args...)
+    {
+        static if (Args.length > 0)
+        {
+            Args[0] value;
+        }
+        static if (Args.length > 1)
+        {
+            AlignedUnion!(Args[1 .. $]) rest;
+        }
+    }
+
+    template accessor(T, Union)
+    {
+        enum VariantAccessorInfo info = accessorImpl!(T, Union, 1);
+        enum accessor = VariantAccessorInfo("this.values" ~ info.accessor, info.tag);
+    }
+
+    template accessorImpl(T, Union, size_t tag)
+    {
+        static if (is(T == typeof(Union.value)))
+        {
+            enum accessorImpl = VariantAccessorInfo(".value", tag);
+        }
+        else
+        {
+            enum VariantAccessorInfo info = accessorImpl!(T, typeof(Union.rest), tag + 1);
+            enum accessorImpl = VariantAccessorInfo(".rest" ~ info.accessor, info.tag);
+        }
+    }
+
+    struct Variant
+    {
+        /// Types can be present in this $(D_PSYMBOL Variant).
+        alias Types = Specs;
+
+        private ptrdiff_t tag = -1;
+        private AlignedUnion!Types values;
+
+        this(T)(auto ref T value)
+        if (canFind!(T, Types))
+        {
+            opAssign!T(forward!value);
+        }
+
+        bool hasValue() const
+        {
+            return this.tag != -1;
+        }
+
+        bool peek(T)() const
+        if (canFind!(T, Types))
+        {
+            return this.tag == staticIndexOf!(T, Types);
+        }
+
+        ref inout(T) get(T)() inout
+        if (canFind!(T, Types))
+        in (this.tag == staticIndexOf!(T, Types), "Variant isn't initialized")
+        {
+            mixin("return " ~ accessor!(T, AlignedUnion!Types).accessor ~ ";");
+        }
+
+        typeof(this) opAssign(T)(auto ref T value)
+        if (canFind!(T, Types))
+        {
+            this.tag = staticIndexOf!(T, Types);
+            mixin(accessor!(T, AlignedUnion!Types).accessor ~ " = forward!value;");
+            return this;
+        }
+
+        TypeInfo type()
+        {
+            static foreach (i, Type; Types)
+            {
+                if (this.tag == i)
+                {
+                    return typeid(Type);
+                }
+            }
+            assert(false, "Variant isn't initialized");
+        }
+
+        bool opEquals()(auto ref inout Variant that) inout
+        {
+            if (this.tag != that.tag)
+            {
+                return false;
+            }
+            static foreach (i, Type; Types)
+            {
+                if (this.tag == i)
+                {
+                    return get!Type == that.get!Type;
+                }
+            }
+            return true;
+        }
+    }
+}
+
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant;
+    variant = 5;
+    assert(variant.peek!int);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant;
+    variant = 5.0;
+    assert(!variant.peek!int);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant = 5;
+    assert(variant.get!int == 5);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static assert(is(Variant!(int, float)));
+    static assert(is(Variant!int));
+}
+
+@nogc nothrow pure @safe unittest
+{
+    static struct WithDestructorAndCopy
+    {
+        this(this) @nogc nothrow pure @safe
+        {
+        }
+
+        ~this() @nogc nothrow pure @safe
+        {
+        }
+    }
+    static assert(is(Variant!WithDestructorAndCopy));
+}
+
+// Equality compares the underlying objects
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant1 = 5;
+    Variant!(int, double) variant2 = 5;
+    assert(variant1 == variant2);
+}
+
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant1 = 5;
+    Variant!(int, double) variant2 = 6;
+    assert(variant1 != variant2);
+}
+
+// Differently typed variants aren't equal
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant1 = 5;
+    Variant!(int, double) variant2 = 5.0;
+    assert(variant1 != variant2);
+}
+
+// Uninitialized variants are equal
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant1, variant2;
+    assert(variant1 == variant2);
 }
