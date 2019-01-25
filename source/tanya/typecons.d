@@ -554,7 +554,7 @@ private struct VariantAccessorInfo
  * Params:
  *  Specs = Types of the union members.
  */
-template Variant(Specs...)
+package (tanya) template Variant(Specs...)
 if (isTypeTuple!Specs)
 {
     union AlignedUnion(Args...)

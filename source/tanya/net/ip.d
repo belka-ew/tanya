@@ -103,7 +103,7 @@ struct Address4
      *
      * Returns: Object that represents the Loopback address.
      */
-    static Address4 loopback() @nogc nothrow pure @safe
+    static @property Address4 loopback() @nogc nothrow pure @safe
     {
         typeof(return) address;
         address.address = Address4.loopback_;
@@ -121,7 +121,7 @@ struct Address4
      *
      * Returns: Object that represents any address.
      */
-    static Address4 any() @nogc nothrow pure @safe
+    static @property Address4 any() @nogc nothrow pure @safe
     {
         typeof(return) address;
         address.address = Address4.any_;
@@ -499,7 +499,7 @@ struct Address6
      *
      * Returns: Object that represents any address.
      */
-    static Address6 any() @nogc nothrow pure @safe
+    static @property Address6 any() @nogc nothrow pure @safe
     {
         return Address6();
     }
@@ -515,7 +515,7 @@ struct Address6
      *
      * Returns: Object that represents the Loopback address.
      */
-    static Address6 loopback() @nogc nothrow pure @safe
+    static @property Address6 loopback() @nogc nothrow pure @safe
     {
         typeof(return) address;
         address.address[$ - 1] = 1;
@@ -1049,6 +1049,8 @@ struct Address
 {
     private Variant!(Address4, Address6) address;
 
+    @disable this();
+
     /**
      * Initializes the addres with an IPv4 address.
      *
@@ -1082,6 +1084,12 @@ struct Address
         return this.address.peek!Address4;
     }
 
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        assert(Address(Address4.any()).isV4());
+    }
+
     /**
      * Determines whether this is an IPv6 address.
      *
@@ -1091,6 +1099,12 @@ struct Address
     bool isV6() const @nogc nothrow pure @safe
     {
         return this.address.peek!Address6;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        assert(Address(Address6.any()).isV6());
     }
 
     /**
@@ -1103,10 +1117,17 @@ struct Address
      *
      * Precondition: This is an IPv4 address.
      */
-    Address4 toV4() const @nogc nothrow pure @safe
+    ref inout(Address4) toV4() inout @nogc nothrow pure @safe
     in (this.address.peek!Address4)
     {
         return this.address.get!Address4;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        auto expected = Address4.loopback;
+        assert(Address(expected).toV4() == expected);
     }
 
     /**
@@ -1119,10 +1140,17 @@ struct Address
      *
      * Precondition: This is an IPv6 address.
      */
-    Address6 toV6() const @nogc nothrow pure @safe
+    ref inout(Address6) toV6() inout @nogc nothrow pure @safe
     in (this.address.peek!Address6)
     {
         return this.address.get!Address6;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        auto expected = Address6.loopback;
+        assert(Address(expected).toV6() == expected);
     }
 
     /**
@@ -1170,6 +1198,13 @@ struct Address
         return this.address.get!Address6.isMulticast();
     }
 
+    ///
+    @nogc nothrow @safe unittest
+    {
+        assert(Address(address4("224.0.0.3")).isMulticast());
+        assert(Address(address6("ff00::")).isMulticast());
+    }
+
     /**
      * Determines whether this is an unspecified address.
      *
@@ -1191,7 +1226,76 @@ struct Address
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(Address(Address4.any()).isAny());
-        assert(Address(Address6.any()).isAny());
+        assert(Address(Address4.any).isAny());
+        assert(Address(Address6.any).isAny());
     }
+
+    /**
+     * Compares two addresses for equality.
+     *
+     * Params:
+     *  T    = The type of the other address. It can be $(D_PSYMBOL Address),
+     *         $(D_PSYMBOL Address4) or $(D_PSYMBOL Address6).
+     *  that = The address to compare with.
+     *
+     * Returns: $(D_KEYWORD true) if this and $(D_PARAM that) addresses are
+     *          representations of the same IP address, $(D_KEYWORD false)
+     *          otherwise.
+     */
+    bool opEquals(T)(T that) const
+    if (is(Unqual!T == Address4) || is(Unqual!T == Address6))
+    {
+        alias AddressType = Unqual!T;
+        if (this.address.peek!AddressType)
+        {
+            return this.address.get!AddressType == that;
+        }
+        return false;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        assert(Address(Address4.loopback) == Address4.loopback);
+        assert(Address(Address6.loopback) == Address6.loopback);
+        assert(Address(Address4.loopback) != Address6.loopback);
+    }
+
+    /// ditto
+    bool opEquals(T)(T that) const
+    if (is(Unqual!T == Address))
+    {
+        return this.address == that.address;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        assert(Address(Address6.loopback) == Address(Address6.loopback));
+        assert(Address(Address4.loopback) != Address(Address6.loopback));
+    }
+
+    ref Address opAssign(T)(T that)
+    if (is(Unqual!T == Address4) || is(Unqual!T == Address6))
+    {
+        this.address = that;
+        return this;
+    }
+
+    ///
+    @nogc nothrow pure @safe unittest
+    {
+        Address address = Address4.any;
+        address = Address4.loopback;
+        assert(address == Address4.loopback);
+    }
+}
+
+// Can assign another address
+@nogc nothrow pure @safe unittest
+{
+    Address actual = Address4.loopback;
+    Address expected = Address6.loopback;
+    actual = expected;
+    assert(actual == expected);
 }
