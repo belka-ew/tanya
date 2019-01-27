@@ -5,7 +5,7 @@
 /**
  * This module provides functions for converting between different types.
  *
- * Copyright: Eugene Wissner 2017-2018.
+ * Copyright: Eugene Wissner 2017-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -62,15 +62,8 @@ version (unittest)
  */
 T emplace(T, U, Args...)(void[] memory, U outer, auto ref Args args)
 if (!isAbstractClass!T && isInnerClass!T && is(typeof(T.outer) == U))
-in
-{
-    assert(memory.length >= stateSize!T);
-}
-out (result)
-{
-    assert(memory.ptr is (() @trusted => cast(void*) result)());
-}
-do
+in (memory.length >= stateSize!T)
+out (result; memory.ptr is (() @trusted => cast(void*) result)())
 {
     copy(typeid(T).initializer, memory);
 
@@ -88,15 +81,8 @@ do
 /// ditto
 T emplace(T, Args...)(void[] memory, auto ref Args args)
 if (is(T == class) && !isAbstractClass!T && !isInnerClass!T)
-in
-{
-    assert(memory.length == stateSize!T);
-}
-out (result)
-{
-    assert(memory.ptr is (() @trusted => cast(void*) result)());
-}
-do
+in (memory.length == stateSize!T)
+out (result; memory.ptr is (() @trusted => cast(void*) result)())
 {
     copy(typeid(T).initializer, memory);
 
@@ -141,15 +127,8 @@ do
 /// ditto
 T* emplace(T, Args...)(void[] memory, auto ref Args args)
 if (!isAggregateType!T && (Args.length <= 1))
-in
-{
-    assert(memory.length >= T.sizeof);
-}
-out (result)
-{
-    assert(memory.ptr is result);
-}
-do
+in (memory.length >= T.sizeof)
+out (result; memory.ptr is result)
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
     static if (Args.length == 1)
@@ -184,8 +163,8 @@ private void initializeOne(T)(ref void[] memory, ref T* result) @trusted
 /// ditto
 T* emplace(T, Args...)(void[] memory, auto ref Args args)
 if (!isPolymorphicType!T && isAggregateType!T)
-in(memory.length >= T.sizeof)
-out(result; memory.ptr is result)
+in (memory.length >= T.sizeof)
+out (result; memory.ptr is result)
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
 
@@ -204,6 +183,10 @@ out(result; memory.ptr is result)
     {
         ((ref arg) @trusted =>
             copy((cast(void*) &arg)[0 .. T.sizeof], memory))(args[0]);
+        static if (hasElaborateCopyConstructor!T)
+        {
+            result.__postblit();
+        }
     }
     else static if (is(typeof({ T t = T(args); })))
     {
@@ -290,6 +273,24 @@ out(result; memory.ptr is result)
     ubyte[1] mem = [3];
 
     assert(emplace!SEntry(cast(void[]) mem[0 .. 1]).content == 0);
+}
+
+// Postblit is called when emplacing a struct
+@nogc nothrow pure @system unittest
+{
+    static struct S
+    {
+        bool called = false;
+        this(this) @nogc nothrow pure @safe
+        {
+            this.called = true;
+        }
+    }
+    S target;
+    S* sp = &target;
+
+    emplace!S(sp[0 .. 1], S());
+    assert(target.called);
 }
 
 /**
