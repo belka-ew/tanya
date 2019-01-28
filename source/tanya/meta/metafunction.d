@@ -1801,3 +1801,62 @@ if (T.length == 2)
     static assert(is(Select!(true, int, float) == int));
     static assert(is(Select!(false, int, float) == float));
 }
+
+/**
+ * Attaces a numeric index to each element from $(D_PARAM Args).
+ *
+ * $(D_PSYMBOL EnumerateFrom) returns a sequence of tuples ($(D_PSYMBOL Pack)s)
+ * consisting of the index of each element and the element itself.
+ *
+ * Params:
+ *  start = Enumeration initial value.
+ *  Args  = Enumerated sequence.
+ *
+ * See_Also: $(D_PSYMBOL Enumerate).
+ */
+template EnumerateFrom(size_t start, Args...)
+{
+    static if (Args.length == 0)
+    {
+        alias EnumerateFrom = AliasSeq!();
+    }
+    else
+    {
+        alias EnumerateFrom = AliasSeq!(Pack!(start, Args[0]), EnumerateFrom!(start + 1, Args[1 .. $]));
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(EnumerateFrom!(0, int, uint, bool).length == 3);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    alias Expected = AliasSeq!(Pack!(cast(size_t) 0, int),
+                               Pack!(cast(size_t) 1, uint));
+    static assert(is(EnumerateFrom!(0, int, uint) == Expected));
+}
+
+/**
+ * Attaces a numeric index to each element from $(D_PARAM Args).
+ *
+ * $(D_PSYMBOL EnumerateFrom) returns a sequence of tuples ($(D_PSYMBOL Pack)s)
+ * consisting of the index of each element and the element itself.
+ *
+ * Params:
+ *  Args  = Enumerated sequence.
+ *
+ * See_Also: $(D_PSYMBOL EnumerateFrom).
+ */
+alias Enumerate(Args...) = EnumerateFrom!(0, Args);
+
+///
+@nogc nothrow pure @safe unittest
+{
+    alias Expected = AliasSeq!(Pack!(cast(size_t) 0, int),
+                               Pack!(cast(size_t) 1, uint));
+    static assert(is(Enumerate!(int, uint) == Expected));
+}
