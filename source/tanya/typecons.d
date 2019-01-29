@@ -367,8 +367,15 @@ struct Option(T)
     ref typeof(this) opAssign(U)(ref U that)
     if (is(U == Option))
     {
-        this.value = that;
-        this.isNothing_ = that.isNothing;
+        if (that.isNothing)
+        {
+            reset();
+        }
+        else
+        {
+            this.value = that.get;
+            this.isNothing_ = false;
+        }
         return this;
     }
 
@@ -513,6 +520,15 @@ struct Option(T)
     alias OptionT = Option!Hashable;
     assert(OptionT().toHash() == 0U);
     assert(OptionT(Hashable(1U)).toHash() == 1U);
+}
+
+// Can assign Option that is nothing
+@nogc nothrow pure @safe unittest
+{
+    auto option1 = Option!int(5);
+    Option!int option2;
+    option1 = option2;
+    assert(option1.isNothing);
 }
 
 /**
