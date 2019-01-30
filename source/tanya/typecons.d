@@ -227,11 +227,15 @@ struct Option(T)
      * Precondition: `!isNothing`.
      */
     @property ref inout(T) get() inout
-    in
+    in (!isNothing, "Option is nothing")
     {
-        assert(!isNothing, "Option is nothing");
+        return this.value;
     }
-    do
+
+    /// ditto
+    deprecated("Call Option.get explicitly instead of relying on alias this")
+    @property ref inout(T) get_() inout
+    in (!isNothing, "Option is nothing")
     {
         return this.value;
     }
@@ -406,7 +410,7 @@ struct Option(T)
         }
     }
 
-    alias get this;
+    alias get_ this;
 }
 
 ///

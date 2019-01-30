@@ -148,7 +148,7 @@ struct Address4
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(address4("127.0.0.1").isLoopback());
+        assert(address4("127.0.0.1").get.isLoopback());
     }
 
     /**
@@ -166,7 +166,7 @@ struct Address4
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(address4("0.0.0.0").isAny());
+        assert(address4("0.0.0.0").get.isAny());
     }
 
     /**
@@ -183,7 +183,7 @@ struct Address4
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(address4("255.255.255.255").isBroadcast());
+        assert(address4("255.255.255.255").get.isBroadcast());
     }
 
     /**
@@ -210,7 +210,7 @@ struct Address4
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(address4("224.0.0.3").isMulticast());
+        assert(address4("224.0.0.3").get.isMulticast());
     }
 
     /**
@@ -229,7 +229,7 @@ struct Address4
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(address4("192.168.0.1").isUnicast());
+        assert(address4("192.168.0.1").get.isUnicast());
     }
 
     /**
@@ -276,7 +276,7 @@ struct Address4
     {
         const actual = address4("192.168.0.1");
         const ubyte[4] expected = [192, 168, 0, 1];
-        assert(actual.toBytes() == expected);
+        assert(actual.get.toBytes() == expected);
     }
 
     /**
@@ -293,7 +293,7 @@ struct Address4
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(address4("127.0.0.1").toUInt() == 0x7f000001U);
+        assert(address4("127.0.0.1").get.toUInt() == 0x7f000001U);
     }
 }
 
@@ -394,7 +394,7 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
 {
     {
         ubyte[4] actual = [127, 0, 0, 1];
-        assert(address4(actual[]).isLoopback());
+        assert(address4(actual[]).get.isLoopback());
     }
     {
         ubyte[3] actual = [127, 0, 0];
@@ -543,7 +543,7 @@ struct Address6
     ///
     @nogc nothrow @safe unittest
     {
-        assert(address6("::").isAny());
+        assert(address6("::").get.isAny());
     }
 
     /**
@@ -560,7 +560,7 @@ struct Address6
     ///
     @nogc nothrow @safe unittest
     {
-        assert(address6("::1").isLoopback());
+        assert(address6("::1").get.isLoopback());
     }
 
     /**
@@ -579,7 +579,7 @@ struct Address6
     ///
     @nogc nothrow @safe unittest
     {
-        assert(address6("ff00::").isMulticast());
+        assert(address6("ff00::").get.isMulticast());
     }
 
     /**
@@ -598,7 +598,7 @@ struct Address6
     ///
     @nogc nothrow @safe unittest
     {
-        assert(address6("::1").isUnicast());
+        assert(address6("::1").get.isUnicast());
     }
 
     /**
@@ -615,7 +615,7 @@ struct Address6
     ///
     @nogc nothrow @safe unittest
     {
-        assert(address6("fe80::1").isLinkLocal());
+        assert(address6("fe80::1").get.isLinkLocal());
     }
 
     /**
@@ -632,7 +632,7 @@ struct Address6
     ///
     @nogc nothrow @safe unittest
     {
-        assert(address6("fd80:124e:34f3::1").isUniqueLocal());
+        assert(address6("fd80:124e:34f3::1").get.isUniqueLocal());
     }
 
     /**
@@ -678,7 +678,7 @@ struct Address6
     {
         import tanya.algorithm.comparison : equal;
 
-        assert(equal(address6("1:2:3:4:5:6:7:8").stringify()[],
+        assert(equal(address6("1:2:3:4:5:6:7:8").get.stringify()[],
                "0001:0002:0003:0004:0005:0006:0007:0008"));
     }
 
@@ -697,7 +697,7 @@ struct Address6
     {
         auto actual = address6("1:2:3:4:5:6:7:8");
         ubyte[16] expected = [0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8];
-        assert(actual.toBytes() == expected);
+        assert(actual.get.toBytes() == expected);
     }
 }
 
@@ -935,26 +935,30 @@ CopyTail:
 
 @nogc nothrow @safe unittest
 {
-    {
-        ubyte[16] expected = [0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8];
-        auto actual = address6("1:2:3:4:5:6:7:8");
-        assert(actual.address == expected);
-    }
-    {
-        ubyte[16] expected;
-        auto actual = address6("::");
-        assert(actual.address == expected);
-    }
-    {
-        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
-        auto actual = address6("::1");
-        assert(actual.address == expected);
-    }
-    {
-        ubyte[16] expected = [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        auto actual = address6("1::");
-        assert(actual.address == expected);
-    }
+    ubyte[16] expected = [0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8];
+    auto actual = address6("1:2:3:4:5:6:7:8");
+    assert(actual.get.address == expected);
+}
+
+@nogc nothrow @safe unittest
+{
+    ubyte[16] expected;
+    auto actual = address6("::");
+    assert(actual.get.address == expected);
+}
+
+@nogc nothrow @safe unittest
+{
+    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+    auto actual = address6("::1");
+    assert(actual.get.address == expected);
+}
+
+@nogc nothrow @safe unittest
+{
+    ubyte[16] expected = [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    auto actual = address6("1::");
+    assert(actual.get.address == expected);
 }
 
 // Rejects malformed addresses
@@ -971,25 +975,31 @@ CopyTail:
 // Parses embedded IPv4 address
 @nogc nothrow @safe unittest
 {
-    {
-        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
-        auto actual = address6("0:0:0:0:0:0:1.2.3.4");
-        assert(actual.address == expected);
-    }
-    {
-        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
-        auto actual = address6("::1.2.3.4");
-        assert(actual.address == expected);
-    }
-    {
-        ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 6, 1, 2, 3, 4];
-        auto actual = address6("::5:6:1.2.3.4");
-        assert(actual.address == expected);
-    }
+    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
+    auto actual = address6("0:0:0:0:0:0:1.2.3.4");
+    assert(actual.get.address == expected);
+}
+
+@nogc nothrow @safe unittest
+{
+    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
+    auto actual = address6("::1.2.3.4");
+    assert(actual.get.address == expected);
+}
+
+@nogc nothrow @safe unittest
+{
+    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 6, 1, 2, 3, 4];
+    auto actual = address6("::5:6:1.2.3.4");
+    assert(actual.get.address == expected);
+}
+
+@nogc nothrow @safe unittest
+{
     assert(address6("0:0:0:0:0:0:1.2.3.").isNothing);
     assert(address6("0:0:0:0:0:0:1.2:3.4").isNothing);
     assert(address6("0:0:0:0:0:0:1.2.3.4.").isNothing);
-    assert(address6("fe80:0:0:0:0:0:1.2.3.4%1").scopeID == 1);
+    assert(address6("fe80:0:0:0:0:0:1.2.3.4%1").get.scopeID == 1);
 }
 
 /**
@@ -1201,8 +1211,8 @@ struct Address
     ///
     @nogc nothrow @safe unittest
     {
-        assert(Address(address4("224.0.0.3")).isMulticast());
-        assert(Address(address6("ff00::")).isMulticast());
+        assert(Address(address4("224.0.0.3").get).isMulticast());
+        assert(Address(address6("ff00::").get).isMulticast());
     }
 
     /**
