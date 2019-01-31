@@ -18,6 +18,7 @@
 module tanya.typecons;
 
 import tanya.algorithm.mutation;
+import tanya.conv;
 import tanya.format;
 import tanya.functional;
 import tanya.meta.metafunction;
@@ -562,20 +563,18 @@ Option!T option(T)()
     assert(option(5) == 5);
 }
 
-private struct VariantAccessorInfo
-{
-    string accessor;
-    size_t tag;
-}
-
 /**
- * Tagged union.
+ * Type that can hold one of the types listed as its template parameters.
+ *
+ * $(D_PSYMBOL Variant) is a type similar to $(D_KEYWORD union), but
+ * $(D_PSYMBOL Variant) keeps track of the actually used type and throws an
+ * assertion error when trying to access an invalid type at runtime.
  *
  * Params:
- *  Specs = Types of the union members.
+ *  Specs = Types this $(D_SPYBMOL Variant) can hold.
  */
-package (tanya) template Variant(Specs...)
-if (isTypeTuple!Specs)
+template Variant(Specs...)
+if (isTypeTuple!Specs && NoDuplicates!Specs.length == Specs.length)
 {
     union AlignedUnion(Args...)
     {
@@ -587,6 +586,12 @@ if (isTypeTuple!Specs)
         {
             AlignedUnion!(Args[1 .. $]) rest;
         }
+    }
+
+    private struct VariantAccessorInfo
+    {
+        string accessor;
+        ptrdiff_t tag;
     }
 
     template accessor(T, Union)
@@ -616,23 +621,84 @@ if (isTypeTuple!Specs)
         private ptrdiff_t tag = -1;
         private AlignedUnion!Types values;
 
-        this(T)(auto ref T value)
+        /**
+         * Constructs this $(D_PSYMBOL Variant) with one of the types supported
+         * in it.
+         *
+         * Params:
+         *  T     = Type of the initial value.
+         *  value = Initial value.
+         */
+        this(T)(ref T value)
         if (canFind!(T, Types))
         {
-            opAssign!T(forward!value);
+            copyAssign!T(value);
         }
 
+        /// ditto
+        this(T)(T value)
+        if (canFind!(T, Types))
+        {
+            moveAssign!T(value);
+        }
+
+        ~this()
+        {
+            reset();
+        }
+
+        this(this)
+        {
+            alias pred(U) = hasElaborateCopyConstructor!(U.Seq[1]);
+            static foreach (Type; Filter!(pred, Enumerate!Types))
+            {
+                if (this.tag == Type.Seq[0])
+                {
+                    get!(Type.Seq[1]).__postblit();
+                }
+            }
+        }
+
+        /**
+         * Tells whether this $(D_PSYMBOL Variant) was initialized.
+         *
+         * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Variant) contains a
+         *          value, $(D_KEYWORD false) otherwise.
+         */
         bool hasValue() const
         {
             return this.tag != -1;
         }
 
+        /**
+         * Tells whether this $(D_PSYMBOL Variant) holds currently a value of
+         * type $(D_PARAM T).
+         *
+         * Params:
+         *  T = Examined type.
+         *
+         * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Variant) currently
+         *          contains a value of type $(D_PARAM T), $(D_KEYWORD false)
+         *          otherwise.
+         */
         bool peek(T)() const
         if (canFind!(T, Types))
         {
             return this.tag == staticIndexOf!(T, Types);
         }
 
+        /**
+         * Returns the underlying value, assuming it is of the type $(D_PARAM T).
+         *
+         * Params:
+         *  T = Type of the value should be returned.
+         *
+         * Returns: The underyling value.
+         *
+         * Precondition: The $(D_PSYMBOL Variant) has a value.
+         *
+         * See_Also: $(D_PSYMBOL peek), $(D_PSYMBOL hasValue).
+         */
         ref inout(T) get(T)() inout
         if (canFind!(T, Types))
         in (this.tag == staticIndexOf!(T, Types), "Variant isn't initialized")
@@ -640,15 +706,71 @@ if (isTypeTuple!Specs)
             mixin("return " ~ accessor!(T, AlignedUnion!Types).accessor ~ ";");
         }
 
-        typeof(this) opAssign(T)(auto ref T value)
+        /**
+         * Reassigns the value.
+         *
+         * Params:
+         *  T    = Type of the new value
+         *  that = New value.
+         *
+         * Returns: $(D_KEYWORD this).
+         */
+        ref typeof(this) opAssign(T)(T that)
         if (canFind!(T, Types))
         {
+            reset();
+            return moveAssign!T(that);
+        }
+
+        /// ditto
+        ref typeof(this) opAssign(T)(ref T that)
+        if (canFind!(T, Types))
+        {
+            reset();
+            return copyAssign!T(that);
+        }
+
+        private ref typeof(this) moveAssign(T)(ref T that) @trusted
+        {
             this.tag = staticIndexOf!(T, Types);
-            mixin(accessor!(T, AlignedUnion!Types).accessor ~ " = forward!value;");
+
+            enum string accessorMixin = accessor!(T, AlignedUnion!Types).accessor;
+            moveEmplace(that, mixin(accessorMixin));
+
             return this;
         }
 
-        TypeInfo type()
+        private ref typeof(this) copyAssign(T)(ref T that)
+        {
+            this.tag = staticIndexOf!(T, Types);
+
+            enum string accessorMixin = accessor!(T, AlignedUnion!Types).accessor;
+            emplace!T((() @trusted => (&mixin(accessorMixin))[0 .. 1])(), that);
+
+            return this;
+        }
+
+        private void reset()
+        {
+            alias pred(U) = hasElaborateDestructor!(U.Seq[1]);
+            static foreach (Type; Filter!(pred, Enumerate!Types))
+            {
+                if (this.tag == Type.Seq[0])
+                {
+                    destroy(get!(Type.Seq[1]));
+                }
+            }
+        }
+
+        /**
+         * Returns $(D_PSYMBOL TypeInfo) corresponding to the current type.
+         *
+         * If this $(D_PSYMBOL Variant) isn't initialized, return
+         * $(D_KEYWORD null).
+         *
+         * Returns: $(D_PSYMBOL TypeInfo) of the current type.
+         */
+        @property TypeInfo type()
         {
             static foreach (i, Type; Types)
             {
@@ -657,9 +779,29 @@ if (isTypeTuple!Specs)
                     return typeid(Type);
                 }
             }
-            assert(false, "Variant isn't initialized");
+            return null;
         }
 
+        /**
+         * Compares this $(D_PSYMBOL Variant) with another one with the same
+         * specification for equality.
+         *
+         * $(UL
+         *  $(LI If both hold values of the same type, these values are
+         *       compared.)
+         *  $(LI If they hold values of different types, then the
+         *       $(D_PSYMBOL Variant)s aren't equal.)
+         *  $(LI If only one of them is initialized but another one not, they
+         *       aren't equal.)
+         *  $(LI If neither of them is initialized, they are equal.)
+         * )
+         *
+         * Params:
+         *  that = The $(D_PSYMBOL Variant) to compare with.
+         *
+         * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Variant) is equal to
+         *          $(D_PARAM that), $(D_KEYWORD false) otherwise.
+         */
         bool opEquals()(auto ref inout Variant that) inout
         {
             if (this.tag != that.tag)
@@ -676,6 +818,18 @@ if (isTypeTuple!Specs)
             return true;
         }
     }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, double) variant = 5;
+    assert(variant.peek!int);
+    assert(variant.get!int == 5);
+
+    variant = 5.4;
+    assert(!variant.peek!int);
+    assert(variant.get!double == 5.4);
 }
 
 @nogc nothrow pure @safe unittest
@@ -747,4 +901,34 @@ if (isTypeTuple!Specs)
 {
     Variant!(int, double) variant1, variant2;
     assert(variant1 == variant2);
+}
+
+// Calls postblit constructor of the active type
+@nogc nothrow pure @safe unittest
+{
+    static struct S
+    {
+        bool called;
+
+        this(this)
+        {
+            this.called = true;
+        }
+    }
+    Variant!(int, S) variant1 = S();
+    auto variant2 = variant1;
+    assert(variant2.get!S.called);
+}
+
+// Variant.type is null if the Variant doesn't have a value
+@nogc nothrow pure @safe unittest
+{
+    Variant!(int, uint) variant;
+    assert(variant.type is null);
+}
+
+// Variant can contain only distinct types
+@nogc nothrow pure @safe unittest
+{
+    static assert(!is(Variant!(int, int)));
 }

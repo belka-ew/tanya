@@ -28,6 +28,11 @@ matrix:
     d: dmd-$LATEST
     env: DDOC=true
     os: linux
+  allow_failures:
+  - name: D-Scanner
+    d: dmd-$LATEST
+    env: DSCANNER=0.5.11
+    os: linux
 
 addons:
   apt:
