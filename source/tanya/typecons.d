@@ -660,7 +660,7 @@ if (isTypeTuple!Specs && NoDuplicates!Specs.length == Specs.length)
         }
 
         /**
-         * Tells whether this $(D_PSYMBOL Variant) was initialized.
+         * Tells whether this $(D_PSYMBOL Variant) is initialized.
          *
          * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Variant) contains a
          *          value, $(D_KEYWORD false) otherwise.
@@ -765,7 +765,7 @@ if (isTypeTuple!Specs && NoDuplicates!Specs.length == Specs.length)
         /**
          * Returns $(D_PSYMBOL TypeInfo) corresponding to the current type.
          *
-         * If this $(D_PSYMBOL Variant) isn't initialized, return
+         * If this $(D_PSYMBOL Variant) isn't initialized, returns
          * $(D_KEYWORD null).
          *
          * Returns: $(D_PSYMBOL TypeInfo) of the current type.

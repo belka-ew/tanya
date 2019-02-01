@@ -5,7 +5,7 @@
 /**
  * Algorithms that modify its arguments.
  *
- * Copyright: Eugene Wissner 2017-2018.
+ * Copyright: Eugene Wissner 2017-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -223,9 +223,16 @@ void move(T)(ref T source, ref T target)
 /// ditto
 T move(T)(ref T source) @trusted
 {
-    T target = void;
-    moveEmplace(source, target);
-    return target;
+    static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
+    {
+        T target = void;
+        moveEmplace(source, target);
+        return target;
+    }
+    else
+    {
+        return source;
+    }
 }
 
 ///
