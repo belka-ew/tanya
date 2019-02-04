@@ -389,12 +389,9 @@ do
     static struct OutPutRange
     {
         int value;
-        void put(int value) @nogc nothrow pure @safe
-        in
-        {
-            assert(this.value == 0);
-        }
-        do
+
+        void opCall(int value) @nogc nothrow pure @safe
+        in (this.value == 0)
         {
             this.value = value;
         }

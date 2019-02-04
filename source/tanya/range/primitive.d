@@ -5,7 +5,7 @@
 /**
  * This module defines primitives for working with ranges.
  *
- * Copyright: Eugene Wissner 2017-2018.
+ * Copyright: Eugene Wissner 2017-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -833,17 +833,18 @@ void put(R, E)(ref R range, auto ref E e)
     static if (__traits(hasMember, R, "put")
             && is(typeof((R r, E e) => r.put(e))))
     {
+        pragma(msg, "OutputRange.put()-primitive is deprecated. Define opCall() instead.");
         range.put(e);
+    }
+    else static if (is(typeof((R r, E e) => r(e))))
+    {
+        range(e);
     }
     else static if (isInputRange!R
                  && is(typeof((R r, E e) => r.front = e)))
     {
         range.front = e;
         range.popFront();
-    }
-    else static if (is(typeof((R r, E e) => r(e))))
-    {
-        range(e);
     }
     else
     {
@@ -860,23 +861,6 @@ void put(R, E)(ref R range, auto ref E e)
 
     put(slice, 2);
     assert(actual == [2, 0]);
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static struct Put
-    {
-        int e;
-
-        void put(int e)
-        {
-            this.e = e;
-        }
-    }
-    Put p;
-    put(p, 2);
-    assert(p.e == 2);
 }
 
 ///
@@ -963,7 +947,7 @@ template isOutputRange(R, E)
 {
     static struct R1
     {
-        void put(int) @nogc nothrow pure @safe
+        void opCall(int) @nogc nothrow pure @safe
         {
         }
     }
@@ -1002,17 +986,8 @@ template isOutputRange(R, E)
     }
     static assert(!isOutputRange!(R3, int));
 
-    static struct R4
-    {
-        void opCall(int) @nogc nothrow pure @safe
-        {
-        }
-    }
-    static assert(isOutputRange!(R4, int));
-
     static assert(isOutputRange!(R1, R3));
     static assert(isOutputRange!(R2, R3));
-    static assert(isOutputRange!(R4, R3));
 }
 
 /**
