@@ -798,15 +798,13 @@ template isRandomAccessRange(R)
 /**
  * Puts $(D_PARAM e) into the $(D_PARAM range).
  *
- * $(D_PSYMBOL R) should be an output range for $(D_PARAM E). It doesn't mean
- * that everything $(D_PARAM range) is an output range for can be put into it,
- * but only if one of the following conditions is met:
+ * $(D_PSYMBOL R) should be an output range for $(D_PARAM E), i.e. at least one
+ * of the following conditions should met:
  *
  * $(OL
- *  $(LI $(D_PARAM R) defines a `put`-method for $(D_PARAM E))
- *  $(LI $(D_PARAM e) can be assigned to $(D_INLINECODE range.front))
  *  $(LI $(D_PARAM e) can be put into $(D_PARAM range) using
  *       $(D_INLINECODE range(e))
+ *  $(LI $(D_PARAM e) can be assigned to $(D_INLINECODE range.front))
  *  )
  * )
  *
@@ -894,29 +892,19 @@ void put(R, E)(ref R range, auto ref E e)
  *      $(TH Scenario)
  *  )
  *  $(TR
- *      $(TD r.put(e))
- *      $(TD $(D_PARAM R) defines `put` for $(D_PARAM E).)
- *  )
- *  $(TR
- *      $(TD r.front = e)
- *      $(TD $(D_PARAM R) is an input range, whose element type is
- *      $(D_PARAM E) and `front` is an lvalue.)
- *  )
- *  $(TR
  *      $(TD r(e))
  *      $(TD $(D_PARAM R) defines `opCall` for $(D_PARAM E).)
  *  )
  *  $(TR
- *      $(TD for (; !e.empty; e.popFront()) r.put(e.front) $(BR)
- *           for (; !e.empty; e.popFront(), r.popFront())
- *           r.front = e.front $(BR)
- *           for (; !e.empty; e.popFront()) r(e.front)
- *      )
- *      $(TD $(D_PARAM E) is input range, whose elements can be put into
- *           $(D_PARAM R) according to the rules described above in this table.
- *      )
+ *      $(TD r.front = e)
+ *      $(TD $(D_PARAM R) is an input range with assignable elements of type
+ *           $(D_PARAM E).)
  *  )
  * )
+ *
+ * Output ranges don't have element type (so $(D_PSYMBOL ElementType) returns
+ * $(D_KEYWORD void) when applied to an output range). It is because an output
+ * range can support puting differently typed elements into it.
  *
  * Params:
  *  R = The type to be tested.
@@ -924,6 +912,8 @@ void put(R, E)(ref R range, auto ref E e)
  *
  * Returns: $(D_KEYWORD true) if $(D_PARAM R) is an output range for the
  *          elements of the type $(D_PARAM E), $(D_KEYWORD false) otherwise.
+ *
+ * See_Also: $(D_PSYMBOL put).
  */
 template isOutputRange(R, E)
 {
@@ -933,6 +923,11 @@ template isOutputRange(R, E)
     }
     else static if (isInputRange!E)
     {
+        pragma(msg, "Deprecation. An input range whose element type is "
+                  ~ "supported by the output range isn't considered itself to "
+                  ~ "be a source for such an output range. Don't rely on this "
+                  ~ "behavior and use tanya.algorithm.copy() to write one "
+                  ~ "range into another one.");
         alias ET = ElementType!E;
         enum bool isOutputRange = is(typeof((R r, ET e) => put(r, e)));
     }
@@ -956,13 +951,16 @@ template isOutputRange(R, E)
     static struct R2
     {
         int value;
+
         void popFront() @nogc nothrow pure @safe
         {
         }
+
         ref int front() @nogc nothrow pure @safe
         {
             return value;
         }
+
         bool empty() const @nogc nothrow pure @safe
         {
             return true;
@@ -975,19 +973,18 @@ template isOutputRange(R, E)
         void popFront() @nogc nothrow pure @safe
         {
         }
+
         int front() @nogc nothrow pure @safe
         {
             return 0;
         }
+
         bool empty() const @nogc nothrow pure @safe
         {
             return true;
         }
     }
     static assert(!isOutputRange!(R3, int));
-
-    static assert(isOutputRange!(R1, R3));
-    static assert(isOutputRange!(R2, R3));
 }
 
 /**

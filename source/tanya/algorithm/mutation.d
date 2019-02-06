@@ -309,7 +309,7 @@ void swap(T)(ref T a, ref T b) @trusted
  *               $(D_PARAM source) elements.
  */
 Target copy(Source, Target)(Source source, Target target)
-if (isInputRange!Source && isOutputRange!(Target, Source))
+if (isInputRange!Source && isOutputRange!(Target, ElementType!Source))
 in
 {
     static if (hasLength!Source && hasLength!Target)
