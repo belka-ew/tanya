@@ -30,7 +30,7 @@
  *
  * More advanced formatting is currently not implemented.
  *
- * Copyright: Eugene Wissner 2017-2018.
+ * Copyright: Eugene Wissner 2017-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -47,8 +47,7 @@ static import tanya.memory.op;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 import tanya.meta.transform;
-import tanya.range.array;
-import tanya.range.primitive;
+import tanya.range;
 import tanya.typecons : Tuple;
 
 // Returns the last part of buffer with converted number.
@@ -1989,7 +1988,7 @@ private const(char)[] real2String(double value,
     }
 }
 
-private void formatReal(T)(ref T arg, ref String result)
+private void formatReal(T, OR)(ref T arg, OR result)
 if (isFloatingPoint!T)
 {
     char[512] buffer; // Big enough for e+308 or e-307.
@@ -2017,11 +2016,11 @@ if (isFloatingPoint!T)
 
     if (negative)
     {
-        result.insertBack('-');
+        put(result, "-");
     }
     if (decimalPoint == special)
     {
-        result.insertBack(realString);
+        put(result, realString);
         return;
     }
 
@@ -2181,11 +2180,11 @@ if (isFloatingPoint!T)
     // Get the length that we've copied.
     length = cast(uint) (buffer.length - bufferSlice.length);
 
-    result.insertBack(buffer[64 .. length]); // Number.
-    result.insertBack(tail[1 .. tail[0] + 1]); // Tail.
+    put(result, buffer[64 .. length]); // Number.
+    put(result, tail[1 .. tail[0] + 1]); // Tail.
 }
 
-private void formatStruct(T)(ref T arg, ref String result)
+private void formatStruct(T, OR)(ref T arg, OR result)
 if (is(T == struct))
 {
     template pred(alias f)
@@ -2202,24 +2201,24 @@ if (is(T == struct))
     }
     alias fields = Filter!(pred, __traits(allMembers, T));
 
-    result.insertBack(T.stringof);
-    result.insertBack('(');
+    put(result, T.stringof);
+    put(result, "(");
     static if (fields.length > 0)
     {
         printToString!"{}"(result, __traits(getMember, arg, fields[0]));
         foreach (field; fields[1 .. $])
         {
-            result.insertBack(", ");
+            put(result, ", ");
             printToString!"{}"(result, __traits(getMember, arg, field));
         }
     }
-    result.insertBack(')');
+    put(result, ")");
 }
 
-private void formatRange(T)(ref T arg, ref String result)
+private void formatRange(T, OR)(ref T arg, OR result)
 if (isInputRange!T && !isInfinite!T)
 {
-    result.insertBack('[');
+    put(result, "[");
     if (!arg.empty)
     {
         printToString!"{}"(result, arg.front);
@@ -2227,24 +2226,24 @@ if (isInputRange!T && !isInfinite!T)
     }
     foreach (e; arg)
     {
-        result.insertBack(", ");
+        put(result, ", ");
         printToString!"{}"(result, e);
     }
-    result.insertBack(']');
+    put(result, "]");
 }
 
-private ref String printToString(string fmt, Args...)(return ref String result,
-                                                      auto ref Args args)
+private void printToString(string fmt, OR, Args...)(ref OR result,
+                                                    auto ref Args args)
 {
     alias Arg = Args[0];
 
     static if (is(Unqual!Arg == typeof(null))) // null
     {
-        result.insertBack("null");
+        put(result, "null");
     }
     else static if (is(Unqual!Arg == bool)) // Boolean
     {
-        result.insertBack(args[0] ? "true" : "false");
+        put(result, args[0] ? "true" : "false");
     }
     else static if (is(Arg == enum)) // Enum
     {
@@ -2252,19 +2251,19 @@ private ref String printToString(string fmt, Args...)(return ref String result,
         {
             if (args[0] == __traits(getMember, Arg, m))
             {
-                result.insertBack(m);
+                put(result, m);
             }
         }
     }
     else static if (isSomeChar!Arg || isSomeString!Arg) // String or char
     {
-        result.insertBack(args[0]);
+        put(result, args[0]);
     }
     else static if (isInputRange!Arg
                  && !isInfinite!Arg
                  && isSomeChar!(ElementType!Arg)) // Stringish range
     {
-        result.insertBack(args[0]);
+        put(result, args[0]);
     }
     else static if (isInputRange!Arg && !isInfinite!Arg)
     {
@@ -2276,25 +2275,25 @@ private ref String printToString(string fmt, Args...)(return ref String result,
         {
             if (args[0] is null)
             {
-                result.insertBack("null");
+                put(result, "null");
             }
             else
             {
-                result.insertBack(args[0].stringify()[]);
+                put(result, args[0].stringify()[]);
             }
         }
         else
         {
-            result.insertBack(args[0].stringify()[]);
+            put(result, args[0].stringify()[]);
         }
     }
     else static if (is(Arg == class))
     {
-        result.insertBack(args[0] is null ? "null" : args[0].toString());
+        put(result, args[0] is null ? "null" : args[0].toString());
     }
     else static if (is(Arg == interface))
     {
-        result.insertBack(Arg.classinfo.name);
+        put(result, Arg.classinfo.name);
     }
     else static if (is(Arg == struct))
     {
@@ -2302,7 +2301,7 @@ private ref String printToString(string fmt, Args...)(return ref String result,
     }
     else static if (is(Arg == union))
     {
-        result.insertBack(Arg.stringof);
+        put(result, Arg.stringof);
     }
     else static if (isFloatingPoint!Arg) // Float
     {
@@ -2321,21 +2320,19 @@ private ref String printToString(string fmt, Args...)(return ref String result,
         }
         while (address != 0);
 
-        result.insertBack("0x");
-        result.insertBack(buffer[position .. $]);
+        put(result, "0x");
+        put(result, buffer[position .. $]);
     }
     else static if (isIntegral!Arg) // Integer
     {
         char[21] buffer;
-        result.insertBack(integral2String(args[0], buffer));
+        put(result, integral2String(args[0], buffer));
     }
     else
     {
         static assert(false,
                       "Formatting type " ~ Arg.stringof ~ " is not supported");
     }
-
-    return result;
 }
 
 /**
@@ -2351,28 +2348,47 @@ private ref String printToString(string fmt, Args...)(return ref String result,
 String format(string fmt, Args...)(auto ref Args args)
 {
     String formatted;
+    sformat!fmt(backInserter(formatted), args);
+    return formatted;
+}
 
+/**
+ * Produces a string according to the specified format and writes it into an
+ * output range. $(D_PSYMBOL sformat) writes the final string in chunks, so the
+ * output range should be in output range for `const(char)[]`.
+ *
+ * Params:
+ *  fmt    = Format.
+ *  R      = Output range type.
+ *  output = Output range.
+ *  args   = Arguments.
+ *
+ * Returns: $(D_PARAM output).
+ */
+R sformat(string fmt, R, Args...)(return R output, auto ref Args args)
+if (isOutputRange!(R, const(char)[]))
+{
     alias Specs = ParseFmt!fmt;
     enum bool FormatSpecFilter(alias spec) = is(typeof(spec) == FormatSpec);
     static assert((Filter!(FormatSpecFilter, ParseFmt!fmt)).length == Args.length,
-                  "Number of the arguments doesn't match the format strign");
+                  "Number of the arguments doesn't match the format string");
 
     foreach (spec; Specs)
     {
         static if (FormatSpecFilter!spec)
         {
-            printToString!"{}"(formatted, args[spec.position]);
+            printToString!"{}"(output, args[spec.position]);
         }
         else static if (isSomeString!(typeof(spec)))
         {
-            formatted.insertBack(spec);
+            put(output, spec);
         }
         else
         {
             static assert(false, "Format string parsed incorrectly");
         }
     }
-    return formatted;
+    return output;
 }
 
 // doesn't print the first argument repeatedly

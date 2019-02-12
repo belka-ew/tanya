@@ -23,7 +23,7 @@ matrix:
   include:
   - name: D-Scanner
     d: dmd-$LATEST
-    env: DSCANNER=0.5.11
+    env: DSCANNER=0.6.0
     os: linux
   - name: DDoc
     d: dmd-$LATEST
@@ -32,7 +32,7 @@ matrix:
   allow_failures:
   - name: D-Scanner
     d: dmd-$LATEST
-    env: DSCANNER=0.5.11
+    env: DSCANNER=0.6.0
     os: linux
 
 addons:
