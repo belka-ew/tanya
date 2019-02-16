@@ -237,6 +237,7 @@ struct Address4
      *
      * Returns: This address in dotted-decimal notation.
      */
+    deprecated("Use Address4.toString() instead")
     String stringify() const @nogc nothrow pure @safe
     {
         const octets = (() @trusted => (cast(ubyte*) &this.address)[0 .. 4])();
@@ -251,12 +252,50 @@ struct Address4
         }
     }
 
+    /**
+     * Writes this IPv4 address in dotted-decimal notation.
+     *
+     * Params:
+     *  OR     = Type of the output range.
+     *  output = Output range.
+     *
+     * Returns: $(D_PARAM output).
+     */
+    OR toString(OR)(OR output) const @nogc nothrow pure @safe
+    if (isOutputRange!(OR, const(char)[]))
+    {
+        const octets = (() @trusted => (cast(ubyte*) &this.address)[0 .. 4])();
+        enum string fmt = "{}.{}.{}.{}";
+        version (LittleEndian)
+        {
+            return sformat!fmt(output,
+                               octets[0],
+                               octets[1],
+                               octets[2],
+                               octets[3]);
+        }
+        else
+        {
+            return sformat!fmt(output,
+                               octets[3],
+                               octets[2],
+                               octets[1],
+                               octets[0]);
+        }
+    }
+
     ///
     @nogc nothrow pure @safe unittest
     {
+        import tanya.container.string : String;
+        import tanya.range : backInserter;
+
         const dottedDecimal = "192.168.0.1";
+        String actual;
         const address = address4(dottedDecimal);
-        assert(address.get.stringify() == dottedDecimal);
+
+        address.get.toString(backInserter(actual));
+        assert(actual == dottedDecimal);
     }
 
     /**
@@ -640,6 +679,7 @@ struct Address6
      *
      * Returns: text representation of this address.
      */
+    deprecated("Use Address6.toString() instead")
     String stringify() const @nogc nothrow pure @safe
     {
         String output;
@@ -673,13 +713,57 @@ struct Address6
         return output;
     }
 
+    /**
+     * Writes text representation of this address to an output range.
+     *
+     * Params:
+     *  OR     = Type of the output range.
+     *  output = Output range.
+     *
+     * Returns: $(D_PARAM output).
+     */
+    OR toString(OR)(OR output) const
+    if (isOutputRange!(OR, const(char)[]))
+    {
+        foreach (i, b; this.address)
+        {
+            ubyte low = b & 0xf;
+            ubyte high = b >> 4;
+
+            if (high < 10)
+            {
+                put(output, cast(char) (high + '0'));
+            }
+            else
+            {
+                put(output, cast(char) (high - 10 + 'a'));
+            }
+            if (low < 10)
+            {
+                put(output, cast(char) (low + '0'));
+            }
+            else
+            {
+                put(output, cast(char) (low - 10 + 'a'));
+            }
+            if (i % 2 != 0 && i != (this.address.length - 1))
+            {
+                put(output, ':');
+            }
+        }
+        return output;
+    }
+
     ///
     @nogc nothrow @safe unittest
     {
-        import tanya.algorithm.comparison : equal;
+        import tanya.container.string : String;
+        import tanya.range : backInserter;
 
-        assert(equal(address6("1:2:3:4:5:6:7:8").get.stringify()[],
-               "0001:0002:0003:0004:0005:0006:0007:0008"));
+        String actual;
+        address6("1:2:3:4:5:6:7:8").get.toString(backInserter(actual));
+
+        assert(actual == "0001:0002:0003:0004:0005:0006:0007:0008");
     }
 
     /**
