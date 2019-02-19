@@ -17,11 +17,19 @@
  * To escape `{` or `}`, use `{{` and `}}` respectively. `{{` will be outputted
  * as a single `{`, `}}` - as a single `}`.
  *
- * If a custom data type (like $(D_KEYWORD struct) or $(D_KEYWORD class))
- * defines a `stringify()` function that is callable without arguments and
- * returns a $(D_PSYMBOL String), this function is used to produce a string
- * representation for the value. String conversions for the most built-in
- * data types a also available.
+ * To define the string representation for a custom data type (like
+ * $(D_KEYWORD class) or $(D_KEYWORD struct)), `toString()`-function can be
+ * implemented for that type. `toString()` should be $(D_KEYWORD const) and
+ * accept exactly one argument: an output range for `const(char)[]`. It should
+ * return the same output range, advanced after putting the corresponding value
+ * into it. That is `toString()` signature should look like:
+ *
+ * ---
+ * OR toString(OR)(OR range) const
+ * if (isOutputRange!(OR, const(char)[]));
+ * ---
+ *
+ * String conversions for the most built-in data types a also available.
  *
  * $(D_KEYWORD char), $(D_KEYWORD wchar) and $(D_KEYWORD dchar) ranges are
  * outputted as plain strings (without any delimiters between their elements).
@@ -2271,6 +2279,8 @@ private void printToString(string fmt, OR, Args...)(ref OR result,
     }
     else static if (is(Unqual!(typeof(args[0].stringify())) == String))
     {
+        pragma(msg, ".stringify() is deprecated. Use toString() with an output"
+                  ~ " range instead");
         static if (is(Arg == class) || is(Arg == interface))
         {
             if (args[0] is null)
@@ -2285,6 +2295,24 @@ private void printToString(string fmt, OR, Args...)(ref OR result,
         else
         {
             put(result, args[0].stringify()[]);
+        }
+    }
+    else static if (is(typeof(args[0].toString(result)) == OR))
+    {
+        static if (is(Arg == class) || is(Arg == interface))
+        {
+            if (args[0] is null)
+            {
+                put(result, "null");
+            }
+            else
+            {
+                result = args[0].toString(result);
+            }
+        }
+        else
+        {
+            result = args[0].toString(result);
         }
     }
     else static if (is(Arg == class))
@@ -2365,7 +2393,7 @@ String format(string fmt, Args...)(auto ref Args args)
  *
  * Returns: $(D_PARAM output).
  */
-R sformat(string fmt, R, Args...)(return R output, auto ref Args args)
+R sformat(string fmt, R, Args...)(R output, auto ref Args args)
 if (isOutputRange!(R, const(char)[]))
 {
     alias Specs = ParseFmt!fmt;
@@ -2523,14 +2551,15 @@ if (isOutputRange!(R, const(char)[]))
     }
     assert(format!"{}"(Nested()) == "Nested(0)");
 
-    static struct WithStringify
+    static struct WithToString
     {
-        String stringify() const @nogc nothrow pure @safe
+        OR toString(OR)(OR range) const
         {
-            return String("stringify method");
+            put(range, "toString method");
+            return range;
         }
     }
-    assert(format!"{}"(WithStringify()) == "stringify method");
+    assert(format!"{}"(WithToString()) == "toString method");
 }
 
 // Aggregate types.
@@ -2552,9 +2581,10 @@ if (isOutputRange!(R, const(char)[]))
 
     class B
     {
-        String stringify() @nogc nothrow pure @safe
+        OR toString(OR)(OR range) const
         {
-            return String("Class B");
+            put(range, "Class B");
+            return range;
         }
     }
     assert(format!"{}"(cast(B) null) == "null");
