@@ -14,6 +14,7 @@
  */
 module tanya.range.adapter;
 
+import tanya.algorithm.mutation;
 import tanya.functional;
 import tanya.meta.trait;
 import tanya.range;
@@ -32,7 +33,7 @@ private mixin template InserterCtor()
 {
     private Container* container;
 
-    this(ref Container container) @trusted
+    private this(ref Container container) @trusted
     {
         this.container = &container;
     }
@@ -158,4 +159,72 @@ if (hasMember!(Container, "insertFront"))
     frontInserter(container)(5);
 
     assert(container.element == 5);
+}
+
+/**
+ * $(D_PSYMBOL arrayInserter) makes an output range out of an array.
+ *
+ * The returned output range accepts single values as well as input ranges that
+ * can be copied into the target array.
+ *
+ * Params:
+ *  Array = Array type.
+ *  array = Array.
+ *
+ * Returns: An output range writing into $(D_PARAM array).
+ */
+auto arrayInserter(Array)(return scope ref Array array)
+if (isArray!Array)
+{
+    static if (is(Array ArrayT : ArrayT[size], size_t size))
+    {
+        alias E = ArrayT;
+    }
+    else
+    {
+        alias E = ElementType!Array;
+    }
+
+    static struct ArrayInserter
+    {
+        private E[] data;
+
+        private this(ref Array data) @trusted
+        {
+            this.data = data[];
+        }
+
+        void opCall(T)(auto ref T data)
+        if (is(T : E))
+        in (!this.data.empty)
+        {
+            put(this.data, data);
+        }
+
+        void opCall(R)(auto ref R data)
+        if (isInputRange!R && isOutputRange!(E[], ElementType!R))
+        {
+            this.data = copy(data, this.data);
+        }
+    }
+    return ArrayInserter(array);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[1] array;
+
+    arrayInserter(array)(5);
+    assert(array[0] == 5);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    char[1] array;
+    alias Actual = typeof(arrayInserter(array));
+
+    static assert(isOutputRange!(Actual, char));
+    static assert(isOutputRange!(Actual, char[]));
 }
