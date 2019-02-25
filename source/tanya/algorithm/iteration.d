@@ -22,7 +22,10 @@ module tanya.algorithm.iteration;
 
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
+import tanya.meta.trait;
+import tanya.meta.transform;
 import tanya.range;
+import tanya.typecons;
 version (unittest) import tanya.test.stub;
 
 private struct Take(R, bool exactly)
@@ -645,4 +648,208 @@ if (isBidirectionalRange!Range)
 
     actual[2] = 10;
     assert(given[1] == 10);
+}
+
+private struct SingletonByValue(E)
+{
+    private Option!E element;
+
+    @disable this();
+
+    private this(U)(ref U element)
+    if (is(U == E))
+    {
+        this.element = move(element);
+    }
+
+    private this(U)(ref U element)
+    if (is(Unqual!U == Option!(Unqual!E)) || is(Unqual!U == Option!(const E)))
+    {
+        if (!element.isNothing)
+        {
+            this.element = element.get;
+        }
+    }
+
+    @property ref inout(E) front() inout
+    in (!empty)
+    {
+        return this.element.get;
+    }
+
+    alias back = front;
+
+    void popFront()
+    in (!empty)
+    {
+        this.element.reset();
+    }
+
+    alias popBack = popFront;
+
+    @property bool empty() const
+    {
+        return this.element.isNothing;
+    }
+
+    @property size_t length() const
+    {
+        return !this.element.isNothing;
+    }
+
+    auto save()
+    {
+        return SingletonByValue!E(this.element);
+    }
+
+    auto save() const
+    {
+        return SingletonByValue!(const E)(this.element);
+    }
+
+    ref inout(E) opIndex(size_t i) inout
+    in (!empty)
+    in (i == 0)
+    {
+        return this.element.get;
+    }
+}
+
+private struct SingletonByRef(E)
+{
+    private E* element;
+
+    @disable this();
+
+    private this(return ref E element) @trusted
+    {
+        this.element = &element;
+    }
+
+    @property ref inout(E) front() inout return
+    in (!empty)
+    {
+        return *this.element;
+    }
+
+    alias back = front;
+
+    void popFront()
+    in (!empty)
+    {
+        this.element = null;
+    }
+
+    alias popBack = popFront;
+
+    @property bool empty() const
+    {
+        return this.element is null;
+    }
+
+    @property size_t length() const
+    {
+        return this.element !is null;
+    }
+
+    auto save() return
+    {
+        return typeof(this)(*this.element);
+    }
+
+    auto save() const return
+    {
+        return SingletonByRef!(const E)(*this.element);
+    }
+
+    ref inout(E) opIndex(size_t i) inout return
+    in (!empty)
+    in (i == 0)
+    {
+        return *this.element;
+    }
+}
+
+/**
+ * Creates a bidirectional and random-access range with the single element
+ * $(D_PARAM element).
+ *
+ * If $(D_PARAM element) is passed by value the resulting range stores it
+ * internally. If $(D_PARAM element) is passed by reference, the resulting
+ * range keeps only a pointer to the element.
+ *
+ * Params:
+ *  E       = Element type.
+ *  element = Element.
+ *
+ * Returns: A range with one element.
+ */
+auto singleton(E)(return E element)
+if (isMutable!E)
+{
+    return SingletonByValue!E(element);
+}
+
+/// ditto
+auto singleton(E)(return ref E element)
+{
+    return SingletonByRef!E(element);
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    auto singleChar = singleton('a');
+
+    assert(singleChar.length == 1);
+    assert(singleChar.front == 'a');
+
+    singleChar.popFront();
+    assert(singleChar.empty);
+}
+
+// Singleton range is bidirectional and random-access
+@nogc nothrow pure @safe unittest
+{
+    static assert(isBidirectionalRange!(typeof(singleton('a'))));
+    static assert(isRandomAccessRange!(typeof(singleton('a'))));
+
+    assert({ char a; return isBidirectionalRange!(typeof(singleton(a))); });
+    assert({ char a; return isRandomAccessRange!(typeof(singleton(a))); });
+}
+
+@nogc nothrow pure @safe unittest
+{
+    char a = 'a';
+    auto single = singleton(a);
+
+    assert(single.front == 'a');
+    assert(single.back == 'a');
+    assert(single[0] == 'a');
+    assert(single.length == 1);
+    assert(!single.empty);
+}
+
+// popFront makes SingletonByRef empty
+@nogc nothrow pure @safe unittest
+{
+    char a = 'a';
+    auto single = singleton(a);
+
+    single.popFront();
+    assert(single.empty);
+    assert(single.length == 0);
+    assert(single.empty);
+}
+
+// popBack makes SingletonByRef empty
+@nogc nothrow pure @safe unittest
+{
+    char a = 'b';
+    auto single = singleton(a);
+
+    single.popBack();
+    assert(single.empty);
+    assert(single.length == 0);
+    assert(single.empty);
 }
