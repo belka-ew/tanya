@@ -15,6 +15,7 @@
 module tanya.net.ip;
 
 import tanya.algorithm.comparison;
+import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.container.string;
 import tanya.conv;
@@ -683,33 +684,8 @@ struct Address6
     String stringify() const @nogc nothrow pure @safe
     {
         String output;
-        foreach (i, b; this.address)
-        {
-            ubyte low = b & 0xf;
-            ubyte high = b >> 4;
 
-            if (high < 10)
-            {
-                output.insertBack(cast(char) (high + '0'));
-            }
-            else
-            {
-                output.insertBack(cast(char) (high - 10 + 'a'));
-            }
-            if (low < 10)
-            {
-                output.insertBack(cast(char) (low + '0'));
-            }
-            else
-            {
-                output.insertBack(cast(char) (low - 10 + 'a'));
-            }
-            if (i % 2 != 0 && i != (this.address.length - 1))
-            {
-                output.insertBack(':');
-            }
-        }
-
+        toString(backInserter(output));
         return output;
     }
 
@@ -725,32 +701,59 @@ struct Address6
     OR toString(OR)(OR output) const
     if (isOutputRange!(OR, const(char)[]))
     {
-        foreach (i, b; this.address)
-        {
-            ubyte low = b & 0xf;
-            ubyte high = b >> 4;
+        ptrdiff_t largestGroupIndex = -1;
+        size_t largestGroupSize;
+        size_t zeroesInGroup;
+        size_t groupIndex;
 
-            if (high < 10)
+        // Look for the longest group of zeroes
+        for (size_t i; i < this.address.length; i += 2)
+        {
+            if (this.address[i] == 0 && this.address[i + 1] == 0)
             {
-                put(output, cast(char) (high + '0'));
+                if (zeroesInGroup++ == 0)
+                {
+                    groupIndex = i;
+                }
             }
             else
             {
-                put(output, cast(char) (high - 10 + 'a'));
+                zeroesInGroup = 0;
             }
-            if (low < 10)
+            if (zeroesInGroup > largestGroupSize && zeroesInGroup > 1)
             {
-                put(output, cast(char) (low + '0'));
-            }
-            else
-            {
-                put(output, cast(char) (low - 10 + 'a'));
-            }
-            if (i % 2 != 0 && i != (this.address.length - 1))
-            {
-                put(output, ':');
+                largestGroupSize = zeroesInGroup;
+                largestGroupIndex = groupIndex;
             }
         }
+
+        // Write the address
+        size_t i;
+        if (largestGroupIndex != 0)
+        {
+            writeGroup(output, i);
+        }
+        if (largestGroupIndex != -1)
+        {
+            while (i < largestGroupIndex)
+            {
+                put(output, ":");
+                writeGroup(output, i);
+            }
+            put(output, "::");
+            i += largestGroupSize + 2;
+            if (i < (this.address.length - 1))
+            {
+                writeGroup(output, i);
+            }
+        }
+
+        while (i < this.address.length - 1)
+        {
+            put(output, ":");
+            writeGroup(output, i);
+        }
+
         return output;
     }
 
@@ -761,9 +764,70 @@ struct Address6
         import tanya.range : backInserter;
 
         String actual;
-        address6("1:2:3:4:5:6:7:8").get.toString(backInserter(actual));
 
-        assert(actual == "0001:0002:0003:0004:0005:0006:0007:0008");
+        address6("1:2:3:4:5:6:7:8").get.toString(backInserter(actual));
+        assert(actual == "1:2:3:4:5:6:7:8");
+    }
+
+    @nogc nothrow @safe unittest
+    {
+        char[18] actual;
+
+        address6("ff00:2:3:4:5:6:7:8").get.toString(arrayInserter(actual));
+        assert(actual[] == "ff00:2:3:4:5:6:7:8");
+    }
+
+    // Skips zero group in the middle
+    @nogc nothrow @safe unittest
+    {
+        char[12] actual;
+
+        address6("1::4:5:6:7:8").get.toString(arrayInserter(actual));
+        assert(actual[] == "1::4:5:6:7:8");
+    }
+
+    // Doesn't replace lonely zeroes
+    @nogc nothrow @safe unittest
+    {
+        char[15] actual;
+
+        address6("0:1:0:2:3:0:4:0").get.toString(arrayInserter(actual));
+        assert(actual[] == "0:1:0:2:3:0:4:0");
+    }
+
+    // Skips zero group at the beginning
+    @nogc nothrow @safe unittest
+    {
+        char[13] actual;
+
+        address6("::3:4:5:6:7:8").get.toString(arrayInserter(actual));
+        assert(actual[] == "::3:4:5:6:7:8");
+    }
+
+    // Skips zero group at the end
+    @nogc nothrow @safe unittest
+    {
+        char[13] actual;
+
+        address6("1:2:3:4:5:6::").get.toString(arrayInserter(actual));
+        assert(actual[] == "1:2:3:4:5:6::");
+    }
+
+    private void writeGroup(OR)(ref OR output, ref size_t i) const
+    {
+        ubyte low = this.address[i] & 0xf;
+        ubyte high = this.address[i] >> 4;
+
+        bool groupStarted = writeHexDigit!OR(output, high);
+        groupStarted = writeHexDigit!OR(output, low, groupStarted);
+
+        ++i;
+        low = this.address[i] & 0xf;
+        high = this.address[i] >> 4;
+
+        writeHexDigit!OR(output, high, groupStarted);
+        put(output, low.toHexDigit.singleton);
+        ++i;
     }
 
     /**
@@ -785,11 +849,30 @@ struct Address6
     }
 }
 
-private void write2Bytes(R)(ref R range, ubyte[] address)
+private void read2Bytes(R)(ref R range, ubyte[] address)
 {
     ushort group = readIntegral!ushort(range, 16);
     address[0] = cast(ubyte) (group >> 8);
     address[1] = group & 0xff;
+}
+
+private char toHexDigit(ubyte digit) @nogc nothrow pure @safe
+in (digit < 16)
+{
+    return cast(char) (digit >= 10 ? (digit - 10 + 'a') : (digit + '0'));
+}
+
+private bool writeHexDigit(OR)(ref OR output,
+                               ubyte digit,
+                               bool groupStarted = false)
+in (digit < 16)
+{
+    if (digit != 0 || groupStarted)
+    {
+        put(output, digit.toHexDigit.singleton);
+        return true;
+    }
+    return groupStarted;
 }
 
 /**
@@ -851,7 +934,7 @@ if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
             {
                 auto state = range.save();
             }
-            write2Bytes(range, result.address[i * 2 .. $]);
+            read2Bytes(range, result.address[i * 2 .. $]);
             if (range.empty)
             {
                 return typeof(return)();
@@ -880,7 +963,7 @@ if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
             }
         }
     }
-    write2Bytes(range, result.address[14 .. $]);
+    read2Bytes(range, result.address[14 .. $]);
 
     if (range.empty)
     {
@@ -911,7 +994,7 @@ ParseTail: // after ::
     { // To make "state" definition local
         auto state = range.save();
 
-        write2Bytes(range, tail[j .. $]);
+        read2Bytes(range, tail[j .. $]);
         if (range.empty)
         {
             goto CopyTail;
@@ -940,7 +1023,7 @@ ParseTail: // after ::
             return typeof(return)();
         }
         auto state = range.save();
-        write2Bytes(range, tail[j .. $]);
+        read2Bytes(range, tail[j .. $]);
 
         if (range.empty)
         {
