@@ -48,8 +48,10 @@ before_script:
 
 script:
 - if [ -n "$DDOC" ]; then
+    dub build :meta -b ddox --compiler=$DC;
     dub build -b ddox --compiler=$DC;
   elif [ -z "$DSCANNER" ]; then
+    dub test :meta -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
     dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
   else
     dub fetch dscanner --version=$DSCANNER;

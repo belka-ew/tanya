@@ -57,4 +57,5 @@ test_script:
   - echo %PATH%
   - 'dub --version'
   - '%DC% --version'
+  - dub test :meta -b unittest --arch=%Darch% --compiler=%DC%
   - dub test -b unittest --arch=%Darch% --compiler=%DC%

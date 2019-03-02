@@ -1,0 +1,5 @@
+{
+	"name": "meta",
+	"description": "Template metaprogramming",
+	"targetType": "library"
+}

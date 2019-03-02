@@ -9,9 +9,17 @@
 
 	"targetType": "library",
 
+	"dependencies": {
+		"tanya:meta": "*"
+	},
+
 	"dependencies-linux": {
 		"mir-linux-kernel": "~>1.0.0"
 	},
+
+	"subPackages": [
+		"./meta"
+	],
 
 	"configurations": [
 		{

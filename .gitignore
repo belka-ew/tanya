@@ -9,7 +9,7 @@ dub.selections.json
 
 __test__*__
 __test__*__.core
-/tanya-test-*
+tanya-*test-*
 /dub_platform_probe[_-]*
 
 /docs/
