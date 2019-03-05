@@ -1,0 +1,9 @@
+{
+	"name": "encoding",
+	"description": "This package provides tools to work with text encodings",
+	"targetType": "library",
+
+	"dependencies": {
+		"tanya:meta": "*"
+	}
+}

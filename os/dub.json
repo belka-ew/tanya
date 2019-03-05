@@ -1,0 +1,9 @@
+{
+	"name": "os",
+	"description": "Platform-independent interfaces to operating system functionality",
+	"targetType": "library",
+
+	"dependencies": {
+		"tanya:meta": "*"
+	}
+}

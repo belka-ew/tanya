@@ -1,0 +1,5 @@
+{
+	"name": "sys",
+	"description": "Low-level operating system bindings and definitions",
+	"targetType": "library"
+}

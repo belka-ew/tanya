@@ -10,7 +10,10 @@
 	"targetType": "library",
 
 	"dependencies": {
-		"tanya:meta": "*"
+		"tanya:meta": "*",
+		"tanya:sys": "*",
+		"tanya:os": "*",
+		"tanya:encoding": "*"
 	},
 
 	"dependencies-linux": {
@@ -18,7 +21,10 @@
 	},
 
 	"subPackages": [
-		"./meta"
+		"./meta",
+		"./sys",
+		"./os",
+		"./encoding"
 	],
 
 	"configurations": [
