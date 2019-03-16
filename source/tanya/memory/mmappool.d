@@ -5,7 +5,7 @@
 /*
  * Native allocator.
  *
- * Copyright: Eugene Wissner 2016-2018.
+ * Copyright: Eugene Wissner 2016-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -17,7 +17,6 @@ module tanya.memory.mmappool;
 version (TanyaNative):
 
 import mir.linux._asm.unistd;
-import tanya.algorithm.comparison;
 import tanya.memory.allocator;
 import tanya.memory.op;
 import tanya.os.error;

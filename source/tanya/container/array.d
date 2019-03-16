@@ -5,7 +5,7 @@
 /**
  * Single-dimensioned array.
  *
- * Copyright: Eugene Wissner 2016-2018.
+ * Copyright: Eugene Wissner 2016-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -17,7 +17,6 @@ module tanya.container.array;
 import core.checkedint;
 import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
-import tanya.exception;
 import tanya.functional;
 import tanya.memory;
 import tanya.meta.trait;

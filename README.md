@@ -31,7 +31,6 @@ string, Set, Hash table.
 * `conv`: This module provides functions for converting between different
 types.
 * `encoding`: This package provides tools to work with text encodings.
-* `exception`: Common exceptions and errors.
 * `format`: Formatting and conversion functions.
 * `functional`: Functions that manipulate other functions and their argument
 lists.

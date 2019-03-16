@@ -5,7 +5,7 @@
 /**
  * This module contains buffers designed for C-style input/output APIs.
  *
- * Copyright: Eugene Wissner 2016-2018.
+ * Copyright: Eugene Wissner 2016-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)

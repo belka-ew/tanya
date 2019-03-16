@@ -14,7 +14,7 @@
  *  $(LI Unique ownership)
  * )
  *
- * Copyright: Eugene Wissner 2016-2018.
+ * Copyright: Eugene Wissner 2016-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -23,10 +23,8 @@
  */
 module tanya.memory.smartref;
 
-import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.conv;
-import tanya.exception;
 import tanya.memory;
 import tanya.meta.trait;
 import tanya.range.primitive;
