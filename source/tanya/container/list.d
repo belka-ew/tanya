@@ -16,7 +16,6 @@
 module tanya.container.list;
 
 import tanya.algorithm.comparison;
-import tanya.algorithm.mutation;
 import tanya.container.entry;
 import tanya.memory;
 import tanya.meta.trait;

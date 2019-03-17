@@ -17,10 +17,8 @@
  */
 module tanya.typecons;
 
-import tanya.algorithm.mutation;
-import tanya.conv;
 import tanya.format;
-import tanya.functional;
+import tanya.memory.lifecycle;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 version (unittest) import tanya.test.stub;

@@ -1,0 +1,18 @@
+{
+	"name": "memory",
+	"description": "Tools for manual memory management (allocators, smart pointers)",
+	"targetType": "library",
+
+	"dependencies": {
+		"tanya:meta": "*",
+		"tanya:os": "*",
+		"tanya:sys": "*"
+	},
+
+	"sourcePaths": [
+		"."
+	],
+	"importPaths": [
+		"."
+	]
+}

@@ -5,5 +5,12 @@
 
 	"dependencies": {
 		"tanya:meta": "*"
-	}
+	},
+
+	"sourcePaths": [
+		"."
+	],
+	"importPaths": [
+		"."
+	]
 }

@@ -21,7 +21,7 @@
 module tanya.algorithm.iteration;
 
 import tanya.algorithm.comparison;
-import tanya.algorithm.mutation;
+import tanya.memory.lifecycle;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;

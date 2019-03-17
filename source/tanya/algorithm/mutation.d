@@ -14,284 +14,21 @@
  */
 module tanya.algorithm.mutation;
 
-import tanya.conv;
 static import tanya.memory.op;
+static import tanya.memory.lifecycle;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
 version (unittest) import tanya.test.stub;
 
-private void deinitialize(bool zero, T)(ref T value)
-{
-    static if (is(T == U[S], U, size_t S))
-    {
-        foreach (ref e; value)
-        {
-            deinitialize!zero(e);
-        }
-    }
-    else
-    {
-        static if (isNested!T)
-        {
-            // Don't override the context pointer.
-            enum size_t size = T.sizeof - (void*).sizeof;
-        }
-        else
-        {
-            enum size_t size = T.sizeof;
-        }
-        static if (zero)
-        {
-            tanya.memory.op.fill!0((cast(void*) &value)[0 .. size]);
-        }
-        else
-        {
-            tanya.memory.op.copy(typeid(T).initializer()[0 .. size],
-                                 (&value)[0 .. 1]);
-        }
-    }
-}
+deprecated("Use tanya.memory.lifecycle.swap instead")
+alias swap = tanya.memory.lifecycle.swap;
 
-/**
- * Moves $(D_PARAM source) into $(D_PARAM target) assuming that
- * $(D_PARAM target) isn't initialized.
- *
- * Moving the $(D_PARAM source) copies it into the $(D_PARAM target) and places
- * the $(D_PARAM source) into a valid but unspecified state, which means that
- * after moving $(D_PARAM source) can be destroyed or assigned a new value, but
- * accessing it yields an unspecified value. No postblits or destructors are
- * called. If the $(D_PARAM target) should be destroyed before, use
- * $(D_PSYMBOL move).
- *
- * $(D_PARAM source) and $(D_PARAM target) must be different objects.
- *
- * Params:
- *  T      = Object type.
- *  source = Source object.
- *  target = Target object.
- *
- * See_Also: $(D_PSYMBOL move),
- *           $(D_PSYMBOL hasElaborateCopyConstructor),
- *           $(D_PSYMBOL hasElaborateDestructor).
- *
- * Precondition: `&source !is &target`.
- */
-void moveEmplace(T)(ref T source, ref T target) @system
-in
-{
-    assert(&source !is &target, "Source and target must be different");
-}
-do
-{
-    static if (is(T == struct) || isStaticArray!T)
-    {
-        tanya.memory.op.copy((&source)[0 .. 1], (&target)[0 .. 1]);
+deprecated("Use tanya.memory.lifecycle.moveEmplace instead")
+alias moveEmplace = tanya.memory.lifecycle.moveEmplace;
 
-        static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
-        {
-            static if (__VERSION__ >= 2083) // __traits(isZeroInit) available.
-            {
-                deinitialize!(__traits(isZeroInit, T))(source);
-            }
-            else
-            {
-                if (typeid(T).initializer().ptr is null)
-                {
-                    deinitialize!true(source);
-                }
-                else
-                {
-                    deinitialize!false(source);
-                }
-            }
-        }
-    }
-    else
-    {
-        target = source;
-    }
-}
-
-///
-@nogc nothrow pure @system unittest
-{
-    static struct S
-    {
-        int member = 5;
-
-        this(this) @nogc nothrow pure @safe
-        {
-            assert(false);
-        }
-    }
-    S source, target = void;
-    moveEmplace(source, target);
-    assert(target.member == 5);
-
-    int x1 = 5, x2;
-    moveEmplace(x1, x2);
-    assert(x2 == 5);
-}
-
-// Is pure.
-@nogc nothrow pure @system unittest
-{
-    struct S
-    {
-        this(this)
-        {
-        }
-    }
-    S source, target = void;
-    static assert(is(typeof({ moveEmplace(source, target); })));
-}
-
-// Moves nested.
-@nogc nothrow pure @system unittest
-{
-    struct Nested
-    {
-        void method() @nogc nothrow pure @safe
-        {
-        }
-    }
-    Nested source, target = void;
-    moveEmplace(source, target);
-    assert(source == target);
-}
-
-// Emplaces static arrays.
-@nogc nothrow pure @system unittest
-{
-    static struct S
-    {
-        size_t member;
-        this(size_t i) @nogc nothrow pure @safe
-        {
-            this.member = i;
-        }
-        ~this() @nogc nothrow pure @safe
-        {
-        }
-    }
-    S[2] source = [ S(5), S(5) ], target = void;
-    moveEmplace(source, target);
-    assert(source[0].member == 0);
-    assert(target[0].member == 5);
-    assert(source[1].member == 0);
-    assert(target[1].member == 5);
-}
-
-/**
- * Moves $(D_PARAM source) into $(D_PARAM target) assuming that
- * $(D_PARAM target) isn't initialized.
- *
- * Moving the $(D_PARAM source) copies it into the $(D_PARAM target) and places
- * the $(D_PARAM source) into a valid but unspecified state, which means that
- * after moving $(D_PARAM source) can be destroyed or assigned a new value, but
- * accessing it yields an unspecified value. $(D_PARAM target) is destroyed before
- * the new value is assigned. If $(D_PARAM target) isn't initialized and
- * therefore shouldn't be destroyed, $(D_PSYMBOL moveEmplace) can be used.
- *
- * If $(D_PARAM target) isn't specified, $(D_PSYMBOL move) returns the source
- * as rvalue without calling its copy constructor or destructor.
- *
- * $(D_PARAM source) and $(D_PARAM target) are the same object,
- * $(D_PSYMBOL move) does nothing.
- *
- * Params:
- *  T      = Object type.
- *  source = Source object.
- *  target = Target object.
- *
- * See_Also: $(D_PSYMBOL moveEmplace).
- */
-void move(T)(ref T source, ref T target)
-{
-    if ((() @trusted => &source is &target)())
-    {
-        return;
-    }
-    static if (hasElaborateDestructor!T)
-    {
-        target.__xdtor();
-    }
-    (() @trusted => moveEmplace(source, target))();
-}
-
-/// ditto
-T move(T)(ref T source) @trusted
-{
-    static if (hasElaborateCopyConstructor!T || hasElaborateDestructor!T)
-    {
-        T target = void;
-        moveEmplace(source, target);
-        return target;
-    }
-    else
-    {
-        return source;
-    }
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static struct S
-    {
-        int member = 5;
-
-        this(this) @nogc nothrow pure @safe
-        {
-            assert(false);
-        }
-    }
-    S source, target = void;
-    move(source, target);
-    assert(target.member == 5);
-    assert(move(target).member == 5);
-
-    int x1 = 5, x2;
-    move(x1, x2);
-    assert(x2 == 5);
-    assert(move(x2) == 5);
-}
-
-// Moves if source is target.
-@nogc nothrow pure @safe unittest
-{
-    int x = 5;
-    move(x, x);
-    assert(x == 5);
-}
-
-/**
- * Exchanges the values of $(D_PARAM a) and $(D_PARAM b).
- *
- * $(D_PSYMBOL swap) moves the contents of $(D_PARAM a) and $(D_PARAM b)
- * without calling its postblits or destructors.
- *
- * Params:
- *  a = The first object.
- *  b = The second object.
- */
-void swap(T)(ref T a, ref T b) @trusted
-{
-    T tmp = void;
-    moveEmplace(a, tmp);
-    moveEmplace(b, a);
-    moveEmplace(tmp, b);
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    int a = 3, b = 5;
-    swap(a, b);
-    assert(a == 5);
-    assert(b == 3);
-}
+deprecated("Use tanya.memory.lifecycle.move instead")
+alias move = tanya.memory.lifecycle.move;
 
 /**
  * Copies the $(D_PARAM source) range into the $(D_PARAM target) range.
@@ -494,7 +231,7 @@ if (isInputRange!Range && hasLvalueElements!Range
         for (; !range.empty; range.popFront())
         {
             ElementType!Range* p = &range.front;
-            emplace!(ElementType!Range)(cast(void[]) (p[0 .. 1]), value);
+            tanya.memory.lifecycle.emplace!(ElementType!Range)(cast(void[]) (p[0 .. 1]), value);
         }
     }
     else
@@ -577,13 +314,7 @@ if (isInputRange!Range && hasLvalueElements!Range)
 void destroyAll(Range)(Range range)
 if (isInputRange!Range && hasLvalueElements!Range)
 {
-    static if (hasElaborateDestructor!(ElementType!Range))
-    {
-        foreach (ref e; range)
-        {
-            destroy(e);
-        }
-    }
+    tanya.memory.lifecycle.destroyAllImpl!(Range, ElementType!Range)(range);
 }
 
 ///
@@ -632,7 +363,7 @@ if (isForwardRange!Range && hasSwappableElements!Range)
 
     while (!front.empty && !next.empty && !sameHead(front, next))
     {
-        swap(front.front, next.front);
+        tanya.memory.lifecycle.swap(front.front, next.front);
         front.popFront();
         next.popFront();
 

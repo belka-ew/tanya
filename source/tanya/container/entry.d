@@ -14,9 +14,9 @@
  */
 module tanya.container.entry;
 
-import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.memory.allocator;
+import tanya.memory.lifecycle;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.typecons;

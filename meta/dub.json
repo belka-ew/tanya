@@ -1,5 +1,12 @@
 {
 	"name": "meta",
 	"description": "Template metaprogramming",
-	"targetType": "library"
+	"targetType": "library",
+
+	"sourcePaths": [
+		"."
+	],
+	"importPaths": [
+		"."
+	]
 }
