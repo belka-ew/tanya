@@ -15,7 +15,7 @@
 module tanya.range.primitive;
 
 import tanya.algorithm.comparison;
-import tanya.memory.lifecycle;
+import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.array;

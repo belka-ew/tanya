@@ -61,5 +61,6 @@ test_script:
   - dub test :sys -b unittest --arch=%Darch% --compiler=%DC%
   - dub test :os -b unittest --arch=%Darch% --compiler=%DC%
   - dub test :encoding -b unittest --arch=%Darch% --compiler=%DC%
-  - dub test :memory -b unittest --arch=%Darch% --compiler=%DC%
+  - dub test :middle -b unittest --arch=%Darch% --compiler=%DC%
+  - dub test :test -b unittest --arch=%Darch% --compiler=%DC%
   - dub test -b unittest --arch=%Darch% --compiler=%DC%

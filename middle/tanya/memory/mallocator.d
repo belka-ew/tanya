@@ -10,7 +10,7 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/memory/tanya/memory/mallocator.d,
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/middle/tanya/memory/mallocator.d,
  *                 tanya/memory/mallocator.d)
  */
 module tanya.memory.mallocator;
@@ -172,27 +172,12 @@ final class Mallocator : Allocator
         assert(p is null);
     }
 
-    // Fails with false
-    @nogc nothrow pure @system unittest
-    {
-        void[] p = Mallocator.instance.allocate(20);
-        void[] oldP = p;
-        assert(!Mallocator.instance.reallocate(p, size_t.max - Mallocator.psize * 2));
-        assert(oldP is p);
-        Mallocator.instance.deallocate(p);
-    }
-
     /**
      * Returns: The alignment offered.
      */
     @property uint alignment() const @nogc nothrow pure @safe shared
     {
         return (void*).alignof;
-    }
-
-    private nothrow @nogc unittest
-    {
-        assert(Mallocator.instance.alignment == (void*).alignof);
     }
 
     static private shared(Mallocator) instantiate() @nogc nothrow @system

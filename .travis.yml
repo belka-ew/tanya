@@ -53,19 +53,21 @@ script:
     dub build :sys -b ddox --compiler=$DC;
     dub build :os -b ddox --compiler=$DC;
     dub build :encoding -b ddox --compiler=$DC;
-    dub build :memory -b ddox --compiler=$DC;
+    dub build :middle -b ddox --compiler=$DC;
+    dub build :test -b ddox --compiler=$DC;
     dub build -b ddox --compiler=$DC;
   elif [ -z "$DSCANNER" ]; then
     dub test :meta -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
     dub test :sys -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
     dub test :os -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
     dub test :encoding -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
-    dub test :memory -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
+    dub test :middle -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
+    dub test :test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
     dub test -b ${UNITTEST:-unittest} --arch=$ARCH --compiler=$DC;
   else
     dub fetch dscanner --version=$DSCANNER;
 
-    FILES=$(find source */source -type f);
+    FILES=$(find */tanya -type f);
     dub run dscanner -- --styleCheck $FILES;
   fi
 

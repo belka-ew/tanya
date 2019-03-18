@@ -1,12 +1,16 @@
 {
-	"name": "memory",
-	"description": "Tools for manual memory management (allocators, smart pointers)",
+	"name": "middle",
+	"description": "Runtime, middle-level utilities",
 	"targetType": "library",
 
 	"dependencies": {
 		"tanya:meta": "*",
 		"tanya:os": "*",
 		"tanya:sys": "*"
+	},
+
+	"dependencies-linux": {
+		"mir-linux-kernel": "~>1.0.0"
 	},
 
 	"sourcePaths": [

@@ -9,13 +9,13 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/memory/tanya/memory/package.d,
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/middle/tanya/memory/package.d,
  *                 tanya/memory/package.d)
  */
 module tanya.memory;
 
 public import tanya.memory.allocator;
-public import tanya.memory.lifecycle;
+public import tanya.memory.lifetime;
 import tanya.meta.trait;
 deprecated("Use tanya.meta.trait.stateSize instead")
 public import tanya.meta.trait : stateSize;

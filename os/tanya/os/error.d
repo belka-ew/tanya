@@ -407,12 +407,6 @@ struct ErrorCode
         assert(ec.toString() == "An invalid pointer address detected");
     }
 
-    @nogc nothrow pure @safe unittest
-    {
-        ErrorCode ec = cast(ErrorCode.ErrorNo) -1;
-        assert(ec.toString() is null);
-    }
-
     private ErrorNo value_ = ErrorNo.success;
 
     alias ErrorNo this;

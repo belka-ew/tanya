@@ -55,11 +55,7 @@ module tanya.range.array;
  * Precondition: $(D_INLINECODE array.length > 0).
  */
 @property ref inout(T) front(T)(return scope inout(T)[] array)
-in
-{
-    assert(array.length > 0);
-}
-do
+in (array.length > 0)
 {
     return array[0];
 }
@@ -95,11 +91,7 @@ do
  * Precondition: $(D_INLINECODE array.length > 0).
  */
 @property ref inout(T) back(T)(return scope inout(T)[] array)
-in
-{
-    assert(array.length > 0);
-}
-do
+in (array.length > 0)
 {
     return array[$ - 1];
 }
@@ -134,22 +126,14 @@ do
  * Precondition: $(D_INLINECODE array.length > 0).
  */
 void popFront(T)(scope ref inout(T)[] array)
-in
-{
-    assert(array.length > 0);
-}
-do
+in (array.length > 0)
 {
     array = array[1 .. $];
 }
 
 /// ditto
 void popBack(T)(scope ref inout(T)[] array)
-in
-{
-    assert(array.length > 0);
-}
-do
+in (array.length > 0)
 {
     array = array[0 .. $ - 1];
 }

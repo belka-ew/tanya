@@ -14,21 +14,21 @@
  */
 module tanya.algorithm.mutation;
 
+static import tanya.memory.lifetime;
 static import tanya.memory.op;
-static import tanya.memory.lifecycle;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
 version (unittest) import tanya.test.stub;
 
-deprecated("Use tanya.memory.lifecycle.swap instead")
-alias swap = tanya.memory.lifecycle.swap;
+deprecated("Use tanya.memory.lifetime.swap instead")
+alias swap = tanya.memory.lifetime.swap;
 
-deprecated("Use tanya.memory.lifecycle.moveEmplace instead")
-alias moveEmplace = tanya.memory.lifecycle.moveEmplace;
+deprecated("Use tanya.memory.lifetime.moveEmplace instead")
+alias moveEmplace = tanya.memory.lifetime.moveEmplace;
 
-deprecated("Use tanya.memory.lifecycle.move instead")
-alias move = tanya.memory.lifecycle.move;
+deprecated("Use tanya.memory.lifetime.move instead")
+alias move = tanya.memory.lifetime.move;
 
 /**
  * Copies the $(D_PARAM source) range into the $(D_PARAM target) range.
@@ -231,7 +231,7 @@ if (isInputRange!Range && hasLvalueElements!Range
         for (; !range.empty; range.popFront())
         {
             ElementType!Range* p = &range.front;
-            tanya.memory.lifecycle.emplace!(ElementType!Range)(cast(void[]) (p[0 .. 1]), value);
+            tanya.memory.lifetime.emplace!(ElementType!Range)(cast(void[]) (p[0 .. 1]), value);
         }
     }
     else
@@ -314,7 +314,7 @@ if (isInputRange!Range && hasLvalueElements!Range)
 void destroyAll(Range)(Range range)
 if (isInputRange!Range && hasLvalueElements!Range)
 {
-    tanya.memory.lifecycle.destroyAllImpl!(Range, ElementType!Range)(range);
+    tanya.memory.lifetime.destroyAllImpl!(Range, ElementType!Range)(range);
 }
 
 ///
@@ -363,7 +363,7 @@ if (isForwardRange!Range && hasSwappableElements!Range)
 
     while (!front.empty && !next.empty && !sameHead(front, next))
     {
-        tanya.memory.lifecycle.swap(front.front, next.front);
+        tanya.memory.lifetime.swap(front.front, next.front);
         front.popFront();
         next.popFront();
 

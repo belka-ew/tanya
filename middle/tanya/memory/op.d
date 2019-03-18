@@ -9,7 +9,7 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/memory/tanya/memory/op.d,
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/middle/tanya/memory/op.d,
  *                 tanya/memory/op.d)
  */
 module tanya.memory.op;
@@ -30,21 +30,6 @@ version (TanyaNative)
 else
 {
     import core.stdc.string;
-}
-
-version (TanyaNative)
-{
-    @nogc nothrow pure @system unittest
-    {
-        ubyte[2] buffer = 1;
-        fillMemory(buffer[1 .. $], 0);
-        assert(buffer[0] == 1 && buffer[1] == 0);
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        assert(equal(null, null));
-    }
 }
 
 private enum alignMask = size_t.sizeof - 1;
@@ -92,26 +77,6 @@ do
     ubyte[9] target;
     source.copy(target);
     assert(equal(source, target));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    {
-        ubyte[0] source, target;
-        source.copy(target);
-    }
-    {
-        ubyte[1] source = [1];
-        ubyte[1] target;
-        source.copy(target);
-        assert(target[0] == 1);
-    }
-    {
-        ubyte[8] source = [1, 2, 3, 4, 5, 6, 7, 8];
-        ubyte[8] target;
-        source.copy(target);
-        assert(equal(source, target));
-    }
 }
 
 /*
@@ -213,15 +178,6 @@ do
 
     copyBackward(mem[0 .. 4], mem[2 .. $]);
     assert(equal(expected, mem));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    ubyte[9] r1 = [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i' ];
-    ubyte[9] r2;
-
-    copyBackward(r1, r2);
-    assert(equal(r1, r2));
 }
 
 /**
@@ -416,22 +372,4 @@ do
     assert(!equal("asd", "asdf"));
     assert(!equal("asdf", "asd"));
     assert(!equal("asdf", "qwer"));
-}
-
-// Compares unanligned memory
-@nogc nothrow pure @safe unittest
-{
-    ubyte[16] r1 = [
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
-        'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
-    ];
-    ubyte[16] r2 = [
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
-        'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
-    ];
-
-    assert(equal(r1, r2));
-    assert(equal(r1[1 .. $], r2[1 .. $]));
-    assert(equal(r1[0 .. $ - 1], r2[0 .. $ - 1]));
-    assert(equal(r1[0 .. 8], r2[0 .. 8]));
 }

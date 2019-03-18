@@ -21,7 +21,7 @@ import tanya.container.string;
 import tanya.conv;
 import tanya.encoding.ascii;
 import tanya.format;
-import tanya.memory.lifecycle;
+import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.net.iface;

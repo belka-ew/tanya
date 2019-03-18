@@ -18,7 +18,7 @@
 module tanya.typecons;
 
 import tanya.format;
-import tanya.memory.lifecycle;
+import tanya.memory.lifetime;
 import tanya.meta.metafunction;
 import tanya.meta.trait;
 version (unittest) import tanya.test.stub;

@@ -1,0 +1,16 @@
+{
+	"name": "test",
+	"description": "Test suite for unittest-blocks",
+	"targetType": "library",
+
+	"dependencies": {
+		"tanya:middle": "*"
+	},
+
+	"sourcePaths": [
+		"."
+	],
+	"importPaths": [
+		"."
+	]
+}

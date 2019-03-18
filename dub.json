@@ -14,7 +14,8 @@
 		"tanya:sys": "*",
 		"tanya:os": "*",
 		"tanya:encoding": "*",
-		"tanya:memory": "*"
+		"tanya:middle": "*",
+		"tanya:test": "*"
 	},
 
 	"dependencies-linux": {
@@ -26,7 +27,8 @@
 		"./sys",
 		"./os",
 		"./encoding",
-		"./memory"
+		"./middle",
+		"./test"
 	],
 
 	"configurations": [
@@ -47,6 +49,17 @@
 			"preBuildCommands": ["ninja -C arch"],
 			"lflags": ["arch/tanya.a"],
 			"versions": ["TanyaNative"]
+		},
+		{
+			"name": "unittest",
+			"importPaths": [
+				"./source",
+				"./tests"
+			],
+			"sourcePaths": [
+				"./source",
+				"./tests"
+			]
 		}
 	],
 

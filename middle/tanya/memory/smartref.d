@@ -18,14 +18,13 @@
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
- * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/memory/tanya/memory/smartref.d,
+ * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/middle/tanya/memory/smartref.d,
  *                 tanya/memory/smartref.d)
  */
 module tanya.memory.smartref;
 
 import tanya.memory;
 import tanya.meta.trait;
-version (unittest) import tanya.test.stub;
 
 private template Payload(T)
 {
@@ -46,11 +45,7 @@ private final class RefCountedStore(T)
 
     size_t opUnary(string op)()
     if (op == "--" || op == "++")
-    in
-    {
-        assert(this.counter > 0);
-    }
-    do
+    in (this.counter > 0)
     {
         mixin("return " ~ op ~ "counter;");
     }
@@ -131,11 +126,7 @@ struct RefCounted(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.allocator_ = allocator;
     }
@@ -239,11 +230,7 @@ struct RefCounted(T)
      * Precondition: $(D_INLINECODE cound > 0).
      */
     inout(Payload!T) get() inout
-    in
-    {
-        assert(count > 0, "Attempted to access an uninitialized reference");
-    }
-    do
+    in (count > 0, "Attempted to access an uninitialized reference")
     {
         return this.storage.payload;
     }
@@ -301,174 +288,14 @@ struct RefCounted(T)
     auto val = rc.get();
 
     *val = 8;
-    assert(*rc.storage.payload == 8);
+    assert(*rc.get == 8);
 
     val = null;
-    assert(rc.storage.payload !is null);
-    assert(*rc.storage.payload == 8);
+    assert(rc.get !is null);
+    assert(*rc.get == 8);
 
     *rc = 9;
-    assert(*rc.storage.payload == 9);
-}
-
-@nogc @system unittest
-{
-    auto rc = defaultAllocator.refCounted!int(5);
-    rc = defaultAllocator.make!int(7);
-    assert(*rc == 7);
-}
-
-@nogc @system unittest
-{
-    RefCounted!int rc;
-    assert(!rc.isInitialized);
-    rc = null;
-    assert(!rc.isInitialized);
-}
-
-@nogc @system unittest
-{
-    auto rc = defaultAllocator.refCounted!int(5);
-
-    void func(RefCounted!int param) @nogc
-    {
-        assert(param.count == 2);
-        param = defaultAllocator.make!int(7);
-        assert(param.count == 1);
-        assert(*param == 7);
-    }
-    func(rc);
-    assert(rc.count == 1);
-    assert(*rc == 5);
-}
-
-@nogc @system unittest
-{
-    RefCounted!int rc;
-
-    void func(RefCounted!int param) @nogc
-    {
-        assert(param.count == 0);
-        param = defaultAllocator.make!int(7);
-        assert(param.count == 1);
-        assert(*param == 7);
-    }
-    func(rc);
-    assert(rc.count == 0);
-}
-
-@nogc @system unittest
-{
-    RefCounted!int rc1, rc2;
-    static assert(is(typeof(rc1 = rc2)));
-}
-
-version (unittest)
-{
-    private class A
-    {
-        uint *destroyed;
-
-        this(ref uint destroyed) @nogc
-        {
-            this.destroyed = &destroyed;
-        }
-
-        ~this() @nogc
-        {
-            ++(*destroyed);
-        }
-    }
-
-    private struct B
-    {
-        int prop;
-        @disable this();
-        this(int param1) @nogc
-        {
-            prop = param1;
-        }
-    }
-}
-
-@nogc @system unittest
-{
-    uint destroyed;
-    auto a = defaultAllocator.make!A(destroyed);
-
-    assert(destroyed == 0);
-    {
-        auto rc = RefCounted!A(a, defaultAllocator);
-        assert(rc.count == 1);
-
-        void func(RefCounted!A rc) @nogc @system
-        {
-            assert(rc.count == 2);
-        }
-        func(rc);
-
-        assert(rc.count == 1);
-    }
-    assert(destroyed == 1);
-
-    RefCounted!int rc;
-    assert(rc.count == 0);
-    rc = defaultAllocator.make!int(8);
-    assert(rc.count == 1);
-}
-
-@nogc @system unittest
-{
-    auto rc = RefCounted!int(defaultAllocator);
-    assert(!rc.isInitialized);
-    assert(rc.allocator is defaultAllocator);
-}
-
-@nogc @system unittest
-{
-    auto rc = defaultAllocator.refCounted!int(5);
-    assert(rc.count == 1);
-
-    void func(RefCounted!int rc) @nogc
-    {
-        assert(rc.count == 2);
-        rc = null;
-        assert(!rc.isInitialized);
-        assert(rc.count == 0);
-    }
-
-    assert(rc.count == 1);
-    func(rc);
-    assert(rc.count == 1);
-
-    rc = null;
-    assert(!rc.isInitialized);
-    assert(rc.count == 0);
-}
-
-@nogc @system unittest
-{
-    auto rc = defaultAllocator.refCounted!int(5);
-    assert(*rc == 5);
-
-    void func(RefCounted!int rc) @nogc
-    {
-        assert(rc.count == 2);
-        rc = defaultAllocator.refCounted!int(4);
-        assert(*rc == 4);
-        assert(rc.count == 1);
-    }
-    func(rc);
-    assert(*rc == 5);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(typeof(RefCounted!int.storage.payload) == int*));
-    static assert(is(typeof(RefCounted!A.storage.payload) == A));
-
-    static assert(is(RefCounted!B));
-    static assert(is(RefCounted!A));
+    assert(*rc.get == 9);
 }
 
 /**
@@ -493,11 +320,7 @@ version (unittest)
 RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
 if (!is(T == interface) && !isAbstractClass!T
  && !isAssociativeArray!T && !isArray!T)
-in
-{
-    assert(allocator !is null);
-}
-do
+in (allocator !is null)
 {
     auto rc = typeof(return)(allocator);
 
@@ -565,51 +388,6 @@ in (size <= size_t.max / E.sizeof)
     assert(rc.count == 1);
 }
 
-@nogc @system unittest
-{
-    struct E
-    {
-    }
-    auto b = defaultAllocator.refCounted!B(15);
-    static assert(is(typeof(b.storage.payload) == B*));
-    static assert(is(typeof(b.prop) == int));
-    static assert(!is(typeof(defaultAllocator.refCounted!B())));
-
-    static assert(is(typeof(defaultAllocator.refCounted!E())));
-    static assert(!is(typeof(defaultAllocator.refCounted!E(5))));
-    {
-        auto rc = defaultAllocator.refCounted!B(3);
-        assert(rc.get().prop == 3);
-    }
-    {
-        auto rc = defaultAllocator.refCounted!E();
-        assert(rc.count);
-    }
-}
-
-@nogc @system unittest
-{
-    auto rc = defaultAllocator.refCounted!(int[])(5);
-    assert(rc.length == 5);
-}
-
-@nogc @system unittest
-{
-    auto p1 = defaultAllocator.make!int(5);
-    auto p2 = p1;
-    auto rc = RefCounted!int(p1, defaultAllocator);
-    assert(rc.get() is p2);
-}
-
-@nogc @system unittest
-{
-    size_t destroyed;
-    {
-        auto rc = defaultAllocator.refCounted!WithDtor(destroyed);
-    }
-    assert(destroyed == 1);
-}
-
 /**
  * $(D_PSYMBOL Unique) stores an object that gets destroyed at the end of its scope.
  *
@@ -644,11 +422,7 @@ struct Unique(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.allocator_ = allocator;
     }
@@ -829,11 +603,7 @@ struct Unique(T)
 Unique!T unique(T, A...)(shared Allocator allocator, auto ref A args)
 if (!is(T == interface) && !isAbstractClass!T
  && !isAssociativeArray!T && !isArray!T)
-in
-{
-    assert(allocator !is null);
-}
-do
+in (allocator !is null)
 {
     auto payload = allocator.make!(T, A)(args);
     return Unique!T(payload, allocator);
@@ -861,43 +631,4 @@ in (size <= size_t.max / E.sizeof)
 {
     auto payload = allocator.resize!E(null, size);
     return Unique!T(payload, allocator);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(typeof(defaultAllocator.unique!B(5))));
-    static assert(is(typeof(defaultAllocator.unique!(int[])(5))));
-}
-
-@nogc nothrow pure @system unittest
-{
-    auto s = defaultAllocator.unique!int(5);
-    assert(*s == 5);
-
-    s = null;
-    assert(s is null);
-}
-
-@nogc nothrow pure @system unittest
-{
-    auto s = defaultAllocator.unique!int(5);
-    assert(*s == 5);
-
-    s = defaultAllocator.unique!int(4);
-    assert(*s == 4);
-}
-
-@nogc nothrow pure @system unittest
-{
-    auto p1 = defaultAllocator.make!int(5);
-    auto p2 = p1;
-
-    auto rc = Unique!int(p1, defaultAllocator);
-    assert(rc.get() is p2);
-}
-
-@nogc nothrow pure @system unittest
-{
-    auto rc = Unique!int(defaultAllocator);
-    assert(rc.allocator is defaultAllocator);
 }

@@ -16,8 +16,8 @@ module tanya.conv;
 
 import tanya.container.string;
 import tanya.memory;
-deprecated("Use tanya.memory.lifecycle.emplace instead")
-public import tanya.memory.lifecycle : emplace;
+deprecated("Use tanya.memory.lifetime.emplace instead")
+public import tanya.memory.lifetime : emplace;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;

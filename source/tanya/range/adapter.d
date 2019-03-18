@@ -15,7 +15,7 @@
 module tanya.range.adapter;
 
 import tanya.algorithm.mutation;
-import tanya.memory.lifecycle;
+import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.range;
 
