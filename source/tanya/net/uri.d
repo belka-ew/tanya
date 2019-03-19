@@ -5,7 +5,7 @@
 /**
  * URL parser.
  *
- * Copyright: Eugene Wissner 2017-2018.
+ * Copyright: Eugene Wissner 2017-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -17,11 +17,6 @@ module tanya.net.uri;
 import tanya.conv;
 import tanya.encoding.ascii;
 import tanya.memory;
-
-version (unittest)
-{
-    import tanya.test.assertion;
-}
 
 /**
  * Thrown if an invalid URI was specified.
@@ -368,90 +363,6 @@ struct URL
     assert(u.path == "/path");
     assert(u.query == "query=value");
     assert(u.fragment == "fragment");
-}
-
-@nogc pure @system unittest
-{
-    auto u = URL("127.0.0.1");
-    assert(u.path == "127.0.0.1");
-
-    u = URL("http://127.0.0.1");
-    assert(u.scheme == "http");
-    assert(u.host == "127.0.0.1");
-
-    u = URL("http://127.0.0.1:9000");
-    assert(u.scheme == "http");
-    assert(u.host == "127.0.0.1");
-    assert(u.port == 9000);
-
-    u = URL("127.0.0.1:80");
-    assert(u.host == "127.0.0.1");
-    assert(u.port == 80);
-    assert(u.path is null);
-
-    u = URL("//example.net");
-    assert(u.host == "example.net");
-    assert(u.scheme is null);
-
-    u = URL("//example.net?q=before:after");
-    assert(u.host == "example.net");
-    assert(u.query == "q=before:after");
-
-    u = URL("localhost:8080");
-    assert(u.host == "localhost");
-    assert(u.port == 8080);
-    assert(u.path is null);
-
-    u = URL("ftp:");
-    assert(u.scheme == "ftp");
-
-    u = URL("file:///C:\\Users");
-    assert(u.scheme == "file");
-    assert(u.path == "C:\\Users");
-
-    u = URL("localhost:66000");
-    assert(u.scheme == "localhost");
-    assert(u.path == "66000");
-
-    u = URL("file:///home/");
-    assert(u.scheme == "file");
-    assert(u.path == "/home/");
-
-    u = URL("file:///home/?q=asdf");
-    assert(u.scheme == "file");
-    assert(u.path == "/home/");
-    assert(u.query == "q=asdf");
-
-    u = URL("http://secret@example.org");
-    assert(u.scheme == "http");
-    assert(u.host == "example.org");
-    assert(u.user == "secret");
-
-    u = URL("h_tp://:80");
-    assert(u.path == "h_tp://:80");
-    assert(u.port == 0);
-
-    u = URL("zlib:/home/user/file.gz");
-    assert(u.scheme == "zlib");
-    assert(u.path == "/home/user/file.gz");
-
-    u = URL("h_tp:asdf");
-    assert(u.path == "h_tp:asdf");
-}
-
-@nogc pure @system unittest
-{
-    assertThrown!URIException(() => URL("http://:80"));
-    assertThrown!URIException(() => URL(":80"));
-    assertThrown!URIException(() => URL("http://u1:p1@u2:p2@example.org"));
-    assertThrown!URIException(() => URL("http://blah.com:port"));
-    assertThrown!URIException(() => URL("http://blah.com:66000"));
-}
-
-@nogc pure @system unittest
-{
-    auto u = URL("ftp://");
-    assert(u.scheme == "ftp");
 }
 
 /**

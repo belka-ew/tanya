@@ -5,7 +5,7 @@
 /**
  * Network interfaces.
  *
- * Copyright: Eugene Wissner 2018.
+ * Copyright: Eugene Wissner 2018-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -14,7 +14,6 @@
  */
 module tanya.net.iface;
 
-import tanya.algorithm.comparison;
 import tanya.algorithm.mutation;
 import tanya.container.string;
 import tanya.meta.trait;
@@ -208,21 +207,4 @@ String indexToName(uint index) @nogc nothrow @trusted
         }
         return String(findNullTerminated(buffer));
     }
-}
-
-@nogc nothrow @safe unittest
-{
-    version (linux)
-    {
-        assert(equal(indexToName(1)[], "lo"));
-    }
-    else version (Windows)
-    {
-        assert(equal(indexToName(1)[], "loopback_0"));
-    }
-    else
-    {
-        assert(equal(indexToName(1)[], "lo0"));
-    }
-    assert(indexToName(uint.max).empty);
 }

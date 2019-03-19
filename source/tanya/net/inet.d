@@ -5,7 +5,7 @@
 /**
  * Internet utilities.
  *
- * Copyright: Eugene Wissner 2016-2018.
+ * Copyright: Eugene Wissner 2016-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -72,11 +72,7 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      */
     this(T)(T value)
     if (isUnsigned!T)
-    in
-    {
-        assert(value <= (2 ^^ (L * 8)) - 1);
-    }
-    do
+    in (value <= (2 ^^ (L * 8)) - 1)
     {
         this.value = value & StorageType.max;
     }
@@ -87,11 +83,7 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     @property ubyte back() const
-    in
-    {
-        assert(this.length > 0);
-    }
-    do
+    in (this.length > 0)
     {
         return this.value & 0xff;
     }
@@ -102,11 +94,7 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     @property ubyte front() const
-    in
-    {
-        assert(this.length > 0);
-    }
-    do
+    in (this.length > 0)
     {
         return (this.value >> ((this.length - 1) * 8)) & 0xff;
     }
@@ -117,11 +105,7 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     void popBack()
-    in
-    {
-        assert(this.length > 0);
-    }
-    do
+    in (this.length > 0)
     {
         this.value >>= 8;
         --this.size;
@@ -133,11 +117,7 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     void popFront()
-    in
-    {
-        assert(this.length > 0);
-    }
-    do
+    in (this.length > 0)
     {
         this.value &= StorageType.max >> ((StorageType.sizeof - this.length) * 8);
         --this.size;
@@ -187,15 +167,6 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
 
     networkOrder.popFront();
     assert(networkOrder.empty);
-}
-
-// Static tests
-@nogc nothrow pure @safe unittest
-{
-    static assert(isBidirectionalRange!(NetworkOrder!4));
-    static assert(isBidirectionalRange!(NetworkOrder!8));
-    static assert(!is(NetworkOrder!9));
-    static assert(!is(NetworkOrder!1));
 }
 
 /**

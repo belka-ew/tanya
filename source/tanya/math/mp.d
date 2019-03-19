@@ -107,11 +107,7 @@ struct Integer
 
     /// ditto
     this(shared Allocator allocator) @nogc nothrow pure @safe
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.allocator_ = allocator;
     }
@@ -867,11 +863,7 @@ struct Integer
 
     /// ditto
     ref Integer opOpAssign(string op : "/")(auto ref const Integer operand)
-    in
-    {
-        assert(operand.length > 0, "Division by zero.");
-    }
-    do
+    in (operand.length > 0, "Division by zero.")
     {
         divide(operand, this);
         return this;
@@ -879,35 +871,10 @@ struct Integer
 
      /// ditto
     ref Integer opOpAssign(string op : "%")(auto ref const Integer operand)
-    in
-    {
-        assert(operand.length > 0, "Division by zero.");
-    }
-    do
+    in (operand.length > 0, "Division by zero")
     {
         divide(operand, null, this);
         return this;
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        auto h1 = Integer(18);
-        auto h2 = Integer(4);
-        h1 %= h2;
-        assert(h1 == 2);
-
-        h1 = 8;
-        h1 %= h2;
-        assert(h1 == 0);
-
-        h1 = 7;
-        h1 %= h2;
-        assert(h1 == 3);
-
-        h1 = 56088;
-        h2 = 456;
-        h1 /= h2;
-        assert(h1 == 123);
     }
 
     /// ditto
@@ -1055,7 +1022,7 @@ struct Integer
         return this;
     }
 
-    //
+    ///
     @nogc nothrow pure @safe unittest
     {
         auto h1 = Integer(79);
@@ -1162,11 +1129,7 @@ struct Integer
     /// ditto
     Integer opBinary(string op)(const auto ref Integer operand) const
     if (op == "/" || op == "%")
-    in
-    {
-        assert(operand.length > 0, "Division by zero.");
-    }
-    do
+    in (operand.length > 0, "Division by zero")
     {
         mixin("return Integer(this, allocator) " ~ op ~ "= operand;");
     }
@@ -1281,11 +1244,7 @@ struct Integer
     if ((is(Q : typeof(null))
      || (is(Q : Integer) && __traits(isRef, quotient)))
      && (ARGS.length == 0 || (ARGS.length == 1 && is(ARGS[0] : Integer))))
-    in
-    {
-        assert(divisor != 0, "Division by zero.");
-    }
-    do
+    in (divisor != 0, "Division by zero")
     {
         if (compare(divisor) < 0)
         {
@@ -1520,47 +1479,6 @@ struct Integer
         {
             auto integer = Integer(0x66778899aabbddee);
             ubyte[8] expected = [ 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xdd, 0xee ];
-
-            auto array = integer.toArray();
-            assert(equal(array[], expected[]));
-        }
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        {
-            Integer integer;
-            assert(integer.toArray().length == 0);
-        }
-        {
-            auto integer = Integer(0x03);
-            ubyte[1] expected = [ 0x03 ];
-
-            auto array = integer.toArray();
-            assert(equal(array[], expected[]));
-        }
-        {
-            ubyte[63] expected = [
-                0x02, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-                0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-                0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-                0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
-                0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
-                0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38,
-                0x39, 0x3a, 0x3b, 0x00, 0x61, 0x62, 0x63,
-            ];
-            auto integer = Integer(Sign.positive, expected[]);
-
-            auto array = integer.toArray();
-            assert(equal(array[], expected[]));
-        }
-        {
-            ubyte[14] expected = [
-                0x22, 0x33, 0x44, 0x55, 0x05, 0x06, 0x07,
-                0x08, 0x3a, 0x3b, 0x00, 0x61, 0x62, 0x63,
-            ];
-            auto integer = Integer(Sign.positive, expected[]);
 
             auto array = integer.toArray();
             assert(equal(array[], expected[]));

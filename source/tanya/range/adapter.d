@@ -19,16 +19,6 @@ import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.range;
 
-version (unittest)
-{
-    static struct Container
-    {
-        void insertBack(const(char)[])
-        {
-        }
-    }
-}
-
 private mixin template InserterCtor()
 {
     private Container* container;
@@ -90,22 +80,6 @@ if (hasMember!(Container, "insertBack"))
     backInserter(container)(5);
 
     assert(container.element == 5);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto func()()
-    {
-        Container container;
-        return backInserter(container);
-    }
-    static assert(!is(typeof(func!())));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    Container container;
-    static assert(isOutputRange!(typeof(backInserter(container)), string));
 }
 
 /**

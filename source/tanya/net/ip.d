@@ -384,17 +384,6 @@ if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
     return range.empty ? typeof(return)(result) : typeof(return)();
 }
 
-// Rejects malformed addresses
-@nogc nothrow pure @safe unittest
-{
-    assert(address4("256.0.0.1").isNothing);
-    assert(address4(".0.0.1").isNothing);
-    assert(address4("0..0.1").isNothing);
-    assert(address4("0.0.0.").isNothing);
-    assert(address4("0.0.").isNothing);
-    assert(address4("").isNothing);
-}
-
 /**
  * Constructs an $(D_PSYMBOL Address4) from raw bytes in network byte order.
  *
@@ -445,20 +434,6 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
         ubyte[5] actual = [127, 0, 0, 0, 1];
         assert(address4(actual[]).isNothing);
     }
-}
-
-@nogc nothrow pure @safe unittest
-{
-    assert(address4(cast(ubyte[]) []).isNothing);
-}
-
-// Assignment and comparison works
-@nogc nothrow pure @safe unittest
-{
-    auto address1 = Address4.loopback();
-    auto address2 = Address4.any();
-    address1 = address2;
-    assert(address1 == address2);
 }
 
 /**
@@ -770,50 +745,6 @@ struct Address6
         assert(actual == "1:2:3:4:5:6:7:8");
     }
 
-    @nogc nothrow @safe unittest
-    {
-        char[18] actual;
-
-        address6("ff00:2:3:4:5:6:7:8").get.toString(arrayInserter(actual));
-        assert(actual[] == "ff00:2:3:4:5:6:7:8");
-    }
-
-    // Skips zero group in the middle
-    @nogc nothrow @safe unittest
-    {
-        char[12] actual;
-
-        address6("1::4:5:6:7:8").get.toString(arrayInserter(actual));
-        assert(actual[] == "1::4:5:6:7:8");
-    }
-
-    // Doesn't replace lonely zeroes
-    @nogc nothrow @safe unittest
-    {
-        char[15] actual;
-
-        address6("0:1:0:2:3:0:4:0").get.toString(arrayInserter(actual));
-        assert(actual[] == "0:1:0:2:3:0:4:0");
-    }
-
-    // Skips zero group at the beginning
-    @nogc nothrow @safe unittest
-    {
-        char[13] actual;
-
-        address6("::3:4:5:6:7:8").get.toString(arrayInserter(actual));
-        assert(actual[] == "::3:4:5:6:7:8");
-    }
-
-    // Skips zero group at the end
-    @nogc nothrow @safe unittest
-    {
-        char[13] actual;
-
-        address6("1:2:3:4:5:6::").get.toString(arrayInserter(actual));
-        assert(actual[] == "1:2:3:4:5:6::");
-    }
-
     private void writeGroup(OR)(ref OR output, ref size_t i) const
     {
         ubyte low = this.address[i] & 0xf;
@@ -1099,75 +1030,6 @@ ParseIface: // Scope name or ID
 CopyTail:
     copy(tail[0 .. j + 2], result.address[$ - j - 2 .. $]);
     return typeof(return)(result);
-}
-
-@nogc nothrow @safe unittest
-{
-    ubyte[16] expected = [0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8];
-    auto actual = address6("1:2:3:4:5:6:7:8");
-    assert(actual.get.address == expected);
-}
-
-@nogc nothrow @safe unittest
-{
-    ubyte[16] expected;
-    auto actual = address6("::");
-    assert(actual.get.address == expected);
-}
-
-@nogc nothrow @safe unittest
-{
-    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
-    auto actual = address6("::1");
-    assert(actual.get.address == expected);
-}
-
-@nogc nothrow @safe unittest
-{
-    ubyte[16] expected = [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    auto actual = address6("1::");
-    assert(actual.get.address == expected);
-}
-
-// Rejects malformed addresses
-@nogc nothrow @safe unittest
-{
-    assert(address6("").isNothing);
-    assert(address6(":").isNothing);
-    assert(address6(":a").isNothing);
-    assert(address6("a:").isNothing);
-    assert(address6("1:2:3:4::6:").isNothing);
-    assert(address6("fe80:2:3:4::6:7:8%").isNothing);
-}
-
-// Parses embedded IPv4 address
-@nogc nothrow @safe unittest
-{
-    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
-    auto actual = address6("0:0:0:0:0:0:1.2.3.4");
-    assert(actual.get.address == expected);
-}
-
-@nogc nothrow @safe unittest
-{
-    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4];
-    auto actual = address6("::1.2.3.4");
-    assert(actual.get.address == expected);
-}
-
-@nogc nothrow @safe unittest
-{
-    ubyte[16] expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 6, 1, 2, 3, 4];
-    auto actual = address6("::5:6:1.2.3.4");
-    assert(actual.get.address == expected);
-}
-
-@nogc nothrow @safe unittest
-{
-    assert(address6("0:0:0:0:0:0:1.2.3.").isNothing);
-    assert(address6("0:0:0:0:0:0:1.2:3.4").isNothing);
-    assert(address6("0:0:0:0:0:0:1.2.3.4.").isNothing);
-    assert(address6("fe80:0:0:0:0:0:1.2.3.4%1").get.scopeID == 1);
 }
 
 /**
@@ -1467,13 +1329,4 @@ struct Address
         address = Address4.loopback;
         assert(address == Address4.loopback);
     }
-}
-
-// Can assign another address
-@nogc nothrow pure @safe unittest
-{
-    Address actual = Address4.loopback;
-    Address expected = Address6.loopback;
-    actual = expected;
-    assert(actual == expected);
 }

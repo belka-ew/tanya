@@ -324,13 +324,3 @@ else version (Windows)
         }
     }
 }
-
-static if (is(PlatformEntropySource)) @nogc @system unittest
-{
-    import tanya.memory.smartref : unique;
-
-    auto source = defaultAllocator.unique!PlatformEntropySource();
-
-    assert(source.threshold == 32);
-    assert(source.strong);
-}

@@ -7,13 +7,14 @@ os:
 language: d
 
 d:
+- dmd-2.085.0
 - dmd-2.084.1
 - dmd-2.083.1
 - dmd-2.082.1
 
 env:
   global:
-  - LATEST=2.084.1
+  - LATEST=2.085.0
 
   matrix:
   - ARCH=x86_64
@@ -28,11 +29,6 @@ matrix:
   - name: DDoc
     d: dmd-$LATEST
     env: DDOC=true
-    os: linux
-  allow_failures:
-  - name: D-Scanner
-    d: dmd-$LATEST
-    env: DSCANNER=0.7.0
     os: linux
 
 addons:
