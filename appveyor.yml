@@ -16,12 +16,6 @@ environment:
       DVersion: 2.084.1
       arch: x86
     - DC: dmd
-      DVersion: 2.083.1
-      arch: x64
-    - DC: dmd
-      DVersion: 2.083.1
-      arch: x86
-    - DC: dmd
       DVersion: 2.082.1
       arch: x64
     - DC: dmd

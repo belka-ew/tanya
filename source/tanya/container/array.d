@@ -21,7 +21,6 @@ import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
-version (unittest) import tanya.test.stub;
 
 /**
  * Random-access range for the $(D_PSYMBOL Array).
@@ -35,22 +34,15 @@ struct Range(A)
     private E* begin, end;
     private A* container;
 
-    invariant
-    {
-        assert(this.begin <= this.end);
-        assert(this.container !is null);
-        assert(this.begin >= this.container.data);
-        assert(this.end <= this.container.data + this.container.length);
-    }
+    invariant (this.begin <= this.end);
+    invariant (this.container !is null);
+    invariant (this.begin >= this.container.data);
+    invariant (this.end <= this.container.data + this.container.length);
 
     private this(ref A container, E* begin, E* end) @trusted
-    in
-    {
-        assert(begin <= end);
-        assert(begin >= container.data);
-        assert(end <= container.data + container.length);
-    }
-    do
+    in (begin <= end)
+    in (begin >= container.data)
+    in (end <= container.data + container.length)
     {
         this.container = &container;
         this.begin = begin;
@@ -77,51 +69,31 @@ struct Range(A)
     alias opDollar = length;
 
     @property ref inout(E) front() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return *this.begin;
     }
 
     @property ref inout(E) back() inout @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return *(this.end - 1);
     }
 
     void popFront() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         ++this.begin;
     }
 
     void popBack() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         --this.end;
     }
 
     ref inout(E) opIndex(size_t i) inout @trusted
-    in
-    {
-        assert(i < length);
-    }
-    do
+    in (i < length)
     {
         return *(this.begin + i);
     }
@@ -137,23 +109,15 @@ struct Range(A)
     }
 
     Range opSlice(size_t i, size_t j) @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
     A.ConstRange opSlice(size_t i, size_t j) const @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -182,11 +146,8 @@ struct Array(T)
     private T* data;
     private size_t capacity_;
 
-    invariant
-    {
-        assert(this.length_ <= this.capacity_);
-        assert(this.capacity_ == 0 || this.data !is null);
-    }
+    invariant (this.length_ <= this.capacity_);
+    invariant (this.capacity_ == 0 || this.data !is null);
 
     /**
      * Creates a new $(D_PSYMBOL Array) with the elements from a static array.
@@ -312,11 +273,7 @@ struct Array(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         allocator_ = allocator;
     }
@@ -567,11 +524,7 @@ struct Array(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     void removeBack()
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         length = length - 1;
     }
@@ -589,11 +542,7 @@ struct Array(T)
      * Returns: The number of elements removed
      */
     size_t removeBack(size_t howMany)
-    out (removed)
-    {
-        assert(removed <= howMany);
-    }
-    do
+    out (removed; removed <= howMany)
     {
         const toRemove = min(howMany, length);
 
@@ -614,11 +563,7 @@ struct Array(T)
     }
 
     private inout(T)[] slice(size_t length) inout @trusted
-    in
-    {
-        assert(length <= capacity);
-    }
-    do
+    in (length <= capacity)
     {
         return this.data[0 .. length];
     }
@@ -640,13 +585,9 @@ struct Array(T)
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     Range remove(Range r)
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= end);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= end)
     {
         auto target = r.begin;
         auto source = r.end;
@@ -801,13 +742,9 @@ struct Array(T)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         const oldLength = length;
         const after = r.end - this.data;
@@ -819,13 +756,9 @@ struct Array(T)
 
     /// ditto
     size_t insertAfter(size_t R)(Range r, T[R] el)
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         return insertAfter!(T[])(r, el[]);
     }
@@ -833,13 +766,9 @@ struct Array(T)
     /// ditto
     size_t insertAfter(R)(Range r, auto ref R el)
     if (isImplicitlyConvertible!(R, T))
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         const oldLen = length;
         const offset = r.end - this.data;
@@ -862,26 +791,18 @@ struct Array(T)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         return insertAfter(Range(this, this.data, r.begin), el);
     }
 
     /// ditto
     size_t insertBefore(size_t R)(Range r, T[R] el)
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         return insertBefore!(T[])(r, el[]);
     }
@@ -889,13 +810,9 @@ struct Array(T)
     /// ditto
     size_t insertBefore(R)(Range r, auto ref R el)
     if (isImplicitlyConvertible!(R, T))
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         const oldLen = length;
         const offset = r.begin - this.data;
@@ -1063,11 +980,7 @@ struct Array(T)
      * Precondition: $(D_INLINECODE length > pos).
      */
     ref inout(T) opIndex(size_t pos) inout @trusted
-    in
-    {
-        assert(length > pos);
-    }
-    do
+    in (length > pos)
     {
         return *(this.data + pos);
     }
@@ -1168,11 +1081,7 @@ struct Array(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) front() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return *this.data;
     }
@@ -1195,11 +1104,7 @@ struct Array(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) back() inout @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return *(this.data + length - 1);
     }
@@ -1227,24 +1132,16 @@ struct Array(T)
      * Precondition: $(D_INLINECODE i <= j && j <= length).
      */
     Range opSlice(size_t i, size_t j) @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
 
     /// ditto
     ConstRange opSlice(size_t i, size_t j) const @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1301,12 +1198,8 @@ struct Array(T)
      */
     Range opSliceAssign(size_t R)(T[R] value, size_t i, size_t j)
     @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         copy(value[], this.data[i .. j]);
         return opSlice(i, j);
@@ -1315,12 +1208,8 @@ struct Array(T)
     /// ditto
     Range opSliceAssign(R : T)(auto ref R value, size_t i, size_t j)
     @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         fill(this.data[i .. j], value);
         return opSlice(i, j);
@@ -1328,13 +1217,9 @@ struct Array(T)
 
     /// ditto
     Range opSliceAssign()(Range value, size_t i, size_t j) @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-        assert(j - i == value.length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
+    in (j - i == value.length)
     {
         copy(value, this.data[i .. j]);
         return opSlice(i, j);
@@ -1490,199 +1375,4 @@ struct Array(T)
     r[0] = 7;
     assert(r.front == 7);
     assert(r.front == v.front);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    const v1 = Array!int();
-    const Array!int v2;
-    const v3 = Array!int([1, 5, 8]);
-    static assert(is(PointerTarget!(typeof(v3.data)) == const(int)));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    // Test that const arrays return usable ranges.
-    auto v = const Array!int([1, 2, 4]);
-    auto r1 = v[];
-
-    assert(r1.back == 4);
-    r1.popBack();
-    assert(r1.back == 2);
-    r1.popBack();
-    assert(r1.back == 1);
-    r1.popBack();
-    assert(r1.length == 0);
-
-    static assert(!is(typeof(r1[0] = 5)));
-    static assert(!is(typeof(v[0] = 5)));
-
-    const r2 = r1[];
-    static assert(is(typeof(r2[])));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    Array!int v1;
-    const Array!int v2;
-
-    auto r1 = v1[];
-    auto r2 = v1[];
-
-    assert(r1.length == 0);
-    assert(r2.empty);
-    assert(r1 == r2);
-
-    v1.insertBack([1, 2, 4]);
-    assert(v1[] == v1);
-    assert(v2[] == v2);
-    assert(v2[] != v1);
-    assert(v1[] != v2);
-    assert(v1[].equal(v1[]));
-    assert(v2[].equal(v2[]));
-    assert(!v1[].equal(v2[]));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    struct MutableEqualsStruct
-    {
-        bool opEquals(typeof(this) that) @nogc nothrow pure @safe
-        {
-            return true;
-        }
-    }
-    struct ConstEqualsStruct
-    {
-        bool opEquals(const typeof(this) that) const @nogc nothrow pure @safe
-        {
-            return true;
-        }
-    }
-    auto v1 = Array!ConstEqualsStruct();
-    auto v2 = Array!ConstEqualsStruct();
-    assert(v1 == v2);
-    assert(v1[] == v2);
-    assert(v1 == v2[]);
-    assert(v1[].equal(v2[]));
-
-    auto v3 = const Array!ConstEqualsStruct();
-    auto v4 = const Array!ConstEqualsStruct();
-    assert(v3 == v4);
-    assert(v3[] == v4);
-    assert(v3 == v4[]);
-    assert(v3[].equal(v4[]));
-
-    auto v7 = Array!MutableEqualsStruct(1, MutableEqualsStruct());
-    auto v8 = Array!MutableEqualsStruct(1, MutableEqualsStruct());
-    assert(v7 == v8);
-    assert(v7[] == v8);
-    assert(v7 == v8[]);
-    assert(v7[].equal(v8[]));
-}
-
-// Destructor can destroy empty arrays
-@nogc nothrow pure @safe unittest
-{
-    auto v = Array!WithDtor();
-}
-
-@nogc nothrow pure @safe unittest
-{
-    class A
-    {
-    }
-    A a1, a2;
-    auto v1 = Array!A([a1, a2]);
-
-    static assert(is(Array!(A*)));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto v = Array!int([5, 15, 8]);
-    {
-        size_t i;
-
-        foreach (e; v)
-        {
-            assert(i != 0 || e == 5);
-            assert(i != 1 || e == 15);
-            assert(i != 2 || e == 8);
-            ++i;
-        }
-        assert(i == 3);
-    }
-    {
-        size_t i = 3;
-
-        foreach_reverse (e; v)
-        {
-            --i;
-            assert(i != 2 || e == 8);
-            assert(i != 1 || e == 15);
-            assert(i != 0 || e == 5);
-        }
-        assert(i == 0);
-    }
-}
-
-// const constructor tests
-@nogc nothrow pure @safe unittest
-{
-    auto v1 = const Array!int([1, 2, 3]);
-    auto v2 = Array!int(v1);
-    assert(v1.data !is v2.data);
-    assert(v1 == v2);
-
-    auto v3 = const Array!int(Array!int([1, 2, 3]));
-    assert(v1 == v3);
-    assert(v3.length == 3);
-    assert(v3.capacity == 3);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto v1 = Array!int(defaultAllocator);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    Array!int v;
-    auto r = v[];
-    assert(r.length == 0);
-    assert(r.empty);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto v1 = const Array!int([5, 15, 8]);
-    Array!int v2;
-    v2 = v1[0 .. 2];
-    assert(equal(v1[0 .. 2], v2[]));
-}
-
-// Move assignment
-@nogc nothrow pure @safe unittest
-{
-    Array!int v1;
-    v1 = Array!int([5, 15, 8]);
-}
-
-// Postblit is safe
-@nogc nothrow pure @safe unittest
-{
-    auto array = Array!int(3);
-    void func(Array!int arg)
-    {
-        assert(arg.capacity == 3);
-    }
-    func(array);
-}
-
-// Can have non-copyable elements
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(Array!NonCopyable));
-    static assert(is(typeof({ Array!NonCopyable.init[0] = NonCopyable(); })));
 }

@@ -22,7 +22,6 @@ import tanya.memory;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.primitive;
-version (unittest) import tanya.test.stub;
 
 /**
  * Bidirectional range whose element type is a tuple of a key and the
@@ -70,16 +69,9 @@ struct Range(T)
     }
 
     void popFront()
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.front.status == BucketStatus.used);
-    }
-    out
-    {
-        assert(empty || this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.front.status == BucketStatus.used)
+    out (; empty || this.dataRange.back.status == BucketStatus.used)
     {
         do
         {
@@ -89,16 +81,9 @@ struct Range(T)
     }
 
     void popBack()
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.back.status == BucketStatus.used);
-    }
-    out
-    {
-        assert(empty || this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.back.status == BucketStatus.used)
+    out (; empty || this.dataRange.back.status == BucketStatus.used)
     {
         do
         {
@@ -108,23 +93,15 @@ struct Range(T)
     }
 
     @property ref inout(KV) front() inout
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.front.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.front.status == BucketStatus.used)
     {
         return this.dataRange.front.kv;
     }
 
     @property ref inout(KV) back() inout
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.back.status == BucketStatus.used)
     {
         return this.dataRange.back.kv;
     }
@@ -185,16 +162,9 @@ struct ByKey(T)
     }
 
     @property void popFront()
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.front.status == BucketStatus.used);
-    }
-    out
-    {
-        assert(empty || this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.front.status == BucketStatus.used)
+    out (; empty || this.dataRange.back.status == BucketStatus.used)
     {
         do
         {
@@ -204,16 +174,9 @@ struct ByKey(T)
     }
 
     @property void popBack()
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.back.status == BucketStatus.used);
-    }
-    out
-    {
-        assert(empty || this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.back.status == BucketStatus.used)
+    out (; empty || this.dataRange.back.status == BucketStatus.used)
     {
         do
         {
@@ -223,23 +186,15 @@ struct ByKey(T)
     }
 
     @property ref inout(Key) front() inout
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.front.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.front.status == BucketStatus.used)
     {
         return this.dataRange.front.key;
     }
 
     @property ref inout(Key) back() inout
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.back.status == BucketStatus.used)
     {
         return this.dataRange.back.key;
     }
@@ -300,16 +255,9 @@ struct ByValue(T)
     }
 
     @property void popFront()
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.front.status == BucketStatus.used);
-    }
-    out
-    {
-        assert(empty || this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.front.status == BucketStatus.used)
+    out (; empty || this.dataRange.back.status == BucketStatus.used)
     {
         do
         {
@@ -319,16 +267,9 @@ struct ByValue(T)
     }
 
     @property void popBack()
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.back.status == BucketStatus.used);
-    }
-    out
-    {
-        assert(empty || this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.back.status == BucketStatus.used)
+    out (; empty || this.dataRange.back.status == BucketStatus.used)
     {
         do
         {
@@ -338,23 +279,15 @@ struct ByValue(T)
     }
 
     @property ref inout(Value) front() inout
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.front.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.front.status == BucketStatus.used)
     {
         return this.dataRange.front.kv.value;
     }
 
     @property ref inout(Value) back() inout
-    in
-    {
-        assert(!empty);
-        assert(this.dataRange.back.status == BucketStatus.used);
-    }
-    do
+    in (!empty)
+    in (this.dataRange.back.status == BucketStatus.used)
     {
         return this.dataRange.back.kv.value;
     }
@@ -412,10 +345,7 @@ if (isHashFunction!(hasher, Key))
     /// ditto
     alias ConstByValue = .ByValue!(const HashArray);
 
-    invariant
-    {
-        assert(this.data.lengthIndex < primes.length);
-    }
+    invariant (this.data.lengthIndex < primes.length);
 
     /**
      * Constructor.
@@ -427,11 +357,7 @@ if (isHashFunction!(hasher, Key))
      * Precondition: $(D_INLINECODE allocator !is null).
      */
     this(size_t n, shared Allocator allocator = defaultAllocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this(allocator);
         this.data.rehash(n);
@@ -446,11 +372,7 @@ if (isHashFunction!(hasher, Key))
 
     /// ditto
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.data = HashArray(allocator);
     }
@@ -470,11 +392,7 @@ if (isHashFunction!(hasher, Key))
      */
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     if (is(Unqual!S == HashTable))
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.data = HashArray(init.data, allocator);
     }
@@ -482,11 +400,7 @@ if (isHashFunction!(hasher, Key))
     /// ditto
     this(S)(S init, shared Allocator allocator = defaultAllocator)
     if (is(S == HashTable))
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.data.move(init.data, allocator);
     }
@@ -503,11 +417,7 @@ if (isHashFunction!(hasher, Key))
      */
     this(R)(R range, shared Allocator allocator = defaultAllocator)
     if (isForwardRange!R && is(ElementType!R == KeyValue))
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this(allocator);
         insert(range);
@@ -537,11 +447,7 @@ if (isHashFunction!(hasher, Key))
      */
     this(size_t n)(KeyValue[n] array,
          shared Allocator allocator = defaultAllocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         insert(array[]);
     }
@@ -589,11 +495,7 @@ if (isHashFunction!(hasher, Key))
      * Postcondition: $(D_INLINECODE allocator !is null)
      */
     @property shared(Allocator) allocator() const
-    out (allocator)
-    {
-        assert(allocator !is null);
-    }
-    do
+    out (allocator; allocator !is null)
     {
         return this.data.array.allocator;
     }
@@ -1084,130 +986,4 @@ if (isHashFunction!(hasher, Key))
 
     dinos.clear();
     assert(dinos.empty);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    import tanya.range.primitive : isForwardRange;
-    static assert(is(HashTable!(string, int) a));
-    static assert(is(const HashTable!(string, int)));
-    static assert(isForwardRange!(HashTable!(string, int).Range));
-
-    static assert(is(HashTable!(int, int, (ref const int) => size_t.init)));
-    static assert(is(HashTable!(int, int, (int) => size_t.init)));
-}
-
-// Constructs by reference
-@nogc nothrow pure @safe unittest
-{
-    auto hashTable1 = HashTable!(string, int)(7);
-    auto hashTable2 = HashTable!(string, int)(hashTable1);
-    assert(hashTable1.length == hashTable2.length);
-    assert(hashTable1.capacity == hashTable2.capacity);
-}
-
-// Constructs by value
-@nogc nothrow pure @safe unittest
-{
-    auto hashTable = HashTable!(string, int)(HashTable!(string, int)(7));
-    assert(hashTable.capacity == 7);
-}
-
-// Assigns by reference
-@nogc nothrow pure @safe unittest
-{
-    auto hashTable1 = HashTable!(string, int)(7);
-    HashTable!(string, int) hashTable2;
-    hashTable1 = hashTable2;
-    assert(hashTable1.length == hashTable2.length);
-    assert(hashTable1.capacity == hashTable2.capacity);
-}
-
-// Assigns by value
-@nogc nothrow pure @safe unittest
-{
-    HashTable!(string, int) hashTable;
-    hashTable = HashTable!(string, int)(7);
-    assert(hashTable.capacity == 7);
-}
-
-// Postblit copies
-@nogc nothrow pure @safe unittest
-{
-    auto hashTable = HashTable!(string, int)(7);
-    void testFunc(HashTable!(string, int) hashTable)
-    {
-        assert(hashTable.capacity == 7);
-    }
-    testFunc(hashTable);
-}
-
-// Issue 53: https://github.com/caraus-ecms/tanya/issues/53
-@nogc nothrow pure @safe unittest
-{
-    {
-        HashTable!(uint, uint) hashTable;
-        foreach (uint i; 0 .. 14)
-        {
-            hashTable[i + 1] = i;
-        }
-        assert(hashTable.length == 14);
-    }
-    {
-        HashTable!(int, int) hashtable;
-
-        hashtable[1194250162] = 3;
-        hashtable[-1131293824] = 6;
-        hashtable[838100082] = 9;
-
-        hashtable.rehash(11);
-
-        assert(hashtable[-1131293824] == 6);
-    }
-}
-
-@nogc nothrow pure @safe unittest
-{
-    static struct String
-    {
-        bool opEquals(string) const @nogc nothrow pure @safe
-        {
-            return true;
-        }
-
-        bool opEquals(ref const string) const @nogc nothrow pure @safe
-        {
-            return true;
-        }
-
-        bool opEquals(String) const @nogc nothrow pure @safe
-        {
-            return true;
-        }
-
-        bool opEquals(ref const String) const @nogc nothrow pure @safe
-        {
-            return true;
-        }
-
-        size_t toHash() const @nogc nothrow pure @safe
-        {
-            return 0;
-        }
-    }
-    static assert(is(typeof("asdf" in HashTable!(String, int)())));
-    static assert(is(typeof(HashTable!(String, int)()["asdf"])));
-}
-
-// Can have non-copyable keys and elements
-@nogc nothrow pure @safe unittest
-{
-    @NonCopyable @Hashable
-    static struct S
-    {
-        mixin StructStub;
-    }
-    static assert(is(HashTable!(S, int)));
-    static assert(is(HashTable!(int, S)));
-    static assert(is(HashTable!(S, S)));
 }

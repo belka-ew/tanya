@@ -116,30 +116,6 @@ else version (DragonFlyBSD)
 {
     version = Kqueue;
 }
-version (unittest)
-{
-    final class TestLoop : Loop
-    {
-        override protected bool reify(SocketWatcher watcher,
-                                      EventMask oldEvents,
-                                      EventMask events) @nogc
-        {
-            return true;
-        }
-
-        override protected void poll() @nogc
-        {
-            assert(!this.done);
-            unloop();
-        }
-
-        override protected @property uint maxEvents()
-        const pure nothrow @safe @nogc
-        {
-            return 64U;
-        }
-    }
-}
 
 /**
  * Events.
@@ -160,7 +136,7 @@ alias EventMask = BitFlags!Event;
  */
 abstract class Loop
 {
-    private bool done = true;
+    protected bool done = true;
 
     /// Pending watchers.
     protected DList!Watcher pendings;
@@ -173,14 +149,6 @@ abstract class Loop
     const pure nothrow @safe @nogc
     {
         return 128U;
-    }
-
-    @nogc @system unittest
-    {
-        auto loop = defaultAllocator.make!TestLoop;
-        assert(loop.maxEvents == 64);
-
-        defaultAllocator.dispose(loop);
     }
 
     /**
@@ -226,31 +194,6 @@ abstract class Loop
     void unloop() @safe pure nothrow @nogc
     {
         this.done = true;
-    }
-
-    @nogc @system unittest
-    {
-        auto loop = defaultAllocator.make!TestLoop;
-        assert(loop.done);
-
-        loop.run();
-        assert(loop.done);
-
-        defaultAllocator.dispose(loop);
-    }
-
-    @nogc @system unittest
-    {
-        auto loop = defaultAllocator.make!TestLoop;
-        auto watcher = defaultAllocator.make!DummyWatcher;
-        loop.pendings.insertBack(watcher);
-
-        assert(!watcher.invoked);
-        loop.run();
-        assert(watcher.invoked);
-
-        defaultAllocator.dispose(loop);
-        defaultAllocator.dispose(watcher);
     }
 
     /**
@@ -327,17 +270,6 @@ abstract class Loop
     do
     {
         blockTime_ = blockTime;
-    }
-
-    @nogc @system unittest
-    {
-        auto loop = defaultAllocator.make!TestLoop;
-        assert(loop.blockTime == 1.dur!"minutes");
-
-        loop.blockTime = 2.dur!"minutes";
-        assert(loop.blockTime == 2.dur!"minutes");
-
-        defaultAllocator.dispose(loop);
     }
 
     /**
@@ -418,16 +350,3 @@ do
 }
 
 private Loop defaultLoop_;
-
-@nogc @system unittest
-{
-    auto oldLoop = defaultLoop_;
-    auto loop = defaultAllocator.make!TestLoop;
-
-    defaultLoop = loop;
-    assert(defaultLoop_ is loop);
-    assert(defaultLoop is loop);
-
-    defaultLoop_ = oldLoop;
-    defaultAllocator.dispose(loop);
-}

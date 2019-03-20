@@ -20,7 +20,6 @@ import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.typecons;
-version (unittest) import tanya.test.stub;
 
 package struct SEntry(T)
 {
@@ -129,22 +128,14 @@ package struct HashArray(alias hasher, K, V = void)
     size_t length;
 
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.array = Buckets(allocator);
     }
 
     this(T)(ref T data, shared Allocator allocator)
     if (is(Unqual!T == HashArray))
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.array = Buckets(data.array, allocator);
         this.lengthIndex = data.lengthIndex;
@@ -153,11 +144,7 @@ package struct HashArray(alias hasher, K, V = void)
 
     // Move constructor
     void move(ref HashArray data, shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.array = Buckets(.move(data.array), allocator);
         this.lengthIndex = data.lengthIndex;
@@ -238,11 +225,7 @@ package struct HashArray(alias hasher, K, V = void)
 
     // Takes an index in the primes array.
     void rehashToSize(const size_t n)
-    in
-    {
-        assert(n < primes.length);
-    }
-    do
+    in (n < primes.length)
     {
         auto storage = typeof(this.array)(primes[n], this.array.allocator);
         DataLoop: foreach (ref e1; this.array[])
@@ -326,14 +309,4 @@ package struct HashArray(alias hasher, K, V = void)
         }
         return false;
     }
-}
-
-// Can be constructed with non-copyable key/values
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(Bucket!NonCopyable));
-    static assert(is(Bucket!(NonCopyable, NonCopyable)));
-
-    static assert(is(HashArray!((ref NonCopyable) => 0U, NonCopyable)));
-    static assert(is(HashArray!((ref NonCopyable) => 0U, NonCopyable, NonCopyable)));
 }

@@ -35,11 +35,6 @@ import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
 
-version (unittest)
-{
-    import tanya.test.assertion;
-}
-
 /**
  * Thrown on encoding errors.
  */
@@ -74,22 +69,15 @@ if (is(Unqual!E == char))
     private alias ContainerType = CopyConstness!(E, String);
     private ContainerType* container;
 
-    invariant
-    {
-        assert(this.begin <= this.end);
-        assert(this.container !is null);
-        assert(this.begin >= this.container.data);
-        assert(this.end <= this.container.data + this.container.length);
-    }
+    invariant (this.begin <= this.end);
+    invariant (this.container !is null);
+    invariant (this.begin >= this.container.data);
+    invariant (this.end <= this.container.data + this.container.length);
 
     private this(ref ContainerType container, E* begin, E* end) @trusted
-    in
-    {
-        assert(begin <= end);
-        assert(begin >= container.data);
-        assert(end <= container.data + container.length);
-    }
-    do
+    in (begin <= end)
+    in (begin >= container.data)
+    in (end <= container.data + container.length)
     {
         this.container = &container;
         this.begin = begin;
@@ -116,51 +104,31 @@ if (is(Unqual!E == char))
     alias opDollar = length;
 
     @property ref inout(E) front() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return *this.begin;
     }
 
     @property ref inout(E) back() inout @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return *(this.end - 1);
     }
 
     void popFront() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         ++this.begin;
     }
 
     void popBack() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         --this.end;
     }
 
     ref inout(E) opIndex(const size_t i) inout @trusted
-    in
-    {
-        assert(i < length);
-    }
-    do
+    in (i < length)
     {
         return *(this.begin + i);
     }
@@ -176,23 +144,15 @@ if (is(Unqual!E == char))
     }
 
     ByCodeUnit opSlice(const size_t i, const size_t j) @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
     ByCodeUnit!(const E) opSlice(const size_t i, const size_t j) const @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -216,22 +176,15 @@ if (is(Unqual!E == char))
     private alias ContainerType = CopyConstness!(E, String);
     private ContainerType* container;
 
-    invariant
-    {
-        assert(this.begin <= this.end);
-        assert(this.container !is null);
-        assert(this.begin >= this.container.data);
-        assert(this.end <= this.container.data + this.container.length);
-    }
+    invariant (this.begin <= this.end);
+    invariant (this.container !is null);
+    invariant (this.begin >= this.container.data);
+    invariant (this.end <= this.container.data + this.container.length);
 
     private this(ref ContainerType container, E* begin, E* end) @trusted
-    in
-    {
-        assert(begin <= end);
-        assert(begin >= container.data);
-        assert(end <= container.data + container.length);
-    }
-    do
+    in (begin <= end)
+    in (begin >= container.data)
+    in (end <= container.data + container.length)
     {
         this.container = &container;
         this.begin = begin;
@@ -251,15 +204,8 @@ if (is(Unqual!E == char))
     }
 
     @property dchar front() const @trusted
-    in
-    {
-        assert(!empty);
-    }
-    out (chr)
-    {
-        assert(chr < 0xd800 || chr > 0xdfff);
-    }
-    do
+    in (!empty)
+    out (chr; chr < 0xd800 || chr > 0xdfff)
     {
         dchar chr;
         ubyte units;
@@ -289,11 +235,7 @@ if (is(Unqual!E == char))
     }
 
     void popFront() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         ubyte units;
         if ((*begin & 0xf0) == 0xf0)
@@ -339,10 +281,7 @@ struct String
     private char* data;
     private size_t capacity_;
 
-    pure nothrow @safe @nogc invariant
-    {
-        assert(this.length_ <= this.capacity_);
-    }
+    @nogc nothrow pure @safe invariant (this.length_ <= this.capacity_);
 
     /**
      * Constructs the string from a stringish range.
@@ -432,11 +371,7 @@ struct String
 
     /// ditto
     this(shared Allocator allocator) @nogc nothrow pure @safe
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.allocator_ = allocator;
     }
@@ -497,12 +432,6 @@ struct String
         }
     }
 
-    @nogc nothrow pure @safe unittest
-    {
-        auto s = String(0, 'K');
-        assert(s.length == 0);
-    }
-
     this(this) @nogc nothrow pure @trusted
     {
         auto buf = this.data[0 .. this.length_];
@@ -521,12 +450,8 @@ struct String
 
     private void write4Bytes(ref const dchar src)
     @nogc nothrow pure @trusted
-    in
-    {
-        assert(capacity - length >= 4);
-        assert(src - 0x10000 < 0x100000);
-    }
-    do
+    in (capacity - length >= 4)
+    in (src - 0x10000 < 0x100000)
     {
         auto dst = this.data + length;
 
@@ -540,11 +465,7 @@ struct String
 
     private size_t insertWideChar(C)(auto ref const C chr) @trusted
     if (is(C == wchar) || is(C == dchar))
-    in
-    {
-        assert(capacity - length >= 3);
-    }
-    do
+    in (capacity - length >= 3)
     {
         auto dst = this.data + length;
         if (chr < 0x80)
@@ -602,13 +523,6 @@ struct String
         return ret;
     }
 
-    // Allocates enough space for 3-byte character.
-    @nogc pure @safe unittest
-    {
-        String s;
-        s.insertBack('\u8100');
-    }
-
     /// ditto
     size_t insertBack(const dchar chr) @nogc pure @trusted
     {
@@ -628,12 +542,6 @@ struct String
         {
             throw defaultAllocator.make!UTFException("Invalid UTF-32 sequeunce");
         }
-    }
-
-    @nogc pure @safe unittest
-    {
-        assertThrown!UTFException(() => String(1, cast(dchar) 0xd900));
-        assertThrown!UTFException(() => String(1, cast(wchar) 0xd900));
     }
 
     /**
@@ -880,13 +788,9 @@ struct String
                                      const size_t i,
                                      const size_t j)
     if (is(Unqual!R == char))
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-        assert(j - i == value.length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
+    in (j - i == value.length)
     {
         auto target = opSlice(i, j);
         copy(value, target);
@@ -898,12 +802,8 @@ struct String
                                   const size_t i,
                                   const size_t j)
     @nogc nothrow pure @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         copy(value[], this.data[i .. j]);
         return opSlice(i, j);
@@ -914,12 +814,8 @@ struct String
                                   const size_t i,
                                   const size_t j)
     @nogc nothrow pure @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         for (auto p = this.data + i; p < this.data + j; ++p)
         {
@@ -996,11 +892,7 @@ struct String
      * Precondition: $(D_INLINECODE length > pos).
      */
     ref inout(char) opIndex(const size_t pos) inout @nogc nothrow pure @trusted
-    in
-    {
-        assert(length > pos);
-    }
-    do
+    in (length > pos)
     {
         return *(this.data + pos);
     }
@@ -1145,12 +1037,8 @@ struct String
      */
     ByCodeUnit!char opSlice(const size_t i, const size_t j)
     @nogc nothrow pure @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1158,12 +1046,8 @@ struct String
     /// ditto
     ByCodeUnit!(const char) opSlice(const size_t i, const size_t j)
     const @nogc nothrow pure @trusted
-    in
-    {
-        assert(i <= j);
-        assert(j <= length);
-    }
-    do
+    in (i <= j)
+    in (j <= length)
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1418,38 +1302,16 @@ struct String
         return opSliceAssign(value, 0, length);
     }
 
-    @nogc nothrow pure @safe unittest
-    {
-        auto s1 = String("Buttercup");
-        auto s2 = String("Cap");
-        s2[] = s1[6 .. $];
-        assert(s2 == "cup");
-    }
-
     /// ditto
     ByCodeUnit!char opIndexAssign(const char value) @nogc nothrow pure @safe
     {
         return opSliceAssign(value, 0, length);
     }
 
-    @nogc nothrow pure @safe unittest
-    {
-        auto s1 = String("Wow");
-        s1[] = 'a';
-        assert(s1 == "aaa");
-    }
-
     /// ditto
     ByCodeUnit!char opIndexAssign(const char[] value) @nogc nothrow pure @safe
     {
         return opSliceAssign(value, 0, length);
-    }
-
-    @nogc nothrow pure @safe unittest
-    {
-        auto s1 = String("ö");
-        s1[] = "oe";
-        assert(s1 == "oe");
     }
 
     /**
@@ -1466,13 +1328,9 @@ struct String
      */
     R remove(R)(R r) @trusted
     if (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char))
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         auto end = this.data + this.length;
         copy(ByCodeUnit!char(this, r.end, end), ByCodeUnit!char(this, r.begin, end));
@@ -1521,13 +1379,9 @@ struct String
      && isInputRange!T
      && isSomeChar!(ElementType!T)))
      && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         const oldLength = length;
         const after = r.end - this.data;
@@ -1555,13 +1409,9 @@ struct String
      && isInputRange!T
      && isSomeChar!(ElementType!T)))
      && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
-    in
-    {
-        assert(r.container is &this);
-        assert(r.begin >= this.data);
-        assert(r.end <= this.data + length);
-    }
-    do
+    in (r.container is &this)
+    in (r.begin >= this.data)
+    in (r.end <= this.data + length)
     {
         return insertAfter(R(this, this.data, r.begin), el);
     }
@@ -1589,77 +1439,4 @@ struct String
     }
 
     mixin DefaultAllocator;
-}
-
-// Postblit works
-@nogc nothrow pure @safe unittest
-{
-    void internFunc(String arg)
-    {
-    }
-    void middleFunc(S...)(S args)
-    {
-        foreach (arg; args)
-        {
-            internFunc(arg);
-        }
-    }
-    void topFunc(String args)
-    {
-        middleFunc(args);
-    }
-    topFunc(String("asdf"));
-}
-
-// Const range produces mutable ranges
-@nogc pure @safe unittest
-{
-    auto s = const String("И снизу лед, и сверху - маюсь между.");
-    {
-        const constRange = s[];
-
-        auto fromConstRange = constRange[];
-        fromConstRange.popFront();
-        assert(fromConstRange.front == s[1]);
-
-        fromConstRange = constRange[0 .. $];
-        fromConstRange.popFront();
-        assert(fromConstRange.front == s[1]);
-
-        assert(constRange.get() is s.get());
-    }
-    {
-        const constRange = s.byCodePoint();
-
-        auto fromConstRange = constRange[];
-        fromConstRange.popFront();
-        assert(fromConstRange.front == ' ');
-    }
-}
-
-// Can pop multibyte characters
-@nogc pure @safe unittest
-{
-    auto s = String("\U00024B62\U00002260");
-    auto range = s.byCodePoint();
-
-    range.popFront();
-    assert(!range.empty);
-
-    range.popFront();
-    assert(range.empty);
-
-    range = s.byCodePoint();
-    range.popFront();
-    s[$ - 3] = 0xf0;
-    assertThrown!UTFException(&(range.popFront));
-}
-
-// Inserts own char range correctly
-@nogc nothrow pure @safe unittest
-{
-    auto s1 = String(`ü`);
-    String s2;
-    s2.insertBack(s1[]);
-    assert(s1 == s2);
 }

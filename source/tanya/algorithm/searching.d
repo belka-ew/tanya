@@ -5,7 +5,7 @@
 /**
  * Searching algorithms.
  *
- * Copyright: Eugene Wissner 2018.
+ * Copyright: Eugene Wissner 2018-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -50,29 +50,4 @@ if (isInputRange!R)
 {
     int[3] array;
     assert(count(array) == 3);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    static struct Range
-    {
-        private int counter = 3;
-
-        int front() const @nogc nothrow pure @safe
-        {
-            return this.counter;
-        }
-
-        void popFront() @nogc nothrow pure @safe
-        {
-            --this.counter;
-        }
-
-        bool empty() const @nogc nothrow pure @safe
-        {
-            return this.counter == 0;
-        }
-    }
-    Range range;
-    assert(count(range) == 3);
 }

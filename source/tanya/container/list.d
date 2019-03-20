@@ -22,7 +22,6 @@ import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range.array;
 import tanya.range.primitive;
-version (unittest) import tanya.test.stub;
 
 /**
  * Forward range for the $(D_PSYMBOL SList).
@@ -37,10 +36,7 @@ struct SRange(L)
 
     private EntryPointer* head;
 
-    invariant
-    {
-        assert(this.head !is null);
-    }
+    invariant (this.head !is null);
 
     private this(ref EntryPointer head) @trusted
     {
@@ -60,21 +56,13 @@ struct SRange(L)
     }
 
     @property ref inout(E) front() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return (*this.head).content;
     }
 
     void popFront() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         this.head = &(*this.head).next;
     }
@@ -206,11 +194,7 @@ struct SList(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.allocator_ = allocator;
     }
@@ -332,11 +316,7 @@ struct SList(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) front() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return this.head.content;
     }
@@ -477,11 +457,7 @@ struct SList(T)
      */
     size_t insertBefore(R)(Range r, R el)
     if (isImplicitlyConvertible!(R, T))
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         return moveEntry(*r.head, el);
     }
@@ -500,11 +476,7 @@ struct SList(T)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         size_t inserted;
         foreach (e; el)
@@ -529,11 +501,7 @@ struct SList(T)
 
     /// ditto
     size_t insertBefore()(Range r, ref T el) @trusted
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         *r.head = allocator.make!Entry(el, *r.head);
         return 1;
@@ -629,11 +597,7 @@ struct SList(T)
      * Precondition: $(D_INLINECODE !empty)
      */
     void removeFront()
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         auto n = this.head.next;
 
@@ -668,11 +632,7 @@ struct SList(T)
      * Returns: The number of elements removed.
      */
     size_t removeFront(size_t howMany)
-    out (removed)
-    {
-        assert(removed <= howMany);
-    }
-    do
+    out (removed; removed <= howMany)
     {
         size_t i;
         for (; i < howMany && !empty; ++i)
@@ -704,11 +664,7 @@ struct SList(T)
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
     Range remove(Range r)
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         auto outOfScopeList = typeof(this)(allocator);
         outOfScopeList.head = *r.head;
@@ -742,12 +698,8 @@ struct SList(T)
      *               $(D_PARAM range) is extracted from this list.
      */
     Range popFirstOf(Range range)
-    in
-    {
-        assert(!range.empty);
-        assert(checkRangeBelonging(range));
-    }
-    do
+    in (!range.empty)
+    in (checkRangeBelonging(range))
     {
         auto next = (*range.head).next;
 
@@ -923,46 +875,6 @@ struct SList(T)
     assert(i == 3);
 }
 
-@nogc nothrow pure @safe unittest
-{
-    interface Stuff
-    {
-    }
-    static assert(is(SList!Stuff));
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto l = SList!int(0, 0);
-    assert(l.empty);
-}
-
-// foreach called using opIndex().
-@nogc nothrow pure @safe unittest
-{
-    SList!int l;
-    size_t i;
-
-    l.insertFront(5);
-    l.insertFront(4);
-    l.insertFront(9);
-    foreach (e; l)
-    {
-        assert(i != 0 || e == 9);
-        assert(i != 1 || e == 4);
-        assert(i != 2 || e == 5);
-        ++i;
-    }
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto l1 = SList!int();
-    auto l2 = SList!int([9, 4]);
-    l1 = l2[];
-    assert(l1 == l2);
-}
-
 /**
  * Bidirectional range for the $(D_PSYMBOL DList).
  *
@@ -977,11 +889,8 @@ struct DRange(L)
     private EntryPointer* head;
     private EntryPointer* tail;
 
-    invariant
-    {
-        assert(this.head !is null);
-        assert(this.tail !is null);
-    }
+    invariant (this.head !is null);
+    invariant (this.tail !is null);
 
     private this(ref EntryPointer head, ref EntryPointer tail) @trusted
     {
@@ -1002,41 +911,25 @@ struct DRange(L)
     }
 
     @property ref inout(E) front() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return (*this.head).content;
     }
 
     @property ref inout(E) back() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return (*this.tail).content;
     }
 
     void popFront() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         this.head = &(*this.head).next;
     }
 
     void popBack() @trusted
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         this.tail = &(*this.tail).prev;
     }
@@ -1082,13 +975,10 @@ struct DList(T)
     // 0th and the last elements of the list.
     private Entry* head, tail;
 
-    invariant
-    {
-        assert((this.tail is null && this.head is null)
+    invariant ((this.tail is null && this.head is null)
             || (this.tail !is null && this.head !is null));
-        assert(this.tail is null || this.tail.next is null);
-        assert(this.head is null || this.head.prev is null);
-    }
+    invariant (this.tail is null || this.tail.next is null);
+    invariant (this.head is null || this.head.prev is null);
 
     /**
      * Creates a new $(D_PSYMBOL DList) with the elements from a static array.
@@ -1192,11 +1082,7 @@ struct DList(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator !is null);
-    }
-    do
+    in (allocator !is null)
     {
         this.allocator_ = allocator;
     }
@@ -1322,11 +1208,7 @@ struct DList(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) front() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return this.head.content;
     }
@@ -1337,11 +1219,7 @@ struct DList(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) back() inout
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         return this.tail.content;
     }
@@ -1656,11 +1534,7 @@ struct DList(T)
      */
     size_t insertBefore(R)(Range r, R el)
     if (isImplicitlyConvertible!(R, T))
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         return moveFront(*r.head, el);
     }
@@ -1676,11 +1550,7 @@ struct DList(T)
 
     /// ditto
     size_t insertBefore()(Range r, ref T el) @trusted
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         auto temp = allocator.make!Entry(el, *r.head);
 
@@ -1714,11 +1584,7 @@ struct DList(T)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         size_t inserted;
         foreach (e; el)
@@ -1771,11 +1637,7 @@ struct DList(T)
      */
     size_t insertAfter(R)(Range r, R el) @trusted
     if (isImplicitlyConvertible!(R, T))
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         return moveBack(*r.tail, el);
     }
@@ -1793,11 +1655,7 @@ struct DList(T)
 
     /// ditto
     size_t insertAfter()(Range r, ref T el) @trusted
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         auto temp = allocator.make!Entry(el, null, *r.tail);
 
@@ -1831,11 +1689,7 @@ struct DList(T)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         size_t inserted;
         foreach (e; el)
@@ -1926,11 +1780,7 @@ struct DList(T)
      * Precondition: $(D_INLINECODE !empty)
      */
     void removeFront()
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         auto n = this.head.next;
 
@@ -1962,11 +1812,7 @@ struct DList(T)
 
     /// ditto
     void removeBack()
-    in
-    {
-        assert(!empty);
-    }
-    do
+    in (!empty)
     {
         auto n = this.tail.prev;
 
@@ -2008,11 +1854,7 @@ struct DList(T)
      * Returns: The number of elements removed.
      */
     size_t removeFront(size_t howMany)
-    out (removed)
-    {
-        assert(removed <= howMany);
-    }
-    do
+    out (removed; removed <= howMany)
     {
         size_t i;
         for (; i < howMany && !empty; ++i)
@@ -2035,11 +1877,7 @@ struct DList(T)
 
     /// ditto
     size_t removeBack(size_t howMany)
-    out (removed)
-    {
-        assert(removed <= howMany);
-    }
-    do
+    out (removed; removed <= howMany)
     {
         size_t i;
         for (; i < howMany && !empty; ++i)
@@ -2071,11 +1909,7 @@ struct DList(T)
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
     Range remove(Range r)
-    in
-    {
-        assert(checkRangeBelonging(r));
-    }
-    do
+    in (checkRangeBelonging(r))
     {
         // Save references to the elements before and after the range.
         Entry* headPrev;
@@ -2147,11 +1981,7 @@ struct DList(T)
      *               $(D_PARAM range) is extracted from this list.
      */
     Range popFirstOf(Range range)
-    in
-    {
-        assert(!range.empty);
-    }
-    do
+    in (!range.empty)
     {
         remove(Range(*range.head, *range.head));
         return range;
@@ -2159,11 +1989,7 @@ struct DList(T)
 
     /// ditto
     Range popLastOf(Range range)
-    in
-    {
-        assert(!range.empty);
-    }
-    do
+    in (!range.empty)
     {
         remove(Range(*range.tail, *range.tail));
         return range;
@@ -2316,83 +2142,4 @@ struct DList(T)
         ++i;
     }
     assert(i == 3);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    class A
-    {
-    }
-    static assert(is(SList!(A*)));
-    static assert(is(DList!(A*)));
-}
-
-// Removes all elements
-@nogc nothrow pure @safe unittest
-{
-    auto l = DList!int([5]);
-    assert(l.remove(l[]).empty);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto l1 = DList!int([5, 234, 30, 1]);
-    auto l2 = DList!int([5, 1]);
-    auto r = l1[];
-
-    r.popFront();
-    r.popBack();
-    assert(r.front == 234);
-    assert(r.back == 30);
-
-    assert(!l1.remove(r).empty);
-    assert(l1 == l2);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto l = DList!int(0, 0);
-    assert(l.empty);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto l1 = DList!int([5, 234]);
-    assert(l1.head is l1.head.next.prev);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    DList!int l;
-    l.insertAfter(l[], 234);
-    assert(l.front == 234);
-    assert(l.back == 234);
-}
-
-@nogc nothrow pure @safe unittest
-{
-    auto l1 = DList!int();
-    auto l2 = DList!int([9, 4]);
-    l1 = l2[];
-    assert(l1 == l2);
-}
-
-// Sets the new head
-@nogc nothrow pure @safe unittest
-{
-    auto l1 = DList!int([5, 234, 30, 1]);
-    auto l2 = DList!int([1]);
-    auto r = l1[];
-
-    r.popBack();
-
-    assert(!l1.remove(r).empty);
-    assert(l1 == l2);
-}
-
-// Can have non-copyable elements
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(SList!NonCopyable));
-    static assert(is(DList!NonCopyable));
 }

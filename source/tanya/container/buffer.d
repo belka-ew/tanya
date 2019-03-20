@@ -22,11 +22,7 @@ version (unittest)
     private int fillBuffer(ubyte[] buffer,
                            int start = 0,
                            int end = 10) @nogc pure nothrow
-    in
-    {
-        assert(start < end);
-    }
-    do
+    in (start < end)
     {
         auto numberRead = end - start;
         for (ubyte i; i < numberRead; ++i)
@@ -71,12 +67,9 @@ if (isScalarType!T)
     /// Size by which the buffer will grow.
     private size_t blockSize = 8192;
 
-    invariant
-    {
-        assert(this.length_ <= this.buffer_.length);
-        assert(this.blockSize > 0);
-        assert(this.minAvailable > 0);
-    }
+    invariant (this.length_ <= this.buffer_.length);
+    invariant (this.blockSize > 0);
+    invariant (this.minAvailable > 0);
 
     /**
      * Creates a new read buffer.
@@ -101,11 +94,7 @@ if (isScalarType!T)
 
     /// ditto
     this(shared Allocator allocator)
-    in
-    {
-        assert(allocator_ is null);
-    }
-    do
+    in (allocator_ is null)
     {
         allocator_ = allocator;
     }
@@ -188,7 +177,7 @@ if (isScalarType!T)
      * Returns: $(D_KEYWORD this).
      */
     ref ReadBuffer opOpAssign(string op)(size_t length)
-        if (op == "+")
+    if (op == "+")
     {
         this.length_ += length;
         ring = start;
@@ -293,11 +282,6 @@ if (isScalarType!T)
     mixin DefaultAllocator;
 }
 
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(ReadBuffer!int));
-}
-
 /**
  * Circular, self-expanding buffer with overflow support. Can be used with
  * functions returning the number of the transferred bytes.
@@ -328,12 +312,9 @@ if (isScalarType!T)
     /// The position of the free area in the buffer.
     private size_t position;
 
-    invariant
-    {
-        assert(this.blockSize > 0);
-        // Position can refer to an element outside the buffer if the buffer is full.
-        assert(this.position <= this.buffer_.length);
-    }
+    invariant (this.blockSize > 0);
+    // Position can refer to an element outside the buffer if the buffer is full.
+    invariant (this.position <= this.buffer_.length);
 
     /**
      * Params:
@@ -344,12 +325,8 @@ if (isScalarType!T)
      * Precondition: $(D_INLINECODE size > 0 && allocator !is null)
      */
     this(size_t size, shared Allocator allocator = defaultAllocator) @trusted
-    in
-    {
-        assert(size > 0);
-        assert(allocator !is null);
-    }
-    do
+    in (size > 0)
+    in (allocator !is null)
     {
         this.blockSize = size;
         ring = size - 1;
@@ -435,7 +412,7 @@ if (isScalarType!T)
      *  buffer = Buffer chunk got with $(D_PSYMBOL opIndex).
      */
     ref WriteBuffer opOpAssign(string op)(const T[] buffer)
-        if (op == "~")
+    if (op == "~")
     {
         size_t end, start;
 
@@ -509,12 +486,8 @@ if (isScalarType!T)
      * Returns: $(D_KEYWORD this).
      */
     ref WriteBuffer opOpAssign(string op)(size_t length)
-        if (op == "+")
-    in
-    {
-        assert(length <= this.length);
-    }
-    do
+    if (op == "+")
+    in (length <= this.length)
     {
         auto afterRing = ring + 1;
         auto oldStart = start;
@@ -647,11 +620,6 @@ if (isScalarType!T)
     }
 
     mixin DefaultAllocator;
-}
-
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(typeof(WriteBuffer!int(5))));
 }
 
 @nogc nothrow pure @system unittest
