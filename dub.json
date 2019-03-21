@@ -52,6 +52,22 @@
 		},
 		{
 			"name": "unittest",
+			"versions": ["TanyaPhobos"],
+			"importPaths": [
+				"./source",
+				"./tests"
+			],
+			"sourcePaths": [
+				"./source",
+				"./tests"
+			]
+		},
+		{
+			"name": "unittest-native",
+			"platforms": ["linux-x86_64-gdc"],
+			"preBuildCommands": ["ninja -C arch"],
+			"lflags": ["arch/tanya.a"],
+			"versions": ["TanyaNative"],
 			"importPaths": [
 				"./source",
 				"./tests"

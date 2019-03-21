@@ -501,3 +501,20 @@ final class MmapPool : Allocator
     }
     private alias Block = shared BlockEntry*;
 }
+
+@nogc nothrow pure @system unittest
+{
+    // allocate() check.
+    size_t tooMuchMemory = size_t.max
+                         - MmapPool.alignment_
+                         - BlockEntry.sizeof * 2
+                         - RegionEntry.sizeof
+                         - pageSize;
+    assert(MmapPool.instance.allocate(tooMuchMemory) is null);
+
+    assert(MmapPool.instance.allocate(size_t.max) is null);
+
+    // initializeRegion() check.
+    tooMuchMemory = size_t.max - MmapPool.alignment_;
+    assert(MmapPool.instance.allocate(tooMuchMemory) is null);
+}

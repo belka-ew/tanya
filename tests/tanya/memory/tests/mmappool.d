@@ -19,23 +19,6 @@ import tanya.memory.mmappool;
 
 @nogc nothrow pure @system unittest
 {
-    // allocate() check.
-    size_t tooMuchMemory = size_t.max
-                         - MmapPool.alignment_
-                         - BlockEntry.sizeof * 2
-                         - RegionEntry.sizeof
-                         - pageSize;
-    assert(MmapPool.instance.allocate(tooMuchMemory) is null);
-
-    assert(MmapPool.instance.allocate(size_t.max) is null);
-
-    // initializeRegion() check.
-    tooMuchMemory = size_t.max - MmapPool.alignment_;
-    assert(MmapPool.instance.allocate(tooMuchMemory) is null);
-}
-
-@nogc nothrow pure @system unittest
-{
     auto p = MmapPool.instance.allocate(20);
 
     assert(MmapPool.instance.deallocate(p));
@@ -91,16 +74,6 @@ import tanya.memory.mmappool;
     assert((cast(int[]) p)[7] == 123);
 
     MmapPool.instance.deallocate(p);
-}
-
-@nogc nothrow pure @system unittest
-{
-    assert(instance is instance);
-}
-
-@nogc nothrow pure @system unittest
-{
-    assert(MmapPool.instance.alignment == MmapPool.alignment_);
 }
 
 // A lot of allocations/deallocations, but it is the minimum caused a

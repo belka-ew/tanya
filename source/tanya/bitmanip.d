@@ -5,7 +5,7 @@
 /**
  * Bit manipulation.
  *
- * Copyright: Eugene Wissner 2018.
+ * Copyright: Eugene Wissner 2018-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -274,47 +274,6 @@ if (isBitFlagEnum!E)
     {
         return cast(size_t) this.field;
     }
-}
-
-@nogc nothrow pure @safe unittest
-{
-    enum E : int
-    {
-        one = 1,
-    }
-
-    // Casts to a boolean
-    assert(BitFlags!E(E.one));
-    assert(!BitFlags!E());
-
-    // Assigns to and compares with a single value
-    {
-        BitFlags!E bitFlags;
-        bitFlags = E.one;
-        assert(bitFlags == E.one);
-    }
-    // Assigns to and compares with the same type
-    {
-        auto bitFlags1 = BitFlags!E(E.one);
-        BitFlags!E bitFlags2;
-        bitFlags2 = bitFlags1;
-        assert(bitFlags1 == bitFlags2);
-    }
-    assert((BitFlags!E() | E.one) == BitFlags!E(E.one));
-    assert((BitFlags!E() | BitFlags!E(E.one)) == BitFlags!E(E.one));
-
-    assert(!(BitFlags!E() & BitFlags!E(E.one)));
-
-    assert(!(BitFlags!E(E.one) ^ E.one));
-    assert(BitFlags!E() ^ BitFlags!E(E.one));
-
-    assert(~BitFlags!E());
-
-    assert(BitFlags!E().toHash() == 0);
-    assert(BitFlags!E(E.one).toHash() != 0);
-
-    // opBinaryRight is allowed
-    static assert(is(typeof({ E.one | BitFlags!E(); })));
 }
 
 /**
