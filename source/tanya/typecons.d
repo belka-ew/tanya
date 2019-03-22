@@ -296,11 +296,7 @@ struct Option(T)
     /// ditto
     bool opEquals(U)(auto ref const U that) const
     if (ifTestable!(U, a => a == T.init) && !is(U == Option))
-    in
-    {
-        assert(!isNothing);
-    }
-    do
+    in (!isNothing)
     {
         return get == that;
     }

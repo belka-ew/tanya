@@ -175,7 +175,7 @@ import tanya.range;
 // Aggregate types
 @system unittest // Object.toString has no attributes.
 {
-    import tanya.memory;
+    import tanya.memory.allocator;
     import tanya.memory.smartref;
 
     interface I

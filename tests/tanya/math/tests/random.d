@@ -4,7 +4,7 @@
 module tanya.math.tests.random;
 
 import tanya.math.random;
-import tanya.memory;
+import tanya.memory.allocator;
 
 static if (is(PlatformEntropySource)) @nogc @system unittest
 {

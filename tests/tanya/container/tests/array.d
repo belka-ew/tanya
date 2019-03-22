@@ -5,7 +5,7 @@ module tanya.container.tests.array;
 
 import tanya.algorithm.comparison;
 import tanya.container.array;
-import tanya.memory;
+import tanya.memory.allocator;
 import tanya.test.stub;
 
 // const arrays return usable ranges

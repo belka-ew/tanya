@@ -23,7 +23,8 @@
  */
 module tanya.memory.smartref;
 
-import tanya.memory;
+import tanya.memory.allocator;
+import tanya.memory.lifetime;
 import tanya.meta.trait;
 
 private template Payload(T)

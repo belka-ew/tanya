@@ -4,7 +4,7 @@
 module tanya.container.tests.set;
 
 import tanya.container.set;
-import tanya.memory;
+import tanya.memory.allocator;
 import tanya.test.stub;
 
 // Basic insertion logic.

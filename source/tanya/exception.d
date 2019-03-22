@@ -10,7 +10,7 @@
  * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/exception.d,
  *                 tanya/exception.d)
  */
-deprecated("Use tanya.memory.lifetimeinstead")
+deprecated("Use tanya.memory.allocator instead")
 module tanya.exception;
 
-public import tanya.memory.lifetime : onOutOfMemoryError, OutOfMemoryError;
+public import tanya.memory.allocator : onOutOfMemoryError, OutOfMemoryError;

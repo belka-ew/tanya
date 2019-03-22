@@ -6,7 +6,7 @@ module tanya.async.tests.loop;
 import core.time;
 import tanya.async.loop;
 import tanya.async.watcher;
-import tanya.memory;
+import tanya.memory.allocator;
 
 private final class DummyWatcher : Watcher
 {

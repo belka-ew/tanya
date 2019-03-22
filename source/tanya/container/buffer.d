@@ -14,7 +14,7 @@
  */
 module tanya.container.buffer;
 
-import tanya.memory;
+import tanya.memory.allocator;
 import tanya.meta.trait;
 
 version (unittest)

@@ -15,7 +15,7 @@
 module tanya.conv;
 
 import tanya.container.string;
-import tanya.memory;
+import tanya.memory.allocator;
 deprecated("Use tanya.memory.lifetime.emplace instead")
 public import tanya.memory.lifetime : emplace;
 import tanya.meta.trait;
@@ -64,12 +64,8 @@ if (isInputRange!R
  && isSomeChar!(ElementType!R)
  && isIntegral!T
  && isUnsigned!T)
-in
-{
-    assert(base >= 2);
-    assert(base <= 36);
-}
-do
+in (base >= 2)
+in (base <= 36)
 {
     T boundary = cast(T) (T.max / base);
     if (range.empty)

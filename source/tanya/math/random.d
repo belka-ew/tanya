@@ -14,7 +14,7 @@
  */
 module tanya.math.random;
 
-import tanya.memory;
+import tanya.memory.allocator;
 import tanya.typecons;
 
 /// Maximum amount gathered from the entropy sources.

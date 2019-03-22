@@ -16,7 +16,7 @@ module tanya.net.uri;
 
 import tanya.conv;
 import tanya.encoding.ascii;
-import tanya.memory;
+import tanya.memory.allocator;
 
 /**
  * Thrown if an invalid URI was specified.

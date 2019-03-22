@@ -41,7 +41,7 @@
  * For an example of an asynchronous server refer to the documentation of the
  * $(D_PSYMBOL tanya.async.loop) module.
  *
- * Copyright: Eugene Wissner 2016-2018.
+ * Copyright: Eugene Wissner 2016-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -55,7 +55,7 @@ import core.time;
 public import std.socket : SocketOption, SocketOptionLevel;
 import tanya.algorithm.comparison;
 import tanya.bitmanip;
-import tanya.memory;
+import tanya.memory.allocator;
 import tanya.meta.trait;
 import tanya.os.error;
 

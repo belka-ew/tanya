@@ -3,7 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 module tanya.memory.tests.lifetime;
 
-import tanya.memory;
+import tanya.memory.allocator;
+import tanya.memory.lifetime;
 import tanya.test.stub;
 
 @nogc nothrow pure @safe unittest

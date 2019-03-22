@@ -52,13 +52,9 @@ private enum alignMask = size_t.sizeof - 1;
  * Precondition: $(D_INLINECODE source.length <= target.length).
  */
 void copy(const void[] source, void[] target) @nogc nothrow pure @trusted
-in
-{
-    assert(source.length <= target.length);
-    assert(source.length == 0 || source.ptr !is null);
-    assert(target.length == 0 || target.ptr !is null);
-}
-do
+in (source.length <= target.length)
+in (source.length == 0 || source.ptr !is null)
+in (target.length == 0 || target.ptr !is null)
 {
     version (TanyaNative)
     {
@@ -102,11 +98,7 @@ private template filledBytes(ubyte Byte, ubyte I = 0)
  *  memory = Memory block.
  */
 void fill(ubyte c = 0)(void[] memory) @trusted
-in
-{
-    assert(memory.length == 0 || memory.ptr !is null);
-}
-do
+in (memory.length == 0 || memory.ptr !is null)
 {
     version (TanyaNative)
     {
@@ -152,13 +144,9 @@ do
  * Precondition: $(D_INLINECODE source.length <= target.length).
  */
 void copyBackward(const void[] source, void[] target) @nogc nothrow pure @trusted
-in
-{
-    assert(source.length <= target.length);
-    assert(source.length == 0 || source.ptr !is null);
-    assert(target.length == 0 || target.ptr !is null);
-}
-do
+in (source.length <= target.length)
+in (source.length == 0 || source.ptr !is null)
+in (target.length == 0 || target.ptr !is null)
 {
     version (TanyaNative)
     {
@@ -194,11 +182,7 @@ do
  */
 inout(void[]) find(return inout void[] haystack, ubyte needle)
 @nogc nothrow pure @trusted
-in
-{
-    assert(haystack.length == 0 || haystack.ptr !is null);
-}
-do
+in (haystack.length == 0 || haystack.ptr !is null)
 {
     auto length = haystack.length;
     const size_t needleWord = size_t.max * needle;
@@ -276,11 +260,7 @@ do
  */
 inout(char[]) findNullTerminated(return inout char[] haystack)
 @nogc nothrow pure @trusted
-in
-{
-    assert(haystack.length == 0 || haystack.ptr !is null);
-}
-do
+in (haystack.length == 0 || haystack.ptr !is null)
 {
     auto length = haystack.length;
     enum size_t highBits = filledBytes!(0x01, 0);
@@ -347,12 +327,8 @@ do
  *          $(D_KEYWORD false) otherwise.
  */
 bool equal(const void[] r1, const void[] r2) @nogc nothrow pure @trusted
-in
-{
-    assert(r1.length == 0 || r1.ptr !is null);
-    assert(r2.length == 0 || r2.ptr !is null);
-}
-do
+in (r1.length == 0 || r1.ptr !is null)
+in (r2.length == 0 || r2.ptr !is null)
 {
     version (TanyaNative)
     {

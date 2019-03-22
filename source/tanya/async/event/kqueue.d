@@ -5,7 +5,7 @@
 /*
  * Event loop implementation for *BSD.
  *
- * Copyright: Eugene Wissner 2016-2018.
+ * Copyright: Eugene Wissner 2016-2019.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -58,7 +58,7 @@ import tanya.async.loop;
 import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.array;
-import tanya.memory;
+import tanya.memory.allocator;
 import tanya.network.socket;
 
 void EV_SET(kevent_t* kevp, typeof(kevent_t.tupleof) args) pure nothrow @nogc
