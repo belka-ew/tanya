@@ -608,7 +608,7 @@ if (isTypeTuple!Specs && NoDuplicates!Specs.length == Specs.length)
             return this;
         }
 
-        private ref typeof(this) copyAssign(T)(ref T that)
+        private ref typeof(this) copyAssign(T)(ref T that) return
         {
             this.tag = staticIndexOf!(T, Types);
 

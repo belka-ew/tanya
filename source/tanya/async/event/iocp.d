@@ -67,11 +67,7 @@ final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
      * Postcondition: $(D_INLINECODE socket !is null)
      */
     override @property OverlappedConnectedSocket socket() pure nothrow @safe @nogc
-    out (socket)
-    {
-        assert(socket !is null);
-    }
-    do
+    out (socket; socket !is null)
     {
         return cast(OverlappedConnectedSocket) socket_;
     }
@@ -124,11 +120,7 @@ final class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
      * Precondition: $(D_INLINECODE protocol !is null)
      */
     @property void protocol(Protocol protocol) pure nothrow @safe @nogc
-    in
-    {
-        assert(protocol !is null);
-    }
-    do
+    in (protocol !is null)
     {
         protocol_ = protocol;
     }
@@ -264,11 +256,7 @@ final class IOCPLoop : Loop
 
     private void kill(StreamTransport transport,
                       SocketException exception = null) @nogc
-    in
-    {
-        assert(transport !is null);
-    }
-    do
+    in (transport !is null)
     {
         transport.socket.shutdown();
         defaultAllocator.dispose(transport.socket);

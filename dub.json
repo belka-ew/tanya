@@ -53,6 +53,7 @@
 		{
 			"name": "unittest",
 			"versions": ["TanyaPhobos"],
+			"dflags": ["-dip25"],
 			"importPaths": [
 				"./source",
 				"./tests"

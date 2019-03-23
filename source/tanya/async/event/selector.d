@@ -75,22 +75,14 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
      * Postcondition: $(D_INLINECODE socket !is null)
      */
     override @property ConnectedSocket socket() pure nothrow @safe @nogc
-    out (socket)
-    {
-        assert(socket !is null);
-    }
-    do
+    out (socket; socket !is null)
     {
         return cast(ConnectedSocket) socket_;
     }
 
     private @property void socket(ConnectedSocket socket)
     pure nothrow @safe @nogc
-    in
-    {
-        assert(socket !is null);
-    }
-    do
+    in (socket !is null)
     {
         socket_ = socket;
     }
@@ -114,11 +106,7 @@ package class StreamTransport : SocketWatcher, DuplexTransport, SocketTransport
      * Precondition: $(D_INLINECODE protocol !is null)
      */
     @property void protocol(Protocol protocol) pure nothrow @safe @nogc
-    in
-    {
-        assert(protocol !is null);
-    }
-    do
+    in (protocol !is null)
     {
         protocol_ = protocol;
     }
@@ -257,11 +245,7 @@ abstract class SelectorLoop : Loop
      */
     protected void kill(StreamTransport transport,
                         SocketException exception = null) @nogc
-    in
-    {
-        assert(transport !is null);
-    }
-    do
+    in (transport !is null)
     {
         transport.socket.shutdown();
         defaultAllocator.dispose(transport.socket);
@@ -283,11 +267,7 @@ abstract class SelectorLoop : Loop
      */
     protected bool feed(StreamTransport transport,
                         SocketException exception = null) @nogc
-    in
-    {
-        assert(transport !is null);
-    }
-    do
+    in (transport !is null)
     {
         while (transport.input.length && transport.writeReady)
         {
@@ -350,11 +330,7 @@ abstract class SelectorLoop : Loop
      *  connection = Connection watcher ready to accept.
      */
     package void acceptConnections(ConnectionWatcher connection) @nogc
-    in
-    {
-        assert(connection !is null);
-    }
-    do
+    in (connection !is null)
     {
         while (true)
         {

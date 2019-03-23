@@ -57,10 +57,9 @@ struct Address4
      * Params:
      *  address = The address as an unsigned integer in host byte order.
      */
-    this(uint address) @nogc nothrow pure @safe
+    this(uint address) @nogc nothrow pure @trusted
     {
-        copy(NetworkOrder!4(address),
-             (() @trusted => (cast(ubyte*) &this.address)[0 .. 4])());
+        copy(NetworkOrder!4(address), (cast(ubyte*) &this.address)[0 .. 4]);
     }
 
     ///

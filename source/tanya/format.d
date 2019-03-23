@@ -1928,7 +1928,7 @@ private char[] errol3(double value,
  * $(D_PARAM sign).
  */
 private const(char)[] real2String(double value,
-                                  ref char[512] buffer,
+                                  return ref char[512] buffer,
                                   out int exponent,
                                   out bool sign) @nogc nothrow pure @trusted
 {

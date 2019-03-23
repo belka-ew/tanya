@@ -52,11 +52,7 @@ abstract class SocketWatcher : Watcher
      * Precondition: $(D_INLINECODE socket !is null)
      */
     this(Socket socket) pure nothrow @safe @nogc
-    in
-    {
-        assert(socket !is null);
-    }
-    do
+    in (socket !is null)
     {
         socket_ = socket;
     }
@@ -102,11 +98,7 @@ class ConnectionWatcher : SocketWatcher
      * Invokes new connection callback.
      */
     override void invoke() @nogc
-    in
-    {
-        assert(protocolFactory !is null, "Protocol isn't set.");
-    }
-    do
+    in (protocolFactory !is null, "Protocol isn't set.")
     {
         for (; !this.incoming.empty; this.incoming.removeFront())
         {

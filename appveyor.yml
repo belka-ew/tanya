@@ -10,10 +10,10 @@ environment:
       DVersion: 2.085.0
       arch: x86
     - DC: dmd
-      DVersion: 2.082.1
+      DVersion: 2.081.2
       arch: x64
     - DC: dmd
-      DVersion: 2.082.1
+      DVersion: 2.081.2
       arch: x86
 
 skip_tags: true

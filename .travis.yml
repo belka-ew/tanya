@@ -8,7 +8,7 @@ language: d
 
 d:
 - dmd-2.085.0
-- dmd-2.082.1
+- dmd-2.081.2
 
 env:
   global:
