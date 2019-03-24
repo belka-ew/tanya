@@ -2258,6 +2258,61 @@ if (isCallable!F)
 }
 
 /**
+ * Determines whether a function has attribute.
+ *
+ * This template should get at least two arguments: the function itself and the
+ * attributes it should be tested for. If more than one attribute is given,
+ * $(D_PSYMBOL hasFunctionAttributes) evaluates to $(D_KEYWORD true) if all of
+ * them are present. The attributes should be $(D_PSYMBOL FunctionAttribute)
+ * members.
+ *
+ * Params:
+ *  Args = The function and attributes.
+ *
+ * Returns:
+ *
+ * See_Also: $(D_PSYMBOL FunctionAttribute).
+ */
+template hasFunctionAttributes(Args...)
+if (Args.length > 1
+ && is(typeof(Args[1]) == FunctionAttribute)
+ && isCallable!(Args[0])
+ && allSameType!(Map!(TypeOf, Args[1 .. $])))
+{
+    enum uint pred(Args_...) = Args_[0] | Args_[1];
+
+    template Reduce(Args_...)
+    {
+        static if (Args_.length == 1)
+        {
+            enum uint Reduce = Args_[0];
+        }
+        else
+        {
+            enum uint Reduce = Reduce!(pred!(Args_[0], Args_[1]), Args_[2 .. $]);
+        }
+    }
+    enum uint field = Reduce!(0, Args[1 .. $]);
+    enum hasFunctionAttributes = (functionAttributes!(Args[0]) & field) == field;
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static struct Range
+    {
+        @property auto front() inout
+        {
+            return 8;
+        }
+    }
+    static assert(hasFunctionAttributes!(Range.init.front, FunctionAttribute.inout_));
+    static assert(!hasFunctionAttributes!(Range.init.front, FunctionAttribute.const_));
+    static assert(!hasFunctionAttributes!(Range.init.front,
+                  FunctionAttribute.inout_, FunctionAttribute.const_));
+}
+
+/**
  * Returns a tuple with default values of the parameters to $(D_PARAM F).
  *
  * If a parameter doesn't have a default value, $(D_KEYWORD void) is returned.

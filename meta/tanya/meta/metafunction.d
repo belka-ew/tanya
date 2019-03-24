@@ -1779,7 +1779,7 @@ if (T.length == 2)
 }
 
 /**
- * Attaces a numeric index to each element from $(D_PARAM Args).
+ * Attaches a numeric index to each element from $(D_PARAM Args).
  *
  * $(D_PSYMBOL EnumerateFrom) returns a sequence of tuples ($(D_PSYMBOL Pack)s)
  * consisting of the index of each element and the element itself.
@@ -1817,7 +1817,7 @@ template EnumerateFrom(size_t start, Args...)
 }
 
 /**
- * Attaces a numeric index to each element from $(D_PARAM Args).
+ * Attaches a numeric index to each element from $(D_PARAM Args).
  *
  * $(D_PSYMBOL EnumerateFrom) returns a sequence of tuples ($(D_PSYMBOL Pack)s)
  * consisting of the index of each element and the element itself.
