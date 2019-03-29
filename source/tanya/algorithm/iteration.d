@@ -27,6 +27,50 @@ import tanya.meta.transform;
 import tanya.range;
 import tanya.typecons;
 
+// These predicates are used to help preserve `const` and `inout` for
+// ranges built on other ranges.
+
+private enum hasInoutFront(T) = is(typeof((inout ref T a) => a.front));
+private enum hasInoutBack(T) = is(typeof((inout ref T a) => a.back));
+private enum hasInoutIndex(T) = is(typeof((inout ref T a, size_t i) => a[i]));
+
+private enum hasConstEmpty(T) = is(typeof(((const T* a) => (*a).empty)(null)) : bool);
+private enum hasConstLength(T) = is(typeof(((const T* a) => (*a).length)(null)) : size_t);
+private enum hasConstSave(T) = is(typeof(((const T* a) => (*a).save())(null)) : T);
+private enum hasConstSlice(T) = is(typeof(((const T* a) => (*a)[0 .. $])(null)) : T);
+
+unittest
+{
+    // Test the definitions.
+    static assert(hasInoutFront!string);
+    static assert(hasInoutBack!string);
+    static assert(hasInoutIndex!string);
+    static assert(hasConstEmpty!string);
+    static assert(hasConstLength!string);
+    static assert(hasConstSave!string);
+    static assert(hasConstSlice!string);
+
+    // Test that Take propagates const/inout correctly.
+    alias TakeString = Take!(string, false);
+    static assert(hasInoutFront!TakeString);
+    static assert(hasInoutBack!TakeString);
+    static assert(hasInoutIndex!TakeString);
+    static assert(hasConstEmpty!TakeString);
+    static assert(hasConstLength!TakeString);
+    static assert(hasConstSave!TakeString);
+    static assert(hasConstSlice!TakeString);
+
+    // Test that Retro propagates const/inout correctly.
+    alias RetroString = Retro!string;
+    static assert(hasInoutFront!RetroString);
+    static assert(hasInoutBack!RetroString);
+    static assert(hasInoutIndex!RetroString);
+    static assert(hasConstEmpty!RetroString);
+    static assert(hasConstLength!RetroString);
+    static assert(hasConstSave!RetroString);
+    static assert(hasConstSlice!RetroString);
+}
+
 private struct Take(R, bool exactly)
 {
     private R source;
@@ -47,11 +91,11 @@ private struct Take(R, bool exactly)
         }
     }
 
-    @property auto ref front()
-    in (!empty)
+    mixin(`@property auto ref front() ` ~ (hasInoutFront!R ? `inout ` : ``) ~
+    `in (!empty)
     {
         return this.source.front;
-    }
+    }`);
 
     void popFront()
     in (!empty)
@@ -60,8 +104,8 @@ private struct Take(R, bool exactly)
         --this.length_;
     }
 
-    @property bool empty()
-    {
+    mixin(`@property bool empty() ` ~ (exactly || isInfinite!R || hasConstEmpty!R ? `const ` : ``) ~
+    `{
         static if (exactly || isInfinite!R)
         {
             return length == 0;
@@ -70,11 +114,11 @@ private struct Take(R, bool exactly)
         {
             return this.length_ == 0 || this.source.empty;
         }
-    }
+    }`);
 
     static if (exactly || hasLength!R)
     {
-        @property size_t length()
+        @property size_t length() const
         {
             return this.length_;
         }
@@ -97,18 +141,18 @@ private struct Take(R, bool exactly)
 
     static if (isForwardRange!R)
     {
-        typeof(this) save()
-        {
+        mixin(`typeof(this) save() ` ~ (hasConstSave!R ? `const ` : ``) ~
+        `{
             return typeof(this)(this.source.save(), length);
-        }
+        }`);
     }
     static if (isRandomAccessRange!R)
     {
-        @property auto ref back()
-        in (!empty)
+        mixin(`@property auto ref back() ` ~ (hasInoutBack!R ? `inout ` : ``) ~
+        `in (!empty)
         {
             return this.source[this.length - 1];
-        }
+        }`);
 
         void popBack()
         in (!empty)
@@ -116,11 +160,11 @@ private struct Take(R, bool exactly)
             --this.length_;
         }
 
-        auto ref opIndex(size_t i)
-        in (i < length)
+        mixin(`auto ref opIndex(size_t i) ` ~ (hasInoutIndex!R ? `inout ` : ``) ~
+        `in (i < length)
         {
             return this.source[i];
-        }
+        }`);
 
         static if (hasAssignableElements!R)
         {
@@ -152,12 +196,14 @@ private struct Take(R, bool exactly)
 
     static if (!exactly && hasSlicing!R)
     {
-        auto opSlice(size_t i, size_t j)
-        in (i <= j)
+        static if (is(typeof(length))) alias opDollar = length;
+
+        mixin(`auto opSlice(size_t i, size_t j) ` ~ (hasConstSlice!R ? `const ` : ``) ~
+        `in (i <= j)
         in (j <= length)
         {
             return typeof(this)(this.source[i .. j], length);
-        }
+        }`);
     }
 
     version (unittest) static assert(isInputRange!Take);
@@ -379,16 +425,16 @@ private struct Retro(Range)
         this.source = source;
     }
 
-    Retro save()
-    {
-        return this;
-    }
+    mixin(`Retro save() ` ~ (hasConstSave!Range ? `const ` : ``) ~
+    `{
+        return Retro(source.save());
+    }`);
 
-    @property auto ref front()
-    in (!empty)
+    mixin(`@property auto ref front() ` ~ (hasInoutBack!Range ? `inout ` : ``) ~
+    `in (!empty)
     {
         return this.source.back;
-    }
+    }`);
 
     void popFront()
     in (!empty)
@@ -396,11 +442,11 @@ private struct Retro(Range)
         this.source.popBack();
     }
 
-    @property auto ref back()
-    in (!empty)
+    mixin(`@property auto ref back() ` ~ (hasInoutFront!Range ? `inout ` : ``) ~
+    `in (!empty)
     {
         return this.source.front;
-    }
+    }`);
 
     void popBack()
     in (!empty)
@@ -408,38 +454,38 @@ private struct Retro(Range)
         this.source.popFront();
     }
 
-    @property bool empty()
-    {
+    mixin(`@property bool empty() ` ~ (hasConstEmpty!Range ? `const ` : ``) ~
+    `{
         return this.source.empty;
-    }
+    }`);
 
     static if (hasLength!Range)
     {
-        @property size_t length()
-        {
+        mixin(`@property size_t length() ` ~ (hasConstLength!Range ? `const ` : ``) ~
+        `{
             return this.source.length;
-        }
+        }`);
     }
 
     static if (isRandomAccessRange!Range && hasLength!Range)
     {
-        auto ref opIndex(size_t i)
-        in (i < length)
+        mixin(`auto ref opIndex(size_t i) ` ~ (hasInoutIndex!Range ? `inout ` : ``) ~
+        `in (i < length)
         {
             return this.source[$ - ++i];
-        }
+        }`);
     }
 
     static if (hasLength!Range && hasSlicing!Range)
     {
         alias opDollar = length;
 
-        auto opSlice(size_t i, size_t j)
-        in (i <= j)
+        mixin(`auto opSlice(size_t i, size_t j) ` ~ (hasConstSlice!Range ? `const ` : ``) ~
+        `in (i <= j)
         in (j <= length)
         {
             return typeof(this)(this.source[$-j .. $-i]);
-        }
+        }`);
     }
 
     static if (hasAssignableElements!Range)
