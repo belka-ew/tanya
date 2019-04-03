@@ -798,22 +798,7 @@ alias AliasSeq(Args...) = Args;
  * Returns: $(D_KEYWORD true) if all the items of $(D_PARAM L) satisfy
  *          $(D_PARAM F), $(D_KEYWORD false) otherwise.
  */
-template allSatisfy(alias F, L...)
-if (__traits(isTemplate, F))
-{
-    static if (L.length == 0)
-    {
-        enum bool allSatisfy = true;
-    }
-    else static if (F!(L[0]))
-    {
-        enum bool allSatisfy = allSatisfy!(F, L[1 .. $]);
-    }
-    else
-    {
-        enum bool allSatisfy = false;
-    }
-}
+enum bool allSatisfy(alias F, L...) = Filter!(templateNot!F, L).length == 0;
 
 ///
 @nogc nothrow pure @safe unittest
@@ -836,22 +821,7 @@ if (__traits(isTemplate, F))
  * Returns: $(D_KEYWORD true) if any of the items of $(D_PARAM L) satisfy
  *          $(D_PARAM F), $(D_KEYWORD false) otherwise.
  */
-template anySatisfy(alias F, L...)
-if (__traits(isTemplate, F))
-{
-    static if (L.length == 0)
-    {
-        enum bool anySatisfy = false;
-    }
-    else static if (F!(L[0]))
-    {
-        enum bool anySatisfy = true;
-    }
-    else
-    {
-        enum bool anySatisfy = anySatisfy!(F, L[1 .. $]);
-    }
-}
+enum bool anySatisfy(alias F, L...) = Filter!(F, L).length != 0;
 
 ///
 @nogc nothrow pure @safe unittest
@@ -861,21 +831,18 @@ if (__traits(isTemplate, F))
     static assert(!anySatisfy!(isSigned, uint, ushort, ulong));
 }
 
-private template indexOf(ptrdiff_t i, Args...)
-if (Args.length > 0)
+private template indexOf(Args...)
 {
-    static if (Args.length == 1)
+    static foreach (i, Arg; Args[1 .. $])
+    {
+        static if (!is(typeof(indexOf) == ptrdiff_t) && isEqual!(Args[0], Arg))
+        {
+            enum ptrdiff_t indexOf = i;
+        }
+    }
+    static if (!is(typeof(indexOf) == ptrdiff_t))
     {
         enum ptrdiff_t indexOf = -1;
-    }
-    else static if (isEqual!(Args[0 .. 2]))
-    {
-        enum ptrdiff_t indexOf = i;
-    }
-    else
-    {
-        enum ptrdiff_t indexOf = indexOf!(i + 1,
-                                          AliasSeq!(Args[0], Args[2 .. $]));
     }
 }
 
@@ -891,13 +858,13 @@ if (Args.length > 0)
  */
 template staticIndexOf(T, L...)
 {
-    enum ptrdiff_t staticIndexOf = indexOf!(0, AliasSeq!(T, L));
+    enum ptrdiff_t staticIndexOf = indexOf!(T, L);
 }
 
 /// ditto
 template staticIndexOf(alias T, L...)
 {
-    enum ptrdiff_t staticIndexOf = indexOf!(0, AliasSeq!(T, L));
+    enum ptrdiff_t staticIndexOf = indexOf!(T, L);
 }
 
 ///
@@ -920,16 +887,10 @@ template staticIndexOf(alias T, L...)
  * Returns: $(D_KEYWORD true) if $(D_PARAM T) can be found in $(D_PARAM L),
  *          $(D_KEYWORD false) otherwise.
  */
-template canFind(T, L...)
-{
-    enum bool canFind = indexOf!(0, AliasSeq!(T, L)) != -1;
-}
+enum bool canFind(T, L...) = staticIndexOf!(T, L) != -1;
 
 /// ditto
-template canFind(alias T, L...)
-{
-    enum bool canFind = indexOf!(0, AliasSeq!(T, L)) != -1;
-}
+enum bool canFind(alias T, L...) = staticIndexOf!(T, L) != -1;
 
 ///
 @nogc nothrow pure @safe unittest
@@ -1617,6 +1578,7 @@ template EraseAll(alias T, L...)
  *          $(D_PARAM pred).
  */
 template Filter(alias pred, L...)
+if (__traits(isTemplate, pred))
 {
     static if (L.length == 0)
     {
