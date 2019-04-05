@@ -136,7 +136,7 @@ import tanya.test.stub;
 }
 
 // const constructor tests
-@nogc nothrow pure @safe unittest
+@nogc nothrow pure @system unittest
 {
     auto v1 = const Array!int([1, 2, 3]);
     auto v2 = Array!int(v1);

@@ -40,7 +40,8 @@ struct Range(A)
     invariant (this.begin >= this.container.data);
     invariant (this.end <= this.container.data + this.container.length);
 
-    private this(ref A container, E* begin, E* end) @trusted
+    private this(return ref A container, return E* begin, return E* end)
+    @trusted
     in (begin <= end)
     in (begin >= container.data)
     in (end <= container.data + container.length)
@@ -123,7 +124,7 @@ struct Range(A)
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
-    inout(E)[] get() inout @trusted
+    inout(E)[] get() inout
     {
         return this.begin[0 .. length];
     }
@@ -172,7 +173,7 @@ struct Array(T)
      *  init      = Values to initialize the array with.
      *  allocator = Allocator.
      */
-    this(R)(R init, shared Allocator allocator = defaultAllocator)
+    this(R)(scope R init, shared Allocator allocator = defaultAllocator)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -225,7 +226,7 @@ struct Array(T)
         {
             // Move each element.
             reserve(init.length_);
-            foreach (ref target; this.data[0 .. init.length_])
+            foreach (ref target; slice(init.length_))
             {
                 moveEmplace(*init.data++, target);
             }
@@ -660,7 +661,7 @@ struct Array(T)
     }
 
     /// ditto
-    size_t insertBack(R)(R el)
+    size_t insertBack(R)(scope R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -739,7 +740,7 @@ struct Array(T)
      *
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
-    size_t insertAfter(R)(Range r, R el)
+    size_t insertAfter(R)(Range r, scope R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -788,7 +789,7 @@ struct Array(T)
     }
 
     /// ditto
-    size_t insertBefore(R)(Range r, R el)
+    size_t insertBefore(R)(Range r, scope R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -1255,13 +1256,13 @@ struct Array(T)
      *
      * Returns: The array with elements of this array.
      */
-    inout(T[]) get() inout @trusted
+    inout(T[]) get() inout
     {
         return this.data[0 .. length];
     }
 
     ///
-    @nogc nothrow pure @safe unittest
+    @nogc nothrow pure @system unittest
     {
         auto v = Array!int([1, 2, 4]);
         auto data = v.get();
@@ -1317,7 +1318,7 @@ struct Array(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(R)(R that)
+    ref typeof(this) opAssign(R)(scope R that)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
