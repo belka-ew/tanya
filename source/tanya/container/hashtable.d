@@ -416,8 +416,8 @@ if (isHashFunction!(hasher, Key))
      *
      * Precondition: $(D_INLINECODE allocator !is null).
      */
-    this(R)(R range, shared Allocator allocator = defaultAllocator)
-    if (isForwardRange!R && is(ElementType!R == KeyValue))
+    this(R)(scope R range, shared Allocator allocator = defaultAllocator)
+    if (isForwardRange!R && is(ElementType!R == KeyValue) && !isInfinite!R)
     in (allocator !is null)
     {
         this(allocator);
@@ -450,6 +450,7 @@ if (isHashFunction!(hasher, Key))
          shared Allocator allocator = defaultAllocator)
     in (allocator !is null)
     {
+        this(allocator);
         insert(array[]);
     }
 
@@ -714,8 +715,8 @@ if (isHashFunction!(hasher, Key))
      *
      * Returns: The number of the inserted elements with a unique key.
      */
-    size_t insert(R)(R range)
-    if (isForwardRange!R && is(ElementType!R == KeyValue))
+    size_t insert(R)(scope R range)
+    if (isForwardRange!R && is(ElementType!R == KeyValue) && !isInfinite!R)
     {
         size_t count;
         foreach (e; range)

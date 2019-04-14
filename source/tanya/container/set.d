@@ -218,10 +218,13 @@ if (isHashFunction!(hasher, T))
      *
      * Precondition: $(D_INLINECODE allocator !is null).
      */
-    this(R)(R range, shared Allocator allocator = defaultAllocator)
-    if (isForwardRange!R && isImplicitlyConvertible!(ElementType!R, T))
+    this(R)(scope R range, shared Allocator allocator = defaultAllocator)
+    if (isForwardRange!R
+     && isImplicitlyConvertible!(ElementType!R, T)
+     && !isInfinite!R)
     in (allocator !is null)
     {
+        this(allocator);
         insert(range);
     }
 
@@ -248,6 +251,7 @@ if (isHashFunction!(hasher, T))
     this(size_t n)(T[n] array, shared Allocator allocator = defaultAllocator)
     in (allocator !is null)
     {
+        this(allocator);
         insert(array[]);
     }
 
@@ -456,8 +460,10 @@ if (isHashFunction!(hasher, T))
      *
      * Returns: The number of new elements inserted.
      */
-    size_t insert(R)(R range)
-    if (isForwardRange!R && isImplicitlyConvertible!(ElementType!R, T))
+    size_t insert(R)(scope R range)
+    if (isForwardRange!R
+     && isImplicitlyConvertible!(ElementType!R, T)
+     && !isInfinite!R)
     {
         size_t count;
         foreach (e; range)

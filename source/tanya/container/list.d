@@ -39,7 +39,7 @@ struct SRange(L)
 
     invariant (this.head !is null);
 
-    private this(ref EntryPointer head) @trusted
+    private this(return ref EntryPointer head) @trusted
     {
         this.head = &head;
     }
@@ -127,7 +127,7 @@ struct SList(T)
      *  init      = Values to initialize the list with.
      *  allocator = Allocator.
      */
-    this(R)(R init, shared Allocator allocator = defaultAllocator)
+    this(R)(scope R init, shared Allocator allocator = defaultAllocator)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -372,7 +372,7 @@ struct SList(T)
     }
 
     /// ditto
-    size_t insertFront(R)(R el) @trusted
+    size_t insertFront(R)(scope R el) @trusted
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -473,7 +473,7 @@ struct SList(T)
     }
 
     /// ditto
-    size_t insertBefore(R)(Range r, R el)
+    size_t insertBefore(R)(Range r, scope R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -798,7 +798,7 @@ struct SList(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(R)(R that) @trusted
+    ref typeof(this) opAssign(R)(scope R that) @trusted
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -893,7 +893,8 @@ struct DRange(L)
     invariant (this.head !is null);
     invariant (this.tail !is null);
 
-    private this(ref EntryPointer head, ref EntryPointer tail) @trusted
+    private this(return ref EntryPointer head, return ref EntryPointer tail)
+    @trusted
     {
         this.head = &head;
         this.tail = &tail;
@@ -1010,7 +1011,7 @@ struct DList(T)
      *  init      = Values to initialize the list with.
      *  allocator = Allocator.
      */
-    this(R)(R init, shared Allocator allocator = defaultAllocator)
+    this(R)(scope R init, shared Allocator allocator = defaultAllocator)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -1261,13 +1262,10 @@ struct DList(T)
 
     // Creates a lsit of linked entries from a range.
     // Returns count of the elements in the list.
-    private size_t makeList(R)(ref R el, out Entry* head, out Entry* tail) @trusted
-    out (retLength)
-    {
-        assert((retLength == 0 && head is null && tail is null)
-            || (retLength > 0 && head !is null && tail !is null));
-    }
-    do
+    private size_t makeList(R)(scope ref R el, out Entry* head, out Entry* tail)
+    @trusted
+    out (retLength; (retLength == 0 && head is null && tail is null)
+                 || (retLength > 0 && head !is null && tail !is null))
     {
         size_t retLength;
 
@@ -1335,7 +1333,7 @@ struct DList(T)
     }
 
     /// ditto
-    size_t insertFront(R)(R el)
+    size_t insertFront(R)(scope R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -1454,7 +1452,7 @@ struct DList(T)
     }
 
     /// ditto
-    size_t insertBack(R)(R el) @trusted
+    size_t insertBack(R)(scope R el) @trusted
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -1581,7 +1579,7 @@ struct DList(T)
     }
 
     /// ditto
-    size_t insertBefore(R)(Range r, R el)
+    size_t insertBefore(R)(Range r, scope R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -1686,7 +1684,7 @@ struct DList(T)
     }
 
     /// ditto
-    size_t insertAfter(R)(Range r, R el)
+    size_t insertAfter(R)(Range r, scope R el)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
@@ -2067,7 +2065,7 @@ struct DList(T)
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref typeof(this) opAssign(R)(R that) @trusted
+    ref typeof(this) opAssign(R)(scope R that) @trusted
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
