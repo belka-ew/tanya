@@ -39,7 +39,7 @@ private enum hasConstLength(T) = is(typeof(((const T* a) => (*a).length)(null)) 
 private enum hasConstSave(T) = is(typeof(((const T* a) => (*a).save())(null)) : T);
 private enum hasConstSlice(T) = is(typeof(((const T* a) => (*a)[0 .. $])(null)) : T);
 
-unittest
+@nogc nothrow pure @safe unittest
 {
     // Test the definitions.
     static assert(hasInoutFront!string);
@@ -420,7 +420,7 @@ private struct Retro(Range)
 
     @disable this();
 
-    private this(Range source)
+    private this(Range source) @safe
     {
         this.source = source;
     }
@@ -545,7 +545,7 @@ private struct Retro(Range)
  *
  * Returns: Bidirectional range with the elements order reversed.
  */
-auto retro(Range)(return Range range)
+auto retro(Range)(Range range)
 if (isBidirectionalRange!Range)
 {
     // Special case: retro(retro(range)) is range

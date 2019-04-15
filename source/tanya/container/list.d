@@ -664,7 +664,7 @@ struct SList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    Range remove(Range r)
+    Range remove(scope Range r)
     in (checkRangeBelonging(r))
     {
         auto outOfScopeList = typeof(this)(allocator);
@@ -1907,7 +1907,7 @@ struct DList(T)
      *
      * Precondition: $(D_PARAM r) is extracted from this list.
      */
-    Range remove(Range r)
+    Range remove(scope Range r)
     in (checkRangeBelonging(r))
     {
         // Save references to the elements before and after the range.

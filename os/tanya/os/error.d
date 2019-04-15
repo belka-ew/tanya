@@ -307,14 +307,14 @@ struct ErrorCode
      *
      * Returns: $(D_KEYWORD this).
      */
-    ref ErrorCode opAssign(const ErrorNo that) @nogc nothrow pure @safe
+    ref ErrorCode opAssign(const ErrorNo that) return @nogc nothrow pure @safe
     {
         this.value_ = that;
         return this;
     }
 
     /// ditto
-    ref ErrorCode opAssign(const ErrorCode that) @nogc nothrow pure @safe
+    ref ErrorCode opAssign(const ErrorCode that) return @nogc nothrow pure @safe
     {
         this.value_ = that.value_;
         return this;

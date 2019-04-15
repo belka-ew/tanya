@@ -23,7 +23,7 @@ private mixin template InserterCtor()
 {
     private Container* container;
 
-    private this(ref Container container) @trusted
+    private this(return scope ref Container container) @trusted
     {
         this.container = &container;
     }
@@ -163,7 +163,7 @@ if (isArray!Array)
     {
         private E[] data;
 
-        private this(ref Array data) @trusted
+        private this(return scope ref Array data) @trusted
         {
             this.data = data[];
         }

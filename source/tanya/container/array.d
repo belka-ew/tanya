@@ -586,7 +586,7 @@ struct Array(T)
      *
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
-    Range remove(Range r)
+    Range remove(scope Range r)
     in (r.container is &this)
     in (r.begin >= this.data)
     in (r.end <= end)

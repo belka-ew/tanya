@@ -8,5 +8,6 @@
 	],
 	"importPaths": [
 		"."
-	]
+	],
+	"dflags": ["-dip1000"]
 }
