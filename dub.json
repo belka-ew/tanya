@@ -79,7 +79,7 @@
 		}
 	],
 
-	"dflags": ["-dip1000"],
+	"dflags-dmd": ["-dip1000"],
 
 	"libs-windows": ["advapi32"],
 	"libs-windows-x86_mscoff": ["iphlpapi"],

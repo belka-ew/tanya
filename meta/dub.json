@@ -9,5 +9,5 @@
 	"importPaths": [
 		"."
 	],
-	"dflags": ["-dip1000"]
+	"dflags-dmd": ["-dip1000"]
 }

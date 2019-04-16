@@ -727,3 +727,56 @@ auto singleton(E)(return ref E element)
     singleChar.popFront();
     assert(singleChar.empty);
 }
+
+/**
+ * Accumulates all elements of a range using a function.
+ *
+ * $(D_PSYMBOL foldl) takes a function, an input range and the initial value.
+ * The function takes this initial value and the first element of the range (in
+ * this order), puts them together and returns the result. The return
+ * type of the function should be the same as the type of the initial value.
+ * This is than repeated for all the remaining elements of the range, whereby
+ * the value returned by the passed function is used at the place of the
+ * initial value.
+ *
+ * $(D_PSYMBOL foldl) accumulates from left to right.
+ *
+ * Params:
+ *  F = Callable accepting the accumulator and a range element.
+ */
+template foldl(F...)
+if (F.length == 1)
+{
+    /**
+     * Params:
+     *  R     = Input range type.
+     *  T     = Type of the accumulated value.
+     *  range = Input range.
+     *  init  = Initial value.
+     *
+     * Returns: Accumulated value.
+     */
+    T foldl(R, T)(R range, auto ref T init)
+    if (isInputRange!R && !isInfinite!R)
+    {
+        if (range.empty)
+        {
+            return init;
+        }
+        else
+        {
+            auto acc = F[0](init, range.front);
+            range.popFront;
+            return foldl(range, acc);
+        }
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[3] range = [1, 2, 3];
+    const actual = foldl!((acc, x) => acc + x)(range[], 0);
+
+    assert(actual == 6);
+}
