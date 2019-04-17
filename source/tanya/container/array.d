@@ -16,6 +16,7 @@ module tanya.container.array;
 
 import core.checkedint;
 import tanya.algorithm.comparison;
+import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.memory.allocator;
 import tanya.memory.lifetime;
@@ -670,12 +671,7 @@ struct Array(T)
         {
             reserve(length + el.length);
         }
-        size_t retLength;
-        foreach (e; el)
-        {
-            retLength += insertBack(e);
-        }
-        return retLength;
+        return foldl!((acc, e) => acc + insertBack(e))(el, 0U);
     }
 
     /// ditto

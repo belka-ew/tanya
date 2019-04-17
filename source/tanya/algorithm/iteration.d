@@ -756,7 +756,7 @@ if (F.length == 1)
      *
      * Returns: Accumulated value.
      */
-    T foldl(R, T)(R range, auto ref T init)
+    auto foldl(R, T)(R range, auto ref T init)
     if (isInputRange!R && !isInfinite!R)
     {
         if (range.empty)
@@ -765,8 +765,7 @@ if (F.length == 1)
         }
         else
         {
-            auto acc = F[0](init, range.front);
-            range.popFront;
+            auto acc = F[0](init, getAndPopFront(range));
             return foldl(range, acc);
         }
     }

@@ -1545,3 +1545,97 @@ if (isInputRange!Range && hasLvalueElements!Range)
 
     assert(!sameHead(r1, r2));
 }
+
+/**
+ * Returns the first element and advances the range.
+ *
+ * If $(D_PARAM range) has lvalue elements, then $(D_PSYMBOL getAndPopFront)
+ * returns by reference, otherwise the returned element is copied.
+ *
+ * Params:
+ *  R     = Input range type.
+ *  range = Input range.
+ *
+ * Returns: Front range element.
+ *
+ * See_Also: $(D_PSYMBOL getAndPopBack).
+ */
+ElementType!R getAndPopFront(R)(ref R range)
+if (isInputRange!R)
+in (!range.empty)
+{
+    static if (hasLvalueElements!R)
+    {
+        auto el = (() @trusted => &range.front())();
+    }
+    else
+    {
+        auto el = range.front;
+    }
+    range.popFront();
+    static if (hasLvalueElements!R)
+    {
+        return *el;
+    }
+    else
+    {
+        return el;
+    }
+}
+
+///
+@nogc nothrow pure @safe unittest
+{
+    int[3] array = [1, 2, 3];
+    auto slice = array[];
+
+    assert(getAndPopFront(slice) == 1);
+    assert(slice.length == 2);
+}
+
+/**
+ * Returns the last element and removes it from the range.
+ *
+ * If $(D_PARAM range) has lvalue elements, then $(D_PSYMBOL getAndPopBack)
+ * returns by reference, otherwise the returned element is copied.
+ *
+ * Params:
+ *  R     = Bidirectional range type.
+ *  range = Bidirectional range.
+ *
+ * Returns: Last range element.
+ *
+ * See_Also: $(D_PSYMBOL getAndPopFront).
+ */
+auto ref getAndPopBack(R)(ref R range)
+if (isBidirectionalRange!R)
+in (!range.empty)
+{
+    static if (hasLvalueElements!R)
+    {
+        auto el = (() @trusted => &range.back())();
+    }
+    else
+    {
+        auto el = range.back;
+    }
+    range.popBack();
+    static if (hasLvalueElements!R)
+    {
+        return *el;
+    }
+    else
+    {
+        return el;
+    }
+}
+
+///
+@nogc nothrow pure @trusted unittest
+{
+    int[3] array = [1, 2, 3];
+    auto slice = array[];
+
+    assert(getAndPopBack(slice) == 3);
+    assert(slice.length == 2);
+}
