@@ -1566,6 +1566,12 @@ in (!range.empty)
 {
     static if (hasLvalueElements!R)
     {
+        if (false)
+        {
+            // This code is removed by the compiler but ensures that
+            // this function isn't @safe if range.front isn't @safe.
+            auto _ = range.front();
+        }
         auto el = (() @trusted => &range.front())();
     }
     else
@@ -1613,6 +1619,12 @@ in (!range.empty)
 {
     static if (hasLvalueElements!R)
     {
+        if (false)
+        {
+            // This code is removed by the compiler but ensures that
+            // this function isn't @safe if range.back isn't @safe.
+            auto _ = range.back();
+        }
         auto el = (() @trusted => &range.back())();
     }
     else
