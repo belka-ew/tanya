@@ -14,6 +14,7 @@
  */
 module tanya.container.hashtable;
 
+import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.container.entry;
@@ -718,12 +719,7 @@ if (isHashFunction!(hasher, Key))
     size_t insert(R)(scope R range)
     if (isForwardRange!R && is(ElementType!R == KeyValue) && !isInfinite!R)
     {
-        size_t count;
-        foreach (e; range)
-        {
-            count += insert(e);
-        }
-        return count;
+        return foldl!((acc, x) => acc + insert(x))(range, 0U);
     }
 
     ///

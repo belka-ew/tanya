@@ -16,6 +16,7 @@
 module tanya.container.list;
 
 import tanya.algorithm.comparison;
+import tanya.algorithm.iteration;
 import tanya.container.entry;
 import tanya.memory.allocator;
 import tanya.memory.lifetime;
@@ -1690,12 +1691,7 @@ struct DList(T)
      && isImplicitlyConvertible!(ElementType!R, T))
     in (checkRangeBelonging(r))
     {
-        size_t inserted;
-        foreach (e; el)
-        {
-            inserted += insertAfter(r, e);
-        }
-        return inserted;
+        return foldl!((acc, x) => acc + insertAfter(r, x))(el, 0U);
     }
 
     ///
