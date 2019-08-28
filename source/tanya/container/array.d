@@ -306,8 +306,13 @@ struct Array(T)
      */
     ~this()
     {
-        clear();
-        (() @trusted => allocator.deallocate(slice(capacity)))();
+        destroyAll(slice(this.length_));
+        deallocate();
+    }
+
+    private void deallocate() @trusted
+    {
+        allocator.deallocate(slice(capacity));
     }
 
     static if (isCopyable!T)
@@ -456,7 +461,7 @@ struct Array(T)
                     destroy(*src);
                 }
             }
-            allocator.deallocate(this.data[0 .. this.capacity_]);
+            deallocate();
             this.data = cast(T*) buf;
         }
         this.capacity_ = size;

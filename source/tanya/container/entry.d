@@ -116,7 +116,7 @@ package static immutable size_t[33] primes = [
     805306457, 1610612741, 3221225473
 ];
 
-package struct HashArray(alias hasher, K, V = void)
+package(tanya.container) struct HashArray(alias hasher, K, V = void)
 {
     alias Key = K;
     alias Value = V;

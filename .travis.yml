@@ -7,12 +7,11 @@ os:
 language: d
 
 d:
-- dmd-2.085.1
-- dmd-2.081.2
+- dmd-2.087.1
 
 env:
   global:
-  - LATEST=2.085.1
+  - LATEST=2.087.1
 
   matrix:
   - ARCH=x86_64

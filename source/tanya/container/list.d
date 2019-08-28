@@ -978,10 +978,12 @@ struct DList(T)
     // 0th and the last elements of the list.
     private Entry* head, tail;
 
-    invariant ((this.tail is null && this.head is null)
-            || (this.tail !is null && this.head !is null));
-    invariant (this.tail is null || this.tail.next is null);
-    invariant (this.head is null || this.head.prev is null);
+    static if (__VERSION__ < 2086) // Bug #20171.
+    {
+        invariant ((this.tail is null) == (this.head is null));
+        invariant (this.tail is null || this.tail.next is null);
+        invariant (this.head is null || this.head.prev is null);
+    }
 
     /**
      * Creates a new $(D_PSYMBOL DList) with the elements from a static array.
