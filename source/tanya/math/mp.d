@@ -12,6 +12,7 @@
  * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/math/mp.d,
  *                 tanya/math/mp.d)
  */
+deprecated
 module tanya.math.mp;
 
 import tanya.algorithm.comparison;

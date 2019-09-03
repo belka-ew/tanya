@@ -663,15 +663,7 @@ in (z.length > 0, "Division by zero")
     assert(pow(Integer(0), Integer(5), Integer(5)) == 0);
 }
 
-/**
- * Checks if $(D_PARAM x) is a prime.
- *
- * Params:
- *  x = The number should be checked.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM x) is a prime number,
- *          $(D_KEYWORD false) otherwise.
- */
+deprecated
 bool isPseudoprime(ulong x) @nogc nothrow pure @safe
 {
     return pow(2, x - 1, x) == 1;
