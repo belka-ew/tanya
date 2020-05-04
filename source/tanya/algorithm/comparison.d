@@ -14,6 +14,7 @@
  */
 module tanya.algorithm.comparison;
 
+import std.traits : CommonType;
 import tanya.algorithm.mutation;
 import tanya.math;
 static import tanya.memory.op;

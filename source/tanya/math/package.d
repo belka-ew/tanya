@@ -21,7 +21,6 @@
  */
 module tanya.math;
 
-import tanya.math.mp;
 import tanya.math.nbtheory;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -548,9 +547,6 @@ if (isFloatingPoint!F)
 /**
  * Computes $(D_PARAM x) to the power $(D_PARAM y) modulo $(D_PARAM z).
  *
- * If $(D_PARAM I) is an $(D_PSYMBOL Integer), the allocator of $(D_PARAM x)
- * is used to allocate the result.
- *
  * Params:
  *  I = Base type.
  *  G = Exponent type.
@@ -600,41 +596,6 @@ in (z > 0, "Division by zero")
     return result;
 }
 
-/// ditto
-I pow(I)(const auto ref I x, const auto ref I y, const auto ref I z)
-if (is(I == Integer))
-in (z.length > 0, "Division by zero")
-{
-    size_t i;
-    auto tmp1 = Integer(x, x.allocator);
-    auto result = Integer(x.allocator);
-
-    if (x.size == 0 && y.size != 0)
-    {
-        i = y.size;
-    }
-    else
-    {
-        result = 1;
-    }
-    while (i < y.size)
-    {
-        for (uint mask = 0x01; mask != 0x10000000; mask <<= 1)
-        {
-            if (y.rep[i] & mask)
-            {
-                result *= tmp1;
-                result %= z;
-            }
-            auto tmp2 = tmp1;
-            tmp1 *= tmp2;
-            tmp1 %= z;
-        }
-        ++i;
-    }
-    return result;
-}
-
 ///
 @nogc nothrow pure @safe unittest
 {
@@ -647,33 +608,4 @@ in (z.length > 0, "Division by zero")
     assert(pow(53, 2, 5) == 4);
     assert(pow(0, 0, 5) == 1);
     assert(pow(0, 5, 5) == 0);
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(pow(Integer(3), Integer(5), Integer(7)) == 5);
-    assert(pow(Integer(2), Integer(2), Integer(1)) == 0);
-    assert(pow(Integer(3), Integer(3), Integer(3)) == 0);
-    assert(pow(Integer(7), Integer(4), Integer(2)) == 1);
-    assert(pow(Integer(53), Integer(0), Integer(2)) == 1);
-    assert(pow(Integer(53), Integer(1), Integer(3)) == 2);
-    assert(pow(Integer(53), Integer(2), Integer(5)) == 4);
-    assert(pow(Integer(0), Integer(0), Integer(5)) == 1);
-    assert(pow(Integer(0), Integer(5), Integer(5)) == 0);
-}
-
-deprecated
-bool isPseudoprime(ulong x) @nogc nothrow pure @safe
-{
-    return pow(2, x - 1, x) == 1;
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(74623.isPseudoprime);
-    assert(104729.isPseudoprime);
-    assert(15485867.isPseudoprime);
-    assert(!15485868.isPseudoprime);
 }

@@ -14,7 +14,6 @@
  */
 module tanya.math.nbtheory;
 
-import tanya.math.mp;
 import tanya.meta.trait;
 import tanya.meta.transform;
 
@@ -89,21 +88,6 @@ if (isFloatingPoint!T)
     real r = -1.64;
     assert(r.abs == 1.64L);
     static assert(is(typeof(r.abs) == real));
-}
-
-/// ditto
-T abs(T : Integer)(const auto ref T x)
-{
-    auto result = Integer(x, x.allocator);
-    result.sign = Sign.positive;
-    return result;
-}
-
-/// ditto
-T abs(T : Integer)(T x)
-{
-    x.sign = Sign.positive;
-    return x;
 }
 
 version (D_Ddoc)

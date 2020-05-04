@@ -14,6 +14,7 @@
  */
 module tanya.conv;
 
+import std.traits : Unsigned;
 import tanya.container.string;
 import tanya.memory.allocator;
 deprecated("Use tanya.memory.lifetime.emplace instead")

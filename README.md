@@ -174,7 +174,7 @@ parameter is used)
 
 | DMD     | GCC       |
 |:-------:|:---------:|
-| 2.087.1 | gdc trunk |
+| 2.091.1 | gdc trunk |
 
 ## Further characteristics
 
