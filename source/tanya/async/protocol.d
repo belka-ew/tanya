@@ -9,7 +9,7 @@
  * When an event from the network arrives, a protocol method gets
  * called and can respond to the event.
  *
- * Copyright: Eugene Wissner 2016-2019.
+ * Copyright: Eugene Wissner 2016-2020.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)

@@ -5,7 +5,7 @@
 /**
  * This module defines primitives for working with ranges.
  *
- * Copyright: Eugene Wissner 2017-2019.
+ * Copyright: Eugene Wissner 2017-2020.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
