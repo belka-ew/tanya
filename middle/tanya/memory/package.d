@@ -16,5 +16,3 @@ module tanya.memory;
 
 public import tanya.memory.allocator;
 public import tanya.memory.lifetime;
-deprecated("Use tanya.meta.trait.stateSize instead")
-public import tanya.meta.trait : stateSize;

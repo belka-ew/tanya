@@ -211,14 +211,6 @@ struct Option(T)
         return this.value;
     }
 
-    /// ditto
-    deprecated("Call Option.get explicitly instead of relying on alias this")
-    @property ref inout(T) get_() inout
-    in (!isNothing, "Option is nothing")
-    {
-        return this.value;
-    }
-
     /**
      * Returns the encapsulated value if available or a default value
      * otherwise.
@@ -384,8 +376,6 @@ struct Option(T)
             return isNothing ? 0U : this.value.toHash();
         }
     }
-
-    alias get_ this;
 }
 
 ///

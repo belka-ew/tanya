@@ -630,13 +630,7 @@ template isRandomAccessRange(R)
  */
 void put(R, E)(ref R range, auto ref E e)
 {
-    static if (__traits(hasMember, R, "put")
-            && is(typeof((R r, E e) => r.put(e))))
-    {
-        pragma(msg, "OutputRange.put()-primitive is deprecated. Define opCall() instead.");
-        range.put(e);
-    }
-    else static if (is(typeof((R r, E e) => r(e))))
+    static if (is(typeof((R r, E e) => r(e))))
     {
         range(e);
     }

@@ -20,15 +20,6 @@ import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
 
-deprecated("Use tanya.memory.lifetime.swap instead")
-alias swap = tanya.memory.lifetime.swap;
-
-deprecated("Use tanya.memory.lifetime.moveEmplace instead")
-alias moveEmplace = tanya.memory.lifetime.moveEmplace;
-
-deprecated("Use tanya.memory.lifetime.move instead")
-alias move = tanya.memory.lifetime.move;
-
 /**
  * Copies the $(D_PARAM source) range into the $(D_PARAM target) range.
  *

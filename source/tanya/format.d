@@ -2253,26 +2253,6 @@ private void printToString(string fmt, OR, Args...)(ref OR result,
     {
         formatRange(args[0], result);
     }
-    else static if (is(Unqual!(typeof(args[0].stringify())) == String))
-    {
-        pragma(msg, ".stringify() is deprecated. Use toString() with an output"
-                  ~ " range instead");
-        static if (is(Arg == class) || is(Arg == interface))
-        {
-            if (args[0] is null)
-            {
-                put(result, "null");
-            }
-            else
-            {
-                put(result, args[0].stringify()[]);
-            }
-        }
-        else
-        {
-            put(result, args[0].stringify()[]);
-        }
-    }
     else static if (is(typeof(args[0].toString(result)) == OR))
     {
         static if (is(Arg == class) || is(Arg == interface))

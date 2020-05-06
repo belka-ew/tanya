@@ -94,8 +94,8 @@ struct Address4
     ///
     @nogc nothrow pure @safe unittest
     {
-        assert(address4("127.0.0.1") > address4("126.0.0.0"));
-        assert(address4("127.0.0.1") < address4("127.0.0.2"));
+        assert(address4("127.0.0.1").get > address4("126.0.0.0").get);
+        assert(address4("127.0.0.1").get < address4("127.0.0.2").get);
         assert(address4("127.0.0.1") == address4("127.0.0.1"));
     }
 
@@ -231,26 +231,6 @@ struct Address4
     @nogc nothrow pure @safe unittest
     {
         assert(address4("192.168.0.1").get.isUnicast());
-    }
-
-    /**
-     * Produces a string containing an IPv4 address in dotted-decimal notation.
-     *
-     * Returns: This address in dotted-decimal notation.
-     */
-    deprecated("Use Address4.toString() instead")
-    String stringify() const @nogc nothrow pure @safe
-    {
-        const octets = (() @trusted => (cast(ubyte*) &this.address)[0 .. 4])();
-        enum string fmt = "{}.{}.{}.{}";
-        version (LittleEndian)
-        {
-            return format!fmt(octets[0], octets[1], octets[2], octets[3]);
-        }
-        else
-        {
-            return format!fmt(octets[3], octets[2], octets[1], octets[0]);
-        }
     }
 
     /**
@@ -502,11 +482,11 @@ struct Address6
     ///
     @nogc nothrow @safe unittest
     {
-        assert(address6("::14") > address6("::1"));
-        assert(address6("::1") < address6("::14"));
+        assert(address6("::14").get > address6("::1").get);
+        assert(address6("::1").get < address6("::14").get);
         assert(address6("::1") == address6("::1"));
-        assert(address6("fe80::1%1") < address6("fe80::1%2"));
-        assert(address6("fe80::1%2") > address6("fe80::1%1"));
+        assert(address6("fe80::1%1").get < address6("fe80::1%2").get);
+        assert(address6("fe80::1%2").get > address6("fe80::1%1").get);
     }
 
     /**
@@ -648,20 +628,6 @@ struct Address6
     @nogc nothrow @safe unittest
     {
         assert(address6("fd80:124e:34f3::1").get.isUniqueLocal());
-    }
-
-    /**
-     * Returns text representation of this address.
-     *
-     * Returns: text representation of this address.
-     */
-    deprecated("Use Address6.toString() instead")
-    String stringify() const @nogc nothrow pure @safe
-    {
-        String output;
-
-        toString(backInserter(output));
-        return output;
     }
 
     /**
