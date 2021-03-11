@@ -15,7 +15,7 @@
 module tanya.container.array;
 
 import core.checkedint;
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.memory.allocator;

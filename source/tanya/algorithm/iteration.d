@@ -20,7 +20,7 @@
  */
 module tanya.algorithm.iteration;
 
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -558,8 +558,6 @@ if (isBidirectionalRange!Range)
 ///
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
-
     const int[3] given = [1, 2, 3];
     const int[3] expected = [3, 2, 1];
 

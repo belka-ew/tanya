@@ -23,7 +23,7 @@ import core.stdc.errno;
 public import core.sys.linux.epoll;
 import core.sys.posix.unistd;
 import core.time;
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.async.event.selector;
 import tanya.async.loop;
 import tanya.async.protocol;

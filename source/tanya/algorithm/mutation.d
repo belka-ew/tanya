@@ -77,7 +77,7 @@ do
 ///
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     const int[2] source = [1, 2];
     int[2] target = [3, 4];
@@ -114,7 +114,7 @@ if (isInputRange!Range && isAssignable!(ElementType!Range, Value))
 ///
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     int[6] actual;
     const int[6] expected = [1, 1, 1, 1, 1, 1];
@@ -154,7 +154,7 @@ if (isInputRange!Range && hasLvalueElements!Range
 ///
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     int[6] actual = void;
     const int[6] expected = [1, 1, 1, 1, 1, 1];
@@ -196,7 +196,7 @@ if (isInputRange!Range && hasLvalueElements!Range)
 ///
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     int[2] actual = void;
     const int[2] expected = [0, 0];
@@ -287,7 +287,7 @@ if (isForwardRange!Range && hasSwappableElements!Range)
 ///
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     const int[7] expected = [1, 2, 3, 4, 5, 6, 7];
     int[7] actual = [5, 6, 3, 4, 1, 2, 7];

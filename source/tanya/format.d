@@ -47,7 +47,7 @@
  */
 module tanya.format;
 
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.container.string;
 import tanya.encoding.ascii;
 import tanya.math;

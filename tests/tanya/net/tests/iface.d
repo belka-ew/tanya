@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 module tanya.net.tests.iface;
 
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.net.iface;
 
 @nogc nothrow @safe unittest

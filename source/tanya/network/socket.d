@@ -53,7 +53,6 @@ module tanya.network.socket;
 import core.stdc.errno;
 import core.time;
 public import std.socket : SocketOption, SocketOptionLevel;
-import tanya.algorithm.comparison;
 import tanya.bitmanip;
 import tanya.memory.allocator;
 import tanya.meta.trait;

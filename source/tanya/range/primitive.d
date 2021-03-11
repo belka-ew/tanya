@@ -14,7 +14,7 @@
  */
 module tanya.range.primitive;
 
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.meta.transform;
@@ -305,7 +305,7 @@ private template isDynamicArrayRange(R)
 
 private struct Primitive(Candidate, string primitive)
 {
-    auto ref returnType(Candidate candidate)
+    auto ref returnType(ref Candidate candidate)
     {
         mixin("return candidate." ~ primitive ~ ";");
     }

@@ -15,7 +15,7 @@
  */
 module tanya.container.list;
 
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.algorithm.iteration;
 import tanya.container.entry;
 import tanya.memory.allocator;

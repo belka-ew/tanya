@@ -14,7 +14,7 @@
  */
 module tanya.net.ip;
 
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.container.string;
@@ -465,7 +465,7 @@ struct Address6
      */
     int opCmp(ref const Address6 that) const @nogc nothrow pure @safe
     {
-        const diff = compare(this.address[], that.address[]);
+        const diff = cmp(this.address[], that.address[]);
         if (diff == 0)
         {
             return (that.scopeID < this.scopeID) - (this.scopeID < that.scopeID);

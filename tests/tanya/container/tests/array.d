@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 module tanya.container.tests.array;
 
-import tanya.algorithm.comparison;
+import std.algorithm.comparison;
 import tanya.container.array;
 import tanya.memory.allocator;
 import tanya.test.stub;
@@ -186,11 +186,4 @@ import tanya.test.stub;
         assert(arg.capacity == 3);
     }
     func(array);
-}
-
-// Can have non-copyable elements
-@nogc nothrow pure @safe unittest
-{
-    static assert(is(Array!NonCopyable));
-    static assert(is(typeof({ Array!NonCopyable.init[0] = NonCopyable(); })));
 }

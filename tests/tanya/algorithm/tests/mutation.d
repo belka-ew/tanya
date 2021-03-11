@@ -17,7 +17,7 @@ import tanya.test.stub;
 // Copies overlapping arrays
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     int[6] actual = [1, 2, 3, 4, 5, 6];
     const int[6] expected = [1, 2, 1, 2, 3, 4];
@@ -94,7 +94,7 @@ import tanya.test.stub;
 
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     const int[5] expected = [1, 2, 3, 4, 5];
     int[5] actual = [4, 5, 1, 2, 3];
@@ -106,7 +106,7 @@ import tanya.test.stub;
 // Doesn't cause an infinite loop if back is shorter than the front
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     const int[5] expected = [1, 2, 3, 4, 5];
     int[5] actual = [3, 4, 5, 1, 2];
@@ -118,7 +118,7 @@ import tanya.test.stub;
 // Doesn't call .front on an empty front
 @nogc nothrow pure @safe unittest
 {
-    import tanya.algorithm.comparison : equal;
+    import std.algorithm.comparison : equal;
 
     const int[2] expected = [2, 8];
     int[2] actual = expected;
