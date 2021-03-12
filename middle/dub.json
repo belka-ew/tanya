@@ -5,8 +5,7 @@
 
 	"dependencies": {
 		"tanya:meta": "*",
-		"tanya:os": "*",
-		"tanya:sys": "*"
+		"tanya:os": "*"
 	},
 
 	"dependencies-linux": {

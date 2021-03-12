@@ -14,32 +14,18 @@
  */
 module tanya.memory.mmappool;
 
-version (TanyaNative):
-
-import mir.linux._asm.unistd;
+import core.sys.linux.sys.mman;
 import tanya.memory.allocator;
 import tanya.memory.op;
 import tanya.os.error;
-import tanya.sys.linux.syscall;
-import tanya.sys.posix.mman;
 
-private void* mapMemory(const size_t length) @nogc nothrow pure @system
-{
-    auto p = syscall_(0,
-                      length,
-                      PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS,
-                      -1,
-                      0,
-                      NR_mmap);
-    return p == -ErrorCode.noMemory ? null : cast(void*) p;
-}
+extern(C) pragma(mangle, "mmap")
+private void* mapMemory(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+@nogc nothrow pure @system;
 
-private bool unmapMemory(shared void* addr, const size_t length)
-@nogc nothrow pure @system
-{
-    return syscall_(cast(ptrdiff_t) addr, length, NR_munmap) == 0;
-}
+extern(C) pragma(mangle, "munmap")
+private bool unmapMemory(shared void* addr, size_t length)
+@nogc nothrow pure @system;
 
 /*
  * This allocator allocates memory in regions (multiple of 64 KB for example).
@@ -206,7 +192,7 @@ final class MmapPool : Allocator
             {
                 block.region.next.prev = block.region.prev;
             }
-            return unmapMemory(block.region, block.region.size);
+            return unmapMemory(block.region, block.region.size) == 0;
         }
         // Merge blocks if neigbours are free.
         if (block.next !is null && block.next.free)
@@ -394,9 +380,13 @@ final class MmapPool : Allocator
         {
             return null;
         }
-
-        void* p = mapMemory(regionSize);
-        if (p is null)
+        void* p = mapMemory(null,
+                regionSize,
+                PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS,
+                -1,
+                0);
+        if (cast(ptrdiff_t) p == -1)
         {
             return null;
         }
@@ -506,10 +496,10 @@ final class MmapPool : Allocator
 {
     // allocate() check.
     size_t tooMuchMemory = size_t.max
-                         - MmapPool.alignment_
-                         - BlockEntry.sizeof * 2
-                         - RegionEntry.sizeof
-                         - pageSize;
+        - MmapPool.alignment_
+        - MmapPool.BlockEntry.sizeof * 2
+        - MmapPool.RegionEntry.sizeof
+        - MmapPool.pageSize;
     assert(MmapPool.instance.allocate(tooMuchMemory) is null);
 
     assert(MmapPool.instance.allocate(size_t.max) is null);

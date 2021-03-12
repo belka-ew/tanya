@@ -20,15 +20,7 @@ import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
 
-version (TanyaNative)
-{
-    import mir.linux._asm.unistd;
-    import tanya.sys.linux.syscall;
-    import tanya.sys.posix.ioctl;
-    import tanya.sys.posix.net.if_;
-    import tanya.sys.posix.socket;
-}
-else version (Windows)
+version (Windows)
 {
     import tanya.sys.windows.ifdef;
     import tanya.sys.windows.iphlpapi;
@@ -52,39 +44,7 @@ else version (Posix)
 uint nameToIndex(R)(R name) @trusted
 if (isInputRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
 {
-    version (TanyaNative)
-    {
-        if (name.length >= IF_NAMESIZE)
-        {
-            return 0;
-        }
-        ifreq ifreq_ = void;
-
-        copy(name, ifreq_.ifr_name[]);
-        ifreq_.ifr_name[name.length] = '\0';
-
-        auto socket = syscall(AF_INET,
-                              SOCK_DGRAM | SOCK_CLOEXEC,
-                              0,
-                              NR_socket);
-        if (socket <= 0)
-        {
-            return 0;
-        }
-        scope (exit)
-        {
-            syscall(socket, NR_close);
-        }
-        if (syscall(socket,
-                    SIOCGIFINDEX,
-                    cast(ptrdiff_t) &ifreq_,
-                    NR_ioctl) == 0)
-        {
-            return ifreq_.ifr_ifindex;
-        }
-        return 0;
-    }
-    else version (Windows)
+    version (Windows)
     {
         if (name.length > IF_MAX_STRING_SIZE)
         {
@@ -155,33 +115,7 @@ String indexToName(uint index) @nogc nothrow @trusted
 {
     import tanya.memory.op : findNullTerminated;
 
-    version (TanyaNative)
-    {
-        ifreq ifreq_ = void;
-        ifreq_.ifr_ifindex = index;
-
-        auto socket = syscall(AF_INET,
-                              SOCK_DGRAM | SOCK_CLOEXEC,
-                              0,
-                              NR_socket);
-        if (socket <= 0)
-        {
-            return String();
-        }
-        scope (exit)
-        {
-            syscall(socket, NR_close);
-        }
-        if (syscall(socket,
-                    SIOCGIFNAME,
-                    cast(ptrdiff_t) &ifreq_,
-                    NR_ioctl) == 0)
-        {
-            return String(findNullTerminated(ifreq_.ifr_name));
-        }
-        return String();
-    }
-    else version (Windows)
+    version (Windows)
     {
         NET_LUID luid;
         if (ConvertInterfaceIndexToLuid(index, &luid) != 0)

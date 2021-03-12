@@ -17,21 +17,8 @@ module tanya.math.nbtheory;
 import tanya.meta.trait;
 import tanya.meta.transform;
 
-version (TanyaNative)
-{
-    private extern float fabs(float) @nogc nothrow pure @safe;
-    private extern double fabs(double) @nogc nothrow pure @safe;
-    private extern real fabs(real) @nogc nothrow pure @safe;
-
-    private extern double log(double) @nogc nothrow pure @safe;
-    private extern float logf(float) @nogc nothrow pure @safe;
-    private extern real logl(real) @nogc nothrow pure @safe;
-}
-else
-{
-    import core.math : fabs;
-    import std.math : log;
-}
+import core.math : fabs;
+import std.math : log;
 
 /**
  * Calculates the absolute value of a number.
@@ -90,46 +77,19 @@ if (isFloatingPoint!T)
     static assert(is(typeof(r.abs) == real));
 }
 
-version (D_Ddoc)
+/**
+ * Calculates natural logarithm of $(D_PARAM x).
+ *
+ * Params:
+ *  T = Argument type.
+ *  x = Argument.
+ *
+ * Returns: Natural logarithm of $(D_PARAM x).
+ */
+Unqual!T ln(T)(T x)
+if (isFloatingPoint!T)
 {
-    /**
-     * Calculates natural logarithm of $(D_PARAM x).
-     *
-     * Params:
-     *  T = Argument type.
-     *  x = Argument.
-     *
-     * Returns: Natural logarithm of $(D_PARAM x).
-     */
-    Unqual!T ln(T)(T x)
-    if (isFloatingPoint!T);
-}
-else version (TanyaNative)
-{
-    Unqual!T ln(T)(T x) @nogc nothrow pure @safe
-    if (isFloatingPoint!T)
-    {
-        static if (is(Unqual!T == float))
-        {
-            return logf(x);
-        }
-        else static if (is(Unqual!T == double))
-        {
-            return log(x);
-        }
-        else
-        {
-            return logl(x);
-        }
-    }
-}
-else
-{
-    Unqual!T ln(T)(T x)
-    if (isFloatingPoint!T)
-    {
-        return log(x);
-    }
+    return log(x);
 }
 
 ///

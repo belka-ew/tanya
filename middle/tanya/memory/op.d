@@ -14,23 +14,7 @@
  */
 module tanya.memory.op;
 
-version (TanyaNative)
-{
-    extern private void fillMemory(void[], size_t) pure nothrow @system @nogc;
-
-    extern private void copyMemory(const void[], void[])
-    pure nothrow @system @nogc;
-
-    extern private void moveMemory(const void[], void[])
-    pure nothrow @system @nogc;
-
-    extern private bool equalMemory(const void[], const void[])
-    pure nothrow @system @nogc;
-}
-else
-{
-    import core.stdc.string;
-}
+import core.stdc.string;
 
 private enum alignMask = size_t.sizeof - 1;
 
@@ -56,14 +40,7 @@ in (source.length <= target.length)
 in (source.length == 0 || source.ptr !is null)
 in (target.length == 0 || target.ptr !is null)
 {
-    version (TanyaNative)
-    {
-        copyMemory(source, target);
-    }
-    else
-    {
-        memcpy(target.ptr, source.ptr, source.length);
-    }
+    memcpy(target.ptr, source.ptr, source.length);
 }
 
 ///
@@ -100,14 +77,7 @@ private template filledBytes(ubyte Byte, ubyte I = 0)
 void fill(ubyte c = 0)(void[] memory) @trusted
 in (memory.length == 0 || memory.ptr !is null)
 {
-    version (TanyaNative)
-    {
-        fillMemory(memory, filledBytes!c);
-    }
-    else
-    {
-        memset(memory.ptr, c, memory.length);
-    }
+    memset(memory.ptr, c, memory.length);
 }
 
 ///
@@ -148,14 +118,7 @@ in (source.length <= target.length)
 in (source.length == 0 || source.ptr !is null)
 in (target.length == 0 || target.ptr !is null)
 {
-    version (TanyaNative)
-    {
-        moveMemory(source, target);
-    }
-    else
-    {
-        memmove(target.ptr, source.ptr, source.length);
-    }
+    memmove(target.ptr, source.ptr, source.length);
 }
 
 ///
@@ -330,15 +293,7 @@ bool equal(const void[] r1, const void[] r2) @nogc nothrow pure @trusted
 in (r1.length == 0 || r1.ptr !is null)
 in (r2.length == 0 || r2.ptr !is null)
 {
-    version (TanyaNative)
-    {
-        return equalMemory(r1, r2);
-    }
-    else
-    {
-        return r1.length == r2.length
-            && memcmp(r1.ptr, r2.ptr, r1.length) == 0;
-    }
+    return r1.length == r2.length && memcmp(r1.ptr, r2.ptr, r1.length) == 0;
 }
 
 ///

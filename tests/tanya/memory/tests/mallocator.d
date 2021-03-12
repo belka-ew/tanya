@@ -3,11 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 module tanya.memory.tests.mallocator;
 
-version (TanyaNative)
-{
-}
-else:
-
 import tanya.memory.mallocator;
 
 // Fails with false

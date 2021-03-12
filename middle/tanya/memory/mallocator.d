@@ -15,11 +15,6 @@
  */
 module tanya.memory.mallocator;
 
-version (TanyaNative)
-{
-}
-else:
-
 import core.stdc.stdlib;
 import tanya.memory.allocator;
 
