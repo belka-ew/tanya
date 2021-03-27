@@ -14,6 +14,7 @@
  */
 module tanya.math.random;
 
+import std.typecons;
 import tanya.memory.allocator;
 import tanya.typecons;
 
@@ -90,8 +91,8 @@ abstract class EntropySource
      * Postcondition: Returned length is less than or equal to
      *                $(D_PARAM output) length.
      */
-    Option!ubyte poll(out ubyte[maxGather] output) @nogc
-    out (length; length.isNothing || length.get <= maxGather);
+    Nullable!ubyte poll(out ubyte[maxGather] output) @nogc
+    out (length; length.isNull || length.get <= maxGather);
 }
 
 version (CRuntime_Bionic)
@@ -151,12 +152,12 @@ version (linux)
          * Returns: Number of bytes that were copied to the $(D_PARAM output)
          *          or nothing on error.
          */
-        override Option!ubyte poll(out ubyte[maxGather] output) @nogc nothrow
+        override Nullable!ubyte poll(out ubyte[maxGather] output) @nogc nothrow
         {
             // int getrandom(void *buf, size_t buflen, unsigned int flags);
             import mir.linux._asm.unistd : NR_getrandom;
             auto length = syscall(NR_getrandom, output.ptr, output.length, 0);
-            Option!ubyte ret;
+            Nullable!ubyte ret;
 
             if (length >= 0)
             {
@@ -202,11 +203,11 @@ else version (SecureARC4Random)
          * Returns: Number of bytes that were copied to the $(D_PARAM output)
          *          or nothing on error.
          */
-        override Option!ubyte poll(out ubyte[maxGather] output)
+        override Nullable!ubyte poll(out ubyte[maxGather] output)
         @nogc nothrow @safe
         {
             (() @trusted => arc4random_buf(output.ptr, output.length))();
-            return Option!ubyte(cast(ubyte) (output.length));
+            return Nullable!ubyte(cast(ubyte) (output.length));
         }
     }
 }
@@ -310,10 +311,10 @@ else version (Windows)
          * Returns: Number of bytes that were copied to the $(D_PARAM output)
          *          or nothing on error.
          */
-        override Option!ubyte poll(out ubyte[maxGather] output)
+        override Nullable!ubyte poll(out ubyte[maxGather] output)
         @nogc nothrow @safe
         {
-            Option!ubyte ret;
+            Nullable!ubyte ret;
 
             assert(hProvider > 0, "hProvider not properly initialized");
             if ((() @trusted => CryptGenRandom(hProvider, output.length, cast(PBYTE) output.ptr))())

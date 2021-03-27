@@ -21,11 +21,11 @@
 module tanya.algorithm.iteration;
 
 import std.algorithm.comparison;
+import std.typecons;
 import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
-import tanya.typecons;
 
 // These predicates are used to help preserve `const` and `inout` for
 // ranges built on other ranges.
@@ -570,7 +570,7 @@ if (isBidirectionalRange!Range)
 
 private struct SingletonByValue(E)
 {
-    private Option!E element;
+    private Nullable!E element;
 
     @disable this();
 
@@ -581,9 +581,9 @@ private struct SingletonByValue(E)
     }
 
     private this(U)(ref U element)
-    if (is(Unqual!U == Option!(Unqual!E)) || is(Unqual!U == Option!(const E)))
+    if (is(Unqual!U == Nullable!(Unqual!E)) || is(Unqual!U == Nullable!(const E)))
     {
-        if (!element.isNothing)
+        if (!element.isNull)
         {
             this.element = element.get;
         }
@@ -600,29 +600,24 @@ private struct SingletonByValue(E)
     void popFront()
     in (!empty)
     {
-        this.element.reset();
+        this.element.nullify();
     }
 
     alias popBack = popFront;
 
     @property bool empty() const
     {
-        return this.element.isNothing;
+        return this.element.isNull;
     }
 
     @property size_t length() const
     {
-        return !this.element.isNothing;
+        return !this.element.isNull;
     }
 
     auto save()
     {
         return SingletonByValue!E(this.element);
-    }
-
-    auto save() const
-    {
-        return SingletonByValue!(const E)(this.element);
     }
 
     ref inout(E) opIndex(size_t i) inout
@@ -673,11 +668,6 @@ private struct SingletonByRef(E)
     auto save() return
     {
         return typeof(this)(*this.element);
-    }
-
-    auto save() const return
-    {
-        return SingletonByRef!(const E)(*this.element);
     }
 
     ref inout(E) opIndex(size_t i) inout return

@@ -9,17 +9,17 @@ import tanya.range;
 // Rejects malformed addresses
 @nogc nothrow pure @safe unittest
 {
-    assert(address4("256.0.0.1").isNothing);
-    assert(address4(".0.0.1").isNothing);
-    assert(address4("0..0.1").isNothing);
-    assert(address4("0.0.0.").isNothing);
-    assert(address4("0.0.").isNothing);
-    assert(address4("").isNothing);
+    assert(address4("256.0.0.1").isNull);
+    assert(address4(".0.0.1").isNull);
+    assert(address4("0..0.1").isNull);
+    assert(address4("0.0.0.").isNull);
+    assert(address4("0.0.").isNull);
+    assert(address4("").isNull);
 }
 
 @nogc nothrow pure @safe unittest
 {
-    assert(address4(cast(ubyte[]) []).isNothing);
+    assert(address4(cast(ubyte[]) []).isNull);
 }
 
 // Assignment and comparison works
@@ -106,12 +106,12 @@ import tanya.range;
 // Rejects malformed addresses
 @nogc nothrow @safe unittest
 {
-    assert(address6("").isNothing);
-    assert(address6(":").isNothing);
-    assert(address6(":a").isNothing);
-    assert(address6("a:").isNothing);
-    assert(address6("1:2:3:4::6:").isNothing);
-    assert(address6("fe80:2:3:4::6:7:8%").isNothing);
+    assert(address6("").isNull);
+    assert(address6(":").isNull);
+    assert(address6(":a").isNull);
+    assert(address6("a:").isNull);
+    assert(address6("1:2:3:4::6:").isNull);
+    assert(address6("fe80:2:3:4::6:7:8%").isNull);
 }
 
 // Parses embedded IPv4 address
@@ -138,9 +138,9 @@ import tanya.range;
 
 @nogc nothrow @safe unittest
 {
-    assert(address6("0:0:0:0:0:0:1.2.3.").isNothing);
-    assert(address6("0:0:0:0:0:0:1.2:3.4").isNothing);
-    assert(address6("0:0:0:0:0:0:1.2.3.4.").isNothing);
+    assert(address6("0:0:0:0:0:0:1.2.3.").isNull);
+    assert(address6("0:0:0:0:0:0:1.2:3.4").isNull);
+    assert(address6("0:0:0:0:0:0:1.2.3.4.").isNull);
     assert(address6("fe80:0:0:0:0:0:1.2.3.4%1").get.scopeID == 1);
 }
 

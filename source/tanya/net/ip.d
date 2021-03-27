@@ -15,6 +15,7 @@
 module tanya.net.ip;
 
 import std.algorithm.comparison;
+import std.typecons;
 import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.container.string;
@@ -242,7 +243,7 @@ struct Address4
      *
      * Returns: $(D_PARAM output).
      */
-    OR toString(OR)(OR output) const @nogc nothrow pure @safe
+    OR toString(OR)(OR output) const
     if (isOutputRange!(OR, const(char)[]))
     {
         const octets = (() @trusted => (cast(ubyte*) &this.address)[0 .. 4])();
@@ -324,10 +325,10 @@ struct Address4
  *  R     = Input range type.
  *  range = Stringish range containing the address.
  *
- * Returns: $(D_PSYMBOL Option) containing the address if the parsing was
+ * Returns: $(D_PSYMBOL Nullable) containing the address if the parsing was
  *          successful, or nothing otherwise.
  */
-Option!Address4 address4(R)(R range)
+Nullable!Address4 address4(R)(R range)
 if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
 {
     Address4 result;
@@ -370,10 +371,10 @@ if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
  *  R     = Input range type.
  *  range = $(D_KEYWORD ubyte) range containing the address.
  *
- * Returns: $(D_PSYMBOL Option) containing the address if the $(D_PARAM range)
+ * Returns: $(D_PSYMBOL Nullable) containing the address if the $(D_PARAM range)
  *          contains exactly 4 bytes, or nothing otherwise.
  */
-Option!Address4 address4(R)(R range)
+Nullable!Address4 address4(R)(R range)
 if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
 {
     Address4 result;
@@ -407,11 +408,11 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
     }
     {
         ubyte[3] actual = [127, 0, 0];
-        assert(address4(actual[]).isNothing);
+        assert(address4(actual[]).isNull);
     }
     {
         ubyte[5] actual = [127, 0, 0, 0, 1];
-        assert(address4(actual[]).isNothing);
+        assert(address4(actual[]).isNull);
     }
 }
 
@@ -795,10 +796,10 @@ in (digit < 16)
  *  R     = Input range type.
  *  range = Stringish range containing the address.
  *
- * Returns: $(D_PSYMBOL Option) containing the address if the parsing was
+ * Returns: $(D_PSYMBOL Nullable) containing the address if the parsing was
  *          successful, or nothing otherwise.
  */
-Option!Address6 address6(R)(R range)
+Nullable!Address6 address6(R)(R range)
 if (isForwardRange!R && is(Unqual!(ElementType!R) == char) && hasLength!R)
 {
     if (range.empty)
@@ -1006,10 +1007,10 @@ CopyTail:
  *  range   = $(D_KEYWORD ubyte) range containing the address.
  *  scopeID = Scope ID.
  *
- * Returns: $(D_PSYMBOL Option) containing the address if the $(D_PARAM range)
+ * Returns: $(D_PSYMBOL Nullable) containing the address if the $(D_PARAM range)
  *          contains exactly 16 bytes, or nothing otherwise.
  */
-Option!Address6 address6(R)(R range, uint scopeID = 0)
+Nullable!Address6 address6(R)(R range, uint scopeID = 0)
 if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
 {
     Address6 result;
@@ -1030,20 +1031,20 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
     {
         ubyte[16] actual = [ 1, 2, 3, 4, 5, 6, 7, 8,
                              9, 10, 11, 12, 13, 14, 15, 16 ];
-        assert(!address6(actual[]).isNothing);
+        assert(!address6(actual[]).isNull);
     }
     {
         ubyte[15] actual = [ 1, 2, 3, 4, 5, 6, 7, 8,
                              9, 10, 11, 12, 13, 14, 15 ];
-        assert(address6(actual[]).isNothing);
+        assert(address6(actual[]).isNull);
     }
     {
         ubyte[17] actual = [ 1, 2, 3, 4, 5, 6, 7, 8, 9,
                              10, 11, 12, 13, 14, 15, 16, 17 ];
-        assert(address6(actual[]).isNothing);
+        assert(address6(actual[]).isNull);
     }
     {
-        assert(address6(cast(ubyte[]) []).isNothing);
+        assert(address6(cast(ubyte[]) []).isNull);
     }
 }
 
