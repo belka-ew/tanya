@@ -1,8 +1,6 @@
 # Tanya
 
-[![Build Status](https://travis-ci.com/caraus-ecms/tanya.svg?branch=master)](https://travis-ci.com/caraus-ecms/tanya)
-[![Build status](https://ci.appveyor.com/api/projects/status/djkmverdfsylc7ti/branch/master?svg=true)](https://ci.appveyor.com/project/belka-ew/tanya/branch/master)
-[![codecov](https://codecov.io/gh/caraus-ecms/tanya/branch/master/graph/badge.svg)](https://codecov.io/gh/caraus-ecms/tanya)
+[![CI/CD](https://img.shields.io/badge/CI-CD-brightgreen)](https://build.caraus.tech/go/pipelines)
 [![Dub version](https://img.shields.io/dub/v/tanya.svg)](https://code.dlang.org/packages/tanya)
 [![Dub downloads](https://img.shields.io/dub/dt/tanya.svg)](https://code.dlang.org/packages/tanya)
 [![License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://raw.githubusercontent.com/caraus-ecms/tanya/master/LICENSE)

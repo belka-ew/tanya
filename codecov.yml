@@ -1,3 +1,0 @@
-ignore:
-  - "source/tanya/async/event/iocp.d"
-  - "source/tanya/async/iocp.d"
