@@ -37,7 +37,7 @@ else version (D_Ddoc)
 
 version (WindowsDoc):
 
-import tanya.sys.windows.winbase;
+import core.sys.windows.winbase;
 
 /**
  * Provides an extendable representation of a Win32 $(D_PSYMBOL OVERLAPPED)
