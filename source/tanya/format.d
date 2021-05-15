@@ -48,8 +48,8 @@
 module tanya.format;
 
 import std.algorithm.comparison;
+import std.ascii;
 import tanya.container.string;
-import tanya.encoding.ascii;
 import tanya.math;
 static import tanya.memory.op;
 import tanya.meta.metafunction;

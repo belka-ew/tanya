@@ -12,7 +12,6 @@
 	"dependencies": {
 		"tanya:meta": "*",
 		"tanya:os": "*",
-		"tanya:encoding": "*",
 		"tanya:middle": "*",
 		"tanya:test": "*"
 	},
@@ -24,7 +23,6 @@
 	"subPackages": [
 		"./meta",
 		"./os",
-		"./encoding",
 		"./middle",
 		"./test"
 	],

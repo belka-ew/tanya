@@ -26,10 +26,7 @@ Tanya consists of the following packages and (top-level) modules:
 string, Set, Hash table.
 * `conv`: This module provides functions for converting between different
 types.
-* `encoding`: This package provides tools to work with text encodings.
 * `format`: Formatting and conversion functions.
-* `functional`: Functions that manipulate other functions and their argument
-lists.
 * `hash`: Hash algorithms.
 * `math`: Arbitrary precision integer and a set of functions.
 * `memory`: Tools for manual memory management (allocators, smart pointers).

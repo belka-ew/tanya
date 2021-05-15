@@ -15,12 +15,12 @@
 module tanya.net.ip;
 
 import std.algorithm.comparison;
+import std.ascii;
 import std.typecons;
 import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.container.string;
 import tanya.conv;
-import tanya.encoding.ascii;
 import tanya.format;
 import tanya.memory.lifetime;
 import tanya.meta.trait;

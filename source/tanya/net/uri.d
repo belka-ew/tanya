@@ -14,8 +14,8 @@
  */
 module tanya.net.uri;
 
+import std.ascii;
 import tanya.conv;
-import tanya.encoding.ascii;
 import tanya.memory.allocator;
 
 /**
