@@ -5,7 +5,7 @@
 /**
  * Collection of generic algorithms.
  *
- * Copyright: Eugene Wissner 2017-2020.
+ * Copyright: Eugene Wissner 2017-2021.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -16,4 +16,3 @@ module tanya.algorithm;
 
 public import tanya.algorithm.iteration;
 public import tanya.algorithm.mutation;
-public import tanya.algorithm.searching;

@@ -5,7 +5,7 @@
 /**
  * Single-dimensioned array.
  *
- * Copyright: Eugene Wissner 2016-2020.
+ * Copyright: Eugene Wissner 2016-2021.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -16,7 +16,7 @@ module tanya.container.array;
 
 import core.checkedint;
 import std.algorithm.comparison;
-import tanya.algorithm.iteration;
+import std.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.memory.allocator;
 import tanya.memory.lifetime;
@@ -676,7 +676,7 @@ struct Array(T)
         {
             reserve(length + el.length);
         }
-        return foldl!((acc, e) => acc + insertBack(e))(el, 0U);
+        return fold!((acc, e) => acc + insertBack(e))(el, size_t.init);
     }
 
     /// ditto

@@ -1342,7 +1342,7 @@ struct String
     ///
     @nogc pure @safe unittest
     {
-        import tanya.algorithm.searching : count;
+        import std.algorithm.searching : count;
 
         auto s = String("Из пословицы слова не выкинешь.");
 

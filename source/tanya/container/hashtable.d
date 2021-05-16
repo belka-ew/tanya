@@ -5,7 +5,7 @@
 /**
  * Hash table.
  *
- * Copyright: Eugene Wissner 2018-2020.
+ * Copyright: Eugene Wissner 2018-2021.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -14,7 +14,7 @@
  */
 module tanya.container.hashtable;
 
-import tanya.algorithm.iteration;
+import std.algorithm.iteration;
 import tanya.algorithm.mutation;
 import tanya.container.array;
 import tanya.container.entry;
@@ -719,7 +719,7 @@ if (isHashFunction!(hasher, Key))
     size_t insert(R)(scope R range)
     if (isForwardRange!R && is(ElementType!R == KeyValue) && !isInfinite!R)
     {
-        return foldl!((acc, x) => acc + insert(x))(range, 0U);
+        return fold!((acc, x) => acc + insert(x))(range, size_t.init);
     }
 
     ///
