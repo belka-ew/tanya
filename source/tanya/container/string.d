@@ -70,15 +70,22 @@ if (is(Unqual!E == char))
     private alias ContainerType = CopyConstness!(E, String);
     private ContainerType* container;
 
-    invariant (this.begin <= this.end);
-    invariant (this.container !is null);
-    invariant (this.begin >= this.container.data);
-    invariant (this.end <= this.container.data + this.container.length);
+    invariant
+    {
+        assert(this.begin <= this.end);
+        assert(this.container !is null);
+        assert(this.begin >= this.container.data);
+        assert(this.end <= this.container.data + this.container.length);
+    }
 
     private this(ref ContainerType container, E* begin, E* end) @trusted
-    in (begin <= end)
-    in (begin >= container.data)
-    in (end <= container.data + container.length)
+    in
+    {
+        assert(begin <= end);
+        assert(begin >= container.data);
+        assert(end <= container.data + container.length);
+    }
+    do
     {
         this.container = &container;
         this.begin = begin;
@@ -105,31 +112,51 @@ if (is(Unqual!E == char))
     alias opDollar = length;
 
     @property ref inout(E) front() inout
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return *this.begin;
     }
 
     @property ref inout(E) back() inout @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return *(this.end - 1);
     }
 
     void popFront() @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         ++this.begin;
     }
 
     void popBack() @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         --this.end;
     }
 
     ref inout(E) opIndex(const size_t i) inout @trusted
-    in (i < length)
+    in
+    {
+        assert(i < length);
+    }
+    do
     {
         return *(this.begin + i);
     }
@@ -145,15 +172,23 @@ if (is(Unqual!E == char))
     }
 
     ByCodeUnit opSlice(const size_t i, const size_t j) @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
     ByCodeUnit!(const E) opSlice(const size_t i, const size_t j) const @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -177,15 +212,22 @@ if (is(Unqual!E == char))
     private alias ContainerType = CopyConstness!(E, String);
     private ContainerType* container;
 
-    invariant (this.begin <= this.end);
-    invariant (this.container !is null);
-    invariant (this.begin >= this.container.data);
-    invariant (this.end <= this.container.data + this.container.length);
+    invariant
+    {
+        assert(this.begin <= this.end);
+        assert(this.container !is null);
+        assert(this.begin >= this.container.data);
+        assert(this.end <= this.container.data + this.container.length);
+    }
 
     private this(ref ContainerType container, E* begin, E* end) @trusted
-    in (begin <= end)
-    in (begin >= container.data)
-    in (end <= container.data + container.length)
+    in
+    {
+        assert(begin <= end);
+        assert(begin >= container.data);
+        assert(end <= container.data + container.length);
+    }
+    do
     {
         this.container = &container;
         this.begin = begin;
@@ -205,8 +247,15 @@ if (is(Unqual!E == char))
     }
 
     @property dchar front() const @trusted
-    in (!empty)
-    out (chr; chr < 0xd800 || chr > 0xdfff)
+    in
+    {
+        assert(!empty);
+    }
+    out (chr)
+    {
+        assert(chr < 0xd800 || chr > 0xdfff);
+    }
+    do
     {
         dchar chr;
         ubyte units;
@@ -236,7 +285,11 @@ if (is(Unqual!E == char))
     }
 
     void popFront() @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         ubyte units;
         if ((*begin & 0xf0) == 0xf0)
@@ -282,7 +335,10 @@ struct String
     private char* data;
     private size_t capacity_;
 
-    @nogc nothrow pure @safe invariant (this.length_ <= this.capacity_);
+    @nogc nothrow pure @safe invariant
+    {
+        assert(this.length_ <= this.capacity_);
+    }
 
     /**
      * Constructs the string from a stringish range.
@@ -372,7 +428,11 @@ struct String
 
     /// ditto
     this(shared Allocator allocator) @nogc nothrow pure @safe
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.allocator_ = allocator;
     }
@@ -451,8 +511,12 @@ struct String
 
     private void write4Bytes(ref const dchar src)
     @nogc nothrow pure @trusted
-    in (capacity - length >= 4)
-    in (src - 0x10000 < 0x100000)
+    in
+    {
+        assert(capacity - length >= 4);
+        assert(src - 0x10000 < 0x100000);
+    }
+    do
     {
         auto dst = this.data + length;
 
@@ -466,7 +530,11 @@ struct String
 
     private size_t insertWideChar(C)(auto ref const C chr) @trusted
     if (is(C == wchar) || is(C == dchar))
-    in (capacity - length >= 3)
+    in
+    {
+        assert(capacity - length >= 3);
+    }
+    do
     {
         auto dst = this.data + length;
         if (chr < 0x80)
@@ -789,9 +857,13 @@ struct String
                                      const size_t i,
                                      const size_t j)
     if (is(Unqual!R == char))
-    in (i <= j)
-    in (j <= length)
-    in (j - i == value.length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+        assert(j - i == value.length);
+    }
+    do
     {
         auto target = opSlice(i, j);
         copy(value, target);
@@ -803,8 +875,12 @@ struct String
                                   const size_t i,
                                   const size_t j)
     @nogc nothrow pure @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         copy(value[], this.data[i .. j]);
         return opSlice(i, j);
@@ -815,8 +891,12 @@ struct String
                                   const size_t i,
                                   const size_t j)
     @nogc nothrow pure @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         for (auto p = this.data + i; p < this.data + j; ++p)
         {
@@ -893,7 +973,11 @@ struct String
      * Precondition: $(D_INLINECODE length > pos).
      */
     ref inout(char) opIndex(const size_t pos) inout @nogc nothrow pure @trusted
-    in (length > pos)
+    in
+    {
+        assert(length > pos);
+    }
+    do
     {
         return *(this.data + pos);
     }
@@ -1038,8 +1122,12 @@ struct String
      */
     ByCodeUnit!char opSlice(const size_t i, const size_t j)
     @nogc nothrow pure @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1047,8 +1135,12 @@ struct String
     /// ditto
     ByCodeUnit!(const char) opSlice(const size_t i, const size_t j)
     const @nogc nothrow pure @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1329,9 +1421,13 @@ struct String
      */
     R remove(R)(R r) @trusted
     if (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char))
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         auto end = this.data + this.length;
         copy(ByCodeUnit!char(this, r.end, end), ByCodeUnit!char(this, r.begin, end));
@@ -1377,12 +1473,16 @@ struct String
      */
     size_t insertAfter(T, R)(R r, T el) @trusted
     if ((isSomeChar!T || (!isInfinite!T
-     && isInputRange!T
-     && isSomeChar!(ElementType!T)))
-     && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+        && isInputRange!T
+        && isSomeChar!(ElementType!T)))
+        && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         const oldLength = length;
         const after = r.end - this.data;
@@ -1407,12 +1507,16 @@ struct String
     ///
     size_t insertBefore(T, R)(R r, T el) @trusted
     if ((isSomeChar!T || (!isInfinite!T
-     && isInputRange!T
-     && isSomeChar!(ElementType!T)))
-     && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+        && isInputRange!T
+        && isSomeChar!(ElementType!T)))
+        && (is(R == ByCodeUnit!char) || is(R == ByCodePoint!char)))
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         return insertAfter(R(this, this.data, r.begin), el);
     }

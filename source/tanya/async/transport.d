@@ -57,7 +57,10 @@ interface DuplexTransport : ReadTransport, WriteTransport
      * Postcondition: $(D_INLINECODE protocol !is null)
      */
     @property Protocol protocol() pure nothrow @safe @nogc
-    out (protocol; protocol !is null);
+    out (protocol)
+    {
+        assert(protocol !is null);
+    }
 
     /**
      * Switches the protocol.
@@ -70,7 +73,10 @@ interface DuplexTransport : ReadTransport, WriteTransport
      * Precondition: $(D_INLINECODE protocol !is null)
      */
     @property void protocol(Protocol protocol) pure nothrow @safe @nogc
-    in (protocol !is null);
+    in
+    {
+        assert(protocol !is null);
+    }
 
 
     /**

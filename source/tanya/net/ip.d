@@ -755,7 +755,11 @@ private void read2Bytes(R)(ref R range, ubyte[] address)
 }
 
 private char toHexDigit(ubyte digit) @nogc nothrow pure @safe
-in (digit < 16)
+in
+{
+    assert(digit < 16);
+}
+do
 {
     return cast(char) (digit >= 10 ? (digit - 10 + 'a') : (digit + '0'));
 }
@@ -763,7 +767,11 @@ in (digit < 16)
 private bool writeHexDigit(OR)(ref OR output,
                                ubyte digit,
                                bool groupStarted = false)
-in (digit < 16)
+in
+{
+    assert(digit < 16);
+}
+do
 {
     if (digit != 0 || groupStarted)
     {
@@ -1124,7 +1132,11 @@ struct Address
      * Precondition: This is an IPv4 address.
      */
     ref inout(Address4) toV4() inout @nogc nothrow pure @safe
-    in (this.address.peek!Address4)
+    in
+    {
+        assert(this.address.peek!Address4);
+    }
+    do
     {
         return this.address.get!Address4;
     }
@@ -1147,7 +1159,11 @@ struct Address
      * Precondition: This is an IPv6 address.
      */
     ref inout(Address6) toV6() inout @nogc nothrow pure @safe
-    in (this.address.peek!Address6)
+    in
+    {
+        assert(this.address.peek!Address6);
+    }
+    do
     {
         return this.address.get!Address6;
     }
@@ -1169,7 +1185,11 @@ struct Address
      *           $(D_PSYMBOL Address6.loopback).
      */
     bool isLoopback() const @nogc nothrow pure @safe
-    in (this.address.hasValue)
+    in
+    {
+        assert(this.address.hasValue);
+    }
+    do
     {
         if (this.address.peek!Address4)
         {
@@ -1195,7 +1215,11 @@ struct Address
      *           $(D_PSYMBOL Address6.isMulticast).
      */
     bool isMulticast() const @nogc nothrow pure @safe
-    in (this.address.hasValue)
+    in
+    {
+        assert(this.address.hasValue);
+    }
+    do
     {
         if (this.address.peek!Address4)
         {
@@ -1220,7 +1244,11 @@ struct Address
      * See_Also: $(D_PSYMBOL Address4.isAny), $(D_PSYMBOL Address6.isAny).
      */
     bool isAny() const @nogc nothrow pure @safe
-    in (this.address.hasValue)
+    in
+    {
+        assert(this.address.hasValue);
+    }
+    do
     {
         if (this.address.peek!Address4)
         {

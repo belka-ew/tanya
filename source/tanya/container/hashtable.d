@@ -71,9 +71,16 @@ struct Range(T)
     }
 
     void popFront()
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -83,9 +90,16 @@ struct Range(T)
     }
 
     void popBack()
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -95,15 +109,23 @@ struct Range(T)
     }
 
     @property ref inout(KV) front() inout
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.front.kv;
     }
 
     @property ref inout(KV) back() inout
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.back.kv;
     }
@@ -164,9 +186,16 @@ struct ByKey(T)
     }
 
     @property void popFront()
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -176,9 +205,16 @@ struct ByKey(T)
     }
 
     @property void popBack()
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out 
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -188,15 +224,23 @@ struct ByKey(T)
     }
 
     @property ref inout(Key) front() inout
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.front.key;
     }
 
     @property ref inout(Key) back() inout
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.back.key;
     }
@@ -257,9 +301,16 @@ struct ByValue(T)
     }
 
     @property void popFront()
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -269,9 +320,16 @@ struct ByValue(T)
     }
 
     @property void popBack()
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -281,15 +339,23 @@ struct ByValue(T)
     }
 
     @property ref inout(Value) front() inout
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.front.kv.value;
     }
 
     @property ref inout(Value) back() inout
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.back.kv.value;
     }
@@ -347,7 +413,10 @@ if (isHashFunction!(hasher, Key))
     /// ditto
     alias ConstByValue = .ByValue!(const HashArray);
 
-    invariant (this.data.lengthIndex < primes.length);
+    invariant
+    {
+        assert(this.data.lengthIndex < primes.length);
+    }
 
     /**
      * Constructor.
@@ -359,7 +428,11 @@ if (isHashFunction!(hasher, Key))
      * Precondition: $(D_INLINECODE allocator !is null).
      */
     this(size_t n, shared Allocator allocator = defaultAllocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this(allocator);
         this.data.rehash(n);
@@ -374,7 +447,11 @@ if (isHashFunction!(hasher, Key))
 
     /// ditto
     this(shared Allocator allocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.data = HashArray(allocator);
     }
@@ -394,7 +471,11 @@ if (isHashFunction!(hasher, Key))
      */
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     if (is(Unqual!S == HashTable))
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.data = HashArray(init.data, allocator);
     }
@@ -402,7 +483,11 @@ if (isHashFunction!(hasher, Key))
     /// ditto
     this(S)(S init, shared Allocator allocator = defaultAllocator)
     if (is(S == HashTable))
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.data.move(init.data, allocator);
     }
@@ -419,7 +504,11 @@ if (isHashFunction!(hasher, Key))
      */
     this(R)(scope R range, shared Allocator allocator = defaultAllocator)
     if (isForwardRange!R && is(ElementType!R == KeyValue) && !isInfinite!R)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this(allocator);
         insert(range);
@@ -449,7 +538,11 @@ if (isHashFunction!(hasher, Key))
      */
     this(size_t n)(KeyValue[n] array,
          shared Allocator allocator = defaultAllocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this(allocator);
         insert(array[]);
@@ -498,7 +591,11 @@ if (isHashFunction!(hasher, Key))
      * Postcondition: $(D_INLINECODE allocator !is null)
      */
     @property shared(Allocator) allocator() const
-    out (allocator; allocator !is null)
+    out (allocator)
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         return this.data.array.allocator;
     }

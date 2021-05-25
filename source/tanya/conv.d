@@ -60,11 +60,15 @@ final class ConvException : Exception
  */
 package T readIntegral(T, R)(ref R range, const ubyte base = 10)
 if (isInputRange!R
- && isSomeChar!(ElementType!R)
- && isIntegral!T
- && isUnsigned!T)
-in (base >= 2)
-in (base <= 36)
+        && isSomeChar!(ElementType!R)
+        && isIntegral!T
+        && isUnsigned!T)
+in
+{
+    assert(base >= 2);
+    assert(base <= 36);
+}
+do
 {
     T boundary = cast(T) (T.max / base);
     if (range.empty)

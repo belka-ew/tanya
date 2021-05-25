@@ -291,7 +291,11 @@ if (isTypeTuple!Specs && NoDuplicates!Specs.length == Specs.length)
          */
         ref inout(T) get(T)() inout
         if (canFind!(T, Types))
-        in (this.tag == staticIndexOf!(T, Types), "Variant isn't initialized")
+        in
+        {
+            assert(this.tag == staticIndexOf!(T, Types), "Variant isn't initialized");
+        }
+        do
         {
             mixin("return " ~ accessor!(T, AlignedUnion!Types).accessor ~ ";");
         }

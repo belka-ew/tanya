@@ -69,9 +69,16 @@ struct Range(T)
     }
 
     void popFront()
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -81,9 +88,16 @@ struct Range(T)
     }
 
     void popBack()
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
-    out (; empty || this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    out
+    {
+        assert(empty || this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         do
         {
@@ -93,15 +107,23 @@ struct Range(T)
     }
 
     @property ref inout(E) front() inout
-    in (!empty)
-    in (this.dataRange.front.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.front.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.front.key;
     }
 
     @property ref inout(E) back() inout
-    in (!empty)
-    in (this.dataRange.back.status == BucketStatus.used)
+    in
+    {
+        assert(!empty);
+        assert(this.dataRange.back.status == BucketStatus.used);
+    }
+    do
     {
         return this.dataRange.back.key;
     }
@@ -146,9 +168,12 @@ if (isHashFunction!(hasher, T))
     /// ditto
     alias ConstRange = .Range!(const HashArray);
 
-    invariant (this.data.lengthIndex < primes.length);
-    invariant (this.data.array.length == 0
-            || this.data.array.length == primes[this.data.lengthIndex]);
+    invariant
+    {
+        assert(this.data.lengthIndex < primes.length);
+        assert(this.data.array.length == 0
+                || this.data.array.length == primes[this.data.lengthIndex]);
+    }
 
     /**
      * Constructor.
@@ -160,7 +185,11 @@ if (isHashFunction!(hasher, T))
      * Precondition: $(D_INLINECODE allocator !is null).
      */
     this(size_t n, shared Allocator allocator = defaultAllocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this(allocator);
         this.data.rehash(n);
@@ -175,7 +204,11 @@ if (isHashFunction!(hasher, T))
 
     /// ditto
     this(shared Allocator allocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.data = HashArray(allocator);
     }
@@ -195,7 +228,11 @@ if (isHashFunction!(hasher, T))
      */
     this(S)(ref S init, shared Allocator allocator = defaultAllocator)
     if (is(Unqual!S == Set))
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.data = HashArray(init.data, allocator);
     }
@@ -203,7 +240,11 @@ if (isHashFunction!(hasher, T))
     /// ditto
     this(S)(S init, shared Allocator allocator = defaultAllocator)
     if (is(S == Set))
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.data.move(init.data, allocator);
     }
@@ -222,7 +263,11 @@ if (isHashFunction!(hasher, T))
     if (isForwardRange!R
      && isImplicitlyConvertible!(ElementType!R, T)
      && !isInfinite!R)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this(allocator);
         insert(range);
@@ -249,7 +294,11 @@ if (isHashFunction!(hasher, T))
      * Precondition: $(D_INLINECODE allocator !is null).
      */
     this(size_t n)(T[n] array, shared Allocator allocator = defaultAllocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this(allocator);
         insert(array[]);
@@ -297,7 +346,11 @@ if (isHashFunction!(hasher, T))
      * Postcondition: $(D_INLINECODE allocator !is null)
      */
     @property shared(Allocator) allocator() const
-    out (allocator; allocator !is null)
+    out (allocator)
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         return this.data.array.allocator;
     }

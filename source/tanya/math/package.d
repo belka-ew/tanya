@@ -562,7 +562,11 @@ if (isFloatingPoint!F)
  */
 H pow(I, G, H)(in auto ref I x, in auto ref G y, in auto ref H z)
 if (isIntegral!I && isIntegral!G && isIntegral!H)
-in (z > 0, "Division by zero")
+in
+{
+    assert(z > 0, "Division by zero");
+}
+do
 {
     G mask = G.max / 2 + 1;
     H result;

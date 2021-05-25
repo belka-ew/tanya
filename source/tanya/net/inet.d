@@ -72,7 +72,11 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      */
     this(T)(T value)
     if (isUnsigned!T)
-    in (value <= (2 ^^ (L * 8)) - 1)
+    in
+    {
+        assert(value <= (2 ^^ (L * 8)) - 1);
+    }
+    do
     {
         this.value = value & StorageType.max;
     }
@@ -83,7 +87,11 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     @property ubyte back() const
-    in (this.length > 0)
+    in
+    {
+        assert(this.length > 0);
+    }
+    do
     {
         return this.value & 0xff;
     }
@@ -94,7 +102,11 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     @property ubyte front() const
-    in (this.length > 0)
+    in
+    {
+        assert(this.length > 0);
+    }
+    do
     {
         return (this.value >> ((this.length - 1) * 8)) & 0xff;
     }
@@ -105,7 +117,11 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     void popBack()
-    in (this.length > 0)
+    in
+    {
+        assert(this.length > 0);
+    }
+    do
     {
         this.value >>= 8;
         --this.size;
@@ -117,7 +133,11 @@ if (L > ubyte.sizeof && L <= ulong.sizeof)
      * Precondition: $(D_INLINECODE length > 0).
      */
     void popFront()
-    in (this.length > 0)
+    in
+    {
+        assert(this.length > 0);
+    }
+    do
     {
         this.value &= StorageType.max >> ((StorageType.sizeof - this.length) * 8);
         --this.size;

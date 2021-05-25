@@ -1556,7 +1556,11 @@ if (isInputRange!Range && hasLvalueElements!Range)
  */
 ElementType!R getAndPopFront(R)(ref R range)
 if (isInputRange!R)
-in (!range.empty)
+in
+{
+    assert(!range.empty);
+}
+do
 {
     static if (hasLvalueElements!R)
     {
@@ -1609,7 +1613,11 @@ in (!range.empty)
  */
 auto ref getAndPopBack(R)(ref R range)
 if (isBidirectionalRange!R)
-in (!range.empty)
+in
+{
+    assert(!range.empty);
+}
+do
 {
     static if (hasLvalueElements!R)
     {

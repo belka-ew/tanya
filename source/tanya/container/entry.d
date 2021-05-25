@@ -128,14 +128,22 @@ package(tanya.container) struct HashArray(alias hasher, K, V = void)
     size_t length;
 
     this(shared Allocator allocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.array = Buckets(allocator);
     }
 
     this(T)(ref T data, shared Allocator allocator)
     if (is(Unqual!T == HashArray))
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.array = Buckets(data.array, allocator);
         this.lengthIndex = data.lengthIndex;
@@ -144,7 +152,11 @@ package(tanya.container) struct HashArray(alias hasher, K, V = void)
 
     // Move constructor
     void move(ref HashArray data, shared Allocator allocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.array = Buckets(.move(data.array), allocator);
         this.lengthIndex = data.lengthIndex;
@@ -225,7 +237,11 @@ package(tanya.container) struct HashArray(alias hasher, K, V = void)
 
     // Takes an index in the primes array.
     void rehashToSize(const size_t n)
-    in (n < primes.length)
+    in
+    {
+        assert(n < primes.length);
+    }
+    do
     {
         auto storage = typeof(this.array)(primes[n], this.array.allocator);
         DataLoop: foreach (ref e1; this.array[])

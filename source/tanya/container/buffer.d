@@ -22,7 +22,11 @@ version (unittest)
     private int fillBuffer(ubyte[] buffer,
                            int start = 0,
                            int end = 10) @nogc pure nothrow
-    in (start < end)
+    in
+    {
+        assert(start < end);
+    }
+    do
     {
         auto numberRead = end - start;
         for (ubyte i; i < numberRead; ++i)
@@ -67,9 +71,12 @@ if (isScalarType!T)
     /// Size by which the buffer will grow.
     private size_t blockSize = 8192;
 
-    invariant (this.length_ <= this.buffer_.length);
-    invariant (this.blockSize > 0);
-    invariant (this.minAvailable > 0);
+    invariant
+    {
+        assert(this.length_ <= this.buffer_.length);
+        assert(this.blockSize > 0);
+        assert(this.minAvailable > 0);
+    }
 
     /**
      * Creates a new read buffer.
@@ -94,7 +101,11 @@ if (isScalarType!T)
 
     /// ditto
     this(shared Allocator allocator)
-    in (allocator_ is null)
+    in
+    {
+        assert(allocator_ is null);
+    }
+    do
     {
         allocator_ = allocator;
     }
@@ -312,9 +323,13 @@ if (isScalarType!T)
     /// The position of the free area in the buffer.
     private size_t position;
 
-    invariant (this.blockSize > 0);
-    // Position can refer to an element outside the buffer if the buffer is full.
-    invariant (this.position <= this.buffer_.length);
+    invariant
+    {
+        assert(this.blockSize > 0);
+        // Position can refer to an element outside the buffer if the buffer is
+        // full.
+        assert(this.position <= this.buffer_.length);
+    }
 
     /**
      * Params:
@@ -325,8 +340,12 @@ if (isScalarType!T)
      * Precondition: $(D_INLINECODE size > 0 && allocator !is null)
      */
     this(size_t size, shared Allocator allocator = defaultAllocator) @trusted
-    in (size > 0)
-    in (allocator !is null)
+    in
+    {
+        assert(size > 0);
+        assert(allocator !is null);
+    }
+    do
     {
         this.blockSize = size;
         ring = size - 1;
@@ -487,7 +506,11 @@ if (isScalarType!T)
      */
     ref WriteBuffer opOpAssign(string op)(size_t length)
     if (op == "+")
-    in (length <= this.length)
+    in
+    {
+        assert(length <= this.length);
+    }
+    do
     {
         auto afterRing = ring + 1;
         auto oldStart = start;

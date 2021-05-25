@@ -36,16 +36,23 @@ struct Range(A)
     private E* begin, end;
     private A* container;
 
-    invariant (this.begin <= this.end);
-    invariant (this.container !is null);
-    invariant (this.begin >= this.container.data);
-    invariant (this.end <= this.container.data + this.container.length);
+    invariant
+    {
+        assert(this.begin <= this.end);
+        assert(this.container !is null);
+        assert(this.begin >= this.container.data);
+        assert(this.end <= this.container.data + this.container.length);
+    }
 
     private this(return ref A container, return E* begin, return E* end)
     @trusted
-    in (begin <= end)
-    in (begin >= container.data)
-    in (end <= container.data + container.length)
+    in
+    {
+        assert(begin <= end);
+        assert(begin >= container.data);
+        assert(end <= container.data + container.length);
+    }
+    do
     {
         this.container = &container;
         this.begin = begin;
@@ -72,31 +79,51 @@ struct Range(A)
     alias opDollar = length;
 
     @property ref inout(E) front() inout
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return *this.begin;
     }
 
     @property ref inout(E) back() inout @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return *(this.end - 1);
     }
 
     void popFront() @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         ++this.begin;
     }
 
     void popBack() @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         --this.end;
     }
 
     ref inout(E) opIndex(size_t i) inout @trusted
-    in (i < length)
+    in
+    {
+        assert(i < length);
+    }
+    do
     {
         return *(this.begin + i);
     }
@@ -112,15 +139,23 @@ struct Range(A)
     }
 
     Range opSlice(size_t i, size_t j) @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
 
     A.ConstRange opSlice(size_t i, size_t j) const @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(*this.container, this.begin + i, this.begin + j);
     }
@@ -149,8 +184,11 @@ struct Array(T)
     private T* data;
     private size_t capacity_;
 
-    invariant (this.length_ <= this.capacity_);
-    invariant (this.capacity_ == 0 || this.data !is null);
+    invariant
+    {
+        assert(this.length_ <= this.capacity_);
+        assert(this.capacity_ == 0 || this.data !is null);
+    }
 
     /**
      * Creates a new $(D_PSYMBOL Array) with the elements from a static array.
@@ -276,7 +314,11 @@ struct Array(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         allocator_ = allocator;
     }
@@ -532,7 +574,11 @@ struct Array(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     void removeBack()
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         length = length - 1;
     }
@@ -550,7 +596,11 @@ struct Array(T)
      * Returns: The number of elements removed
      */
     size_t removeBack(size_t howMany)
-    out (removed; removed <= howMany)
+    out (removed)
+    {
+        assert(removed <= howMany);
+    }
+    do
     {
         const toRemove = min(howMany, length);
 
@@ -571,7 +621,11 @@ struct Array(T)
     }
 
     private inout(T)[] slice(size_t length) inout @trusted
-    in (length <= capacity)
+    in
+    {
+        assert(length <= capacity);
+    }
+    do
     {
         return this.data[0 .. length];
     }
@@ -593,9 +647,13 @@ struct Array(T)
      * Precondition: $(D_PARAM r) refers to a region of $(D_KEYWORD this).
      */
     Range remove(scope Range r)
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= end)
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= end);
+    }
+    do
     {
         auto target = r.begin;
         auto source = r.end;
@@ -745,9 +803,13 @@ struct Array(T)
     if (!isInfinite!R
      && isInputRange!R
      && isImplicitlyConvertible!(ElementType!R, T))
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         const oldLength = length;
         const after = r.end - this.data;
@@ -759,9 +821,13 @@ struct Array(T)
 
     /// ditto
     size_t insertAfter(size_t R)(Range r, T[R] el)
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         return insertAfter!(T[])(r, el[]);
     }
@@ -769,9 +835,13 @@ struct Array(T)
     /// ditto
     size_t insertAfter(R)(Range r, auto ref R el)
     if (isImplicitlyConvertible!(R, T))
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         const oldLen = length;
         const offset = r.end - this.data;
@@ -792,20 +862,28 @@ struct Array(T)
     /// ditto
     size_t insertBefore(R)(Range r, scope R el)
     if (!isInfinite!R
-     && isInputRange!R
-     && isImplicitlyConvertible!(ElementType!R, T))
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+        && isInputRange!R
+        && isImplicitlyConvertible!(ElementType!R, T))
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         return insertAfter(Range(this, this.data, r.begin), el);
     }
 
     /// ditto
     size_t insertBefore(size_t R)(Range r, T[R] el)
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         return insertBefore!(T[])(r, el[]);
     }
@@ -813,9 +891,13 @@ struct Array(T)
     /// ditto
     size_t insertBefore(R)(Range r, auto ref R el)
     if (isImplicitlyConvertible!(R, T))
-    in (r.container is &this)
-    in (r.begin >= this.data)
-    in (r.end <= this.data + length)
+    in
+    {
+        assert(r.container is &this);
+        assert(r.begin >= this.data);
+        assert(r.end <= this.data + length);
+    }
+    do
     {
         const oldLen = length;
         const offset = r.begin - this.data;
@@ -983,7 +1065,11 @@ struct Array(T)
      * Precondition: $(D_INLINECODE length > pos).
      */
     ref inout(T) opIndex(size_t pos) inout @trusted
-    in (length > pos)
+    in
+    {
+        assert(length > pos);
+    }
+    do
     {
         return *(this.data + pos);
     }
@@ -1084,7 +1170,11 @@ struct Array(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) front() inout
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return *this.data;
     }
@@ -1107,7 +1197,11 @@ struct Array(T)
      * Precondition: $(D_INLINECODE !empty).
      */
     @property ref inout(T) back() inout @trusted
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return *(this.data + length - 1);
     }
@@ -1135,16 +1229,24 @@ struct Array(T)
      * Precondition: $(D_INLINECODE i <= j && j <= length).
      */
     Range opSlice(size_t i, size_t j) @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
 
     /// ditto
     ConstRange opSlice(size_t i, size_t j) const @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         return typeof(return)(this, this.data + i, this.data + j);
     }
@@ -1201,8 +1303,12 @@ struct Array(T)
      */
     Range opSliceAssign(size_t R)(T[R] value, size_t i, size_t j)
     @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         copy(value[], this.data[i .. j]);
         return opSlice(i, j);
@@ -1211,8 +1317,12 @@ struct Array(T)
     /// ditto
     Range opSliceAssign(R : T)(auto ref R value, size_t i, size_t j)
     @trusted
-    in (i <= j)
-    in (j <= length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+    }
+    do
     {
         fill(this.data[i .. j], value);
         return opSlice(i, j);
@@ -1220,9 +1330,13 @@ struct Array(T)
 
     /// ditto
     Range opSliceAssign()(Range value, size_t i, size_t j) @trusted
-    in (i <= j)
-    in (j <= length)
-    in (j - i == value.length)
+    in
+    {
+        assert(i <= j);
+        assert(j <= length);
+        assert(j - i == value.length);
+    }
+    do
     {
         copy(value, this.data[i .. j]);
         return opSlice(i, j);

@@ -262,8 +262,12 @@ abstract class Loop
      *              $(D_PSYMBOL maxBlockTime).
      */
     protected @property void blockTime(in Duration blockTime) @safe pure nothrow @nogc
-    in (blockTime <= 1.dur!"hours", "Too long to wait.")
-    in (!blockTime.isNegative)
+    in
+    {
+        assert(blockTime <= 1.dur!"hours", "Too long to wait.");
+        assert(!blockTime.isNegative);
+    }
+    do
     {
         blockTime_ = blockTime;
     }
@@ -336,7 +340,11 @@ class BadLoopException : Exception
  *  loop = The event loop.
  */
 @property void defaultLoop(Loop loop) @nogc
-in (loop !is null)
+in
+{
+    assert(loop !is null);
+}
+do
 {
     defaultLoop_ = loop;
 }

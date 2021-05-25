@@ -92,7 +92,10 @@ abstract class EntropySource
      *                $(D_PARAM output) length.
      */
     Nullable!ubyte poll(out ubyte[maxGather] output) @nogc
-    out (length; length.isNull || length.get <= maxGather);
+    out (length)
+    {
+        assert(length.isNull || length.get <= maxGather);
+    }
 }
 
 version (CRuntime_Bionic)

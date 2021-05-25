@@ -48,7 +48,11 @@ private struct SingletonByValue(E)
     }
 
     @property ref inout(E) front() inout
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return this.element.get;
     }
@@ -56,7 +60,11 @@ private struct SingletonByValue(E)
     alias back = front;
 
     void popFront()
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         this.element.nullify();
     }
@@ -79,8 +87,12 @@ private struct SingletonByValue(E)
     }
 
     ref inout(E) opIndex(size_t i) inout
-    in (!empty)
-    in (i == 0)
+    in
+    {
+        assert(!empty);
+        assert(i == 0);
+    }
+    do
     {
         return this.element.get;
     }
@@ -98,7 +110,11 @@ private struct SingletonByRef(E)
     }
 
     @property ref inout(E) front() inout return
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         return *this.element;
     }
@@ -106,7 +122,11 @@ private struct SingletonByRef(E)
     alias back = front;
 
     void popFront()
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         this.element = null;
     }
@@ -129,8 +149,12 @@ private struct SingletonByRef(E)
     }
 
     ref inout(E) opIndex(size_t i) inout return
-    in (!empty)
-    in (i == 0)
+    in
+    {
+        assert(!empty);
+        assert(i == 0);
+    }
+    do
     {
         return *this.element;
     }

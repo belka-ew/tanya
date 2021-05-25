@@ -1175,7 +1175,11 @@ private struct uint128
     }
 
     Tuple!(uint128, uint128) divMod(ulong rhs) const @nogc nothrow pure @safe
-    in (rhs != uint128(), "Division by 0")
+    in
+    {
+        assert(rhs != uint128(), "Division by 0");
+    }
+    do
     {
         if (rhs == 1)
         {
@@ -1273,9 +1277,13 @@ private int indexMismatch(ulong low, ulong high) @nogc nothrow pure @safe
 }
 
 private char[] errol2(double value,
-                      return ref char[512] buffer,
-                      out int exponent) @nogc nothrow pure @safe
-in (value > 9.007199254740992e15 && value < 3.40282366920938e38)
+        return ref char[512] buffer,
+        out int exponent) @nogc nothrow pure @safe
+in
+{
+    assert(value > 9.007199254740992e15 && value < 3.40282366920938e38);
+}
+do
 {
     auto v = uint128(value);
     auto leftBoundary = v + raise2ToExp((value - previous(value)) / 2.0);
@@ -1358,9 +1366,13 @@ in (value > 9.007199254740992e15 && value < 3.40282366920938e38)
 }
 
 private char[] errolFixed(double value,
-                          return ref char[512] buffer,
-                          out int exponent) @nogc nothrow pure @safe
-in (value >= 16.0 && value <= 9.007199254740992e15)
+        return ref char[512] buffer,
+        out int exponent) @nogc nothrow pure @safe
+in
+{
+    assert(value >= 16.0 && value <= 9.007199254740992e15);
+}
+do
 {
     auto decimal = cast(ulong) value;
     auto n = cast(double) decimal;

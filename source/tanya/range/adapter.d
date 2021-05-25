@@ -170,7 +170,11 @@ if (isArray!Array)
 
         void opCall(T)(auto ref T data)
         if (is(T : E))
-        in (!this.data.empty)
+        in
+        {
+            assert(!this.data.empty);
+        }
+        do
         {
             put(this.data, data);
         }
