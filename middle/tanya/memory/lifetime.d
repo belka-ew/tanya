@@ -61,8 +61,15 @@ package(tanya) void destroyAllImpl(R, E)(R p)
  */
 T emplace(T, U, Args...)(void[] memory, U outer, auto ref Args args)
 if (!isAbstractClass!T && isInnerClass!T && is(typeof(T.outer) == U))
-in (memory.length >= stateSize!T)
-out (result; memory.ptr is (() @trusted => cast(void*) result)())
+in
+{
+    assert(memory.length >= stateSize!T);
+}
+out (result)
+{
+    assert(memory.ptr is (() @trusted => cast(void*) result)());
+}
+do
 {
     import tanya.memory.op : copy;
 
@@ -82,8 +89,15 @@ out (result; memory.ptr is (() @trusted => cast(void*) result)())
 /// ditto
 T emplace(T, Args...)(void[] memory, auto ref Args args)
 if (is(T == class) && !isAbstractClass!T && !isInnerClass!T)
-in (memory.length == stateSize!T)
-out (result; memory.ptr is (() @trusted => cast(void*) result)())
+in
+{
+    assert(memory.length == stateSize!T);
+}
+out (result)
+{
+    assert(memory.ptr is (() @trusted => cast(void*) result)());
+}
+do
 {
     import tanya.memory.op : copy;
 
@@ -128,8 +142,15 @@ out (result; memory.ptr is (() @trusted => cast(void*) result)())
 /// ditto
 T* emplace(T, Args...)(void[] memory, auto ref Args args)
 if (!isAggregateType!T && (Args.length <= 1))
-in (memory.length >= T.sizeof)
-out (result; memory.ptr is result)
+in
+{
+    assert(memory.length >= T.sizeof);
+}
+out (result)
+{
+    assert(memory.ptr is result);
+}
+do
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
     static if (Args.length == 1)
@@ -166,8 +187,15 @@ private void initializeOne(T)(ref void[] memory, ref T* result) @trusted
 /// ditto
 T* emplace(T, Args...)(void[] memory, auto ref Args args)
 if (!isPolymorphicType!T && isAggregateType!T)
-in (memory.length >= T.sizeof)
-out (result; memory.ptr is result)
+in
+{
+    assert(memory.length >= T.sizeof);
+}
+out (result)
+{
+    assert(memory.ptr is result);
+}
+do
 {
     auto result = (() @trusted => cast(T*) memory.ptr)();
 
@@ -291,7 +319,11 @@ private void deinitialize(bool zero, T)(ref T value)
  * Precondition: `&source !is &target`.
  */
 void moveEmplace(T)(ref T source, ref T target) @system
-in (&source !is &target, "Source and target must be different")
+in
+{
+    assert(&source !is &target, "Source and target must be different");
+}
+do
 {
     static if (is(T == struct) || isStaticArray!T)
     {

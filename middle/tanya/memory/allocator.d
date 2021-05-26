@@ -101,7 +101,11 @@ mixin template DefaultAllocator()
      * Precondition: $(D_INLINECODE allocator_ !is null)
      */
     this(shared Allocator allocator) @nogc nothrow pure @safe
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.allocator_ = allocator;
     }
@@ -115,7 +119,11 @@ mixin template DefaultAllocator()
      * Postcondition: $(D_INLINECODE allocator !is null)
      */
     @property shared(Allocator) allocator() @nogc nothrow pure @safe
-    out (allocator; allocator !is null)
+    out (allocator)
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         if (allocator_ is null)
         {
@@ -126,7 +134,11 @@ mixin template DefaultAllocator()
 
     /// ditto
     @property shared(Allocator) allocator() const @nogc nothrow pure @trusted
-    out (allocator; allocator !is null)
+    out (allocator)
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         if (allocator_ is null)
         {
@@ -162,7 +174,11 @@ private shared(Allocator) getAllocatorInstance() @nogc nothrow
  * Postcondition: $(D_INLINECODE allocator !is null).
  */
 @property shared(Allocator) defaultAllocator() @nogc nothrow pure @trusted
-out (allocator; allocator !is null)
+out (allocator)
+{
+    assert(allocator !is null);
+}
+do
 {
     return (cast(GetPureInstance!Allocator) &getAllocatorInstance)();
 }
@@ -176,7 +192,11 @@ out (allocator; allocator !is null)
  * Precondition: $(D_INLINECODE allocator !is null).
  */
 @property void defaultAllocator(shared(Allocator) allocator) @nogc nothrow @safe
-in (allocator !is null)
+in
+{
+    assert(allocator !is null);
+}
+do
 {
     .allocator = allocator;
 }
@@ -258,7 +278,11 @@ void dispose(T)(shared Allocator allocator, auto ref T p)
  */
 T make(T, A...)(shared Allocator allocator, auto ref A args)
 if (is(T == class))
-in (allocator !is null)
+in
+{
+    assert(allocator !is null);
+}
+do
 {
     auto mem = (() @trusted => allocator.allocate(stateSize!T))();
     if (mem is null)
@@ -290,7 +314,11 @@ in (allocator !is null)
  */
 T* make(T, A...)(shared Allocator allocator, auto ref A args)
 if (!isPolymorphicType!T && !isAssociativeArray!T && !isArray!T)
-in (allocator !is null)
+in
+{
+    assert(allocator !is null);
+}
+do
 {
     auto mem = (() @trusted => allocator.allocate(stateSize!T))();
     if (mem is null)
@@ -327,8 +355,12 @@ in (allocator !is null)
  *                           && n <= size_t.max / E.sizeof)
  */
 T make(T : E[], E)(shared Allocator allocator, size_t n)
-in (allocator !is null)
-in (n <= size_t.max / E.sizeof)
+in
+{
+    assert(allocator !is null);
+    assert(n <= size_t.max / E.sizeof);
+}
+do
 {
     auto ret = allocator.resize!E(null, n);
 

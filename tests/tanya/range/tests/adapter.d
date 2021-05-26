@@ -12,18 +12,6 @@ private struct Container
     }
 }
 
-// Broken test because of the issue #20006.
-@nogc nothrow pure @safe unittest
-{
-    auto func()()
-    {
-        Container container;
-        return backInserter(container);
-    }
-    // static assert(!is(typeof(func!())));
-    static assert(is(typeof(func!())));
-}
-
 @nogc nothrow pure @safe unittest
 {
     Container container;

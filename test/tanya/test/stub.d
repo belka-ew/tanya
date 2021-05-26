@@ -146,7 +146,11 @@ mixin template InputRangeStub(E = int)
     }
 
     void popFront() @nogc nothrow pure @safe
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         static if (!infinite)
         {
@@ -157,7 +161,11 @@ mixin template InputRangeStub(E = int)
     static if (withLvalueElements)
     {
         ref E front() @nogc nothrow pure @safe
-        in (!empty)
+        in
+        {
+            assert(!empty);
+        }
+        do
         {
             return *this.element;
         }
@@ -165,7 +173,11 @@ mixin template InputRangeStub(E = int)
     else
     {
         E front() @nogc nothrow pure @safe
-        in (!empty)
+        in
+        {
+            assert(!empty);
+        }
+        do
         {
             return E.init;
         }
@@ -216,7 +228,11 @@ mixin template BidirectionalRangeStub(E = int)
     mixin ForwardRangeStub!E;
 
     void popBack() @nogc nothrow pure @safe
-    in (!empty)
+    in
+    {
+        assert(!empty);
+    }
+    do
     {
         static if (!infinite)
         {
@@ -227,7 +243,11 @@ mixin template BidirectionalRangeStub(E = int)
     static if (withLvalueElements)
     {
         ref E back() @nogc nothrow pure @safe
-        in (!empty)
+        in
+        {
+            assert(!empty);
+        }
+        do
         {
             return *this.element;
         }
@@ -235,7 +255,11 @@ mixin template BidirectionalRangeStub(E = int)
     else
     {
         E back() @nogc nothrow pure @safe
-        in (!empty)
+        in
+        {
+            assert(!empty);
+        }
+        do
         {
             return E.init;
         }

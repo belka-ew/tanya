@@ -36,9 +36,13 @@ private enum alignMask = size_t.sizeof - 1;
  * Precondition: $(D_INLINECODE source.length <= target.length).
  */
 void copy(const void[] source, void[] target) @nogc nothrow pure @trusted
-in (source.length <= target.length)
-in (source.length == 0 || source.ptr !is null)
-in (target.length == 0 || target.ptr !is null)
+in
+{
+    assert(source.length <= target.length);
+    assert(source.length == 0 || source.ptr !is null);
+    assert(target.length == 0 || target.ptr !is null);
+}
+do
 {
     memcpy(target.ptr, source.ptr, source.length);
 }
@@ -75,7 +79,11 @@ private template filledBytes(ubyte Byte, ubyte I = 0)
  *  memory = Memory block.
  */
 void fill(ubyte c = 0)(void[] memory) @trusted
-in (memory.length == 0 || memory.ptr !is null)
+in
+{
+    assert(memory.length == 0 || memory.ptr !is null);
+}
+do
 {
     memset(memory.ptr, c, memory.length);
 }
@@ -114,9 +122,13 @@ in (memory.length == 0 || memory.ptr !is null)
  * Precondition: $(D_INLINECODE source.length <= target.length).
  */
 void copyBackward(const void[] source, void[] target) @nogc nothrow pure @trusted
-in (source.length <= target.length)
-in (source.length == 0 || source.ptr !is null)
-in (target.length == 0 || target.ptr !is null)
+in
+{
+    assert(source.length <= target.length);
+    assert(source.length == 0 || source.ptr !is null);
+    assert(target.length == 0 || target.ptr !is null);
+}
+do
 {
     memmove(target.ptr, source.ptr, source.length);
 }
@@ -145,7 +157,11 @@ in (target.length == 0 || target.ptr !is null)
  */
 inout(void[]) find(return inout void[] haystack, ubyte needle)
 @nogc nothrow pure @trusted
-in (haystack.length == 0 || haystack.ptr !is null)
+in
+{
+    assert(haystack.length == 0 || haystack.ptr !is null);
+}
+do
 {
     auto length = haystack.length;
     const size_t needleWord = size_t.max * needle;
@@ -223,7 +239,11 @@ in (haystack.length == 0 || haystack.ptr !is null)
  */
 inout(char[]) findNullTerminated(return inout char[] haystack)
 @nogc nothrow pure @trusted
-in (haystack.length == 0 || haystack.ptr !is null)
+in
+{
+    assert(haystack.length == 0 || haystack.ptr !is null);
+}
+do
 {
     auto length = haystack.length;
     enum size_t highBits = filledBytes!(0x01, 0);
@@ -290,8 +310,12 @@ in (haystack.length == 0 || haystack.ptr !is null)
  *          $(D_KEYWORD false) otherwise.
  */
 bool equal(const void[] r1, const void[] r2) @nogc nothrow pure @trusted
-in (r1.length == 0 || r1.ptr !is null)
-in (r2.length == 0 || r2.ptr !is null)
+in
+{
+    assert(r1.length == 0 || r1.ptr !is null);
+    assert(r2.length == 0 || r2.ptr !is null);
+}
+do
 {
     return r1.length == r2.length && memcmp(r1.ptr, r2.ptr, r1.length) == 0;
 }

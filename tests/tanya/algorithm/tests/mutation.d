@@ -39,7 +39,11 @@ import tanya.test.stub;
         int value;
 
         void opCall(int value) @nogc nothrow pure @safe
-        in (this.value == 0)
+        in
+        {
+            assert(this.value == 0);
+        }
+        do
         {
             this.value = value;
         }

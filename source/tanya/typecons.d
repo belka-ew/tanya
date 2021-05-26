@@ -396,7 +396,7 @@ if (isTypeTuple!Specs && NoDuplicates!Specs.length == Specs.length)
          * Returns: $(D_KEYWORD true) if this $(D_PSYMBOL Variant) is equal to
          *          $(D_PARAM that), $(D_KEYWORD false) otherwise.
          */
-        bool opEquals()(auto ref inout Variant that) inout
+        bool opEquals()(auto ref inout(Variant) that) inout
         {
             if (this.tag != that.tag)
             {

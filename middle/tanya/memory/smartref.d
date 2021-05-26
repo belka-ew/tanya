@@ -46,7 +46,11 @@ private final class RefCountedStore(T)
 
     size_t opUnary(string op)()
     if (op == "--" || op == "++")
-    in (this.counter > 0)
+    in
+    {
+        assert(this.counter > 0);
+    }
+    do
     {
         mixin("return " ~ op ~ "counter;");
     }
@@ -127,7 +131,11 @@ struct RefCounted(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.allocator_ = allocator;
     }
@@ -231,7 +239,11 @@ struct RefCounted(T)
      * Precondition: $(D_INLINECODE cound > 0).
      */
     inout(Payload!T) get() inout
-    in (count > 0, "Attempted to access an uninitialized reference")
+    in
+    {
+        assert(count > 0, "Attempted to access an uninitialized reference");
+    }
+    do
     {
         return this.storage.payload;
     }
@@ -321,7 +333,11 @@ struct RefCounted(T)
 RefCounted!T refCounted(T, A...)(shared Allocator allocator, auto ref A args)
 if (!is(T == interface) && !isAbstractClass!T
  && !isAssociativeArray!T && !isArray!T)
-in (allocator !is null)
+in
+{
+    assert(allocator !is null);
+}
+do
 {
     auto rc = typeof(return)(allocator);
 
@@ -361,8 +377,12 @@ in (allocator !is null)
  */
 RefCounted!T refCounted(T : E[], E)(shared Allocator allocator, size_t size)
 @trusted
-in (allocator !is null)
-in (size <= size_t.max / E.sizeof)
+in
+{
+    assert(allocator !is null);
+    assert(size <= size_t.max / E.sizeof);
+}
+do
 {
     return RefCounted!T(allocator.make!T(size), allocator);
 }
@@ -423,7 +443,11 @@ struct Unique(T)
 
     /// ditto
     this(shared Allocator allocator)
-    in (allocator !is null)
+    in
+    {
+        assert(allocator !is null);
+    }
+    do
     {
         this.allocator_ = allocator;
     }
@@ -604,7 +628,11 @@ struct Unique(T)
 Unique!T unique(T, A...)(shared Allocator allocator, auto ref A args)
 if (!is(T == interface) && !isAbstractClass!T
  && !isAssociativeArray!T && !isArray!T)
-in (allocator !is null)
+in
+{
+    assert(allocator !is null);
+}
+do
 {
     auto payload = allocator.make!(T, A)(args);
     return Unique!T(payload, allocator);
@@ -627,8 +655,12 @@ in (allocator !is null)
  */
 Unique!T unique(T : E[], E)(shared Allocator allocator, size_t size)
 @trusted
-in (allocator !is null)
-in (size <= size_t.max / E.sizeof)
+in
+{
+    assert(allocator !is null);
+    assert(size <= size_t.max / E.sizeof);
+}
+do
 {
     auto payload = allocator.resize!E(null, size);
     return Unique!T(payload, allocator);

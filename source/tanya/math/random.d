@@ -91,11 +91,7 @@ abstract class EntropySource
      * Postcondition: Returned length is less than or equal to
      *                $(D_PARAM output) length.
      */
-    Nullable!ubyte poll(out ubyte[maxGather] output) @nogc
-    out (length)
-    {
-        assert(length.isNull || length.get <= maxGather);
-    }
+    Nullable!ubyte poll(out ubyte[maxGather] output) @nogc;
 }
 
 version (CRuntime_Bionic)
@@ -156,6 +152,11 @@ version (linux)
          *          or nothing on error.
          */
         override Nullable!ubyte poll(out ubyte[maxGather] output) @nogc nothrow
+        out (length)
+        {
+            assert(length.isNull || length.get <= maxGather);
+        }
+        do
         {
             // int getrandom(void *buf, size_t buflen, unsigned int flags);
             import mir.linux._asm.unistd : NR_getrandom;
@@ -208,6 +209,11 @@ else version (SecureARC4Random)
          */
         override Nullable!ubyte poll(out ubyte[maxGather] output)
         @nogc nothrow @safe
+        out (length)
+        {
+            assert(length.isNull || length.get <= maxGather);
+        }
+        do
         {
             (() @trusted => arc4random_buf(output.ptr, output.length))();
             return Nullable!ubyte(cast(ubyte) (output.length));
@@ -316,6 +322,11 @@ else version (Windows)
          */
         override Nullable!ubyte poll(out ubyte[maxGather] output)
         @nogc nothrow @safe
+        out (length)
+        {
+            assert(length.isNull || length.get <= maxGather);
+        }
+        do
         {
             Nullable!ubyte ret;
 

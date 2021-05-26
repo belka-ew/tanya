@@ -133,7 +133,7 @@ do
  *
  * Precondition: $(D_INLINECODE array.length > 0).
  */
-void popFront(T)(scope ref inout(T)[] array)
+void popFront(T)(ref inout(T)[] array)
 in
 {
     assert(array.length > 0);
@@ -144,7 +144,7 @@ do
 }
 
 /// ditto
-void popBack(T)(scope ref inout(T)[] array)
+void popBack(T)(ref inout(T)[] array)
 in
 {
     assert(array.length > 0);
