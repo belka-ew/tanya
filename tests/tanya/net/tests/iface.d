@@ -4,13 +4,14 @@
 module tanya.net.tests.iface;
 
 import std.algorithm.comparison;
+import std.utf;
 import tanya.net.iface;
 
 @nogc nothrow @safe unittest
 {
     version (linux)
     {
-        assert(equal(indexToName(1)[], "lo"));
+        assert(equal(indexToName(1)[], "lo".byChar));
     }
     else version (Windows)
     {

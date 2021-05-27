@@ -1123,7 +1123,8 @@ struct Array(T)
     }
 
     /// ditto
-    bool opEquals(Range that)
+    bool opEquals(R)(R that)
+    if (is(R == Range))
     {
         return equal(opIndex(), that);
     }
