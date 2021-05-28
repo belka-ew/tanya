@@ -14,6 +14,7 @@
  */
 module tanya.net.ip;
 
+import core.sys.posix.sys.socket;
 import std.algorithm.comparison;
 import std.ascii;
 import std.typecons;
@@ -1322,5 +1323,86 @@ struct Address
         Address address = Address4.any;
         address = Address4.loopback;
         assert(address == Address4.loopback);
+    }
+}
+
+/**
+ * Service endpoint specified by a version independent IP address and port.
+ */
+struct Endpoint
+{
+    private sa_family_t family = AF_UNSPEC;
+    private ubyte[ushort.sizeof] service;
+    private Address4 address4; // Unused sin6_flowinfo if IPv6
+    private Address6 address6; // Unused if IPv4
+
+    static assert(Address4.sizeof == 4);
+
+    /// Allows the system to select a free port.
+    enum ushort anyPort = 0;
+
+    /**
+     * Constructs an endpoint.
+     *
+     * Params:
+     *     address = IP address that should be associated with the endpoint.
+     *     port = Port number in network byte order.
+     */
+    this(Address address, const ushort port = anyPort)
+    {
+        this.address = address;
+        this.port = port;
+    }
+
+    /**
+     * Returns: Port number in network byte order.
+     */
+    @property ushort port() const @nogc nothrow pure @safe
+    {
+        return this.service[].toHostOrder!ushort();
+    }
+
+    /**
+     * Params:
+     *     port = Port number in network byte order.
+     */
+    @property void port(const ushort port) @nogc nothrow pure @safe
+    {
+        NetworkOrder!(ushort.sizeof)(port).copy(this.service[]);
+    }
+
+    /**
+     * Returns: IP address associated with the endpoint.
+     */
+    @property Address address() @nogc nothrow pure @safe
+    {
+        if (this.family == AF_INET)
+        {
+            return Address(this.address4);
+        }
+        else if (this.family == AF_INET6)
+        {
+            return Address(this.address6);
+        }
+        return Address.init;
+    }
+
+    /**
+     * Params:
+     *     address = IP address associated with the endpoint.
+     */
+    @property void address(Address address) @nogc nothrow pure @safe
+    {
+        if (address.isV4())
+        {
+            this.family = AF_INET;
+            this.address4 = address.toV4();
+        }
+        else if (address.isV6())
+        {
+            this.family = AF_INET6;
+            this.address4 = Address4(0);
+            this.address6 = address.toV6();
+        }
     }
 }
