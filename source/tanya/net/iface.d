@@ -142,3 +142,23 @@ String indexToName(uint index) @nogc nothrow @trusted
         return String(findNullTerminated(buffer));
     }
 }
+
+/**
+ * $(D_PSYMBOL AddressFamily) specifies a communication domain; this selects
+ * the protocol family which will be used for communication.
+ */
+enum AddressFamily : int
+{
+    unspec    = 0,     /// Unspecified.
+    local     = 1,     /// Local to host (pipes and file-domain).
+    unix      = local, /// POSIX name for PF_LOCAL.
+    inet      = 2,     /// IP protocol family.
+    ax25      = 3,     /// Amateur Radio AX.25.
+    ipx       = 4,     /// Novell Internet Protocol.
+    appletalk = 5,     /// Appletalk DDP.
+    netrom    = 6,     /// Amateur radio NetROM.
+    bridge    = 7,     /// Multiprotocol bridge.
+    atmpvc    = 8,     /// ATM PVCs.
+    x25       = 9,     /// Reserved for X.25 project.
+    inet6     = 10,    /// IP version 6.
+}

@@ -7,37 +7,6 @@
  *
  * Current API supports only server-side TCP communication.
  *
- * Here is an example of a cross-platform blocking server:
- *
- * ---
- * import std.stdio;
- * import tanya.memory;
- * import tanya.network;
- *
- * void main()
- * {
- *     auto socket = defaultAllocator.make!StreamSocket(AddressFamily.inet);
- *     auto address = defaultAllocator.make!InternetAddress("127.0.0.1",
- *                                                          cast(ushort) 8192);
- *
- *     socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
- *     socket.blocking = true;
- *     socket.bind(address);
- *     socket.listen(5);
- *
- *     auto client = socket.accept();
- *     client.send(cast(const(ubyte)[]) "Test\n");
- *
- *     ubyte[100] buf;
- *     auto response = client.receive(buf[]);
- *
- *     writeln(cast(const(char)[]) buf[0 .. response]);
- *
- *     defaultAllocator.dispose(client);
- *     defaultAllocator.dispose(socket);
- * }
- * ---
- *
  * For an example of an asynchronous server refer to the documentation of the
  * $(D_PSYMBOL tanya.async.loop) module.
  *
@@ -48,7 +17,7 @@
  * Source: $(LINK2 https://github.com/caraus-ecms/tanya/blob/master/source/tanya/network/socket.d,
  *                 tanya/network/socket.d)
  */
-module tanya.network.socket;
+module tanya.net.socket;
 
 import core.stdc.errno;
 import core.time;
@@ -57,6 +26,8 @@ import tanya.bitmanip;
 import tanya.memory.allocator;
 import tanya.meta.trait;
 import tanya.os.error;
+import tanya.net.iface;
+import tanya.net.ip;
 
 /// Value returned by socket operations on error.
 enum int socketError = -1;
@@ -589,26 +560,6 @@ shared static this()
 }
 
 /**
- * $(D_PSYMBOL AddressFamily) specifies a communication domain; this selects
- * the protocol family which will be used for communication.
- */
-enum AddressFamily : int
-{
-    unspec    = 0,     /// Unspecified.
-    local     = 1,     /// Local to host (pipes and file-domain).
-    unix      = local, /// POSIX name for PF_LOCAL.
-    inet      = 2,     /// IP protocol family.
-    ax25      = 3,     /// Amateur Radio AX.25.
-    ipx       = 4,     /// Novell Internet Protocol.
-    appletalk = 5,     /// Appletalk DDP.
-    netrom    = 6,     /// Amateur radio NetROM.
-    bridge    = 7,     /// Multiprotocol bridge.
-    atmpvc    = 8,     /// ATM PVCs.
-    x25       = 9,     /// Reserved for X.25 project.
-    inet6     = 10,    /// IP version 6.
-}
-
-/**
  * $(D_PSYMBOL SocketException) should be thrown only if one of the socket functions
  * $(D_PSYMBOL socketError) and sets $(D_PSYMBOL errno), because
  * $(D_PSYMBOL SocketException) relies on the $(D_PSYMBOL errno) value.
@@ -1064,13 +1015,13 @@ class StreamSocket : Socket, ConnectionOrientedSocket
      * Associate a local address with this socket.
      *
      * Params:
-     *  address = Local address.
+     *  endpoint = Local address.
      *
      * Throws: $(D_PSYMBOL SocketException) if unable to bind.
      */
-    void bind(Address address) const @trusted @nogc
+    void bind(const Endpoint endpoint) const @nogc
     {
-        if (.bind(handle_, address.name, address.length) == socketError)
+        if (.bind(handle_, cast(const(sockaddr)*) &endpoint, Endpoint.sizeof))
         {
             throw defaultAllocator.make!SocketException("Unable to bind socket");
         }
@@ -1265,157 +1216,6 @@ class ConnectedSocket : Socket, ConnectionOrientedSocket
             return 0;
         }
         throw defaultAllocator.make!SocketException("Unable to send");
-    }
-}
-
-/**
- * Socket address representation.
- */
-abstract class Address
-{
-    /**
-     * Returns: Pointer to underlying $(D_PSYMBOL sockaddr) structure.
-     */
-    abstract @property inout(sockaddr)* name() inout pure nothrow @nogc;
-
-    /**
-     * Returns: Actual size of underlying $(D_PSYMBOL sockaddr) structure.
-     */
-    abstract @property inout(socklen_t) length() inout const pure nothrow @nogc;
-}
-
-class InternetAddress : Address
-{
-    version (Windows)
-    {
-        /// Internal internet address representation.
-        protected SOCKADDR_STORAGE storage;
-    }
-    else version (Posix)
-    {
-        /// Internal internet address representation.
-        protected sockaddr_storage storage;
-    }
-    const ushort port_;
-
-    enum ushort anyPort = 0;
-
-    this(string host, const ushort port = anyPort) @nogc
-    {
-        if (getaddrinfoPointer is null || freeaddrinfoPointer is null)
-        {
-            throw make!SocketException(defaultAllocator,
-                                       "Address info lookup is not available on this system");
-        }
-        addrinfo* ai_res;
-        this.port_ = port;
-
-        // Make C-string from host.
-        auto node = cast(char[]) allocator.allocate(host.length + 1);
-        node[0 .. $ - 1] = host;
-        node[$ - 1] = '\0';
-        scope (exit)
-        {
-            allocator.deallocate(node);
-        }
-
-        // Convert port to a C-string.
-        char[6] service = [0, 0, 0, 0, 0, 0];
-        const(char)* servicePointer;
-        if (port)
-        {
-            ushort originalPort = port;
-            ushort start;
-            for (ushort j = 10, i = 4; i > 0; j *= 10, --i)
-            {
-                ushort rest = originalPort % 10;
-                if (rest != 0)
-                {
-                    service[i] = cast(char) (rest + '0');
-                    start = i;
-                }
-                originalPort /= 10;
-            }
-            servicePointer = service[start .. $].ptr;
-        }
-
-        auto ret = getaddrinfoPointer(node.ptr, servicePointer, null, &ai_res);
-        if (ret)
-        {
-            throw defaultAllocator.make!SocketException("Address info lookup failed");
-        }
-        scope (exit)
-        {
-            freeaddrinfoPointer(ai_res);
-        }
-
-        ubyte* dp = cast(ubyte*) &storage, sp = cast(ubyte*) ai_res.ai_addr;
-        for (auto i = ai_res.ai_addrlen; i > 0; --i, *dp++, *sp++)
-        {
-            *dp = *sp;
-        }
-        if (ai_res.ai_family != AddressFamily.inet && ai_res.ai_family != AddressFamily.inet6)
-        {
-            throw defaultAllocator.make!SocketException("Wrong address family");
-        }
-    }
-
-    ///
-    unittest
-    {
-        auto address = defaultAllocator.make!InternetAddress("127.0.0.1");
-        assert(address.port == InternetAddress.anyPort);
-        assert(address.name !is null);
-        assert(address.family == AddressFamily.inet);
-
-        defaultAllocator.dispose(address);
-    }
-
-    /**
-     * Returns: Pointer to underlying $(D_PSYMBOL sockaddr) structure.
-     */
-    override @property inout(sockaddr)* name() inout pure nothrow @nogc
-    {
-        return cast(sockaddr*) &storage;
-    }
-
-    /**
-     * Returns: Actual size of underlying $(D_PSYMBOL sockaddr) structure.
-     */
-    override @property inout(socklen_t) length() inout const pure nothrow @nogc
-    {
-        // FreeBSD wants to know the exact length of the address on bind.
-        switch (family)
-        {
-            case AddressFamily.inet:
-                return sockaddr_in.sizeof;
-            case AddressFamily.inet6:
-                return sockaddr_in6.sizeof;
-            default:
-                assert(false);
-        }
-    }
-
-    /**
-     * Returns: Family of this address.
-     */
-    @property inout(AddressFamily) family() inout const pure nothrow @nogc
-    {
-        return cast(AddressFamily) storage.ss_family;
-    }
-
-    @property inout(ushort) port() inout const pure nothrow @nogc
-    {
-        return port_;
-    }
-
-    ///
-    unittest
-    {
-        auto address = defaultAllocator.make!InternetAddress("127.0.0.1",
-                                                             cast(ushort) 1234);
-        assert(address.port == 1234);
-        defaultAllocator.dispose(address);
     }
 }
 

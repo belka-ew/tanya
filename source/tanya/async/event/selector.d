@@ -26,7 +26,7 @@ import tanya.async.watcher;
 import tanya.container.array;
 import tanya.container.buffer;
 import tanya.memory.allocator;
-import tanya.network.socket;
+import tanya.net.socket;
 
 /**
  * Transport for stream sockets.

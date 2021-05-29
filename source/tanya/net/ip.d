@@ -14,7 +14,6 @@
  */
 module tanya.net.ip;
 
-import core.sys.posix.sys.socket;
 import std.algorithm.comparison;
 import std.ascii;
 import std.typecons;
@@ -1331,7 +1330,7 @@ struct Address
  */
 struct Endpoint
 {
-    private sa_family_t family = AF_UNSPEC;
+    private AddressFamily family = AddressFamily.unspec;
     private ubyte[ushort.sizeof] service;
     private Address4 address4; // Unused sin6_flowinfo if IPv6
     private Address6 address6; // Unused if IPv4
@@ -1345,10 +1344,12 @@ struct Endpoint
      * Constructs an endpoint.
      *
      * Params:
+     *     T = Address type (IPv4 or IPv6).
      *     address = IP address that should be associated with the endpoint.
      *     port = Port number in network byte order.
      */
-    this(Address address, const ushort port = anyPort)
+    this(T)(T address, const ushort port = anyPort)
+    if (is(T == Address) || is(T == Address4) || is(T == Address6))
     {
         this.address = address;
         this.port = port;
@@ -1357,7 +1358,7 @@ struct Endpoint
     /**
      * Returns: Port number in network byte order.
      */
-    @property ushort port() const @nogc nothrow pure @safe
+    @property inout(ushort) port() inout const @nogc nothrow pure @safe
     {
         return this.service[].toHostOrder!ushort();
     }
@@ -1374,13 +1375,13 @@ struct Endpoint
     /**
      * Returns: IP address associated with the endpoint.
      */
-    @property Address address() @nogc nothrow pure @safe
+    @property inout(Address) address() inout @nogc nothrow pure @safe
     {
-        if (this.family == AF_INET)
+        if (this.family == AddressFamily.inet)
         {
             return Address(this.address4);
         }
-        else if (this.family == AF_INET6)
+        else if (this.family == AddressFamily.inet6)
         {
             return Address(this.address6);
         }
@@ -1395,14 +1396,26 @@ struct Endpoint
     {
         if (address.isV4())
         {
-            this.family = AF_INET;
-            this.address4 = address.toV4();
+            this.address = address.toV4();
         }
         else if (address.isV6())
         {
-            this.family = AF_INET6;
-            this.address4 = Address4(0);
-            this.address6 = address.toV6();
+            this.address = address.toV6();
         }
+    }
+
+    /// ditto
+    @property void address(Address4 address) @nogc nothrow pure @safe
+    {
+        this.family = AddressFamily.inet;
+        this.address4 = address;
+    }
+
+    /// ditto
+    @property void address(Address6 address) @nogc nothrow pure @safe
+    {
+        this.family = AddressFamily.inet6;
+        this.address4 = Address4(0);
+        this.address6 = address;
     }
 }

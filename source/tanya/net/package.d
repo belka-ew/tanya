@@ -17,4 +17,5 @@ module tanya.net;
 public import tanya.net.iface;
 public import tanya.net.inet;
 public import tanya.net.ip;
+public import tanya.net.socket;
 public import tanya.net.uri;

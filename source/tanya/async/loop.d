@@ -34,8 +34,9 @@
  *
  * void main()
  * {
- *     auto address = defaultAllocator.make!InternetAddress("127.0.0.1", cast(ushort) 8192);
- *
+ *     auto address = address4("127.0.0.1");
+ *     auto endpoint = Endpoint(address.get, cast(ushort) 8192);
+ *    
  *     version (Windows)
  *     {
  *         auto sock = defaultAllocator.make!OverlappedStreamSocket(AddressFamily.inet);
@@ -46,19 +47,18 @@
  *         sock.blocking = false;
  *     }
  *
- *     sock.bind(address);
+ *     sock.bind(endpoint);
  *     sock.listen(5);
- *
+ *    
  *     auto io = defaultAllocator.make!ConnectionWatcher(sock);
  *     io.setProtocol!EchoProtocol;
- *
+ *    
  *     defaultLoop.start(io);
  *     defaultLoop.run();
- *
+ *    
  *     sock.shutdown();
  *     defaultAllocator.dispose(io);
  *     defaultAllocator.dispose(sock);
- *     defaultAllocator.dispose(address);
  * }
  * ---
  *
@@ -78,7 +78,7 @@ import tanya.bitmanip;
 import tanya.container.buffer;
 import tanya.container.list;
 import tanya.memory.allocator;
-import tanya.network.socket;
+import tanya.net.socket;
 
 version (DisableBackends)
 {

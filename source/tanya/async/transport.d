@@ -16,7 +16,7 @@
 module tanya.async.transport;
 
 import tanya.async.protocol;
-import tanya.network.socket;
+import tanya.net.socket;
 
 /**
  * Base transport interface.

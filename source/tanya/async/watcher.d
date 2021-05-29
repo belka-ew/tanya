@@ -20,7 +20,7 @@ import tanya.async.transport;
 import tanya.container.buffer;
 import tanya.container.list;
 import tanya.memory.allocator;
-import tanya.network.socket;
+import tanya.net.socket;
 
 /**
  * A watcher is an opaque structure that you allocate and register to record

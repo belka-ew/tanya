@@ -35,9 +35,6 @@ type information at compile-time, to transform from one type to another. It has
 also different algorithms for iterating, searching and modifying template
 arguments.
 * `net`: URL-Parsing, network programming.
-* `network`: Socket implementation. `network` is currently under rework.
-After finishing the new socket implementation will land in the `net` package and
-`network` will be deprecated.
 * `os`: Platform-independent interfaces to operating system functionality.
 * `range`: Generic functions and templates for D ranges.
 * `test`: Test suite for unittest-blocks.
@@ -167,7 +164,7 @@ parameter is used)
 
 | DMD     | GCC       |
 |:-------:|:---------:|
-| 2.091.1 | gdc trunk |
+| 2.096.0 | 10.3      |
 
 ## Further characteristics
 

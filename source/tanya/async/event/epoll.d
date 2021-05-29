@@ -31,7 +31,7 @@ import tanya.async.transport;
 import tanya.async.watcher;
 import tanya.container.array;
 import tanya.memory.allocator;
-import tanya.network.socket;
+import tanya.net.socket;
 
 extern (C) nothrow @nogc
 {

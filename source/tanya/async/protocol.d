@@ -19,7 +19,7 @@
 module tanya.async.protocol;
 
 import tanya.async.transport;
-import tanya.network.socket;
+import tanya.net.socket;
 
 /**
  * Common protocol interface.
