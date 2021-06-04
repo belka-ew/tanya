@@ -27,6 +27,7 @@
 module tanya.container.string;
 
 import std.algorithm.comparison;
+import std.algorithm.mutation : bringToFront;
 import tanya.algorithm.mutation;
 import tanya.hash.lookup;
 import tanya.memory.allocator;
@@ -1488,7 +1489,7 @@ struct String
         const after = r.end - this.data;
         const inserted = insertBack(el);
 
-        rotate(this.data[after .. oldLength], this.data[oldLength .. length]);
+        bringToFront(this.data[after .. oldLength], this.data[oldLength .. length]);
         return inserted;
     }
 

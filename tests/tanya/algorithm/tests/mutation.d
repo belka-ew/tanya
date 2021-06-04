@@ -95,38 +95,3 @@ import tanya.test.stub;
     NonCopyable[] nonCopyable;
     initializeAll(nonCopyable);
 }
-
-@nogc nothrow pure @safe unittest
-{
-    import std.algorithm.comparison : equal;
-
-    const int[5] expected = [1, 2, 3, 4, 5];
-    int[5] actual = [4, 5, 1, 2, 3];
-
-    rotate(actual[0 .. 2], actual[2 .. $]);
-    assert(equal(actual[], expected[]));
-}
-
-// Doesn't cause an infinite loop if back is shorter than the front
-@nogc nothrow pure @safe unittest
-{
-    import std.algorithm.comparison : equal;
-
-    const int[5] expected = [1, 2, 3, 4, 5];
-    int[5] actual = [3, 4, 5, 1, 2];
-
-    rotate(actual[0 .. 3], actual[3 .. $]);
-    assert(equal(actual[], expected[]));
-}
-
-// Doesn't call .front on an empty front
-@nogc nothrow pure @safe unittest
-{
-    import std.algorithm.comparison : equal;
-
-    const int[2] expected = [2, 8];
-    int[2] actual = expected;
-
-    rotate(actual[0 .. 0], actual[]);
-    assert(equal(actual[], expected[]));
-}
