@@ -13,7 +13,7 @@ Garbage Collector heap. Everything in the library is usable in @nogc code.
 Tanya provides data structures and utilities to facilitate painless systems
 programming in D.
 
-- [API Documentation](https://docs.caraus.io/tanya)
+- [API Documentation](https://docs.caraus.tech/tanya)
 
 ## Overview
 
