@@ -177,9 +177,7 @@ if (isInputRange!Range && hasLvalueElements!Range)
     import tanya.memory.op : copy, fill;
     alias T = ElementType!Range;
 
-    static if (__VERSION__ >= 2083
-            && isDynamicArray!Range
-            && __traits(isZeroInit, T))
+    static if (isDynamicArray!Range && __traits(isZeroInit, T))
     {
         fill!0(range);
     }

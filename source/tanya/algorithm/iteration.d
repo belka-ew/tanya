@@ -226,7 +226,7 @@ if (F.length == 1)
      *
      * Returns: Accumulated value.
      */
-    auto foldr(R, T)(R range, auto ref T init)
+    auto foldr(R, T)(scope R range, scope return auto ref T init)
     if (isBidirectionalRange!R)
     {
         if (range.empty)

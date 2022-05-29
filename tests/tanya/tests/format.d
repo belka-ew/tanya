@@ -258,7 +258,7 @@ unittest
 }
 
 // Typeid
-nothrow pure @safe unittest
+nothrow @safe unittest
 {
     assert(format!"{}"(typeid(int[])) == "int[]");
 
