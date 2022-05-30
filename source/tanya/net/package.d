@@ -5,7 +5,7 @@
 /**
  * Network programming.
  *
- * Copyright: Eugene Wissner 2017-2020.
+ * Copyright: Eugene Wissner 2017-2022.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -17,5 +17,4 @@ module tanya.net;
 public import tanya.net.iface;
 public import tanya.net.inet;
 public import tanya.net.ip;
-public import tanya.net.socket;
 public import tanya.net.uri;

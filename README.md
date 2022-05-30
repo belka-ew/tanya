@@ -20,7 +20,6 @@ programming in D.
 Tanya consists of the following packages and (top-level) modules:
 
 * `algorithm`: Collection of generic algorithms.
-* `async`: Event loop (epoll, kqueue and IOCP).
 * `bitmanip`: Bit manipulation.
 * `container`: Queue, Array, Singly and doubly linked lists, Buffers, UTF-8
 string, Set, Hash table.
@@ -164,7 +163,7 @@ parameter is used)
 
 | DMD     | GCC       |
 |:-------:|:---------:|
-| 2.096.0 | 10.3      |
+| 2.098.1 | 11.2      |
 
 ## Further characteristics
 
