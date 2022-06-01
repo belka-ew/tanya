@@ -12,7 +12,7 @@
  * be found in its submodules. $(D_PSYMBOL tanya.math) doesn't import any
  * submodules publically, they should be imported explicitly.
  *
- * Copyright: Eugene Wissner 2016-2020.
+ * Copyright: Eugene Wissner 2016-2022.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -21,7 +21,7 @@
  */
 module tanya.math;
 
-import tanya.math.nbtheory;
+import std.math;
 import tanya.meta.trait;
 import tanya.meta.transform;
 
@@ -542,74 +542,4 @@ if (isFloatingPoint!F)
 
     assert(signBit(-1.0L));
     assert(!signBit(1.0L));
-}
-
-/**
- * Computes $(D_PARAM x) to the power $(D_PARAM y) modulo $(D_PARAM z).
- *
- * Params:
- *  I = Base type.
- *  G = Exponent type.
- *  H = Divisor type:
- *  x = Base.
- *  y = Exponent.
- *  z = Divisor.
- *
- * Returns: Reminder of the division of $(D_PARAM x) to the power $(D_PARAM y)
- *          by $(D_PARAM z).
- *
- * Precondition: $(D_INLINECODE z > 0)
- */
-H pow(I, G, H)(in auto ref I x, in auto ref G y, in auto ref H z)
-if (isIntegral!I && isIntegral!G && isIntegral!H)
-in
-{
-    assert(z > 0, "Division by zero");
-}
-do
-{
-    G mask = G.max / 2 + 1;
-    H result;
-
-    if (y == 0)
-    {
-        return 1 % z;
-    }
-    else if (y == 1)
-    {
-        return x % z;
-    }
-    do
-    {
-        immutable bit = y & mask;
-        if (!result && bit)
-        {
-            result = x;
-            continue;
-        }
-
-        result *= result;
-        if (bit)
-        {
-            result *= x;
-        }
-        result %= z;
-    }
-    while (mask >>= 1);
-
-    return result;
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    assert(pow(3, 5, 7) == 5);
-    assert(pow(2, 2, 1) == 0);
-    assert(pow(3, 3, 3) == 0);
-    assert(pow(7, 4, 2) == 1);
-    assert(pow(53, 0, 2) == 1);
-    assert(pow(53, 1, 3) == 2);
-    assert(pow(53, 2, 5) == 4);
-    assert(pow(0, 0, 5) == 1);
-    assert(pow(0, 5, 5) == 0);
 }
