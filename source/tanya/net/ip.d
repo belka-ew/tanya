@@ -16,6 +16,7 @@ module tanya.net.ip;
 
 import std.algorithm.comparison;
 import std.ascii;
+import std.sumtype;
 import std.typecons;
 import tanya.algorithm.iteration;
 import tanya.algorithm.mutation;
@@ -28,7 +29,6 @@ import tanya.meta.transform;
 import tanya.net.iface;
 import tanya.net.inet;
 import tanya.range;
-import tanya.typecons;
 
 /**
  * IPv4 internet address.
@@ -1061,7 +1061,7 @@ if (isInputRange!R && is(Unqual!(ElementType!R) == ubyte))
  */
 struct Address
 {
-    private Variant!(Address4, Address6) address;
+    private SumType!(Address4, Address6) address;
 
     @disable this();
 
@@ -1095,7 +1095,10 @@ struct Address
      */
     bool isV4() const @nogc nothrow pure @safe
     {
-        return this.address.peek!Address4;
+        return this.address.match!(
+            (Address4 address4) => true,
+            (Address6 address6) => false
+        );
     }
 
     ///
@@ -1112,7 +1115,10 @@ struct Address
      */
     bool isV6() const @nogc nothrow pure @safe
     {
-        return this.address.peek!Address6;
+        return this.address.match!(
+            (Address4 address4) => false,
+            (Address6 address6) => true
+        );
     }
 
     ///
@@ -1131,14 +1137,12 @@ struct Address
      *
      * Precondition: This is an IPv4 address.
      */
-    ref inout(Address4) toV4() inout @nogc nothrow pure @safe
-    in
+    Address4 toV4() inout @nogc nothrow pure @safe
     {
-        assert(this.address.peek!Address4);
-    }
-    do
-    {
-        return this.address.get!Address4;
+        return this.address.match!(
+            (Address4 address4) => address4,
+            _ => assert(false, "Not an IPv4 address")
+        );
     }
 
     ///
@@ -1158,14 +1162,12 @@ struct Address
      *
      * Precondition: This is an IPv6 address.
      */
-    ref inout(Address6) toV6() inout @nogc nothrow pure @safe
-    in
+    Address6 toV6() inout @nogc nothrow pure @safe
     {
-        assert(this.address.peek!Address6);
-    }
-    do
-    {
-        return this.address.get!Address6;
+        return this.address.match!(
+            (Address6 address6) => address6,
+            _ => assert(false, "Not an IPv6 address")
+        );
     }
 
     ///
@@ -1185,17 +1187,11 @@ struct Address
      *           $(D_PSYMBOL Address6.loopback).
      */
     bool isLoopback() const @nogc nothrow pure @safe
-    in
     {
-        assert(this.address.hasValue);
-    }
-    do
-    {
-        if (this.address.peek!Address4)
-        {
-            return this.address.get!Address4.isLoopback();
-        }
-        return this.address.get!Address6.isLoopback();
+        return this.address.match!(
+            (Address4 address) => address.isLoopback(),
+            (Address6 address) => address.isLoopback()
+        );
     }
 
     ///
@@ -1215,17 +1211,11 @@ struct Address
      *           $(D_PSYMBOL Address6.isMulticast).
      */
     bool isMulticast() const @nogc nothrow pure @safe
-    in
     {
-        assert(this.address.hasValue);
-    }
-    do
-    {
-        if (this.address.peek!Address4)
-        {
-            return this.address.get!Address4.isMulticast();
-        }
-        return this.address.get!Address6.isMulticast();
+        return this.address.match!(
+            (Address4 address) => address.isMulticast(),
+            (Address6 address) => address.isMulticast()
+        );
     }
 
     ///
@@ -1244,17 +1234,11 @@ struct Address
      * See_Also: $(D_PSYMBOL Address4.isAny), $(D_PSYMBOL Address6.isAny).
      */
     bool isAny() const @nogc nothrow pure @safe
-    in
     {
-        assert(this.address.hasValue);
-    }
-    do
-    {
-        if (this.address.peek!Address4)
-        {
-            return this.address.get!Address4.isAny();
-        }
-        return this.address.get!Address6.isAny();
+        return this.address.match!(
+            (Address4 address) => address.isAny(),
+            (Address6 address) => address.isAny()
+        );
     }
 
     ///
@@ -1277,14 +1261,22 @@ struct Address
      *          otherwise.
      */
     bool opEquals(T)(T that) const
-    if (is(Unqual!T == Address4) || is(Unqual!T == Address6))
+    if (is(Unqual!T == Address4))
     {
-        alias AddressType = Unqual!T;
-        if (this.address.peek!AddressType)
-        {
-            return this.address.get!AddressType == that;
-        }
-        return false;
+        return this.address.match!(
+            (Address4 address) => address == that,
+            (Address6 address) => false
+        );
+    }
+
+    ///
+    bool opEquals(T)(T that) const
+    if (is(Unqual!T == Address6))
+    {
+        return this.address.match!(
+            (Address4 address) => false,
+            (Address6 address) => address == that,
+        );
     }
 
     ///

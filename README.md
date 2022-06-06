@@ -163,7 +163,7 @@ parameter is used)
 
 | DMD     | GCC       |
 |:-------:|:---------:|
-| 2.098.1 | 11.2      |
+| 2.100.0 | 12.1      |
 
 ## Further characteristics
 
