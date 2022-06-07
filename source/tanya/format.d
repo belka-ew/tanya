@@ -38,7 +38,7 @@
  *
  * More advanced formatting is currently not implemented.
  *
- * Copyright: Eugene Wissner 2017-2020.
+ * Copyright: Eugene Wissner 2017-2022.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -56,7 +56,6 @@ import tanya.meta.metafunction;
 import tanya.meta.trait;
 import tanya.meta.transform;
 import tanya.range;
-import tanya.typecons : Tuple;
 
 // Returns the last part of buffer with converted number.
 package(tanya) char[] integral2String(T)(T number, return ref char[21] buffer)
@@ -940,6 +939,12 @@ private struct uint128
 {
     ulong[2] data;
 
+    private struct DivMod
+    {
+        uint128 quotient;
+        uint128 remainder;
+    }
+
     this(ulong upper, ulong lower) @nogc nothrow pure @safe
     {
         this.data[0] = upper;
@@ -1174,7 +1179,7 @@ private struct uint128
         return this.data[1];
     }
 
-    Tuple!(uint128, uint128) divMod(ulong rhs) const @nogc nothrow pure @safe
+    DivMod divMod(ulong rhs) const @nogc nothrow pure @safe
     in
     {
         assert(rhs != uint128(), "Division by 0");
@@ -1197,22 +1202,22 @@ private struct uint128
         typeof(return) result;
         for (ubyte x = this.bits; x > 0; --x)
         {
-            result[0]  = result[0] << 1;
-            result[1] = result[1] << 1;
+            result.quotient  = result.quotient << 1;
+            result.remainder = result.remainder << 1;
 
             if ((this >> (x - 1U)) & 1)
             {
-                ++result[1];
+                ++result.remainder;
             }
 
-            if (result[1] >= rhs)
+            if (result.remainder >= rhs)
             {
-                if (result[1].data[1] < rhs)
+                if (result.remainder.data[1] < rhs)
                 {
-                    --result[1].data[0];
+                    --result.remainder.data[0];
                 }
-                result[1].data[1] -= rhs;
-                ++result[0];
+                result.remainder.data[1] -= rhs;
+                ++result.quotient;
             }
         }
         return result;
@@ -1220,12 +1225,12 @@ private struct uint128
 
     uint128 opBinary(string op : "/")(ulong rhs)
     {
-        return divMod(rhs)[0];
+        return divMod(rhs).quotient;
     }
 
     uint128 opBinary(string op : "%")(ulong rhs) const
     {
-        return divMod(rhs)[1];
+        return divMod(rhs).remainder;
     }
 }
 
@@ -1302,12 +1307,12 @@ do
     enum ulong power19 = cast(ulong) 1e19;
 
     auto qr = leftBoundary.divMod(power19);
-    auto low = cast(ulong) qr[1];
-    const lowFactor = cast(ulong) (qr[0] % power19);
+    auto low = cast(ulong) qr.remainder;
+    const lowFactor = cast(ulong) (qr.quotient % power19);
 
     qr = rightBoundary.divMod(power19);
-    auto high = cast(ulong) qr[1];
-    const highFactor = cast(ulong) (qr[0] % power19);
+    auto high = cast(ulong) qr.remainder;
+    const highFactor = cast(ulong) (qr.quotient % power19);
     size_t digitIndex;
 
     if (lowFactor != highFactor)

@@ -16,7 +16,6 @@ module tanya.math.random;
 
 import std.typecons;
 import tanya.memory.allocator;
-import tanya.typecons;
 
 /// Maximum amount gathered from the entropy sources.
 enum maxGather = 128;

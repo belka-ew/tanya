@@ -5,7 +5,7 @@
 /*
  * Internal package used by containers that rely on entries/nodes.
  *
- * Copyright: Eugene Wissner 2016-2020.
+ * Copyright: Eugene Wissner 2016-2022.
  * License: $(LINK2 https://www.mozilla.org/en-US/MPL/2.0/,
  *                  Mozilla Public License, v. 2.0).
  * Authors: $(LINK2 mailto:info@caraus.de, Eugene Wissner)
@@ -19,7 +19,6 @@ import tanya.memory.allocator;
 import tanya.memory.lifetime;
 import tanya.meta.trait;
 import tanya.meta.transform;
-import tanya.typecons;
 
 package struct SEntry(T)
 {
@@ -54,7 +53,11 @@ package struct Bucket(K, V = void)
     }
     else
     {
-        alias KV = Tuple!(K, "key", V, "value");
+        package struct KV
+        {
+            package K key;
+            package V value;
+        }
         KV kv;
     }
     BucketStatus status = BucketStatus.empty;
