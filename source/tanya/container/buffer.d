@@ -14,6 +14,7 @@
  */
 module tanya.container.buffer;
 
+import std.traits : isScalarType;
 import tanya.memory.allocator;
 import tanya.meta.trait;
 

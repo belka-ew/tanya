@@ -70,47 +70,6 @@ enum bool isWideString(T) = is(T : const dchar[]) && !isStaticArray!T;
     static assert(!isWideString!(dchar[10]));
 }
 
-/**
- * Determines whether $(D_PARAM T) is a complex type.
- *
- * Complex types are:
- * $(UL
- *  $(LI cfloat)
- *  $(LI ifloat)
- *  $(LI cdouble)
- *  $(LI idouble)
- *  $(LI creal)
- *  $(LI ireal)
- * )
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a complex type,
- *          $(D_KEYWORD false) otherwise.
- */
-enum bool isComplex(T) = is(Unqual!(OriginalType!T) == cfloat)
-                      || is(Unqual!(OriginalType!T) == ifloat)
-                      || is(Unqual!(OriginalType!T) == cdouble)
-                      || is(Unqual!(OriginalType!T) == idouble)
-                      || is(Unqual!(OriginalType!T) == creal)
-                      || is(Unqual!(OriginalType!T) == ireal);
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(isComplex!cfloat);
-    static assert(isComplex!ifloat);
-    static assert(isComplex!cdouble);
-    static assert(isComplex!idouble);
-    static assert(isComplex!creal);
-    static assert(isComplex!ireal);
-
-    static assert(!isComplex!float);
-    static assert(!isComplex!double);
-    static assert(!isComplex!real);
-}
-
 /*
  * Tests whether $(D_PARAM T) is an interface.
  *
@@ -354,32 +313,6 @@ enum bool isIntegral(T) = isUnsigned!T
 }
 
 /**
- * Determines whether $(D_PARAM T) is a numeric (floating point, integral or
- * complex) type.
-*
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a numeric type,
- *          $(D_KEYWORD false) otherwise.
- *
- * See_Also: $(D_PSYMBOL isIntegral!T),
- *           $(D_PSYMBOL isFloatingPoint),
- *           $(D_PSYMBOL isComplex).
- */
-enum bool isNumeric(T) = isIntegral!T || isFloatingPoint!T || isComplex!T;
-
-///
-@nogc nothrow pure @safe unittest
-{
-    alias F = float;
-    static assert(isNumeric!F);
-    static assert(!isNumeric!bool);
-    static assert(!isNumeric!char);
-    static assert(!isNumeric!wchar);
-}
-
-/**
  * Determines whether $(D_PARAM T) is a boolean type, i.e. $(D_KEYWORD bool).
  *
  * Params:
@@ -456,67 +389,6 @@ enum bool isSomeChar(T) = is(Unqual!(OriginalType!T) == char)
     static assert(!isSomeChar!ushort);
     static assert(!isSomeChar!int);
     static assert(!isSomeChar!uint);
-}
-
-/**
- * Determines whether $(D_PARAM T) is a scalar type.
- *
- * Scalar types are numbers, booleans and characters.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a scalar type,
- *          $(D_KEYWORD false) otherwise.
- *
- * See_Also: $(D_PSYMBOL isNumeric),
- *           $(D_PSYMBOL isBoolean),
- *           $(D_PSYMBOL isSomeChar).
- */
-enum bool isScalarType(T) = isNumeric!T || isBoolean!T || isSomeChar!T;
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(isScalarType!int);
-    static assert(!isScalarType!(int[]));
-}
-
-/**
- * Determines whether $(D_PARAM T) is a basic type.
- *
- * Basic types are scalar types and $(D_KEYWORD void).
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a basic type,
- *          $(D_KEYWORD false) otherwise.
- *
- * See_Also: $(D_PSYMBOL isScalarType).
- */
-enum bool isBasicType(T) = isScalarType!T || is(T : void);
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static struct S
-    {
-    }
-    class C
-    {
-    }
-    enum E : int
-    {
-        i = 0,
-    }
-
-    static assert(isBasicType!void);
-    static assert(isBasicType!(shared void));
-    static assert(isBasicType!E);
-    static assert(!isBasicType!(int*));
-    static assert(!isBasicType!(void function()));
-    static assert(!isBasicType!C);
 }
 
 /**
@@ -677,34 +549,6 @@ template isAssociativeArray(T)
 }
 
 /**
- * Determines whether $(D_PARAM T) is a built-in type.
- *
- * Built-in types are all basic types and arrays.
- *
- * Params:
- *  T = A type.
- *
- * Returns: $(D_KEYWORD true) if $(D_PARAM T) is a built-in type,
- *          $(D_KEYWORD false) otherwise.
- *
- * See_Also: $(D_PSYMBOL isBasicType!T),
- *           $(D_PSYMBOL isArray),
- *           $(D_PSYMBOL isAssociativeArray).
- */
-enum bool isBuiltinType(T) = isBasicType!T
-                          || isArray!T
-                          || isAssociativeArray!T;
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(isBuiltinType!int);
-    static assert(isBuiltinType!(int[]));
-    static assert(isBuiltinType!(int[int]));
-    static assert(!isBuiltinType!(int*));
-}
-
-/**
  * Determines whether $(D_PARAM T) is an aggregate type.
  *
  * Aggregate types are:
@@ -842,57 +686,6 @@ enum bool isSomeString(T) = isNarrowString!T || isWideString!T;
     static assert(!isSomeString!(shared(const(char))[]));
     static assert(!isSomeString!(shared(char)[]));
     static assert(!isSomeString!(char[10]));
-}
-
-/**
- * Returns the minimum value of type $(D_PARAM T). In contrast to
- * $(D_INLINECODE T.min) this template works with floating point and complex
- * types as well.
- *
- * Params:
- *  T = Integral, boolean, floating point, complex or character type.
- *
- * Returns: The minimum value of $(D_PARAM T).
- *
- * See_Also: $(D_PSYMBOL isIntegral),
- *           $(D_PSYMBOL isBoolean),
- *           $(D_PSYMBOL isSomeChar),
- *           $(D_PSYMBOL isFloatingPoint),
- *           $(D_PSYMBOL isComplex).
- */
-template mostNegative(T)
-{
-    static if (isIntegral!T || isBoolean!T || isSomeChar!T)
-    {
-        enum T mostNegative = T.min;
-    }
-    else static if (isFloatingPoint!T || isComplex!T)
-    {
-        enum T mostNegative = -T.max;
-    }
-    else
-    {
-        static assert(false, T.stringof ~ " doesn't have the minimum value");
-    }
-}
-
-///
-@nogc nothrow pure @safe unittest
-{
-    static assert(mostNegative!char == char.min);
-    static assert(mostNegative!wchar == wchar.min);
-    static assert(mostNegative!dchar == dchar.min);
-
-    static assert(mostNegative!byte == byte.min);
-    static assert(mostNegative!ubyte == ubyte.min);
-    static assert(mostNegative!bool == bool.min);
-
-    static assert(mostNegative!float == -float.max);
-    static assert(mostNegative!double == -double.max);
-    static assert(mostNegative!real == -real.max);
-
-    static assert(mostNegative!ifloat == -ifloat.max);
-    static assert(mostNegative!cfloat == -cfloat.max);
 }
 
 /**

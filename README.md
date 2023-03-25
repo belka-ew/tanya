@@ -1,6 +1,5 @@
 # Tanya
 
-[![CI/CD](https://img.shields.io/badge/CI-CD-brightgreen)](https://build.caraus.tech/go/pipelines)
 [![Dub version](https://img.shields.io/dub/v/tanya.svg)](https://code.dlang.org/packages/tanya)
 [![Dub downloads](https://img.shields.io/dub/dt/tanya.svg)](https://code.dlang.org/packages/tanya)
 [![License: MPL 2.0](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)

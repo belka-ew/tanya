@@ -14,7 +14,7 @@
  */
 module tanya.conv;
 
-import std.traits : Unsigned;
+import std.traits : Unsigned, isNumeric;
 import tanya.container.string;
 import tanya.memory.allocator;
 import tanya.meta.trait;

@@ -14,6 +14,7 @@
  */
 module tanya.hash.lookup;
 
+import std.traits : isScalarType;
 import tanya.meta.trait;
 import tanya.range.primitive;
 
