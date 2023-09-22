@@ -2335,7 +2335,7 @@ if (isCallable!F)
             }
             else
             {
-                enum getDefault(T[i .. i + 1] name)
+                auto getDefault(T[i .. i + 1] name)
                 {
                     return name[0];
                 }
