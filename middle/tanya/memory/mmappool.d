@@ -19,13 +19,30 @@ import tanya.memory.allocator;
 import tanya.memory.op;
 import tanya.os.error;
 
-extern(C) pragma(mangle, "mmap")
-private void* mapMemory(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
-@nogc nothrow pure @system;
+version (Windows)
+{
+    import core.sys.windows.basetsd : SIZE_T;
+    import core.sys.windows.windef : BOOL, DWORD;
+    import core.sys.windows.winnt : MEM_COMMIT, MEM_RELEASE, PAGE_READWRITE, PVOID;
 
-extern(C) pragma(mangle, "munmap")
-private bool unmapMemory(shared void* addr, size_t length)
-@nogc nothrow pure @system;
+    extern (Windows)
+    private PVOID VirtualAlloc(PVOID, SIZE_T, DWORD, DWORD)
+    @nogc nothrow pure @system;
+
+    extern (Windows)
+    private BOOL VirtualFree(shared PVOID, SIZE_T, DWORD)
+    @nogc nothrow pure @system;
+}
+else
+{
+    extern(C) pragma(mangle, "mmap")
+    private void* mapMemory(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+    @nogc nothrow pure @system;
+
+    extern(C) pragma(mangle, "munmap")
+    private bool unmapMemory(shared void* addr, size_t length)
+    @nogc nothrow pure @system;
+}
 
 /*
  * This allocator allocates memory in regions (multiple of 64 KB for example).
@@ -192,7 +209,10 @@ final class MmapPool : Allocator
             {
                 block.region.next.prev = block.region.prev;
             }
-            return unmapMemory(block.region, block.region.size) == 0;
+            version (Windows)
+                return VirtualFree(block.region, 0, MEM_RELEASE) != 0;
+            else
+                return unmapMemory(block.region, block.region.size) == 0;
         }
         // Merge blocks if neigbours are free.
         if (block.next !is null && block.next.free)
@@ -380,15 +400,29 @@ final class MmapPool : Allocator
         {
             return null;
         }
-        void* p = mapMemory(null,
-                regionSize,
-                PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | MAP_ANONYMOUS,
-                -1,
-                0);
-        if (cast(ptrdiff_t) p == -1)
+        version (Windows)
         {
-            return null;
+            void* p = VirtualAlloc(null,
+                    regionSize,
+                    MEM_COMMIT,
+                    PAGE_READWRITE);
+            if (p is null)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            void* p = mapMemory(null,
+                    regionSize,
+                    PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS,
+                    -1,
+                    0);
+            if (cast(ptrdiff_t) p == -1)
+            {
+                return null;
+            }
         }
 
         Region region = cast(Region) p;
