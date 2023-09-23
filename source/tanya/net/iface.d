@@ -22,8 +22,22 @@ import tanya.range;
 
 version (Windows)
 {
-    import tanya.sys.windows.ifdef;
-    import tanya.sys.windows.iphlpapi;
+    private union NET_LUID_LH { ulong Value, Info; }
+    private alias NET_LUID = NET_LUID_LH;
+    private alias NET_IFINDEX = uint;
+    private enum IF_MAX_STRING_SIZE = 256;
+    extern(Windows) @nogc nothrow private @system
+    {
+        uint ConvertInterfaceNameToLuidA(const(char)* InterfaceName,
+            NET_LUID* InterfaceLuid);
+        uint ConvertInterfaceLuidToIndex(const(NET_LUID)* InterfaceLuid,
+            NET_IFINDEX* InterfaceIndex);
+        uint ConvertInterfaceIndexToLuid(NET_IFINDEX InterfaceIndex,
+            NET_LUID* InterfaceLuid);
+        uint ConvertInterfaceLuidToNameA(const(NET_LUID)* InterfaceLuid,
+            char* InterfaceName,
+            size_t Length);
+    }
 }
 else version (Posix)
 {
