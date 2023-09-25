@@ -13,10 +13,7 @@
 		"tanya:meta": "*",
 		"tanya:os": "*",
 		"tanya:middle": "*",
-		"tanya:test": "*"
-	},
-
-	"dependencies-linux": {
+		"tanya:test": "*",
 		"mir-linux-kernel": "~>1.0.0"
 	},
 
